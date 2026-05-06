@@ -1,0 +1,48 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <h1>{{ index_title }}</h1>
+</header>
+
+{% if apps %}
+{% for app in apps %}
+<section class="rio-card rio-app">
+  <h2 class="rio-app-label">{{ app.label }}</h2>
+  <table class="rio-table rio-app-models">
+    <tbody>
+      {% for model in app.models %}
+      <tr>
+        <th scope="row"><a href="/admin/{{ model.admin_name }}">{{ model.display_name }}</a></th>
+        <td><a class="rio-button rio-button--ghost" href="/admin/{{ model.admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add</a></td>
+        <td><a class="rio-button rio-button--ghost" href="/admin/{{ model.admin_name }}">{{ icon("table", class="rio-icon") }} View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+{% else %}
+<section class="rio-card rio-empty">
+  <p>No models registered yet. Call <code>Admin::new().model::&lt;YourModel&gt;()</code> in your <code>main.rs</code>.</p>
+</section>
+{% endif %}
+
+<section class="rio-card rio-recent">
+  <h2>Recent actions</h2>
+  {% if recent_actions %}
+  <ul class="rio-timeline">
+    {% for a in recent_actions %}
+    <li class="rio-timeline-item">
+      <span class="rio-pill rio-pill--{{ a.pill_class }}">{{ a.label }}</span>
+      <a href="/admin/{{ a.model_name }}">{{ a.model_name }}</a>
+      #<a href="/admin/{{ a.model_name }}/{{ a.object_id }}/edit">{{ a.object_id }}</a>
+      {% if a.summary %}— {{ a.summary }}{% endif %}
+      <span class="rio-meta">{{ a.user_email }} · {{ a.when_relative }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="rio-meta">No actions yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

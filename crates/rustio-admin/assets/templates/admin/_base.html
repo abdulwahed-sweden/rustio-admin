@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" data-rio-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ page_title|default("") }}{% if page_title %} · {% endif %}{{ site_title }}{% endblock %}</title>
+{% include "admin/_theme.html" %}
+<link rel="stylesheet" href="/static/admin.css">
+{% block extra_head %}{% endblock %}
+</head>
+<body class="rio-shell{% if is_demo_session %} rio-shell--demo{% endif %}">
+{% if is_demo_session %}
+<div class="rio-banner rio-banner--demo" role="status">
+  DEMO USER{% if demo_label %} ({{ demo_label }}){% endif %} — actions are visible to other operators.
+</div>
+{% endif %}
+{% block topbar %}{% include "admin/_topbar.html" %}{% endblock %}
+<div class="rio-layout">
+  {% block sidebar %}{% if identity %}{% include "admin/_sidebar.html" %}{% endif %}{% endblock %}
+  <main class="rio-main" id="main">
+    {% if flash %}
+    <div class="rio-flash rio-flash--{{ flash.kind }}" role="status">{{ flash.message }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<footer class="rio-footer">{{ footer_copyright }}</footer>
+<script src="/static/admin.js" defer></script>
+</body>
+</html>

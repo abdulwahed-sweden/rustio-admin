@@ -1,0 +1,31 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/{{ admin_name }}">{{ admin_name }}</a> ·
+    <span>Delete {{ singular_name }} #{{ object_id }}</span>
+  </nav>
+  <h1>Are you sure?</h1>
+</header>
+
+<section class="rio-card rio-confirm">
+  <p>You are about to delete the <strong>{{ singular_name }}</strong> "<em>{{ object_label }}</em>".</p>
+
+  {% if cascading %}
+  <h2 class="rio-confirm-section">Related records that may be affected</h2>
+  <p class="rio-meta">Other models reference this row. Whether the database deletes them too depends on each FK's <code>ON DELETE</code> rule.</p>
+  <ul class="rio-cascade-list">
+    {% for c in cascading %}
+    <li><a href="/admin/{{ c.source_admin_name }}">{{ c.source_display_name }}</a> via <code>{{ c.source_field }}</code></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post" action="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-form-actions">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--danger">Yes, delete</button>
+    <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
+  </form>
+</section>
+{% endblock %}

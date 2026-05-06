@@ -1,0 +1,33 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>Delete {{ email }}</span>
+  </nav>
+  <h1>Delete user</h1>
+</header>
+
+<section class="rio-card rio-confirm">
+  <p>You are about to delete <strong>{{ email }}</strong> (role: <code>{{ role }}</code>).</p>
+
+  {% if is_self %}
+  <p class="rio-flash rio-flash--error">You cannot delete your own account while signed in.</p>
+  {% endif %}
+  {% if is_last_developer %}
+  <p class="rio-flash rio-flash--error">This is the only active Developer. Promote a backup first via <code>rustio-cli</code>.</p>
+  {% endif %}
+
+  <h2 class="rio-confirm-section">Cascade impact</h2>
+  <ul class="rio-cascade-list">
+    <li>{{ group_count }} group memberships will be removed.</li>
+    <li>{{ direct_perm_count }} direct permission grants will be removed.</li>
+    <li>{{ session_count }} active sessions will be terminated.</li>
+  </ul>
+
+  <form method="post" action="/admin/users/{{ user_id }}/delete" class="rio-form-actions">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--danger" {% if is_self or is_last_developer %}disabled{% endif %}>Yes, delete</button>
+    <a href="/admin/users/{{ user_id }}" class="rio-button rio-button--ghost">No, cancel</a>
+  </form>
+</section>
+{% endblock %}

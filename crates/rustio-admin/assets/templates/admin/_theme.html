@@ -1,0 +1,12 @@
+{# Inject the active AdminTheme as CSS custom properties. #}
+<style>
+:root {
+  --rio-accent: {{ accent_hex }};
+  --rio-accent-rgb: {{ accent_rgb }};
+  --rio-bg: {{ theme_bg }};
+  --rio-surface: {{ theme_surface }};
+  --rio-text: {{ theme_text }};
+  --rio-text-muted: {{ theme_text_muted }};
+  --rio-border: {{ theme_border }};
+}
+</style>

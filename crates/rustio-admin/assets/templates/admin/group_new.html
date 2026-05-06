@@ -1,0 +1,32 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>Add group</span>
+  </nav>
+  <h1>Add group</h1>
+</header>
+
+{% if errors %}
+<div class="rio-flash rio-flash--error" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/admin/groups/new" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  {% for section in sections %}
+  <fieldset class="rio-fieldset">
+    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">
+      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <div class="rio-form-actions">
+    <button type="submit" class="rio-button rio-button--primary">Create group</button>
+    <a href="/admin/groups" class="rio-button rio-button--ghost">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>Delete {{ name }}</span>
+  </nav>
+  <h1>Delete group</h1>
+</header>
+
+<section class="rio-card rio-confirm">
+  <p>You are about to delete group <strong>{{ name }}</strong>{% if description %} — <em>{{ description }}</em>{% endif %}.</p>
+
+  <h2 class="rio-confirm-section">Cascade impact</h2>
+  <ul class="rio-cascade-list">
+    <li>{{ user_count }} user memberships will be removed.</li>
+    <li>{{ perm_count }} permission attachments will be removed.</li>
+  </ul>
+
+  <form method="post" action="/admin/groups/{{ group_id }}/delete" class="rio-form-actions">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--danger">Yes, delete</button>
+    <a href="/admin/groups/{{ group_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
+  </form>
+</section>
+{% endblock %}

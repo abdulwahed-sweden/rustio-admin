@@ -1,0 +1,78 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ display_name }}</span></nav>
+  <div class="rio-page-actions">
+    <h1>{{ display_name }}</h1>
+    <a class="rio-button rio-button--primary" href="/admin/{{ admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add {{ singular_name }}</a>
+  </div>
+</header>
+
+<form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar">
+  <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
+  <button type="submit" class="rio-button">Search</button>
+</form>
+
+{% if filters %}
+<aside class="rio-filters" aria-label="Filters">
+  <h2 class="rio-filters-title">Filter by</h2>
+  {% for group in filters %}
+  <details class="rio-filter-group" open>
+    <summary>{{ group.label }}</summary>
+    <ul class="rio-filter-options">
+      <li><a href="/admin/{{ admin_name }}" class="rio-filter-chip{% if not group.current %} rio-filter-chip--active{% endif %}">All</a></li>
+      {% for opt in group.options %}
+      <li><a href="/admin/{{ admin_name }}?{{ group.field }}={{ opt.value }}" class="rio-filter-chip{% if opt.selected %} rio-filter-chip--active{% endif %}">{{ opt.label }}</a></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endfor %}
+</aside>
+{% endif %}
+
+<section class="rio-card rio-list">
+  {% if rows %}
+  <table class="rio-table rio-table--striped">
+    <thead>
+      <tr>
+        {% for f in fields %}
+        <th class="rio-th rio-th--{{ f.kind }}">{{ f.label }}</th>
+        {% endfor %}
+        <th class="rio-th rio-th--actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        {% for f in fields %}
+        <td class="rio-td rio-td--{{ f.kind }}">
+          {% if f.name == "id" %}
+            <a href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ row.id }}</a>
+          {% elif f.kind == "checkbox" %}
+            {% if row[f.name] %}Yes{% else %}No{% endif %}
+          {% else %}
+            {{ row[f.name]|default("") }}
+          {% endif %}
+        </td>
+        {% endfor %}
+        <td class="rio-td rio-td--actions">
+          <a class="rio-button rio-button--ghost" href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>
+          <a class="rio-button rio-button--danger-ghost" href="/admin/{{ admin_name }}/{{ row.id }}/delete">{{ icon("trash", class="rio-icon") }} Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="rio-empty">No {{ display_name|lower }} yet. <a href="/admin/{{ admin_name }}/new">Add the first one.</a></p>
+  {% endif %}
+</section>
+
+{% if total_pages > 1 %}
+<nav class="rio-pagination" aria-label="Pagination">
+  <span class="rio-meta">{{ total_rows }} total · page {{ page }} of {{ total_pages }}</span>
+  {% if page > 1 %}<a class="rio-pagination-link" href="?p={{ page - 1 }}">← Previous</a>{% endif %}
+  {% if page < total_pages %}<a class="rio-pagination-link" href="?p={{ page + 1 }}">Next →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}
