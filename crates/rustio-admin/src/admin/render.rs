@@ -943,13 +943,23 @@ pub(crate) async fn resolve_relation_options(
             out.insert(f.name, (Vec::new(), false));
             continue;
         };
-        let rows = target
+        // Cap to FK_OPTIONS_LIMIT in SQL; the total count tells us
+        // whether to set `has_more` for the form's "showing first N"
+        // hint. Pre-P10 this called `list()` and slung every row over
+        // the wire before truncating client-side.
+        let page = target
             .ops
-            .list(db, super::types::ListOpts::default())
+            .list(
+                db,
+                super::types::ListOpts {
+                    limit: Some(FK_OPTIONS_LIMIT as i64),
+                    ..super::types::ListOpts::default()
+                },
+            )
             .await?;
-        let total = rows.len();
         let display_idx = pick_display_index(target.fields, rel.display_field);
-        let mut opts: Vec<SelectOption> = rows
+        let opts: Vec<SelectOption> = page
+            .rows
             .into_iter()
             .map(|r| {
                 let label = display_idx
@@ -962,8 +972,7 @@ pub(crate) async fn resolve_relation_options(
                 }
             })
             .collect();
-        let has_more = total > FK_OPTIONS_LIMIT;
-        opts.truncate(FK_OPTIONS_LIMIT);
+        let has_more = page.total > FK_OPTIONS_LIMIT as i64;
         out.insert(f.name, (opts, has_more));
     }
     Ok(out)

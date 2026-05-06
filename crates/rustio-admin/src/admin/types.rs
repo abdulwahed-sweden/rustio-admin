@@ -169,9 +169,10 @@ pub struct AdminEntry {
     pub(crate) ops: Arc<dyn AdminOps>,
 }
 
-/// Per-request options for [`AdminOps::list`]. Empty slices mean
-/// "framework default": no ordering override (falls back to `id DESC`
-/// inside the runtime).
+/// Per-request options for [`AdminOps::list`]. Empty / `None` fields
+/// mean "framework default": no ordering override falls back to
+/// `id DESC` inside the runtime, no filters skips the WHERE clause,
+/// no limit fetches every row.
 #[derive(Debug, Clone, Default)]
 pub struct ListOpts {
     /// Validated `(column, dir)` pairs to apply as `ORDER BY`. The
@@ -179,6 +180,30 @@ pub struct ListOpts {
     /// the runtime, so callers can pass user-supplied names without
     /// SQL-injection risk.
     pub ordering: Vec<(String, super::modeladmin::SortDir)>,
+    /// `(column, value)` pairs applied as `WHERE col::text = $N`.
+    /// Cast to text so the comparison matches the same string-shape
+    /// semantics the in-memory pre-P10 filter used for bool / int /
+    /// timestamp columns.
+    pub filters: Vec<(String, String)>,
+    /// Free-text search: `(term, columns)`. The runtime emits
+    /// `WHERE (col1::text ILIKE $N OR col2::text ILIKE $N OR …)`
+    /// with `$N = '%term%'`. An empty `term` or empty `columns`
+    /// leaves the WHERE alone.
+    pub search: Option<(String, Vec<String>)>,
+    /// `LIMIT $N` for the data query. The COUNT(*) query never
+    /// applies it. `None` → no limit.
+    pub limit: Option<i64>,
+    /// `OFFSET $N` for the data query. `None` or `Some(0)` → no offset.
+    pub offset: Option<i64>,
+}
+
+/// Result of [`AdminOps::list`]: the requested page plus the total
+/// row count under the same WHERE clause (so handlers can render
+/// pagination footers without a separate query).
+#[derive(Debug, Default)]
+pub struct ListPage {
+    pub rows: Vec<ListRow>,
+    pub total: i64,
 }
 
 /// Type-erased CRUD operations. The `Admin::model::<M>()` call captures
@@ -190,7 +215,7 @@ pub(crate) trait AdminOps: Send + Sync {
         &'a self,
         db: &'a Db,
         opts: ListOpts,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>>;
+    ) -> Pin<Box<dyn Future<Output = Result<ListPage>> + Send + 'a>>;
 
     fn find_row<'a>(
         &'a self,
@@ -534,7 +559,7 @@ impl AdminOps for CoreUserOps {
         &'a self,
         _db: &'a Db,
         _opts: ListOpts,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ListPage>> + Send + 'a>> {
         Box::pin(async { Err(core_user_route_error()) })
     }
 

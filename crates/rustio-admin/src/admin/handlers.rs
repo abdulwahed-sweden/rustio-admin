@@ -174,9 +174,7 @@ pub(crate) async fn list_model(
     let entry = find_project_entry(&ctx.admin, admin_name)?;
     let qs = req.query();
 
-    // Build the ordering vec from `?sort=col&dir=desc` if present and
-    // valid, otherwise fall back to the model's `ModelAdmin::ordering()`
-    // (captured on AdminEntry at registration time).
+    // ---- Sort: ?sort=col&dir=desc, validated against entry.fields.
     let active_sort = parse_active_sort(entry, qs.get("sort"), qs.get("dir"));
     let ordering = match &active_sort {
         Some((col, dir)) => vec![(col.clone(), *dir)],
@@ -187,35 +185,19 @@ pub(crate) async fn list_model(
             .collect(),
     };
 
-    let opts = super::types::ListOpts {
-        ordering: ordering.clone(),
-    };
-    let mut rows = entry.ops.list(&ctx.db, opts).await?;
-
-    // In-memory search + filter + pagination. ORDER BY runs in SQL
-    // above; everything below operates on the already-ordered Vec.
-    // P10 pushes search and filter into SQL too, at which point
-    // pagination naturally pushes down via LIMIT/OFFSET.
-    let search = qs.get("q").unwrap_or_default().to_string();
-    if !search.is_empty() {
-        let needle = search.to_ascii_lowercase();
-        rows.retain(|r| {
-            r.cells
-                .iter()
-                .any(|c| c.to_ascii_lowercase().contains(&needle))
-        });
-    }
-
+    // ---- Filters: build the chip group list (and the active
+    // selections) up front so the same struct drives both the
+    // SQL WHERE clause and the rendered sidebar.
+    let inferred = super::filters::infer_filters(entry.fields);
     let mut filter_groups: Vec<render::FilterGroupCtx> = Vec::new();
-    for f in super::filters::infer_filters(entry.fields) {
-        let current = qs.get(&f.field).map(str::to_string);
-        if let Some(val) = &current {
-            if !val.is_empty() {
-                let col_idx = entry.fields.iter().position(|af| af.name == f.field);
-                if let Some(idx) = col_idx {
-                    rows.retain(|r| r.cells.get(idx).map(String::as_str) == Some(val.as_str()));
-                }
-            }
+    let mut sql_filters: Vec<(String, String)> = Vec::new();
+    for f in inferred {
+        let current = qs
+            .get(&f.field)
+            .map(str::to_string)
+            .filter(|s| !s.is_empty());
+        if let Some(ref val) = current {
+            sql_filters.push((f.field.clone(), val.clone()));
         }
         let options = match f.kind {
             super::filters::FilterKind::BoolYesNo => vec![
@@ -230,7 +212,7 @@ pub(crate) async fn list_model(
                     selected: current.as_deref() == Some("false"),
                 },
             ],
-            // Other filter kinds need richer widgets — P10 / later.
+            // Other filter kinds need richer widgets — later phases.
             _ => Vec::new(),
         };
         if !options.is_empty() {
@@ -243,35 +225,84 @@ pub(crate) async fn list_model(
         }
     }
 
-    let total_rows = rows.len();
-    // ?per_page= overrides the model's `list_per_page()` default; we
-    // restrict to a small allowlist so a malicious `?per_page=99999`
-    // can't OOM the worker.
-    let per_page: usize = qs
+    // ---- Search: ?q=term, scoped to the model's `search_fields()`.
+    let search = qs.get("q").unwrap_or_default().to_string();
+    let search_opt: Option<(String, Vec<String>)> = if search.is_empty() {
+        None
+    } else if entry.search_fields.is_empty() {
+        // No search_fields registered → the search box is decorative;
+        // ILIKE-ing every column would fight indexes. Drop the term.
+        None
+    } else {
+        Some((
+            search.clone(),
+            entry.search_fields.iter().map(|s| s.to_string()).collect(),
+        ))
+    };
+
+    // ---- Pagination: per_page from ?per_page= (allow-listed),
+    // falling back to entry.list_per_page. page from ?page=, 1-indexed.
+    let per_page: i64 = qs
         .get("per_page")
-        .and_then(|s| s.parse::<usize>().ok())
-        .filter(|n| matches!(n, 10 | 25 | 50 | 100))
-        .unwrap_or(entry.list_per_page.max(1));
-    let total_pages = total_rows.div_ceil(per_page.max(1)).max(1);
-    let page_raw: usize = qs
+        .and_then(|s| s.parse::<i64>().ok())
+        .filter(|n| matches!(*n, 10 | 25 | 50 | 100))
+        .unwrap_or(entry.list_per_page as i64)
+        .max(1);
+    let page_raw: i64 = qs
         .get("page")
         .and_then(|s| s.parse().ok())
         .unwrap_or(1)
         .max(1);
+
+    // First fetch with the requested offset; if it lands past the
+    // last page (stale URL after rows shrink), clamp and refetch
+    // once. Two queries vs the legacy "fetch-all-then-slice"
+    // approach is still net-fewer-rows over the wire.
+    let initial_offset = (page_raw - 1) * per_page;
+    let mut page_result = entry
+        .ops
+        .list(
+            &ctx.db,
+            super::types::ListOpts {
+                ordering: ordering.clone(),
+                filters: sql_filters.clone(),
+                search: search_opt.clone(),
+                limit: Some(per_page),
+                offset: Some(initial_offset),
+            },
+        )
+        .await?;
+
+    let total_rows = page_result.total;
+    let total_pages = ((total_rows.max(1) + per_page - 1) / per_page).max(1);
     let page = page_raw.min(total_pages);
-    let start = (page - 1) * per_page;
-    let page_rows: Vec<_> = rows.into_iter().skip(start).take(per_page).collect();
+    if page != page_raw && total_rows > 0 {
+        let clamped_offset = (page - 1) * per_page;
+        page_result = entry
+            .ops
+            .list(
+                &ctx.db,
+                super::types::ListOpts {
+                    ordering: ordering.clone(),
+                    filters: sql_filters,
+                    search: search_opt,
+                    limit: Some(per_page),
+                    offset: Some(clamped_offset),
+                },
+            )
+            .await?;
+    }
 
     let list = render::list_ctx(
         &identity,
         &ctx.admin,
         entry,
-        page_rows,
+        page_result.rows,
         search,
         filter_groups,
-        page,
-        per_page,
-        total_rows,
+        page as usize,
+        per_page as usize,
+        total_rows as usize,
         active_sort.as_ref().map(|(c, d)| (c.clone(), *d)),
         csrf_token(req),
     );

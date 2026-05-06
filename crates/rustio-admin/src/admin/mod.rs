@@ -26,5 +26,5 @@ pub use relations::{
 pub use routes::register_admin_routes;
 pub use types::{
     Admin, AdminEntry, AdminField, AdminModel, AdminRelation, AdminTheme, EditRow, FieldType,
-    ListOpts, ListRow, SiteBranding, UserProfileRow, UserProfileSection,
+    ListOpts, ListPage, ListRow, SiteBranding, UserProfileRow, UserProfileSection,
 };
