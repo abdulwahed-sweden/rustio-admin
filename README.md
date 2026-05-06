@@ -69,7 +69,7 @@ For a complete project skeleton see [`examples/minimal/`](./examples/minimal/) a
 |---|---|
 | `rustio-admin`        | The library. Re-exports the macros. |
 | `rustio-admin-macros` | Proc-macros (re-exported from `rustio-admin`). |
-| `rustio-admin-cli`    | The `rustio` binary — `startproject`, `migrate`, `user`, `group`, `perm`, `doctor`. (`startapp` scaffolding pending.) |
+| `rustio-admin-cli`    | The `rustio` binary — `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`. |
 
 ```sh
 cargo build --workspace
