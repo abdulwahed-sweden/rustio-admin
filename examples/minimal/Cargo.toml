@@ -1,0 +1,13 @@
+[package]
+name = "minimal-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "minimal"
+path = "src/main.rs"
+
+[dependencies]

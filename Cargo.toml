@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rustio-admin",
+    "crates/rustio-admin-macros",
+    "crates/rustio-admin-cli",
+    "examples/minimal",
+]
+
+[workspace.package]
+version = "0.1.0-alpha.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+repository = "https://github.com/abdulwahed-sweden/rustio-admin"
+homepage = "https://github.com/abdulwahed-sweden/rustio-admin"
+authors = ["Abdulwahed Mansour"]
+
+[workspace.dependencies]
+rustio-admin = { version = "0.1.0-alpha.0", path = "crates/rustio-admin" }
+rustio-admin-macros = { version = "0.1.0-alpha.0", path = "crates/rustio-admin-macros" }
