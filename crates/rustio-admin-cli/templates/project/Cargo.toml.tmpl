@@ -1,0 +1,15 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Pinned to the GitHub main branch until rustio-admin publishes a
+# crates.io release; flip to `version = "0.1.0"` then.
+rustio-admin = { git = "https://github.com/abdulwahed-sweden/rustio-admin", branch = "main" }
+tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
+chrono       = { version = "0.4", features = ["serde"] }
+sqlx         = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres"] }
+dotenvy      = "0.15"
+env_logger   = "0.11"
+log          = "0.4"

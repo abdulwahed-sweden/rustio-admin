@@ -25,6 +25,7 @@ mod doctor;
 mod group;
 mod migrate;
 mod perm;
+mod scaffold;
 mod user;
 
 #[derive(Parser)]
@@ -40,6 +41,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Scaffold a new rustio-admin project at ./<name>.
+    #[command(name = "startproject")]
+    Startproject {
+        /// Name of the project — also the cargo crate name. Letters,
+        /// digits, '-', and '_' only.
+        name: String,
+    },
     /// Apply / inspect SQL migrations from a directory.
     Migrate {
         #[command(subcommand)]
@@ -70,15 +78,21 @@ fn main() -> ExitCode {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
     let cli = Cli::parse();
-    let result = tokio_run(async {
-        match cli.command {
-            Command::Migrate { action } => migrate::run(action).await,
-            Command::User { action } => user::run(action).await,
-            Command::Group { action } => group::run(action).await,
-            Command::Perm { action } => perm::run(action).await,
-            Command::Doctor => doctor::run().await,
-        }
-    });
+    let result = match cli.command {
+        // Pure filesystem; no async / db needed.
+        Command::Startproject { name } => scaffold::project(&name),
+        // Everything else opens a Postgres connection.
+        other => tokio_run(async {
+            match other {
+                Command::Startproject { .. } => unreachable!("handled above"),
+                Command::Migrate { action } => migrate::run(action).await,
+                Command::User { action } => user::run(action).await,
+                Command::Group { action } => group::run(action).await,
+                Command::Perm { action } => perm::run(action).await,
+                Command::Doctor => doctor::run().await,
+            }
+        }),
+    };
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
