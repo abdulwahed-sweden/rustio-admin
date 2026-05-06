@@ -18,7 +18,7 @@ pub mod router;
 pub mod server;
 pub mod templates;
 
-pub use crate::admin::{Admin, AdminField, AdminModel, FieldType};
+pub use crate::admin::{register_admin_routes, Admin, AdminField, AdminModel, FieldType};
 pub use crate::auth::{Identity, Role};
 pub use crate::error::{Error, Result};
 pub use crate::http::{FormData, Request, Response};
