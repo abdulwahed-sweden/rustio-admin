@@ -11,3 +11,5 @@ name = "minimal"
 path = "src/main.rs"
 
 [dependencies]
+rustio-admin = { workspace = true }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

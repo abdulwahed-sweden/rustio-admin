@@ -1,9 +1,16 @@
 //! Minimal consumer of `rustio-admin`.
 //!
-//! Phase 1 bootstrap: this binary just signals that the workspace builds.
-//! Later phases evolve it into the ~50-line "from struct to admin" demo
-//! described in `rustio-admin-strategic-reset-plan.md` Section 10.
+//! P2: boots an HTTP server with a single hello route. The admin
+//! itself is wired in later phases (P5–P6).
 
-fn main() {
-    println!("rustio-admin alive");
+use rustio_admin::{Response, Result, Router, Server};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let router = Router::new().get("/", |_req| async {
+        Ok(Response::text("rustio-admin alive"))
+    });
+
+    let addr = "127.0.0.1:8000".parse().expect("valid listen address");
+    Server::new(router, addr).run().await
 }

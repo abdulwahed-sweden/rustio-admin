@@ -11,3 +11,42 @@ description = "Django Admin, but for Rust. A small, focused admin framework."
 readme = "../../README.md"
 
 [dependencies]
+# runtime
+tokio = { version = "1", features = [
+    "net",
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "signal",
+    "time",
+    "fs",
+] }
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+
+# data
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "postgres",
+    "chrono",
+    "uuid",
+    "json",
+    "macros",
+] }
+chrono = { version = "0.4", default-features = false, features = [
+    "clock",
+    "std",
+    "serde",
+] }
+uuid = { version = "1", features = ["v4", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# templates
+minijinja = { version = "2", features = ["loader"] }
+
+# utils
+urlencoding = "2"
+log = "0.4"
