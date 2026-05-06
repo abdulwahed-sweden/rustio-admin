@@ -51,12 +51,32 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
   enforces the no-Tier-2-symbols invariant with a `git grep` guard
   on every PR.
 
+### `rustio` CLI
+
+The binary that ships from `rustio-admin-cli` now covers the
+operationally critical surface for v0.1.0:
+
+- `rustio migrate apply` / `status` — drive the framework's
+  numerically prefixed `migrations/*.sql` runner.
+- `rustio user create` / `list` / `role` / `delete` — auth-table
+  CRUD with Argon2 hashing and a confirm-twice password prompt.
+  Honours the developer-orphan guard.
+- `rustio group create` / `list` / `add-user` / `remove-user` —
+  group CRUD + membership.
+- `rustio perm grant-user` / `grant-group` / `list` — permission
+  grants on top of `auth::permissions`.
+- `rustio doctor` — read-only health check (DB reachable? auth
+  tables present? at least one administrator?). Exits non-zero on
+  any blocker so a CI step can gate on it.
+
+Browser-walked end-to-end against a local Postgres against the
+`examples/minimal` skeleton.
+
 ### Known gaps (next phases)
 
-- `rustio-admin-cli` is a stub — `startproject` / `startapp` /
-  `migrate apply` / `user create` land before the v0.1.0 tag.
-- No live browser-walk acceptance test recorded yet (waits on the
-  CLI's `user create` so a clean Postgres can boot a populated
-  admin).
+- `rustio startproject` / `startapp` scaffolding — the file-template
+  baking warrants its own phase. Today the
+  [`docs/getting-started.md`](./docs/getting-started.md) walkthrough
+  fills that gap.
 - Crates.io publish blocked on `rustio-admin-macros` going up first
   (path-only deps can't be published).
