@@ -135,7 +135,10 @@ pub trait AdminModel: Send + Sync + 'static {
     fn values_to_update(&self) -> Vec<(&'static str, Value)>;
 }
 
-/// Runtime metadata about one admin-registered model.
+/// Runtime metadata about one admin-registered model. Captures both
+/// the [`AdminModel`] static surface and the [`super::ModelAdmin`]
+/// customisation values at registration time, so handlers read every
+/// per-model knob from this struct instead of re-resolving traits.
 pub struct AdminEntry {
     pub admin_name: &'static str,
     pub display_name: &'static str,
@@ -146,7 +149,36 @@ pub struct AdminEntry {
     pub fields: &'static [AdminField],
     /// `true` only for framework-owned entries (currently just `User`).
     pub core: bool,
+    /// `ModelAdmin::list_display()`. Empty → use every column on
+    /// `fields`; non-empty → use exactly the listed names in order.
+    pub list_display: &'static [&'static str],
+    /// `ModelAdmin::list_filter()`. Empty by default.
+    pub list_filter: &'static [&'static str],
+    /// `ModelAdmin::search_fields()`. Empty by default.
+    pub search_fields: &'static [&'static str],
+    /// `ModelAdmin::ordering()`. Strings parsed via
+    /// [`super::modeladmin::parse_order_spec`].
+    pub ordering: &'static [&'static str],
+    /// `ModelAdmin::list_per_page()`. Default 50.
+    pub list_per_page: usize,
+    /// `ModelAdmin::readonly_fields()`. Empty by default.
+    pub readonly_fields: &'static [&'static str],
+    /// `ModelAdmin::fieldsets()`. Empty → fall back to the
+    /// framework's name-heuristic grouping.
+    pub fieldsets: &'static [super::modeladmin::Fieldset],
     pub(crate) ops: Arc<dyn AdminOps>,
+}
+
+/// Per-request options for [`AdminOps::list`]. Empty slices mean
+/// "framework default": no ordering override (falls back to `id DESC`
+/// inside the runtime).
+#[derive(Debug, Clone, Default)]
+pub struct ListOpts {
+    /// Validated `(column, dir)` pairs to apply as `ORDER BY`. The
+    /// column name is bound to the model's `M::COLUMNS` set inside
+    /// the runtime, so callers can pass user-supplied names without
+    /// SQL-injection risk.
+    pub ordering: Vec<(String, super::modeladmin::SortDir)>,
 }
 
 /// Type-erased CRUD operations. The `Admin::model::<M>()` call captures
@@ -157,6 +189,7 @@ pub(crate) trait AdminOps: Send + Sync {
     fn list<'a>(
         &'a self,
         db: &'a Db,
+        opts: ListOpts,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>>;
 
     fn find_row<'a>(
@@ -322,7 +355,7 @@ impl Admin {
 
     pub fn model<M>(mut self) -> Self
     where
-        M: AdminModel + crate::orm::Model,
+        M: super::ModelAdmin + crate::orm::Model,
     {
         let ops: Arc<dyn AdminOps> = Arc::new(super::ops::ConcreteOps::<M>::new());
         self.entries.push(AdminEntry {
@@ -332,6 +365,13 @@ impl Admin {
             table: <M as crate::orm::Model>::TABLE,
             fields: M::FIELDS,
             core: false,
+            list_display: M::list_display(),
+            list_filter: M::list_filter(),
+            search_fields: M::search_fields(),
+            ordering: M::ordering(),
+            list_per_page: M::list_per_page(),
+            readonly_fields: M::readonly_fields(),
+            fieldsets: M::fieldsets(),
             ops,
         });
         self
@@ -465,6 +505,13 @@ fn core_user_entry() -> AdminEntry {
         table: "rustio_users",
         fields: CORE_USER_FIELDS,
         core: true,
+        list_display: &[],
+        list_filter: &[],
+        search_fields: &[],
+        ordering: &["-id"],
+        list_per_page: 50,
+        readonly_fields: &[],
+        fieldsets: &[],
         ops: Arc::new(CoreUserOps),
     }
 }
@@ -486,6 +533,7 @@ impl AdminOps for CoreUserOps {
     fn list<'a>(
         &'a self,
         _db: &'a Db,
+        _opts: ListOpts,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>> {
         Box::pin(async { Err(core_user_route_error()) })
     }

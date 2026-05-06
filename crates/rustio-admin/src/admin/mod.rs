@@ -5,6 +5,7 @@ mod builtin;
 pub mod filters;
 mod handlers;
 pub(crate) mod icons;
+pub mod modeladmin;
 mod ops;
 pub mod relations;
 mod render;
@@ -17,6 +18,7 @@ pub use filters::{
     infer_filters, infer_filters_with_relations, mask_pii, FieldRole, FieldUI, FilterDef,
     FilterKind,
 };
+pub use modeladmin::{Fieldset, ModelAdmin, SortDir};
 pub use relations::{
     InverseRelation, RegistryError, RelationRegistry, ResolvedRelation,
     RELATION_FILTER_DROPDOWN_CAP,
@@ -24,5 +26,5 @@ pub use relations::{
 pub use routes::register_admin_routes;
 pub use types::{
     Admin, AdminEntry, AdminField, AdminModel, AdminRelation, AdminTheme, EditRow, FieldType,
-    ListRow, SiteBranding, UserProfileRow, UserProfileSection,
+    ListOpts, ListRow, SiteBranding, UserProfileRow, UserProfileSection,
 };

@@ -36,7 +36,11 @@
     <thead>
       <tr>
         {% for f in fields %}
-        <th class="rio-th rio-th--{{ f.kind }}">{{ f.label }}</th>
+        <th class="rio-th rio-th--{{ f.kind }}{% if f.sort_active %} rio-th--sort-{{ f.sort_active }}{% endif %}">
+          <a href="{{ f.sort_link }}" class="rio-th-sort">
+            {{ f.label }}{% if f.sort_active == "asc" %} ▲{% elif f.sort_active == "desc" %} ▼{% endif %}
+          </a>
+        </th>
         {% endfor %}
         <th class="rio-th rio-th--actions">Actions</th>
       </tr>
@@ -71,8 +75,8 @@
 {% if total_pages > 1 %}
 <nav class="rio-pagination" aria-label="Pagination">
   <span class="rio-meta">{{ total_rows }} total · page {{ page }} of {{ total_pages }}</span>
-  {% if page > 1 %}<a class="rio-pagination-link" href="?p={{ page - 1 }}">← Previous</a>{% endif %}
-  {% if page < total_pages %}<a class="rio-pagination-link" href="?p={{ page + 1 }}">Next →</a>{% endif %}
+  {% if page > 1 %}<a class="rio-pagination-link" href="?page={{ page - 1 }}">← Previous</a>{% endif %}
+  {% if page < total_pages %}<a class="rio-pagination-link" href="?page={{ page + 1 }}">Next →</a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}
