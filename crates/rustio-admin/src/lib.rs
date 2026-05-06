@@ -6,6 +6,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod auth;
+pub mod background;
 pub mod error;
 pub mod http;
 pub mod middleware;
@@ -15,6 +17,7 @@ pub mod router;
 pub mod server;
 pub mod templates;
 
+pub use crate::auth::{Identity, Role};
 pub use crate::error::{Error, Result};
 pub use crate::http::{FormData, Request, Response};
 pub use crate::orm::{Db, DbOptions, Model, Row, Value};
