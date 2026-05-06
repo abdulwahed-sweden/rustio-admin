@@ -1,5 +1,12 @@
 # RustIO Admin — Strategic Reset Architecture & Extraction Plan
 
+> **Update 2026-05-07.** Adopted in full and shipped as `v0.1.0` on
+> [crates.io](https://crates.io/crates/rustio-admin) and the
+> [v0.1.0 GitHub release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0).
+> Kept in-repo as the canonical reference for the framework's
+> non-goals, the Tier-2 discard list (which the CI grep guard
+> enforces on every PR), and the §8 architectural rules.
+
 > Saved 2026-05-06. Source: strategic reset session for the RustIO ecosystem.
 > This document is a design, not a coding plan. Approve, modify, or reject before any code moves.
 
