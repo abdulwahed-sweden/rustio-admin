@@ -13,12 +13,12 @@
 //! `Role::bypasses_group_checks`). Staff and Supervisor need the
 //! specific permission granted either directly or via a group.
 //!
-//! Slimmed for Tier 1: the legacy file's static-asset routes
-//! (P8 reintroduces them once `admin.css`/`admin.js` exist), the
-//! developer stub routes (`__schema__`, `__logs__`, `__sql_console__`),
-//! and the FK remote-search endpoint have been dropped. Everything
-//! else — login/logout, dashboard, /admin/users/*, /admin/groups/*,
-//! /admin/history, /admin/password_change, /admin/:model/* CRUD,
+//! Slimmed for Tier 1: the legacy file's developer stub routes
+//! (`__schema__`, `__logs__`, `__sql_console__`) and the FK remote-
+//! search endpoint have been dropped. Everything else — `/static/admin.css`
+//! and `/static/admin.js` (P8), login/logout, dashboard,
+//! /admin/users/*, /admin/groups/*, /admin/history,
+//! /admin/password_change, /admin/:model/* CRUD,
 //! /admin/:model/:id/history — is wired below.
 
 use std::sync::Arc;
@@ -29,6 +29,16 @@ use crate::http::{Request, Response};
 use crate::orm::Db;
 use crate::router::Router;
 use crate::templates::Templates;
+
+/// Embedded stylesheet baked into the binary. P8 ships a single
+/// hand-written CSS file; project overrides happen via
+/// `Admin::theme(...)` (CSS custom properties) rather than an asset
+/// override, so we don't expose a disk path here.
+const ADMIN_CSS: &str = include_str!("../../assets/static/admin.css");
+
+/// Embedded admin JS (theme toggle + sidebar drawer). ≤200 LOC, no
+/// build step.
+const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 
 use super::handlers::{self, AdminCtx};
 use super::render;
@@ -189,6 +199,26 @@ pub fn register_admin_routes(
                 Err(err) => Err(err),
             }
         })
+    });
+
+    // Embedded stylesheet + JS. The bytes are baked into the binary
+    // so single-binary deploy is preserved; the long cache lifetime
+    // keeps repeat-loads cheap.
+    let router = router.get("/static/admin.css", |_req| async move {
+        Ok(Response::new(
+            hyper::StatusCode::OK,
+            bytes::Bytes::from_static(ADMIN_CSS.as_bytes()),
+        )
+        .with_header("content-type", "text/css; charset=utf-8")
+        .with_header("cache-control", "public, max-age=3600"))
+    });
+    let router = router.get("/static/admin.js", |_req| async move {
+        Ok(Response::new(
+            hyper::StatusCode::OK,
+            bytes::Bytes::from_static(ADMIN_JS.as_bytes()),
+        )
+        .with_header("content-type", "application/javascript; charset=utf-8")
+        .with_header("cache-control", "public, max-age=3600"))
     });
 
     // Public: login/logout.

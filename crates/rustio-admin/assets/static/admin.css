@@ -1,0 +1,715 @@
+/* rustio-admin — single hand-written stylesheet.
+ *
+ * Six-variable theme; project overrides via Admin::theme(...) and
+ * its `_theme.html` partial that injects `:root { --rio-* … }`.
+ * Mobile-first, three breakpoints. Dark palette flips via the
+ * combination of `prefers-color-scheme: dark` and an explicit
+ * `data-rio-theme="dark"` attribute on `<html>`.
+ */
+
+/* ============================================================
+ * 1. Variables + reset
+ * ============================================================ */
+
+:root {
+  /* The six theme tokens (also injected by _theme.html so a project
+   * override survives the cascade). Defaults match AdminTheme::default(). */
+  --rio-accent: #2563eb;
+  --rio-accent-rgb: 37 99 235;
+  --rio-bg: #f4f6fb;
+  --rio-surface: #ffffff;
+  --rio-text: #111827;
+  --rio-text-muted: #4b5563;
+  --rio-border: #d1d5db;
+
+  /* Derived tokens — colors carry meaning across the UI. */
+  --rio-success: #15803d;
+  --rio-warning: #b45309;
+  --rio-danger: #b91c1c;
+  --rio-success-bg: #ecfdf5;
+  --rio-warning-bg: #fffbeb;
+  --rio-danger-bg: #fef2f2;
+  --rio-info-bg: #eff6ff;
+
+  /* Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. */
+  --rio-s1: 0.25rem;
+  --rio-s2: 0.5rem;
+  --rio-s3: 0.75rem;
+  --rio-s4: 1rem;
+  --rio-s5: 1.5rem;
+  --rio-s6: 2rem;
+  --rio-s7: 3rem;
+
+  --rio-radius: 8px;
+  --rio-radius-sm: 4px;
+  --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --rio-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.10);
+  --rio-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --rio-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --rio-sidebar-w: 240px;
+  --rio-topbar-h: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rio-bg: #0f172a;
+    --rio-surface: #1e293b;
+    --rio-text: #e5e7eb;
+    --rio-text-muted: #94a3b8;
+    --rio-border: #334155;
+    --rio-success-bg: #064e3b;
+    --rio-warning-bg: #422006;
+    --rio-danger-bg: #450a0a;
+    --rio-info-bg: #1e3a8a;
+    --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --rio-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+}
+
+html[data-rio-theme="dark"] {
+  --rio-bg: #0f172a;
+  --rio-surface: #1e293b;
+  --rio-text: #e5e7eb;
+  --rio-text-muted: #94a3b8;
+  --rio-border: #334155;
+  --rio-success-bg: #064e3b;
+  --rio-warning-bg: #422006;
+  --rio-danger-bg: #450a0a;
+  --rio-info-bg: #1e3a8a;
+  --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --rio-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+html[data-rio-theme="light"] {
+  --rio-bg: #f4f6fb;
+  --rio-surface: #ffffff;
+  --rio-text: #111827;
+  --rio-text-muted: #4b5563;
+  --rio-border: #d1d5db;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--rio-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rio-text);
+  background: var(--rio-bg);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--rio-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font-family: var(--rio-font-mono); font-size: 0.92em; }
+h1, h2, h3 { margin: 0 0 var(--rio-s3); line-height: 1.25; }
+h1 { font-size: 1.5rem; font-weight: 600; }
+h2 { font-size: 1.15rem; font-weight: 600; }
+h3 { font-size: 1rem; font-weight: 600; }
+p { margin: 0 0 var(--rio-s3); }
+
+/* ============================================================
+ * 2. Shell — topbar / sidebar / main / footer
+ * ============================================================ */
+
+.rio-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rio-banner {
+  padding: var(--rio-s2) var(--rio-s4);
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.rio-banner--demo {
+  background: var(--rio-warning-bg);
+  color: var(--rio-warning);
+  border-bottom: 1px solid var(--rio-border);
+}
+
+.rio-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s4);
+  padding: 0 var(--rio-s4);
+  height: var(--rio-topbar-h);
+  background: var(--rio-surface);
+  border-bottom: 1px solid var(--rio-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.rio-topbar-brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--rio-text);
+}
+.rio-topbar-brand:hover { text-decoration: none; }
+.rio-topbar-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s3);
+  flex-wrap: wrap;
+}
+.rio-topbar-identity { color: var(--rio-text-muted); font-size: 0.9rem; }
+.rio-topbar-link { color: var(--rio-text-muted); }
+.rio-topbar-link:hover { color: var(--rio-text); }
+.rio-topbar-logout { display: inline; }
+.rio-sidebar-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  padding: var(--rio-s1) var(--rio-s2);
+  color: var(--rio-text);
+  cursor: pointer;
+}
+.rio-theme-toggle {
+  background: none;
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  padding: var(--rio-s1) var(--rio-s2);
+  color: var(--rio-text);
+  cursor: pointer;
+}
+
+.rio-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.rio-sidebar {
+  background: var(--rio-surface);
+  border-right: 1px solid var(--rio-border);
+  padding: var(--rio-s4);
+}
+.rio-sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s1);
+}
+.rio-sidebar-section {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rio-text-muted);
+  margin-top: var(--rio-s4);
+  padding: 0 var(--rio-s2);
+}
+.rio-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  padding: var(--rio-s2) var(--rio-s3);
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text);
+}
+.rio-sidebar-link:hover {
+  background: rgba(var(--rio-accent-rgb) / 0.08);
+  text-decoration: none;
+}
+
+.rio-main {
+  padding: var(--rio-s5);
+  min-width: 0;
+}
+
+.rio-footer {
+  padding: var(--rio-s3) var(--rio-s4);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--rio-text-muted);
+  border-top: 1px solid var(--rio-border);
+}
+
+/* ============================================================
+ * 3. Page chrome — headers, breadcrumbs, cards
+ * ============================================================ */
+
+.rio-page-header {
+  margin-bottom: var(--rio-s5);
+}
+.rio-breadcrumbs {
+  font-size: 0.85rem;
+  color: var(--rio-text-muted);
+  margin-bottom: var(--rio-s2);
+}
+.rio-breadcrumbs a { color: var(--rio-text-muted); }
+.rio-breadcrumbs a:hover { color: var(--rio-accent); }
+.rio-page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rio-s4);
+  flex-wrap: wrap;
+}
+
+.rio-card {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  padding: var(--rio-s5);
+  margin-bottom: var(--rio-s5);
+  box-shadow: var(--rio-shadow);
+}
+.rio-card-section {
+  margin-top: var(--rio-s5);
+  padding-top: var(--rio-s4);
+  border-top: 1px solid var(--rio-border);
+}
+.rio-empty {
+  padding: var(--rio-s5);
+  text-align: center;
+  color: var(--rio-text-muted);
+}
+.rio-meta {
+  color: var(--rio-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ============================================================
+ * 4. Buttons
+ * ============================================================ */
+
+.rio-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s1);
+  padding: var(--rio-s2) var(--rio-s4);
+  background: var(--rio-surface);
+  color: var(--rio-text);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 150ms ease;
+}
+.rio-button:hover { opacity: 0.85; text-decoration: none; }
+.rio-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.rio-button--primary {
+  background: var(--rio-accent);
+  color: #fff;
+  border-color: var(--rio-accent);
+}
+.rio-button--primary:hover { color: #fff; }
+.rio-button--danger {
+  background: var(--rio-danger);
+  color: #fff;
+  border-color: var(--rio-danger);
+}
+.rio-button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rio-text-muted);
+}
+.rio-button--ghost:hover { color: var(--rio-text); background: rgba(var(--rio-accent-rgb) / 0.05); }
+.rio-button--danger-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rio-danger);
+}
+.rio-button--danger-ghost:hover { background: var(--rio-danger-bg); }
+
+/* ============================================================
+ * 5. Forms — fieldsets, fields, inputs
+ * ============================================================ */
+
+.rio-form { margin: 0; }
+.rio-fieldset {
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  padding: var(--rio-s5);
+  margin: 0 0 var(--rio-s5);
+  background: var(--rio-surface);
+}
+.rio-fieldset > legend {
+  font-weight: 600;
+  padding: 0 var(--rio-s2);
+  color: var(--rio-text);
+}
+.rio-fieldset-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--rio-s4);
+}
+
+.rio-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s1);
+}
+.rio-field--full { grid-column: 1 / -1; }
+.rio-field-label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--rio-text);
+}
+.rio-required {
+  color: var(--rio-danger);
+  margin-left: var(--rio-s1);
+}
+.rio-field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--rio-text-muted);
+}
+.rio-field-errors {
+  list-style: none;
+  margin: var(--rio-s1) 0 0;
+  padding: 0;
+  color: var(--rio-danger);
+  font-size: 0.85rem;
+}
+
+.rio-input,
+.rio-textarea,
+.rio-select {
+  width: 100%;
+  padding: var(--rio-s2) var(--rio-s3);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-bg);
+  color: var(--rio-text);
+  font: inherit;
+}
+.rio-input:focus,
+.rio-textarea:focus,
+.rio-select:focus {
+  outline: none;
+  border-color: var(--rio-accent);
+  box-shadow: 0 0 0 3px rgba(var(--rio-accent-rgb) / 0.18);
+}
+.rio-input:disabled,
+.rio-textarea:disabled,
+.rio-select:disabled {
+  background: var(--rio-bg);
+  color: var(--rio-text-muted);
+  cursor: not-allowed;
+}
+.rio-textarea { font-family: var(--rio-font-sans); resize: vertical; }
+
+.rio-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  cursor: pointer;
+}
+.rio-checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--rio-accent);
+}
+.rio-checkbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--rio-s2);
+}
+
+.rio-form-actions {
+  display: flex;
+  gap: var(--rio-s2);
+  flex-wrap: wrap;
+  margin-top: var(--rio-s4);
+}
+
+/* ============================================================
+ * 6. Tables
+ * ============================================================ */
+
+.rio-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rio-table th, .rio-table td {
+  padding: var(--rio-s2) var(--rio-s3);
+  text-align: left;
+  border-bottom: 1px solid var(--rio-border);
+}
+.rio-table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--rio-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rio-th--number, .rio-td--number { text-align: right; font-variant-numeric: tabular-nums; }
+.rio-th--checkbox, .rio-td--checkbox { text-align: center; }
+.rio-th--actions, .rio-td--actions { width: 1%; white-space: nowrap; }
+.rio-table--striped tbody tr:nth-child(odd) { background: rgba(var(--rio-accent-rgb) / 0.03); }
+.rio-table--striped tbody tr:hover { background: rgba(var(--rio-accent-rgb) / 0.08); }
+
+.rio-list { padding: 0; }
+.rio-list .rio-table { margin: 0; }
+.rio-list .rio-table th:first-child,
+.rio-list .rio-table td:first-child { padding-left: var(--rio-s5); }
+.rio-list .rio-table th:last-child,
+.rio-list .rio-table td:last-child { padding-right: var(--rio-s5); }
+
+/* Definition lists for the user profile show-grid. */
+.rio-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--rio-s2) var(--rio-s5);
+  margin: 0;
+}
+.rio-dl dt { font-weight: 600; color: var(--rio-text-muted); }
+.rio-dl dd { margin: 0; }
+
+/* ============================================================
+ * 7. Filters / search / pagination
+ * ============================================================ */
+
+.rio-search-bar {
+  display: flex;
+  gap: var(--rio-s2);
+  margin-bottom: var(--rio-s4);
+}
+.rio-search-input {
+  flex: 1;
+  padding: var(--rio-s2) var(--rio-s3);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface);
+  color: var(--rio-text);
+  font: inherit;
+}
+.rio-search-input:focus {
+  outline: none;
+  border-color: var(--rio-accent);
+}
+
+.rio-filters {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  padding: var(--rio-s4);
+  margin-bottom: var(--rio-s4);
+}
+.rio-filters-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--rio-text-muted);
+  margin: 0 0 var(--rio-s2);
+}
+.rio-filter-group { margin-bottom: var(--rio-s2); }
+.rio-filter-group summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: var(--rio-s1) 0;
+}
+.rio-filter-options {
+  list-style: none;
+  margin: var(--rio-s2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rio-s1);
+}
+.rio-filter-chip {
+  display: inline-block;
+  padding: var(--rio-s1) var(--rio-s3);
+  background: var(--rio-bg);
+  color: var(--rio-text);
+  border: 1px solid var(--rio-border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+.rio-filter-chip:hover { text-decoration: none; border-color: var(--rio-accent); }
+.rio-filter-chip--active {
+  background: var(--rio-accent);
+  color: #fff;
+  border-color: var(--rio-accent);
+}
+
+.rio-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s3);
+  margin-top: var(--rio-s4);
+  padding-top: var(--rio-s3);
+}
+.rio-pagination-link {
+  padding: var(--rio-s1) var(--rio-s3);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  font-size: 0.9rem;
+  color: var(--rio-text);
+}
+.rio-pagination-link:hover { text-decoration: none; border-color: var(--rio-accent); }
+
+/* ============================================================
+ * 8. Pills / flashes / timeline / tabs
+ * ============================================================ */
+
+.rio-pill {
+  display: inline-block;
+  padding: var(--rio-s1) var(--rio-s3);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rio-pill--badge-success { background: var(--rio-success-bg); color: var(--rio-success); }
+.rio-pill--badge-neutral { background: var(--rio-bg); color: var(--rio-text-muted); border: 1px solid var(--rio-border); }
+.rio-pill--badge-danger  { background: var(--rio-danger-bg);  color: var(--rio-danger); }
+.rio-pill--badge-warning { background: var(--rio-warning-bg); color: var(--rio-warning); }
+
+.rio-flash {
+  padding: var(--rio-s3) var(--rio-s4);
+  border-radius: var(--rio-radius);
+  margin-bottom: var(--rio-s4);
+}
+.rio-flash--success { background: var(--rio-success-bg); color: var(--rio-success); }
+.rio-flash--error   { background: var(--rio-danger-bg);  color: var(--rio-danger); }
+.rio-flash--warning { background: var(--rio-warning-bg); color: var(--rio-warning); }
+.rio-flash--info    { background: var(--rio-info-bg);    color: var(--rio-accent); }
+.rio-flash ul { margin: var(--rio-s2) 0 0; padding-left: var(--rio-s5); }
+
+.rio-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+}
+.rio-timeline-item {
+  padding: var(--rio-s2) var(--rio-s3);
+  border-left: 3px solid var(--rio-border);
+  background: var(--rio-bg);
+  border-radius: 0 var(--rio-radius-sm) var(--rio-radius-sm) 0;
+}
+.rio-timeline-item--success { border-left-color: var(--rio-success); }
+.rio-timeline-item--info    { border-left-color: var(--rio-accent); }
+.rio-timeline-item--warning { border-left-color: var(--rio-warning); }
+.rio-timeline-item--error   { border-left-color: var(--rio-danger); }
+.rio-timeline-item--muted   { border-left-color: var(--rio-border); }
+
+.rio-tabs {
+  display: flex;
+  gap: var(--rio-s1);
+  border-bottom: 1px solid var(--rio-border);
+  margin-bottom: var(--rio-s4);
+  flex-wrap: wrap;
+}
+.rio-tab {
+  padding: var(--rio-s2) var(--rio-s4);
+  color: var(--rio-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.rio-tab:hover { color: var(--rio-text); text-decoration: none; }
+.rio-tab--active {
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
+  font-weight: 600;
+}
+
+/* ============================================================
+ * 9. Confirm-delete + error pages + login
+ * ============================================================ */
+
+.rio-confirm h2 { font-size: 1rem; margin-top: var(--rio-s4); }
+.rio-confirm-section { margin-top: var(--rio-s4); }
+.rio-cascade-list {
+  list-style: disc;
+  padding-left: var(--rio-s5);
+  color: var(--rio-text-muted);
+}
+
+.rio-error { text-align: center; }
+.rio-error-status {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--rio-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rio-login {
+  max-width: 360px;
+  margin: var(--rio-s7) auto;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  padding: var(--rio-s6);
+  box-shadow: var(--rio-shadow-lg);
+}
+.rio-login-title { text-align: center; margin-bottom: var(--rio-s5); }
+.rio-form--login .rio-button { width: 100%; justify-content: center; }
+
+/* ============================================================
+ * 10. Icons
+ * ============================================================ */
+
+.rio-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  width: 1em;
+  height: 1em;
+}
+
+/* ============================================================
+ * 11. Responsive — mobile-first
+ * ============================================================ */
+
+/* Tables overflow horizontally on narrow screens. */
+.rio-list, .rio-card { overflow-x: auto; }
+
+/* Mobile: sidebar collapsed off-canvas behind a hamburger. */
+.rio-sidebar {
+  display: none;
+  position: fixed;
+  inset: var(--rio-topbar-h) 0 0 0;
+  z-index: 20;
+  width: 80vw;
+  max-width: 320px;
+  border-right: 1px solid var(--rio-border);
+  box-shadow: var(--rio-shadow-lg);
+  overflow-y: auto;
+}
+.rio-shell[data-sidebar="open"] .rio-sidebar { display: block; }
+.rio-sidebar-toggle { display: inline-flex; }
+
+/* Tablet: two-column layout, sidebar pinned. */
+@media (min-width: 768px) {
+  .rio-layout { grid-template-columns: var(--rio-sidebar-w) 1fr; }
+  .rio-sidebar {
+    display: block;
+    position: static;
+    width: auto;
+    max-width: none;
+    box-shadow: none;
+  }
+  .rio-sidebar-toggle { display: none; }
+  .rio-fieldset-grid { grid-template-columns: 1fr 1fr; }
+  .rio-checkbox-list { grid-template-columns: 1fr 1fr; }
+}
+
+/* Desktop: wider sidebar, more padding. */
+@media (min-width: 1280px) {
+  :root { --rio-sidebar-w: 280px; }
+  .rio-main { padding: var(--rio-s6) var(--rio-s7); }
+  .rio-checkbox-list { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* Print: drop the chrome. */
+@media print {
+  .rio-topbar, .rio-sidebar, .rio-footer, .rio-form-actions, .rio-page-actions a { display: none !important; }
+  .rio-card { box-shadow: none; border-color: #ccc; }
+  body { background: #fff; }
+}
