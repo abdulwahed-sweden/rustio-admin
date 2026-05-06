@@ -172,12 +172,30 @@ pub(crate) async fn list_model(
     req: &Request,
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
-    let mut rows = entry.ops.list(&ctx.db).await?;
-
-    // In-memory search/filter/pagination. Pushdown to AdminOps would
-    // mean touching types.rs (out of scope for P6). Acceptable for
-    // small model lists; revisit when a project hits >10k rows.
     let qs = req.query();
+
+    // Build the ordering vec from `?sort=col&dir=desc` if present and
+    // valid, otherwise fall back to the model's `ModelAdmin::ordering()`
+    // (captured on AdminEntry at registration time).
+    let active_sort = parse_active_sort(entry, qs.get("sort"), qs.get("dir"));
+    let ordering = match &active_sort {
+        Some((col, dir)) => vec![(col.clone(), *dir)],
+        None => entry
+            .ordering
+            .iter()
+            .map(|s| super::modeladmin::parse_order_spec(s))
+            .collect(),
+    };
+
+    let opts = super::types::ListOpts {
+        ordering: ordering.clone(),
+    };
+    let mut rows = entry.ops.list(&ctx.db, opts).await?;
+
+    // In-memory search + filter + pagination. ORDER BY runs in SQL
+    // above; everything below operates on the already-ordered Vec.
+    // P10 pushes search and filter into SQL too, at which point
+    // pagination naturally pushes down via LIMIT/OFFSET.
     let search = qs.get("q").unwrap_or_default().to_string();
     if !search.is_empty() {
         let needle = search.to_ascii_lowercase();
@@ -212,9 +230,7 @@ pub(crate) async fn list_model(
                     selected: current.as_deref() == Some("false"),
                 },
             ],
-            // P6 renders only Bool filters interactively. Other kinds
-            // (DateRange, Dropdown, NumericExact, ExactMatch,
-            // RelationSelect) need richer widgets — later phases.
+            // Other filter kinds need richer widgets — P10 / later.
             _ => Vec::new(),
         };
         if !options.is_empty() {
@@ -228,13 +244,20 @@ pub(crate) async fn list_model(
     }
 
     let total_rows = rows.len();
+    // ?per_page= overrides the model's `list_per_page()` default; we
+    // restrict to a small allowlist so a malicious `?per_page=99999`
+    // can't OOM the worker.
     let per_page: usize = qs
         .get("per_page")
         .and_then(|s| s.parse::<usize>().ok())
         .filter(|n| matches!(n, 10 | 25 | 50 | 100))
-        .unwrap_or(25);
+        .unwrap_or(entry.list_per_page.max(1));
     let total_pages = total_rows.div_ceil(per_page.max(1)).max(1);
-    let page_raw: usize = qs.get("p").and_then(|s| s.parse().ok()).unwrap_or(1).max(1);
+    let page_raw: usize = qs
+        .get("page")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1)
+        .max(1);
     let page = page_raw.min(total_pages);
     let start = (page - 1) * per_page;
     let page_rows: Vec<_> = rows.into_iter().skip(start).take(per_page).collect();
@@ -249,10 +272,34 @@ pub(crate) async fn list_model(
         page,
         per_page,
         total_rows,
+        active_sort.as_ref().map(|(c, d)| (c.clone(), *d)),
         csrf_token(req),
     );
     let body = ctx.templates.render("admin/list.html", &list)?;
     Ok(Response::html(body))
+}
+
+/// Parse `?sort=col&dir=desc` against the entry's static field set.
+/// Drops any column the model doesn't declare so a hand-crafted URL
+/// can't leak SQL through the ORDER BY clause. `dir` is permissive
+/// (anything starting with `d` → Desc, otherwise Asc).
+fn parse_active_sort(
+    entry: &super::types::AdminEntry,
+    sort: Option<&str>,
+    dir: Option<&str>,
+) -> Option<(String, super::modeladmin::SortDir)> {
+    let raw = sort?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    if !entry.fields.iter().any(|f| f.name == raw) {
+        return None;
+    }
+    let direction = match dir.map(str::to_ascii_lowercase).as_deref() {
+        Some(s) if s.starts_with('d') => super::modeladmin::SortDir::Desc,
+        _ => super::modeladmin::SortDir::Asc,
+    };
+    Some((raw.to_string(), direction))
 }
 
 // ---- New / Create --------------------------------------------------------

@@ -364,6 +364,14 @@ pub(crate) struct ListField {
     /// `"checkbox"` / `"datetime"`. The list template dispatches on
     /// this rather than duck-typing on the cell's string shape.
     pub kind: &'static str,
+    /// Sort hint for sortable column headers in `list.html`.
+    /// `"asc"` → header link toggles to descending;
+    /// `"desc"` → header link clears the sort (back to default);
+    /// empty → header link sets ascending.
+    pub sort_active: &'static str,
+    /// URL the sortable header link points to. Pre-baked here so the
+    /// template doesn't need to reproduce the toggle logic.
+    pub sort_link: String,
 }
 
 #[derive(Serialize)]
@@ -383,8 +391,8 @@ pub(crate) struct ListCtx {
     pub total_pages: usize,
     pub per_page: usize,
     pub total_rows: usize,
-    /// Whether the bulk-action UI should render. Always `false` in P6
-    /// — the bulk-action POST endpoint isn't wired yet.
+    /// Whether the bulk-action UI should render. Always `false` until
+    /// the bulk-action POST endpoint is wired in a later phase.
     pub bulk_actions_enabled: bool,
     pub flash: Option<FlashCtx>,
 }
@@ -425,16 +433,26 @@ pub(crate) fn list_ctx(
     page: usize,
     per_page: usize,
     total_rows: usize,
+    // `active_sort = (column, direction)` carries the parsed override
+    // from `?sort=&dir=`. `None` means the model's
+    // `ModelAdmin::ordering()` default is in effect — sortable
+    // header links still render, but no column gets the active arrow.
+    active_sort: Option<(String, super::modeladmin::SortDir)>,
     csrf_token: String,
 ) -> ListCtx {
     let total_pages = total_rows.div_ceil(per_page.max(1)).max(1);
     let fields: Vec<ListField> = entry
         .fields
         .iter()
-        .map(|f| ListField {
-            name: f.name.to_string(),
-            label: f.label.to_string(),
-            kind: f.field_type.widget(),
+        .map(|f| {
+            let (sort_active, sort_link) = build_sort_link(f.name, &active_sort);
+            ListField {
+                name: f.name.to_string(),
+                label: f.label.to_string(),
+                kind: f.field_type.widget(),
+                sort_active,
+                sort_link,
+            }
         })
         .collect();
     let field_names: Vec<&'static str> = entry.fields.iter().map(|f| f.name).collect();
@@ -485,6 +503,23 @@ pub(crate) fn list_ctx(
         total_rows,
         bulk_actions_enabled: false,
         flash: None,
+    }
+}
+
+/// Pre-bake the sortable-header URL + active-direction marker for one
+/// column. Three states:
+///   - column is the current sort, ascending  → click toggles to desc
+///   - column is the current sort, descending → click clears the sort
+///   - column is not the current sort         → click sets ascending
+fn build_sort_link(
+    name: &'static str,
+    active: &Option<(String, super::modeladmin::SortDir)>,
+) -> (&'static str, String) {
+    use super::modeladmin::SortDir;
+    match active {
+        Some((col, SortDir::Asc)) if col == name => ("asc", format!("?sort={name}&dir=desc")),
+        Some((col, SortDir::Desc)) if col == name => ("desc", String::from("?")),
+        _ => ("", format!("?sort={name}&dir=asc")),
     }
 }
 
@@ -908,7 +943,10 @@ pub(crate) async fn resolve_relation_options(
             out.insert(f.name, (Vec::new(), false));
             continue;
         };
-        let rows = target.ops.list(db).await?;
+        let rows = target
+            .ops
+            .list(db, super::types::ListOpts::default())
+            .await?;
         let total = rows.len();
         let display_idx = pick_display_index(target.fields, rel.display_field);
         let mut opts: Vec<SelectOption> = rows
