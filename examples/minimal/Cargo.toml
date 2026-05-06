@@ -13,3 +13,4 @@ path = "src/main.rs"
 [dependencies]
 rustio-admin = { workspace = true }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
