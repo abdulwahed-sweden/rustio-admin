@@ -14,16 +14,18 @@
 
 ## Install
 
-While the crate is path-only (pre-publish), use a path dependency from a local checkout:
-
 ```toml
 [dependencies]
-rustio-admin = { path = "../rustio-admin/crates/rustio-admin" }
+rustio-admin = "0.1"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
 
-A crates.io publish lands when the `rustio-admin-macros` crate goes up alongside.
+The CLI ships separately:
+
+```sh
+cargo install rustio-admin-cli      # provides the `rustio` binary
+```
 
 ## The 3-line idea
 
