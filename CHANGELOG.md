@@ -4,7 +4,10 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
-## [Unreleased]
+## [0.1.0] — 2026-05-07
+
+First public release. Strategic-reset rollout of phases 1–15 plus
+the live browser walk and the operator CLI is feature-complete.
 
 ### Added
 
