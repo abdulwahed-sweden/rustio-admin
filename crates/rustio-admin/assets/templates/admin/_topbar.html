@@ -1,0 +1,15 @@
+<header class="rio-topbar" role="banner">
+  <a href="/admin" class="rio-topbar-brand">{{ site_header }}</a>
+  <nav class="rio-topbar-nav" aria-label="Account">
+    {% if identity %}
+      <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
+      <a href="/admin/password_change" class="rio-topbar-link">Change password</a>
+      <form method="post" action="/admin/logout" class="rio-topbar-logout">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button type="submit" class="rio-button rio-button--ghost">Log out</button>
+      </form>
+    {% else %}
+      <a href="/admin/login" class="rio-topbar-link">Log in</a>
+    {% endif %}
+  </nav>
+</header>

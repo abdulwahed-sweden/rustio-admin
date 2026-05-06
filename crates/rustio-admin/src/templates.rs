@@ -88,6 +88,21 @@ impl Templates {
         let mut env = Environment::new();
         env.set_loader(move |name| load_template(disk_root.as_deref(), name));
 
+        // `icon(name, class="…")` returns inline SVG for one of the
+        // lucide stroke icons baked at compile time. Templates use it
+        // to render sidebar nav icons, button icons, and alert glyphs
+        // without an extra HTTP round trip. See `admin/icons.rs` for
+        // the catalogue.
+        env.add_function("icon", |name: &str, kwargs: minijinja::value::Kwargs| {
+            let class: String = kwargs.get("class").unwrap_or_default();
+            kwargs.assert_all_used().ok();
+            // The output is HTML — minijinja's autoescape would
+            // mangle it. Wrap in `safe()` so it renders as markup.
+            minijinja::value::Value::from_safe_string(crate::admin::icons::render_inline(
+                name, &class,
+            ))
+        });
+
         Ok(Arc::new(Self {
             env: Mutex::new(env),
         }))
@@ -266,9 +281,113 @@ fn load_template(
 }
 
 /// Baked into the binary. Single-binary deploy is a hard constraint.
-/// P2 ships an empty list; P7 populates it with the rewritten admin
-/// templates.
-const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[];
+const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
+    // Shell + partials
+    (
+        "admin/_base.html",
+        include_str!("../assets/templates/admin/_base.html"),
+    ),
+    (
+        "admin/_topbar.html",
+        include_str!("../assets/templates/admin/_topbar.html"),
+    ),
+    (
+        "admin/_sidebar.html",
+        include_str!("../assets/templates/admin/_sidebar.html"),
+    ),
+    (
+        "admin/_theme.html",
+        include_str!("../assets/templates/admin/_theme.html"),
+    ),
+    (
+        "admin/includes/_form_field.html",
+        include_str!("../assets/templates/admin/includes/_form_field.html"),
+    ),
+    (
+        "admin/includes/_field_errors.html",
+        include_str!("../assets/templates/admin/includes/_field_errors.html"),
+    ),
+    // Generic pages
+    (
+        "admin/login.html",
+        include_str!("../assets/templates/admin/login.html"),
+    ),
+    (
+        "admin/index.html",
+        include_str!("../assets/templates/admin/index.html"),
+    ),
+    (
+        "admin/list.html",
+        include_str!("../assets/templates/admin/list.html"),
+    ),
+    (
+        "admin/form.html",
+        include_str!("../assets/templates/admin/form.html"),
+    ),
+    (
+        "admin/confirm_delete.html",
+        include_str!("../assets/templates/admin/confirm_delete.html"),
+    ),
+    (
+        "admin/error.html",
+        include_str!("../assets/templates/admin/error.html"),
+    ),
+    (
+        "admin/forbidden.html",
+        include_str!("../assets/templates/admin/forbidden.html"),
+    ),
+    // Audit / password change
+    (
+        "admin/object_history.html",
+        include_str!("../assets/templates/admin/object_history.html"),
+    ),
+    (
+        "admin/log_entries.html",
+        include_str!("../assets/templates/admin/log_entries.html"),
+    ),
+    (
+        "admin/password_change.html",
+        include_str!("../assets/templates/admin/password_change.html"),
+    ),
+    // Built-in user pages
+    (
+        "admin/users_list.html",
+        include_str!("../assets/templates/admin/users_list.html"),
+    ),
+    (
+        "admin/user_new.html",
+        include_str!("../assets/templates/admin/user_new.html"),
+    ),
+    (
+        "admin/user_edit.html",
+        include_str!("../assets/templates/admin/user_edit.html"),
+    ),
+    (
+        "admin/user_view.html",
+        include_str!("../assets/templates/admin/user_view.html"),
+    ),
+    (
+        "admin/user_confirm_delete.html",
+        include_str!("../assets/templates/admin/user_confirm_delete.html"),
+    ),
+    // Built-in group pages
+    (
+        "admin/groups_list.html",
+        include_str!("../assets/templates/admin/groups_list.html"),
+    ),
+    (
+        "admin/group_new.html",
+        include_str!("../assets/templates/admin/group_new.html"),
+    ),
+    (
+        "admin/group_edit.html",
+        include_str!("../assets/templates/admin/group_edit.html"),
+    ),
+    (
+        "admin/group_confirm_delete.html",
+        include_str!("../assets/templates/admin/group_confirm_delete.html"),
+    ),
+];
 
 #[cfg(test)]
 mod tests {
@@ -310,5 +429,29 @@ mod tests {
         assert_eq!(body, "hi from disk");
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Every embedded template is registered. Catches typos in
+    /// `EMBEDDED_TEMPLATES` (e.g. wrong path, missing entry).
+    #[test]
+    fn every_embedded_template_loads() {
+        let t = Templates::new(None).unwrap();
+        for (name, _) in EMBEDDED_TEMPLATES {
+            // Render with an empty serializable; minijinja's
+            // strict-undefined fails on missing variables, so most
+            // pages will Err — but parsing happens before evaluation.
+            // We accept any Err whose underlying minijinja error is a
+            // template-evaluation problem; an Error::Internal that
+            // says "template <name> not found" would mean the loader
+            // failed entirely (regression).
+            let result = t.render(name, &Empty {});
+            if let Err(e) = result {
+                let msg = e.to_string();
+                assert!(
+                    !msg.contains("not found"),
+                    "{name} failed to load: {msg}"
+                );
+            }
+        }
     }
 }

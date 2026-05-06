@@ -10,11 +10,6 @@
 //!
 //! Source: <https://lucide.dev>, MIT-licensed.
 
-// Currently unused inside this crate; P7 wires the `icon()` minijinja
-// helper to `render_inline` when templates land. The allow is removed
-// in that phase.
-#![allow(dead_code)]
-
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 

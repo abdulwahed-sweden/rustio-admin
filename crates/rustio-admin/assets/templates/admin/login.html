@@ -1,0 +1,15 @@
+{% extends "admin/_base.html" %}
+{% block sidebar %}{% endblock %}
+{% block content %}
+<div class="rio-login">
+  <h1 class="rio-login-title">{{ site_header }}</h1>
+  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/admin/login" class="rio-form rio-form--login" autocomplete="on">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    {% for section in sections %}
+      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
+    {% endfor %}
+    <button type="submit" class="rio-button rio-button--primary">Sign in</button>
+  </form>
+</div>
+{% endblock %}

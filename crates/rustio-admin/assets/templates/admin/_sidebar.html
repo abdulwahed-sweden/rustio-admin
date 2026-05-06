@@ -1,0 +1,19 @@
+<aside class="rio-sidebar" aria-label="Admin navigation">
+  <nav>
+    <ul class="rio-sidebar-list">
+      <li><a href="/admin" class="rio-sidebar-link">{{ icon("home", class="rio-icon") }} Home</a></li>
+      {% if entries %}
+        <li class="rio-sidebar-section">Models</li>
+        {% for entry in entries %}
+          <li><a href="/admin/{{ entry.admin_name }}" class="rio-sidebar-link">{{ icon("table", class="rio-icon") }} {{ entry.display_name }}</a></li>
+        {% endfor %}
+      {% endif %}
+      {% if identity and identity.is_admin %}
+        <li class="rio-sidebar-section">Auth</li>
+        <li><a href="/admin/users" class="rio-sidebar-link">{{ icon("users", class="rio-icon") }} Users</a></li>
+        <li><a href="/admin/groups" class="rio-sidebar-link">{{ icon("users-2", class="rio-icon") }} Groups</a></li>
+        <li><a href="/admin/history" class="rio-sidebar-link">{{ icon("clock", class="rio-icon") }} History</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+</aside>

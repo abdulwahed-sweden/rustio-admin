@@ -1,0 +1,6 @@
+{# Render a Vec<String> of inline errors, or nothing if empty. #}
+{% if errors %}
+<ul class="rio-field-errors" role="alert">
+  {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+</ul>
+{% endif %}

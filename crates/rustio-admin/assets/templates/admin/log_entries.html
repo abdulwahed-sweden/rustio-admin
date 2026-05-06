@@ -1,0 +1,29 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+</header>
+
+<section class="rio-card">
+  {% if entries %}
+  <table class="rio-table rio-table--striped">
+    <thead><tr><th>When</th><th>Action</th><th>Model</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
+        <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
+        <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
+        <td>{{ e.user_email }}</td>
+        <td>{{ e.summary }}</td>
+        <td>{{ e.ip_address }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="rio-empty">No actions recorded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

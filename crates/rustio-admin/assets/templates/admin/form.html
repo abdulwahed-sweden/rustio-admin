@@ -1,0 +1,41 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
+    <span>{% if mode == "new" %}Add {{ singular_name }}{% else %}#{{ object_id }}{% endif %}</span>
+  </nav>
+  <h1>{% if mode == "new" %}Add {{ singular_name }}{% else %}Change {{ singular_name }} #{{ object_id }}{% endif %}</h1>
+</header>
+
+{% if errors %}
+<div class="rio-flash rio-flash--error" role="alert">
+  <strong>Please correct the errors below:</strong>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="{% if mode == 'new' %}/admin/{{ admin_name }}/new{% else %}/admin/{{ admin_name }}/{{ object_id }}/edit{% endif %}" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  {% for section in sections %}
+  <fieldset class="rio-fieldset">
+    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">
+      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <div class="rio-form-actions">
+    <button type="submit" name="_save" class="rio-button rio-button--primary">Save</button>
+    <button type="submit" name="_continue" class="rio-button">Save and continue editing</button>
+    <button type="submit" name="_addanother" class="rio-button">Save and add another</button>
+    {% if mode == "edit" %}
+    <a href="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-button rio-button--danger-ghost">Delete</a>
+    <a href="/admin/{{ admin_name }}/{{ object_id }}/history" class="rio-button rio-button--ghost">{{ icon("clock", class="rio-icon") }} History</a>
+    {% endif %}
+    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
+  </div>
+</form>
+{% endblock %}

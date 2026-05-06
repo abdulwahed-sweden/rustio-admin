@@ -1,0 +1,52 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>{{ name }}</span>
+  </nav>
+  <h1>Edit group #{{ group_id }}</h1>
+</header>
+
+{% if errors %}
+<div class="rio-flash rio-flash--error" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/admin/groups/{{ group_id }}/edit" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+  {% for section in sections %}
+  <fieldset class="rio-fieldset">
+    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">
+      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <fieldset class="rio-fieldset">
+    <legend>Permissions</legend>
+    {% if all_permissions %}
+    <ul class="rio-checkbox-list">
+      {% for p in all_permissions %}
+      <li>
+        <label class="rio-checkbox">
+          <input type="checkbox" name="perm_{{ p.id }}" value="on"{% if p.id in group_permissions %} checked{% endif %}>
+          <code>{{ p.name }}</code>
+        </label>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="rio-meta">No permissions registered yet. Permissions are seeded automatically by <code>Admin::seed_permissions</code>.</p>
+    {% endif %}
+  </fieldset>
+
+  <div class="rio-form-actions">
+    <button type="submit" class="rio-button rio-button--primary">Save changes</button>
+    <a href="/admin/groups/{{ group_id }}/delete" class="rio-button rio-button--danger-ghost">Delete group</a>
+    <a href="/admin/groups" class="rio-button rio-button--ghost">Back to groups</a>
+  </div>
+</form>
+{% endblock %}

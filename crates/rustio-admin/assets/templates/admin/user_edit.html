@@ -1,0 +1,67 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>{{ email }}</span>
+  </nav>
+  <h1>Edit user #{{ user_id }}</h1>
+</header>
+
+{% if is_last_developer %}
+<div class="rio-flash rio-flash--warning" role="status">
+  This is the only active Developer. Demoting or deactivating the account is blocked by the framework.
+</div>
+{% endif %}
+
+{% if errors %}
+<div class="rio-flash rio-flash--error" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/admin/users/{{ user_id }}/edit" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+  {% for section in identity_sections %}
+  <fieldset class="rio-fieldset">
+    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">
+      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <fieldset class="rio-fieldset">
+    <legend>Group memberships</legend>
+    {% if all_groups %}
+    <ul class="rio-checkbox-list">
+      {% for g in all_groups %}
+      <li>
+        <label class="rio-checkbox">
+          <input type="checkbox" name="group_{{ g.id }}" value="on"{% if g.id in user_groups %} checked{% endif %}>
+          <span><strong>{{ g.name }}</strong>{% if g.description %} — <span class="rio-meta">{{ g.description }}</span>{% endif %}</span>
+        </label>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="rio-meta">No groups defined yet. <a href="/admin/groups/new">Create one.</a></p>
+    {% endif %}
+  </fieldset>
+
+  {% for section in password_sections %}
+  <fieldset class="rio-fieldset">
+    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">
+      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <div class="rio-form-actions">
+    <button type="submit" class="rio-button rio-button--primary">Save changes</button>
+    <a href="/admin/users/{{ user_id }}/delete" class="rio-button rio-button--danger-ghost">Delete user</a>
+    <a href="/admin/users" class="rio-button rio-button--ghost">Back to users</a>
+  </div>
+</form>
+{% endblock %}

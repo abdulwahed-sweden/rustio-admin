@@ -1,0 +1,9 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<section class="rio-card rio-error">
+  <p class="rio-error-status">{{ status }}</p>
+  <h1>{{ heading }}</h1>
+  <p>{{ message }}</p>
+  <p><a class="rio-button rio-button--ghost" href="/admin">{{ icon("arrow-left", class="rio-icon") }} Back to dashboard</a></p>
+</section>
+{% endblock %}

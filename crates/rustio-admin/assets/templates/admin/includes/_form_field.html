@@ -1,0 +1,71 @@
+{# Render one FormField. The caller must pass `field`. #}
+<div class="rio-field rio-field--{{ field.widget }}{% if field.span == 2 %} rio-field--full{% endif %}">
+  {% if field.widget != "checkbox" %}
+  <label class="rio-field-label" for="id_{{ field.name }}">
+    {{ field.label }}{% if field.required %} <span class="rio-required" aria-hidden="true">*</span>{% endif %}
+  </label>
+  {% endif %}
+
+  {% if field.widget == "textarea" %}
+    <textarea
+      id="id_{{ field.name }}"
+      name="{{ field.name }}"
+      class="rio-textarea"
+      {% if field.required %}required{% endif %}
+      {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+      {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+      {% if field.disabled %}disabled{% endif %}
+      {% if field.autofocus %}autofocus{% endif %}
+      rows="6">{{ field.value }}</textarea>
+  {% elif field.widget == "select" %}
+    <select
+      id="id_{{ field.name }}"
+      name="{{ field.name }}{% if field.multiple %}[]{% endif %}"
+      class="rio-select"
+      {% if field.multiple %}multiple{% endif %}
+      {% if field.required %}required{% endif %}
+      {% if field.disabled %}disabled{% endif %}
+      {% if field.autofocus %}autofocus{% endif %}
+      {% if field.search_url %}data-search-url="{{ field.search_url }}"{% endif %}>
+      {% if field.options %}
+        {% for opt in field.options %}
+          <option value="{{ opt.value }}"{% if opt.value == field.value %} selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+      {% endif %}
+    </select>
+    {% if field.has_more %}
+    <p class="rio-field-hint">Showing first 50 results. Keep typing to filter.</p>
+    {% endif %}
+  {% elif field.widget == "checkbox" %}
+    <label class="rio-checkbox" for="id_{{ field.name }}">
+      <input
+        type="checkbox"
+        id="id_{{ field.name }}"
+        name="{{ field.name }}"
+        value="on"
+        {% if field.checked %}checked{% endif %}
+        {% if field.disabled %}disabled{% endif %}>
+      <span>{{ field.label }}</span>
+    </label>
+  {% else %}
+    <input
+      id="id_{{ field.name }}"
+      name="{{ field.name }}"
+      class="rio-input"
+      type="{{ field.input_type }}"
+      value="{{ field.value }}"
+      {% if field.required %}required{% endif %}
+      {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+      {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+      {% if field.disabled %}disabled{% endif %}
+      {% if field.autofocus %}autofocus{% endif %}
+      {% if field.autocomplete %}autocomplete="{{ field.autocomplete }}"{% endif %}>
+  {% endif %}
+
+  {% if field.hint %}<p class="rio-field-hint">{{ field.hint }}</p>{% endif %}
+  {% if field.errors %}
+    <ul class="rio-field-errors" role="alert">
+      {% for err in field.errors %}<li>{{ err }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</div>
