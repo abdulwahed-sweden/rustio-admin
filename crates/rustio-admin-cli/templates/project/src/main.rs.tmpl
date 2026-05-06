@@ -1,0 +1,55 @@
+use std::sync::Arc;
+
+use rustio_admin::admin::Admin;
+use rustio_admin::middleware;
+use rustio_admin::templates::Templates;
+use rustio_admin::{
+    auth, background, migrations, register_admin_routes, Db, Error, Response, Result, Router,
+    Server,
+};
+
+mod post;
+use post::Post;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // .env is optional; production deploys typically use real env vars.
+    let _ = dotenvy::dotenv();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
+    let db_url = std::env::var("DATABASE_URL").map_err(|_| {
+        Error::Internal(
+            "DATABASE_URL is not set. Copy .env.example to .env and edit it before running."
+                .into(),
+        )
+    })?;
+
+    let db = Db::connect(&db_url).await?;
+    auth::init_tables(&db).await?;
+    migrations::apply(&db, "migrations").await?;
+    background::spawn_housekeeping(db.clone());
+
+    let admin = Admin::new().model::<Post>();
+    admin.seed_permissions(&db).await?;
+
+    // Templates::new(None) → embedded defaults only.
+    // Templates::new(Some("templates".into())) → project overrides win.
+    let template_dir = std::env::var("RUSTIO_TEMPLATE_DIR").ok().map(Into::into);
+    let templates = Templates::new(template_dir)?;
+
+    let router = Router::new()
+        .middleware(middleware::logger)
+        .middleware(middleware::security_headers)
+        .middleware(middleware::csrf_protect)
+        .get("/", |_req| async {
+            Ok(Response::text(
+                "{{name}} alive — see /admin for the admin panel",
+            ))
+        });
+
+    let router = register_admin_routes(router, admin, db, Arc::clone(&templates));
+
+    let addr = "127.0.0.1:8000".parse().expect("valid listen address");
+    log::info!("listening on http://{addr}/admin");
+    Server::new(router, addr).run().await
+}

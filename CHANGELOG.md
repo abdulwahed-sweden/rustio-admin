@@ -68,15 +68,24 @@ operationally critical surface for v0.1.0:
 - `rustio doctor` — read-only health check (DB reachable? auth
   tables present? at least one administrator?). Exits non-zero on
   any blocker so a CI step can gate on it.
+- `rustio startproject <name>` — scaffold a fresh project at
+  `./<name>/` with a working `Cargo.toml` (git dep against
+  rustio-admin's main), a demo `Post` model with a populated
+  `ModelAdmin` impl, starter migration, `.env.example`, and a
+  `README.md`. Templates are baked into the CLI binary via
+  `include_str!`; the project name is validated and the directory
+  is refused if it already exists.
 
-Browser-walked end-to-end against a local Postgres against the
-`examples/minimal` skeleton.
+Browser-walked end-to-end against a local Postgres against both
+the `examples/minimal` skeleton and a fresh
+`rustio startproject demo-app`.
 
 ### Known gaps (next phases)
 
-- `rustio startproject` / `startapp` scaffolding — the file-template
-  baking warrants its own phase. Today the
-  [`docs/getting-started.md`](./docs/getting-started.md) walkthrough
-  fills that gap.
+- `rustio startapp <name>` — generate a sub-app inside an existing
+  project (Django convention). The startproject scaffolding has
+  the templating mechanism; startapp is a follow-up that adds an
+  `apps/<name>/` skeleton + nudges the project's main.rs to
+  register the new model.
 - Crates.io publish blocked on `rustio-admin-macros` going up first
   (path-only deps can't be published).
