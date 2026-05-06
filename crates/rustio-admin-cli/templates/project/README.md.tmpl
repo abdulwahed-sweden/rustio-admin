@@ -13,7 +13,7 @@ cp .env.example .env
 $EDITOR .env
 
 # 3. Apply migrations and create the first administrator
-cargo install --git https://github.com/abdulwahed-sweden/rustio-admin rustio-admin-cli
+cargo install rustio-admin-cli
 rustio migrate apply
 rustio user create --email admin@{{name}}.local --role administrator
 

@@ -92,7 +92,13 @@ generated 3 models which all rendered their list pages on
 `/admin/posts`, `/admin/comments`, and `/admin/book_reviews` after
 a copy-paste edit to `src/main.rs`.
 
-### Known gaps (next phases)
+### Released to crates.io
 
-- Crates.io publish blocked on `rustio-admin-macros` going up first
-  (path-only deps can't be published).
+All three workspace crates are on crates.io as of 2026-05-07:
+
+- [`rustio-admin@0.1.0`](https://crates.io/crates/rustio-admin)
+- [`rustio-admin-macros@0.1.0`](https://crates.io/crates/rustio-admin-macros)
+- [`rustio-admin-cli@0.1.0`](https://crates.io/crates/rustio-admin-cli)
+
+Project consumers add `rustio-admin = "0.1"` to their `Cargo.toml`;
+operators install the CLI with `cargo install rustio-admin-cli`.

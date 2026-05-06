@@ -12,7 +12,7 @@ From an empty directory to a logged-in admin in under five minutes.
 ## 1. Install the CLI
 
 ```sh
-cargo install --git https://github.com/abdulwahed-sweden/rustio-admin rustio-admin-cli
+cargo install rustio-admin-cli
 ```
 
 This installs the `rustio` binary into `~/.cargo/bin/`. It's the
