@@ -19,7 +19,9 @@ use std::sync::Arc;
 use rustio_admin::admin::Admin;
 use rustio_admin::middleware;
 use rustio_admin::templates::Templates;
-use rustio_admin::{auth, migrations, register_admin_routes, Db, Response, Result, Role, Router, Server};
+use rustio_admin::{
+    auth, migrations, register_admin_routes, Db, Response, Result, Role, Router, Server,
+};
 
 use post::Post;
 
@@ -66,7 +68,10 @@ async fn main() -> Result<()> {
 /// Idempotent: silently no-ops when an account with the demo email
 /// already exists.
 async fn bootstrap_admin(db: &Db) -> Result<()> {
-    if auth::find_user_by_email(db, DEMO_ADMIN_EMAIL).await?.is_some() {
+    if auth::find_user_by_email(db, DEMO_ADMIN_EMAIL)
+        .await?
+        .is_some()
+    {
         println!("[minimal] admin already exists ({DEMO_ADMIN_EMAIL})");
         return Ok(());
     }
