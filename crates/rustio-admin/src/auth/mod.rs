@@ -15,6 +15,7 @@ mod role;
 mod sessions;
 mod users;
 
+pub(crate) use permissions::invalidate_user_cache;
 pub use permissions::{
     add_user_to_group, check_permission, create_group, grant_to_group, grant_to_user,
     init_permission_tables, permissions_for_user, register_model_permissions,

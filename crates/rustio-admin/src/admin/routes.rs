@@ -13,14 +13,13 @@
 //! `Role::bypasses_group_checks`). Staff and Supervisor need the
 //! specific permission granted either directly or via a group.
 //!
-//! Slimmed for Tier 1 P6: the legacy file's static-asset routes
+//! Slimmed for Tier 1: the legacy file's static-asset routes
 //! (P8 reintroduces them once `admin.css`/`admin.js` exist), the
 //! developer stub routes (`__schema__`, `__logs__`, `__sql_console__`),
-//! the FK remote-search endpoint, the global history page, the
-//! self-service password-change page, the per-object history view,
-//! and the `/admin/users/*` + `/admin/groups/*` bespoke routes have
-//! been dropped. The user/group routes re-land with `admin/builtin.rs`
-//! in P6.b.
+//! and the FK remote-search endpoint have been dropped. Everything
+//! else — login/logout, dashboard, /admin/users/*, /admin/groups/*,
+//! /admin/history, /admin/password_change, /admin/:model/* CRUD,
+//! /admin/:model/:id/history — is wired below.
 
 use std::sync::Arc;
 
@@ -150,7 +149,19 @@ pub fn register_admin_routes(
     db: Db,
     templates: Arc<Templates>,
 ) -> Router {
-    let ctx = Arc::new(AdminCtx::new(Arc::new(admin), db, templates));
+    let ctx = Arc::new(AdminCtx::new(
+        Arc::new(admin),
+        db.clone(),
+        templates.clone(),
+    ));
+
+    // Bespoke user/group pages share the same DB / templates / Admin
+    // arc but live in their own ctx type with the same shape.
+    let auth_ctx = Arc::new(super::builtin::AuthAdminCtx {
+        admin: ctx.admin.clone(),
+        db,
+        templates,
+    });
 
     // Render `Err(_)` from /admin/* handlers as styled HTML instead of
     // the framework default `text/plain`. Non-admin paths bubble
@@ -207,6 +218,294 @@ pub fn register_admin_routes(
             match role_guard(&c, &req, Role::Staff).await? {
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => handlers::dashboard(&c, ident, &req).await,
+            }
+        }
+    });
+
+    // Global history log (admin-only; high-signal page).
+    let c = ctx.clone();
+    let router = router.get("/admin/history", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_log_entries(&c, ident, &req).await,
+            }
+        }
+    });
+
+    // Self-service password change. Any logged-in user (User-tier and
+    // above). User-tier can change their own password even though
+    // they can't access the dashboard.
+    let c = ctx.clone();
+    let router = router.get("/admin/password_change", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_password_change(&c, ident, &req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.post("/admin/password_change", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_password_change(&c, ident, req).await,
+            }
+        }
+    });
+
+    // --- Built-in users admin (admin-only) ---
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/users", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::builtin::list_users(&ac, ident, handlers::csrf_token(&req)).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/users/new", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::builtin::show_new_user(&ac, ident, handlers::csrf_token(&req)).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.post("/admin/users/new", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::builtin::do_new_user(&ac, ident, req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/users/:id/edit", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::show_user_edit(&ac, ident, id, handlers::csrf_token(&req)).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.post("/admin/users/:id/edit", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::do_user_edit(&ac, ident, id, req).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/users/:id/delete", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::show_user_delete(&ac, ident, id, handlers::csrf_token(&req))
+                        .await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.post("/admin/users/:id/delete", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::do_user_delete(&ac, ident, id, req).await
+                }
+            }
+        }
+    });
+
+    // Read-only user profile view. MUST be registered AFTER
+    // `/admin/users/new` and the `:id/edit` + `:id/delete` routes
+    // above: the router matches in insertion order, and `:id` is a
+    // wildcard that would happily swallow "new" or extra path
+    // segments. Putting this last preserves the more-specific routes'
+    // priority.
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/users/:id", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    let q = req.query();
+                    let tab = q.get("tab").map(|s| s.to_string());
+                    let page: i64 = q.get("page").and_then(|s| s.parse().ok()).unwrap_or(1);
+                    super::builtin::show_user_view(
+                        &ac,
+                        ident,
+                        id,
+                        handlers::csrf_token(&req),
+                        tab,
+                        page,
+                    )
+                    .await
+                }
+            }
+        }
+    });
+
+    // --- Built-in groups admin (admin-only) ---
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/groups", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::builtin::list_groups(&ac, ident, handlers::csrf_token(&req)).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/groups/new", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::builtin::show_new_group(&ac, ident, handlers::csrf_token(&req)).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.post("/admin/groups/new", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::builtin::do_new_group(&ac, ident, req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/groups/:id/edit", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::show_group_edit(&ac, ident, id, handlers::csrf_token(&req))
+                        .await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.post("/admin/groups/:id/edit", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::do_group_edit(&ac, ident, id, req).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.get("/admin/groups/:id/delete", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::show_group_delete(&ac, ident, id, handlers::csrf_token(&req))
+                        .await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let ac = auth_ctx.clone();
+    let router = router.post("/admin/groups/:id/delete", move |req| {
+        let c = c.clone();
+        let ac = ac.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::builtin::do_group_delete(&ac, ident, id, req).await
+                }
             }
         }
     });
@@ -278,6 +577,24 @@ pub fn register_admin_routes(
                 Guard::Allow(ident) => {
                     let id = parse_id(req.param("id"))?;
                     handlers::do_update(&c, ident, &name, id, req).await
+                }
+            }
+        }
+    });
+
+    // Per-object history. Read-only; same `view` permission as the
+    // changelist (if you can list, you can read the audit trail).
+    let c = ctx.clone();
+    let router = router.get("/admin/:admin_name/:id/history", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "view")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    handlers::show_object_history(&c, ident, &name, id, &req).await
                 }
             }
         }

@@ -1,6 +1,7 @@
 //! The admin panel — Django Admin, Rust-flavoured.
 
 pub mod audit;
+mod builtin;
 pub mod filters;
 mod handlers;
 pub(crate) mod icons;
