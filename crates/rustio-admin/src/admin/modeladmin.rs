@@ -1,12 +1,20 @@
 //! `ModelAdmin` — Django-style customisation surface.
 //!
-//! Every type that implements [`super::AdminModel`] also implements
-//! [`ModelAdmin`] via a blanket default impl. Projects override the
-//! defaults by writing a single inherent impl:
+//! Every model that ships through `Admin::model::<M>()` must
+//! implement `ModelAdmin`. The trait defines defaults for every
+//! method, so a project that wants standard behaviour writes a one-
+//! line empty impl:
 //!
 //! ```ignore
-//! use rustio_admin::admin::ModelAdmin;
+//! use rustio_admin::ModelAdmin;
 //!
+//! impl ModelAdmin for Course {}            // accept every default
+//! ```
+//!
+//! Override only the methods you care about; the rest inherit the
+//! trait defaults:
+//!
+//! ```ignore
 //! impl ModelAdmin for Course {
 //!     fn list_display() -> &'static [&'static str] {
 //!         &["code", "title", "credit_hours", "is_published"]
@@ -18,9 +26,18 @@
 //! ```
 //!
 //! The values are captured into [`super::AdminEntry`] at registration
-//! time (`Admin::new().model::<Course>()`). The runtime then reads
-//! them from the entry — no per-request virtual dispatch beyond the
-//! existing `dyn AdminOps`.
+//! time. The runtime reads them straight from the entry — no
+//! per-request virtual dispatch beyond the existing `dyn AdminOps`.
+//!
+//! ### Why no blanket impl?
+//!
+//! An earlier draft shipped `impl<T: AdminModel> ModelAdmin for T {}`
+//! so every derived `AdminModel` would auto-pick-up the defaults.
+//! That collides with Rust's coherence rules — without
+//! `feature(specialization)` (nightly-only), a blanket impl forbids
+//! any per-type impl, which would block project overrides entirely.
+//! The opt-in `impl ModelAdmin for X {}` is the standard stable-Rust
+//! pattern (serde, axum, std).
 
 use super::AdminModel;
 
@@ -85,11 +102,6 @@ pub trait ModelAdmin: AdminModel {
         &[]
     }
 }
-
-/// Blanket default — every `AdminModel` becomes a `ModelAdmin` with
-/// sensible defaults. Project-defined overrides win because Rust's
-/// trait coherence ensures a more-specific impl wins over a blanket.
-impl<T: AdminModel> ModelAdmin for T {}
 
 /// One column to sort by, with direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

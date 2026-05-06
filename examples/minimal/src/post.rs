@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use rustio_admin::orm::{Model, Row, Value};
-use rustio_admin::RustioAdmin;
+use rustio_admin::{ModelAdmin, RustioAdmin};
 
 #[derive(RustioAdmin)]
 pub struct Post {
@@ -15,6 +15,12 @@ pub struct Post {
     pub published: bool,
     pub created_at: DateTime<Utc>,
 }
+
+// Empty `impl ModelAdmin` opts the model into `Admin::model::<Post>()`
+// and inherits every framework default (id-DESC ordering, 50-row
+// pagination, no list-filter, no search). Override individual methods
+// to customise — see `rustio_admin::ModelAdmin` doc comments.
+impl ModelAdmin for Post {}
 
 impl Model for Post {
     const TABLE: &'static str = "posts";
