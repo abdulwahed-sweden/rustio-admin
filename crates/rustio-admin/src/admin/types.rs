@@ -1,13 +1,11 @@
 //! The admin's data vocabulary. Kept separate from rendering and
 //! handlers so changes here ripple out predictably.
 
-// P5 lands the data vocabulary + manual runtime; handlers/render that
-// drive the `pub(crate)` AdminOps trait, the AdminEntry::ops field, the
-// CoreUserOps stub, and the test fixtures don't exist until P6. Until
-// then the dead-code lint flags everything internal — silenced module-
-// wide, to be removed in P6.
-#![allow(dead_code)]
-
+// `for_testing[_failing_list]` + the PanicOps/FailingOps fixtures
+// are part of the admin's test surface but no in-tree test exercises
+// them yet (the legacy admin/macro_tests etc. land in a follow-up).
+// Keep them gated behind cfg(test) elsewhere; allow dead inside that
+// gate.
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -16,10 +14,10 @@ use crate::error::Result;
 use crate::http::FormData;
 use crate::orm::{Db, Value};
 
-type CreateResult<'a> =
+pub(crate) type CreateResult<'a> =
     Pin<Box<dyn Future<Output = Result<std::result::Result<i64, Vec<String>>>> + Send + 'a>>;
 
-type UpdateResult<'a> =
+pub(crate) type UpdateResult<'a> =
     Pin<Box<dyn Future<Output = Result<std::result::Result<(), Vec<String>>>> + Send + 'a>>;
 
 // ---------------------------------------------------------------------------
@@ -153,7 +151,8 @@ pub struct AdminEntry {
 
 /// Type-erased CRUD operations. The `Admin::model::<M>()` call captures
 /// a concrete `M: AdminModel + Model` and hides it behind this trait so
-/// the router can treat every model uniformly.
+/// the router can treat every model uniformly. The single live impl is
+/// [`super::ops::ConcreteOps<M>`].
 pub(crate) trait AdminOps: Send + Sync {
     fn list<'a>(
         &'a self,
@@ -325,7 +324,7 @@ impl Admin {
     where
         M: AdminModel + crate::orm::Model,
     {
-        let ops: Arc<dyn AdminOps> = Arc::new(ConcreteOps::<M>::new());
+        let ops: Arc<dyn AdminOps> = Arc::new(super::ops::ConcreteOps::<M>::new());
         self.entries.push(AdminEntry {
             admin_name: M::ADMIN_NAME,
             display_name: M::DISPLAY_NAME,
@@ -364,7 +363,8 @@ impl Admin {
     }
 
     /// Internal accessor — handlers fetch the registered extension
-    /// closure (if any) here.
+    /// closure (if any) here. Used by `admin/builtin.rs` (P6.b).
+    #[allow(dead_code)]
     pub(crate) fn user_profile_ext(&self) -> Option<&UserProfileExtensionFn> {
         self.user_profile_ext.as_ref()
     }
@@ -381,115 +381,6 @@ impl Admin {
             crate::auth::register_model_permissions(db, entry.admin_name, &singular).await?;
         }
         Ok(())
-    }
-}
-
-// ---- ConcreteOps — the manual runtime ------------------------------------
-
-pub(crate) struct ConcreteOps<M> {
-    _marker: std::marker::PhantomData<M>,
-}
-
-impl<M> ConcreteOps<M> {
-    pub(crate) fn new() -> Self {
-        Self {
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<M> AdminOps for ConcreteOps<M>
-where
-    M: AdminModel + crate::orm::Model,
-{
-    fn list<'a>(
-        &'a self,
-        db: &'a Db,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>> {
-        Box::pin(async move {
-            let rows = crate::orm::all::<M>(db).await?;
-            Ok(rows
-                .into_iter()
-                .map(|r| {
-                    let id = AdminModel::id(&r);
-                    let cells = r.display_values().into_iter().map(|(_, v)| v).collect();
-                    ListRow { id, cells }
-                })
-                .collect())
-        })
-    }
-
-    fn find_row<'a>(
-        &'a self,
-        db: &'a Db,
-        id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<EditRow>>> + Send + 'a>> {
-        Box::pin(async move {
-            let found = crate::orm::find::<M>(db, id).await?;
-            Ok(found.map(|m| EditRow {
-                id: AdminModel::id(&m),
-                values: m.display_values(),
-            }))
-        })
-    }
-
-    fn create<'a>(&'a self, db: &'a Db, form: &'a FormData) -> CreateResult<'a> {
-        Box::pin(async move {
-            match M::from_form(form) {
-                Ok(model) => match crate::orm::create(db, &model).await {
-                    Ok(id) => Ok(Ok(id)),
-                    // Postgres constraint violations route to
-                    // `Error::Conflict` via `From<sqlx::Error>`. Catch
-                    // them here so the user sees a re-rendered form
-                    // with an inline error instead of a 500.
-                    Err(crate::error::Error::Conflict(msg)) => {
-                        log::warn!("create rejected by DB constraint: {msg}");
-                        Ok(Err(vec!["Invalid value or constraint violation. \
-                             Please check the highlighted fields and try again."
-                            .into()]))
-                    }
-                    Err(other) => Err(other),
-                },
-                Err(errs) => Ok(Err(errs)),
-            }
-        })
-    }
-
-    fn update<'a>(&'a self, db: &'a Db, id: i64, form: &'a FormData) -> UpdateResult<'a> {
-        Box::pin(async move {
-            match M::from_form(form) {
-                Ok(model) => match crate::orm::update(db, id, &model).await {
-                    Ok(()) => Ok(Ok(())),
-                    Err(crate::error::Error::Conflict(msg)) => {
-                        log::warn!("update rejected by DB constraint: {msg}");
-                        Ok(Err(vec!["Invalid value or constraint violation. \
-                             Please check the highlighted fields and try again."
-                            .into()]))
-                    }
-                    Err(other) => Err(other),
-                },
-                Err(errs) => Ok(Err(errs)),
-            }
-        })
-    }
-
-    fn delete<'a>(
-        &'a self,
-        db: &'a Db,
-        id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move { crate::orm::delete::<M>(db, id).await })
-    }
-
-    fn object_label<'a>(
-        &'a self,
-        db: &'a Db,
-        id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<String>>> + Send + 'a>> {
-        Box::pin(async move {
-            let found = crate::orm::find::<M>(db, id).await?;
-            Ok(found.map(|m| m.object_label()))
-        })
     }
 }
 
@@ -632,143 +523,6 @@ impl AdminOps for CoreUserOps {
     }
 }
 
-// ---- Test fixtures -------------------------------------------------------
-
-#[cfg(test)]
-impl AdminEntry {
-    /// Build an `AdminEntry` for test fixtures. Fills `ops` with a
-    /// `PanicOps` stub; any test that ends up routing CRUD through the
-    /// returned entry will panic loudly at the trait method.
-    pub(crate) fn for_testing(
-        admin_name: &'static str,
-        display_name: &'static str,
-        singular_name: &'static str,
-        table: &'static str,
-        fields: &'static [AdminField],
-        core: bool,
-    ) -> Self {
-        Self {
-            admin_name,
-            display_name,
-            singular_name,
-            table,
-            fields,
-            core,
-            ops: Arc::new(PanicOps),
-        }
-    }
-
-    /// Variant of `for_testing` whose `ops.list()` returns an `Err`.
-    /// Lets tests exercise resilience paths that catch-and-log without
-    /// spinning up Postgres.
-    pub(crate) fn for_testing_failing_list(
-        admin_name: &'static str,
-        display_name: &'static str,
-        singular_name: &'static str,
-        table: &'static str,
-        fields: &'static [AdminField],
-    ) -> Self {
-        Self {
-            admin_name,
-            display_name,
-            singular_name,
-            table,
-            fields,
-            core: false,
-            ops: Arc::new(FailingOps),
-        }
-    }
-}
-
-#[cfg(test)]
-struct PanicOps;
-
-#[cfg(test)]
-const PANIC_MSG: &str = "PanicOps is test-only; if you hit this, a test is using AdminEntry for CRUD, which is wrong — use a real Model";
-
-#[cfg(test)]
-impl AdminOps for PanicOps {
-    fn list<'a>(
-        &'a self,
-        _db: &'a Db,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>> {
-        Box::pin(async { unreachable!("{PANIC_MSG}") })
-    }
-
-    fn find_row<'a>(
-        &'a self,
-        _db: &'a Db,
-        _id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<EditRow>>> + Send + 'a>> {
-        Box::pin(async { unreachable!("{PANIC_MSG}") })
-    }
-
-    fn create<'a>(&'a self, _db: &'a Db, _form: &'a FormData) -> CreateResult<'a> {
-        Box::pin(async { unreachable!("{PANIC_MSG}") })
-    }
-
-    fn update<'a>(&'a self, _db: &'a Db, _id: i64, _form: &'a FormData) -> UpdateResult<'a> {
-        Box::pin(async { unreachable!("{PANIC_MSG}") })
-    }
-
-    fn delete<'a>(
-        &'a self,
-        _db: &'a Db,
-        _id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async { unreachable!("{PANIC_MSG}") })
-    }
-
-    fn object_label<'a>(
-        &'a self,
-        _db: &'a Db,
-        _id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<String>>> + Send + 'a>> {
-        Box::pin(async { unreachable!("{PANIC_MSG}") })
-    }
-}
-
-#[cfg(test)]
-struct FailingOps;
-
-#[cfg(test)]
-impl AdminOps for FailingOps {
-    fn list<'a>(
-        &'a self,
-        _db: &'a Db,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<ListRow>>> + Send + 'a>> {
-        Box::pin(async { Err(crate::error::Error::Internal("simulated db failure".into())) })
-    }
-
-    fn find_row<'a>(
-        &'a self,
-        _db: &'a Db,
-        _id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<EditRow>>> + Send + 'a>> {
-        Box::pin(async { unreachable!("FailingOps only exercises list()") })
-    }
-
-    fn create<'a>(&'a self, _db: &'a Db, _form: &'a FormData) -> CreateResult<'a> {
-        Box::pin(async { unreachable!("FailingOps only exercises list()") })
-    }
-
-    fn update<'a>(&'a self, _db: &'a Db, _id: i64, _form: &'a FormData) -> UpdateResult<'a> {
-        Box::pin(async { unreachable!("FailingOps only exercises list()") })
-    }
-
-    fn delete<'a>(
-        &'a self,
-        _db: &'a Db,
-        _id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async { unreachable!("FailingOps only exercises list()") })
-    }
-
-    fn object_label<'a>(
-        &'a self,
-        _db: &'a Db,
-        _id: i64,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<String>>> + Send + 'a>> {
-        Box::pin(async { unreachable!("FailingOps only exercises list()") })
-    }
-}
+// Test fixtures (PanicOps / FailingOps + AdminEntry::for_testing*) live
+// with the legacy `admin/macro_tests.rs` etc. that haven't been ported
+// yet. Re-add them here when the first in-tree test needs them.
