@@ -48,6 +48,16 @@ enum Command {
         /// digits, '-', and '_' only.
         name: String,
     },
+    /// Scaffold a new model + migration inside the current project.
+    #[command(name = "startapp")]
+    Startapp {
+        /// Singular lowercase identifier (e.g. `post`, `course`,
+        /// `book_review`). Becomes both the module file name and
+        /// the snake_case prefix; the struct gets the CamelCase
+        /// form (`Post`, `BookReview`); the table gets the
+        /// pluralised form (`posts`, `book_reviews`).
+        name: String,
+    },
     /// Apply / inspect SQL migrations from a directory.
     Migrate {
         #[command(subcommand)]
@@ -81,10 +91,13 @@ fn main() -> ExitCode {
     let result = match cli.command {
         // Pure filesystem; no async / db needed.
         Command::Startproject { name } => scaffold::project(&name),
+        Command::Startapp { name } => scaffold::app(&name),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
-                Command::Startproject { .. } => unreachable!("handled above"),
+                Command::Startproject { .. } | Command::Startapp { .. } => {
+                    unreachable!("handled above")
+                }
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,

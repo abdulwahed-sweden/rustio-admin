@@ -75,17 +75,21 @@ operationally critical surface for v0.1.0:
   `README.md`. Templates are baked into the CLI binary via
   `include_str!`; the project name is validated and the directory
   is refused if it already exists.
+- `rustio startapp <name>` — add a model + migration to an
+  existing project. Generates `src/<name>.rs` (full `Model` +
+  empty `ModelAdmin` impl) and `migrations/<NNNN>_create_<name>s.sql`
+  with an auto-incremented number. Pluralisation is naive (`s`
+  suffix) — fine for the starter table; adjust for irregular
+  plurals. Refuses to mutate `src/main.rs` automatically; prints
+  the exact `mod` / `use` / `.model::<>()` lines instead.
 
-Browser-walked end-to-end against a local Postgres against both
-the `examples/minimal` skeleton and a fresh
-`rustio startproject demo-app`.
+Browser-walked end-to-end against a local Postgres: a single
+`rustio startproject blog` + two `rustio startapp` invocations
+generated 3 models which all rendered their list pages on
+`/admin/posts`, `/admin/comments`, and `/admin/book_reviews` after
+a copy-paste edit to `src/main.rs`.
 
 ### Known gaps (next phases)
 
-- `rustio startapp <name>` — generate a sub-app inside an existing
-  project (Django convention). The startproject scaffolding has
-  the templating mechanism; startapp is a follow-up that adds an
-  `apps/<name>/` skeleton + nudges the project's main.rs to
-  register the new model.
 - Crates.io publish blocked on `rustio-admin-macros` going up first
   (path-only deps can't be published).

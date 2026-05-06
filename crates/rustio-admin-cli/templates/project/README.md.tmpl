@@ -26,13 +26,19 @@ account from step 3.
 
 ## Adding a model
 
-Drop a new file under `src/`, derive `RustioAdmin`, hand-write
-`impl Model`, and register it in `src/main.rs` with
-`Admin::new()…model::<MyModel>()`. The
+```sh
+rustio startapp comment       # generates src/comment.rs +
+                              # migrations/<NNNN>_create_comments.sql
+```
+
+The CLI prints the exact `mod` / `use` / `.model::<>()` lines to
+paste into `src/main.rs`. After that, `rustio migrate apply` and
+re-run; the `/admin/comments` pages light up.
+
+For the full walkthrough see
 [`docs/getting-started.md`](https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/getting-started.md)
-walkthrough has a full worked example, and
-[`docs/modeladmin.md`](https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/modeladmin.md)
-documents every `ModelAdmin` hook.
+and the
+[`ModelAdmin` reference](https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/modeladmin.md).
 
 ## Project layout
 
