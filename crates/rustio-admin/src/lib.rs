@@ -8,6 +8,7 @@
 
 pub mod error;
 pub mod http;
+pub mod middleware;
 pub mod migrations;
 pub mod orm;
 pub mod router;
