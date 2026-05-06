@@ -54,6 +54,15 @@ base64 = "0.22"
 rand = "0.8"
 subtle = "2"
 
+# auth
+argon2 = { version = "0.5", default-features = false, features = [
+    "alloc",
+    "password-hash",
+    "rand",
+] }
+once_cell = "1"
+thiserror = "1"
+
 # utils
 urlencoding = "2"
 log = "0.4"
