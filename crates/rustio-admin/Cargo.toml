@@ -11,6 +11,8 @@ description = "Django Admin, but for Rust. A small, focused admin framework."
 readme = "../../README.md"
 
 [dependencies]
+rustio-admin-macros = { workspace = true }
+
 # runtime
 tokio = { version = "1", features = [
     "net",
