@@ -20,9 +20,6 @@
 //! 1. `<RUSTIO_TEMPLATE_DIR>/admin/<model>/<page>.html`
 //! 2. `<RUSTIO_TEMPLATE_DIR>/<path>`
 //! 3. Embedded default
-//!
-//! Phase 2 bootstrap: the embedded list is empty. P7 populates it with
-//! the rewritten admin templates.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -447,10 +444,7 @@ mod tests {
             let result = t.render(name, &Empty {});
             if let Err(e) = result {
                 let msg = e.to_string();
-                assert!(
-                    !msg.contains("not found"),
-                    "{name} failed to load: {msg}"
-                );
+                assert!(!msg.contains("not found"), "{name} failed to load: {msg}");
             }
         }
     }

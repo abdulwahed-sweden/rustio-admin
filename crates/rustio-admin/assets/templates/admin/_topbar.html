@@ -1,6 +1,12 @@
 <header class="rio-topbar" role="banner">
+  {% if identity %}
+  <button type="button" class="rio-sidebar-toggle" data-rio-sidebar-toggle aria-label="Toggle navigation">
+    {{ icon("menu", class="rio-icon") }}
+  </button>
+  {% endif %}
   <a href="/admin" class="rio-topbar-brand">{{ site_header }}</a>
   <nav class="rio-topbar-nav" aria-label="Account">
+    <button type="button" class="rio-theme-toggle" data-rio-theme-toggle aria-label="Toggle theme">System</button>
     {% if identity %}
       <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
       <a href="/admin/password_change" class="rio-topbar-link">Change password</a>
