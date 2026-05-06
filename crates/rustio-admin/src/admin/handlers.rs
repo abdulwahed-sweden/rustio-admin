@@ -472,3 +472,158 @@ pub(crate) async fn do_delete(
     entry.ops.delete(&ctx.db, id).await?;
     Ok(Response::redirect(format!("/admin/{admin_name}")))
 }
+
+// ---- History pages -------------------------------------------------------
+
+pub(crate) async fn show_object_history(
+    ctx: &AdminCtx,
+    identity: Identity,
+    admin_name: &str,
+    id: i64,
+    req: &Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let label = entry
+        .ops
+        .object_label(&ctx.db, id)
+        .await?
+        .unwrap_or_else(|| format!("#{id}"));
+
+    ensure_audit_ready(&ctx.db).await;
+    let actions = audit::for_object(&ctx.db, admin_name, id)
+        .await
+        .unwrap_or_default();
+
+    let view = render::ObjectHistoryCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: format!("History: {} — {}", entry.singular_name, label),
+        admin_name: admin_name.to_string(),
+        display_name: entry.display_name.to_string(),
+        singular_name: entry.singular_name.to_string(),
+        object_id: id,
+        object_label: label,
+        entries: render::map_audit_actions(actions),
+        flash: None,
+    };
+    let body = ctx.templates.render("admin/object_history.html", &view)?;
+    Ok(Response::html(body))
+}
+
+pub(crate) async fn show_log_entries(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    ensure_audit_ready(&ctx.db).await;
+    let actions = audit::recent(&ctx.db, 100, None, None)
+        .await
+        .unwrap_or_default();
+    let view = render::LogEntriesCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: "Recent admin actions",
+        entries: render::map_audit_actions(actions),
+        flash: None,
+    };
+    let body = ctx.templates.render("admin/log_entries.html", &view)?;
+    Ok(Response::html(body))
+}
+
+// ---- Self-service password change ---------------------------------------
+
+/// Minimum acceptable password length. argon2 accepts arbitrary input,
+/// so this is policy not crypto.
+const MIN_PASSWORD_LEN: usize = 8;
+
+pub(crate) async fn show_password_change(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let view = render::PasswordChangeCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: "Change password",
+        errors: Vec::new(),
+        success: false,
+        sections: render::password_change_form_sections(),
+    };
+    let body = ctx.templates.render("admin/password_change.html", &view)?;
+    Ok(Response::html(body))
+}
+
+pub(crate) async fn do_password_change(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    let form = req.form()?;
+    let old = form.get("old_password").unwrap_or("");
+    let new1 = form.get("new_password1").unwrap_or("");
+    let new2 = form.get("new_password2").unwrap_or("");
+
+    let user = auth::find_user_by_email(&ctx.db, &identity.email)
+        .await?
+        .ok_or_else(|| {
+            Error::Internal(format!(
+                "session identity {} has no matching user row",
+                identity.email
+            ))
+        })?;
+
+    // Push every error twice: once into the global Vec (catch-all
+    // banner) and once into the field-keyed map (`apply_field_errors`
+    // copies the matching entry onto each FormField at re-render
+    // time). Both views render from the same source of truth.
+    let mut errors: Vec<String> = Vec::new();
+    let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+    if !auth::verify_password(old, &user.password_hash) {
+        let msg = "Your old password was entered incorrectly. Please enter it again.";
+        errors.push(msg.into());
+        field_errors
+            .entry("old_password".into())
+            .or_default()
+            .push(msg.into());
+    }
+    if new1 != new2 {
+        let msg = "The two password fields didn't match.";
+        errors.push(msg.into());
+        field_errors
+            .entry("new_password2".into())
+            .or_default()
+            .push(msg.into());
+    }
+    if new1.len() < MIN_PASSWORD_LEN {
+        let msg = format!(
+            "This password is too short. It must contain at least {MIN_PASSWORD_LEN} characters."
+        );
+        errors.push(msg.clone());
+        field_errors
+            .entry("new_password1".into())
+            .or_default()
+            .push(msg);
+    }
+
+    if errors.is_empty() {
+        auth::set_password(&ctx.db, user.id, new1).await?;
+        let view = render::PasswordChangeCtx {
+            base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+            page_title: "Password changed",
+            errors: Vec::new(),
+            success: true,
+            sections: Vec::new(),
+        };
+        let body = ctx.templates.render("admin/password_change.html", &view)?;
+        return Ok(Response::html(body));
+    }
+
+    let mut sections = render::password_change_form_sections();
+    render::apply_field_errors(&mut sections, &field_errors);
+    let view = render::PasswordChangeCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+        page_title: "Change password",
+        errors,
+        success: false,
+        sections,
+    };
+    let body = ctx.templates.render("admin/password_change.html", &view)?;
+    Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
+}

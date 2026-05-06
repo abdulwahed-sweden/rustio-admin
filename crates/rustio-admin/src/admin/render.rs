@@ -1082,3 +1082,457 @@ pub(crate) fn render_forbidden_body(
     };
     templates.render("admin/forbidden.html", &view)
 }
+
+// ---- History pages -------------------------------------------------------
+
+#[derive(Serialize)]
+pub(crate) struct HistoryEntryCtx {
+    pub timestamp_iso: String,
+    pub when_relative: String,
+    pub user_email: String,
+    pub action_type: String,
+    pub label: &'static str,
+    pub pill_class: &'static str,
+    pub model_name: String,
+    pub model_admin_name: String,
+    pub object_id: i64,
+    pub summary: String,
+    pub ip_address: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ObjectHistoryCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: String,
+    pub admin_name: String,
+    pub display_name: String,
+    pub singular_name: String,
+    pub object_id: i64,
+    pub object_label: String,
+    pub entries: Vec<HistoryEntryCtx>,
+    pub flash: Option<FlashCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct LogEntriesCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<HistoryEntryCtx>,
+    pub flash: Option<FlashCtx>,
+}
+
+pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCtx> {
+    actions
+        .into_iter()
+        .map(|a| HistoryEntryCtx {
+            timestamp_iso: a.timestamp.to_rfc3339(),
+            when_relative: relative_time(a.timestamp),
+            user_email: a.user_email.unwrap_or_else(|| "—".to_string()),
+            label: action_label(&a.action_type),
+            pill_class: action_pill_class(&a.action_type),
+            model_name: a.model_name.clone(),
+            // The audit row's `model_name` IS the admin_name slug per
+            // the convention enforced at `audit::record` call sites.
+            model_admin_name: a.model_name,
+            action_type: a.action_type,
+            object_id: a.object_id,
+            summary: a.summary,
+            ip_address: a.ip_address.unwrap_or_default(),
+        })
+        .collect()
+}
+
+// ---- Password change page -----------------------------------------------
+
+#[derive(Serialize)]
+pub(crate) struct PasswordChangeCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub errors: Vec<String>,
+    pub success: bool,
+    pub sections: Vec<FormSection>,
+}
+
+// ---- Bespoke form sections (used by admin/builtin.rs) -------------------
+
+/// Role options for user_new / user_edit. Labels carry privilege
+/// descriptions; values are the role slugs the auth layer expects.
+pub(crate) fn role_select_options() -> Vec<SelectOption> {
+    vec![
+        SelectOption {
+            value: "user".to_string(),
+            label: "User (no admin access)".to_string(),
+        },
+        SelectOption {
+            value: "staff".to_string(),
+            label: "Staff (admin access; per-model group permissions)".to_string(),
+        },
+        SelectOption {
+            value: "supervisor".to_string(),
+            label: "Supervisor (view + edit; no destructive ops)".to_string(),
+        },
+        SelectOption {
+            value: "administrator".to_string(),
+            label: "Administrator (full coverage; bypasses group checks)".to_string(),
+        },
+        SelectOption {
+            value: "developer".to_string(),
+            label: "Developer (highest tier)".to_string(),
+        },
+    ]
+}
+
+/// FormField list for the user_new form. Two sections: Identity
+/// (email + password) and Role (the 5-option select). Caller passes
+/// the current values so re-render after validation failure preserves
+/// them.
+pub(crate) fn user_new_form_sections(email: &str, role: &str) -> Vec<FormSection> {
+    vec![
+        FormSection {
+            title: Some("Identity"),
+            fields: vec![
+                FormField {
+                    name: "email",
+                    label: "Email".to_string(),
+                    widget: "input",
+                    input_type: "email",
+                    value: email.to_string(),
+                    hint: Some("Must be unique across all users.".to_string()),
+                    placeholder: None,
+                    required: true,
+                    options: None,
+                    multiple: false,
+                    span: 2,
+                    autocomplete: Some("off"),
+                    autofocus: true,
+                    disabled: false,
+                    maxlength: None,
+                    searchable: false,
+                    has_more: false,
+                    search_url: None,
+                    errors: vec![],
+                    target_model: None,
+                    checked: false,
+                },
+                FormField {
+                    name: "password",
+                    label: "Password".to_string(),
+                    widget: "input",
+                    input_type: "password",
+                    value: String::new(),
+                    hint: Some(
+                        "At least 8 characters. The user can change it later via Change password."
+                            .to_string(),
+                    ),
+                    placeholder: None,
+                    required: true,
+                    options: None,
+                    multiple: false,
+                    span: 2,
+                    autocomplete: Some("new-password"),
+                    autofocus: false,
+                    disabled: false,
+                    maxlength: None,
+                    searchable: false,
+                    has_more: false,
+                    search_url: None,
+                    errors: vec![],
+                    target_model: None,
+                    checked: false,
+                },
+            ],
+        },
+        FormSection {
+            title: Some("Role"),
+            fields: vec![FormField {
+                name: "role",
+                label: "Role".to_string(),
+                widget: "select",
+                input_type: "select",
+                value: role.to_string(),
+                hint: Some(
+                    "Higher roles include all lower-role capabilities. Group memberships are assigned on the next page after save."
+                        .to_string(),
+                ),
+                placeholder: None,
+                required: true,
+                options: Some(role_select_options()),
+                multiple: false,
+                span: 2,
+                autocomplete: None,
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            }],
+        },
+    ]
+}
+
+/// General section for group_new / group_edit. Two fields: name
+/// (text, required, 150-char max) and description (textarea).
+pub(crate) fn group_form_sections(name: &str, description: &str) -> Vec<FormSection> {
+    vec![FormSection {
+        title: Some("General"),
+        fields: vec![
+            FormField {
+                name: "name",
+                label: "Name".to_string(),
+                widget: "input",
+                input_type: "text",
+                value: name.to_string(),
+                hint: Some(
+                    "A short identifier — letters, digits, dots and dashes only. Example: editors."
+                        .to_string(),
+                ),
+                placeholder: None,
+                required: true,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: Some("off"),
+                autofocus: true,
+                disabled: false,
+                maxlength: Some(150),
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+            FormField {
+                name: "description",
+                label: "Description".to_string(),
+                widget: "textarea",
+                input_type: "text",
+                value: description.to_string(),
+                hint: Some("Optional. What this group is for.".to_string()),
+                placeholder: None,
+                required: false,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: None,
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+        ],
+    }]
+}
+
+/// Identity section for user_edit. Email is disabled (read-only);
+/// role is the select; is_active is the checkbox. Built per render
+/// so values reflect the current row.
+pub(crate) fn user_edit_identity_sections(
+    email: &str,
+    role: &str,
+    is_active: bool,
+) -> Vec<FormSection> {
+    vec![FormSection {
+        title: Some("Identity"),
+        fields: vec![
+            FormField {
+                name: "email",
+                label: "Email".to_string(),
+                widget: "input",
+                input_type: "email",
+                value: email.to_string(),
+                hint: Some(
+                    "Email changes aren't exposed here — they require a full user update."
+                        .to_string(),
+                ),
+                placeholder: None,
+                required: false,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: None,
+                autofocus: false,
+                disabled: true,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+            FormField {
+                name: "role",
+                label: "Role".to_string(),
+                widget: "select",
+                input_type: "select",
+                value: role.to_string(),
+                hint: None,
+                placeholder: None,
+                required: true,
+                options: Some(role_select_options()),
+                multiple: false,
+                span: 2,
+                autocomplete: None,
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+            FormField {
+                name: "is_active",
+                label: "Active".to_string(),
+                widget: "checkbox",
+                input_type: "checkbox",
+                value: if is_active {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                },
+                hint: Some("Inactive users cannot sign in or hold sessions.".to_string()),
+                placeholder: None,
+                required: false,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: None,
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: is_active,
+            },
+        ],
+    }]
+}
+
+/// Reset password section for user_edit. Single optional field;
+/// blank → keep existing password.
+pub(crate) fn user_edit_password_sections() -> Vec<FormSection> {
+    vec![FormSection {
+        title: Some("Reset password (optional)"),
+        fields: vec![FormField {
+            name: "new_password",
+            label: "New password".to_string(),
+            widget: "input",
+            input_type: "password",
+            value: String::new(),
+            hint: Some("Leave blank to keep the current password unchanged.".to_string()),
+            placeholder: None,
+            required: false,
+            options: None,
+            multiple: false,
+            span: 2,
+            autocomplete: Some("new-password"),
+            autofocus: false,
+            disabled: false,
+            maxlength: None,
+            searchable: false,
+            has_more: false,
+            search_url: None,
+            errors: vec![],
+            target_model: None,
+            checked: false,
+        }],
+    }]
+}
+
+/// Pre-built FormField list for the password-change form. Static; the
+/// values are always empty (we never echo passwords back).
+pub(crate) fn password_change_form_sections() -> Vec<FormSection> {
+    vec![FormSection {
+        title: None,
+        fields: vec![
+            FormField {
+                name: "old_password",
+                label: "Old password".to_string(),
+                widget: "input",
+                input_type: "password",
+                value: String::new(),
+                hint: None,
+                placeholder: None,
+                required: true,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: Some("current-password"),
+                autofocus: true,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+            FormField {
+                name: "new_password1",
+                label: "New password".to_string(),
+                widget: "input",
+                input_type: "password",
+                value: String::new(),
+                hint: Some("Your password must contain at least 8 characters.".to_string()),
+                placeholder: None,
+                required: true,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: Some("new-password"),
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+            FormField {
+                name: "new_password2",
+                label: "Confirm".to_string(),
+                widget: "input",
+                input_type: "password",
+                value: String::new(),
+                hint: None,
+                placeholder: None,
+                required: true,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: Some("new-password"),
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+        ],
+    }]
+}
