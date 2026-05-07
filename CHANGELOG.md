@@ -4,6 +4,77 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [0.1.1] — 2026-05-07
+
+Design-system release. No public API surface changes — the typography,
+font, and brand-color work all happens behind the existing `Admin`,
+`AdminTheme`, and template-override surfaces. Drop-in upgrade from 0.1.0.
+
+### Added
+
+- **Self-hosted fonts (SIL OFL-1.1)** baked into the binary, served
+  at `/static/fonts/*.woff2` with year-long immutable cache:
+  - **Geist Variable** + **Geist Mono Variable** — Latin UI + code
+    (single woff2 each covers the full `wght` 100..900 axis).
+  - **Tajawal** 400 / 500 / 700 — Arabic UI surfaces (buttons,
+    sidebar, tables, badges).
+  - **Noto Naskh Arabic Variable** — Arabic body / paragraph copy.
+  - All filtered by `unicode-range` so Latin-only pages pay zero
+    Arabic download cost. Total embedded: ~270 KB.
+- **Complete typography token system** in `admin.css` — three family
+  tokens (`--rio-font-sans`, `--rio-font-arabic`, `--rio-font-arabic-body`,
+  `--rio-font-mono`), a 9-step size scale (`--rio-fs-xs` 13px through
+  `--rio-fs-display` 40px), four line-height tokens including a
+  dedicated `--rio-lh-arabic: 1.9`, four weight tokens, and Latin-only
+  tracking tokens that auto-reset for Arabic / RTL contexts.
+- **`:lang(ar)` / `[dir="rtl"]` resolution rules** — Arabic text
+  automatically picks up Tajawal (UI) or Noto Naskh (when inside a
+  `.rio-prose` or a `<p lang="ar">`); Geist's stylistic alternates
+  (ss01/ss03/cv11) are stripped so joining-script shaping stays
+  intact. Mixed Latin/Arabic strings shape correctly out of the box.
+- **`--rio-surface-2`** + **`--rio-border-strong`** + **`--rio-text-subtle`**
+  tokens for secondary surfaces, heavy outlines, and tertiary text.
+
+### Changed
+
+- **Default brand accent** is now `#A0341A` (Andalusian crimson),
+  replacing the previous cobalt `#2563EB`. The new value applies in
+  three places, all of which agree:
+  - `AdminTheme::default()` — what `rustio startproject` scaffolds.
+  - `admin.css :root --rio-accent` — what unstyled chrome resolves to.
+  - `render::hex_to_rgb_triplet` fallback — what bad config falls back
+    to so the admin chrome never breaks over a user typo.
+  Projects override via `Admin::theme(...)` or `Admin::accent_color(...)`
+  exactly as before.
+- **Tightened light palette** for stronger reading contrast: `--rio-bg`
+  `#f4f6fb` → `#ebeef4` (deeper page bg so white surfaces visibly pop),
+  `--rio-text-muted` `#4b5563` → `#3d4452` (AAA against surface),
+  `--rio-border` `#d1d5db` → `#cdd3df`. Dark-mode tokens similarly
+  bumped — `--rio-text` `#e5e7eb` → `#f1f5f9`, `--rio-text-muted`
+  `#94a3b8` → `#c0c8d6`. Every text/surface pair clears WCAG AAA in
+  both themes.
+- **Body font-size** raised from 14px to **16px**; minimum helper-text
+  size enforced at **13px**; table cells at **15px**; headings rescaled
+  (h1 34px, h2 26px, h3 22px). Mobile bumps `html` to 16.5px below
+  600px so dense forms stay comfortable.
+- **Sidebar + topbar typography** polished — sidebar links now 15px
+  medium with crimson hover on text + icon, topbar identity 15px
+  regular, theme toggle 13px medium with accent border on hover.
+- **`/static/admin.css` and `/static/admin.js`** Cache-Control flipped
+  from `public, max-age=3600` to `no-cache, must-revalidate` so
+  theme + design tweaks roll out the moment the binary restarts.
+  Fonts keep their year-long immutable cache (their bytes never
+  change per release).
+
+### Removed
+
+- IBM Plex Sans Arabic dropped from the bundled fonts — Tajawal +
+  Noto Naskh Arabic cover the UI/body split more elegantly. Anyone
+  who customised templates to reference `"IBM Plex Sans Arabic"` by
+  name will need to switch to `"Tajawal"` / `"Noto Naskh Arabic"`;
+  the `--rio-font-arabic` and `--rio-font-arabic-body` tokens
+  resolve both automatically.
+
 ## [0.1.0] — 2026-05-07
 
 First public release. Strategic-reset rollout of phases 1–15 plus
