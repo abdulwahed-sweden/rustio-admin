@@ -398,6 +398,13 @@ pub(crate) struct ListCtx {
     /// Count of filter groups whose user-selected value is non-empty.
     /// Drives the "Filters (N)" badge on the toolbar dropdown toggle.
     pub active_filter_count: usize,
+    /// Sort dropdown options — every visible field × {asc, desc} plus
+    /// a "Default order" reset link. Pre-baked into ready-to-render
+    /// `(label, href, is_active)` triplets.
+    pub sort_options: Vec<SortOptionCtx>,
+    /// Toolbar label for the Sort toggle: "Default order" when no
+    /// override is in effect, otherwise the active option's label.
+    pub current_sort_label: String,
     pub page: usize,
     pub total_pages: usize,
     pub per_page: usize,
@@ -431,6 +438,38 @@ pub(crate) struct FilterOptionCtx {
     pub value: String,
     pub label: String,
     pub selected: bool,
+}
+
+/// One option in the toolbar's Sort dropdown — a field × direction
+/// pair, or the "Default order" reset link. The label is field-type
+/// aware ("A → Z" for text, "newest first" for datetime, etc.) so the
+/// dropdown reads as English, not as a query string.
+#[derive(Serialize)]
+pub(crate) struct SortOptionCtx {
+    pub label: String,
+    pub link: String,
+    pub is_active: bool,
+}
+
+/// Field-type-aware copy for an `(field_type, direction)` pair.
+/// Datetime descending reads as "newest first"; string ascending as
+/// "A → Z"; everything else falls back to ascending/descending.
+fn sort_direction_label(
+    field_type: super::types::FieldType,
+    dir: super::modeladmin::SortDir,
+) -> &'static str {
+    use super::modeladmin::SortDir;
+    use super::types::FieldType::*;
+    match (field_type, dir) {
+        (DateTime | OptionalDateTime, SortDir::Desc) => "newest first",
+        (DateTime | OptionalDateTime, SortDir::Asc) => "oldest first",
+        (String | OptionalString, SortDir::Asc) => "A → Z",
+        (String | OptionalString, SortDir::Desc) => "Z → A",
+        (Bool, SortDir::Asc) => "off → on",
+        (Bool, SortDir::Desc) => "on → off",
+        (_, SortDir::Asc) => "ascending",
+        (_, SortDir::Desc) => "descending",
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -482,6 +521,41 @@ pub(crate) fn list_ctx(
             }
         })
         .collect();
+
+    // Build the toolbar's Sort dropdown options. Each visible field
+    // contributes two entries (asc + desc); a leading "Default order"
+    // entry resets to `ModelAdmin::ordering()`.
+    use super::modeladmin::SortDir;
+    let mut sort_options: Vec<SortOptionCtx> = Vec::with_capacity(visible_fields.len() * 2 + 1);
+    sort_options.push(SortOptionCtx {
+        label: "Default order".to_string(),
+        link: format!("/admin/{}", entry.admin_name),
+        is_active: active_sort.is_none(),
+    });
+    for f in &visible_fields {
+        for dir in [SortDir::Asc, SortDir::Desc] {
+            let dir_label = sort_direction_label(f.field_type, dir);
+            let dir_q = if matches!(dir, SortDir::Desc) {
+                "desc"
+            } else {
+                "asc"
+            };
+            let is_active = matches!(
+                &active_sort,
+                Some((col, d)) if col == f.name && *d == dir
+            );
+            sort_options.push(SortOptionCtx {
+                label: format!("{} ({})", f.label, dir_label),
+                link: format!("/admin/{}?sort={}&dir={}", entry.admin_name, f.name, dir_q),
+                is_active,
+            });
+        }
+    }
+    let current_sort_label = sort_options
+        .iter()
+        .find(|o| o.is_active)
+        .map(|o| o.label.clone())
+        .unwrap_or_else(|| "Default order".to_string());
     let field_names: Vec<&'static str> = entry.fields.iter().map(|f| f.name).collect();
     let field_types: Vec<crate::admin::FieldType> =
         entry.fields.iter().map(|f| f.field_type).collect();
@@ -525,6 +599,8 @@ pub(crate) fn list_ctx(
         search_query,
         active_filter_count: filters.iter().filter(|g| g.current.is_some()).count(),
         filters,
+        sort_options,
+        current_sort_label,
         page,
         total_pages,
         per_page,

@@ -1269,6 +1269,49 @@ pre code {
   border-color: rgb(var(--rio-accent-rgb) / 0.30);
 }
 
+/* Vertical menu — full-width clickable rows. Used by the toolbar's
+ * Sort dropdown (and any future per-page picker / column toggler).
+ * Each item is an `<a>` so navigation stays the source of truth. */
+.rio-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+  margin: calc(-0.4rem) calc(-0.4rem) 0;
+}
+.rio-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rio-s3);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-medium);
+  line-height: var(--rio-lh-ui);
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+.rio-dropdown-item:hover {
+  text-decoration: none;
+  background: var(--rio-surface-3);
+  color: var(--rio-text-strong);
+}
+.rio-dropdown-item.is-active,
+.rio-dropdown-item.is-active:hover {
+  background: rgb(var(--rio-accent-rgb) / 0.10);
+  color: var(--rio-accent);
+  font-weight: var(--rio-fw-semibold);
+}
+/* Active row trails a subtle bullet — the cleanest "current selection"
+ * marker that doesn't fight the accent text colour. */
+.rio-dropdown-item.is-active::after {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rio-accent);
+  flex-shrink: 0;
+}
+
 .rio-dropdown-footer {
   display: flex;
   justify-content: flex-end;
