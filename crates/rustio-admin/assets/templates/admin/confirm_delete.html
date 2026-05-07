@@ -1,16 +1,18 @@
 {% extends "admin/_base.html" %}
 {% block content %}
+<div class="rio-form-shell">
+
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> ·
-    <a href="/admin/{{ admin_name }}">{{ admin_name }}</a> ·
+    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
     <span>Delete {{ singular_name }} #{{ object_id }}</span>
   </nav>
   <h1>Are you sure?</h1>
 </header>
 
 <section class="rio-card rio-confirm">
-  <p>You are about to delete the <strong>{{ singular_name }}</strong> "<em>{{ object_label }}</em>".</p>
+  <p>You are about to delete the <strong>{{ singular_name }}</strong> &ldquo;<em>{{ object_label }}</em>&rdquo;.</p>
 
   {% if cascading %}
   <h2 class="rio-confirm-section">Related records that may be affected</h2>
@@ -24,8 +26,11 @@
 
   <form method="post" action="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--danger">Yes, delete</button>
+    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
   </form>
 </section>
+
+</div>
 {% endblock %}

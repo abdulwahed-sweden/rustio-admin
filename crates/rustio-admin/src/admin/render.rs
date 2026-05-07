@@ -1408,6 +1408,7 @@ pub(crate) struct ConfirmDeleteCtx {
     pub page_title: String,
     pub entries: Vec<SidebarEntry>,
     pub admin_name: &'static str,
+    pub display_name: &'static str,
     pub singular_name: &'static str,
     pub object_id: i64,
     pub object_label: String,
@@ -1442,6 +1443,7 @@ pub(crate) fn confirm_delete_ctx(
             .map(SidebarEntry::from)
             .collect(),
         admin_name: entry.admin_name,
+        display_name: entry.display_name,
         singular_name: entry.singular_name,
         object_id,
         object_label,
