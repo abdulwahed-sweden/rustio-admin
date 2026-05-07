@@ -1142,6 +1142,25 @@ pre code {
   gap: var(--rio-s2);
   margin-bottom: var(--rio-s4);
 }
+/* Wrap that holds the input + the absolutely-positioned magnifying
+ * glass icon. Takes the input's flex sizing so the search bar layout
+ * is unchanged from the bare-input version. */
+.rio-search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.rio-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--rio-text-subtle);
+  pointer-events: none;
+}
 .rio-search-input {
   flex: 1;
   padding: 0.6rem var(--rio-s4);
@@ -1151,7 +1170,12 @@ pre code {
   color: var(--rio-text-strong);
   font: inherit;
   font-size: var(--rio-fs-md);
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
+/* Make room for the leading glyph when the input lives inside a
+ * `.rio-search-input-wrap`. Bare inputs (no wrap) keep the original
+ * left padding. */
+.rio-search-input-wrap .rio-search-input { padding-left: 2.4rem; }
 .rio-search-input::placeholder { color: var(--rio-text-subtle); }
 .rio-search-input:focus {
   outline: none;

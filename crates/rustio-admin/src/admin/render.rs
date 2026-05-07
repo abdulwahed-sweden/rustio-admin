@@ -422,6 +422,14 @@ pub(crate) struct ListCtx {
     /// sort override is in effect.
     pub active_sort_field: Option<String>,
     pub active_sort_dir: Option<&'static str>,
+    /// Per-page dropdown options (allow-listed: 25 / 50 / 100 / 200).
+    pub per_page_options: Vec<PerPageOptionCtx>,
+    /// Toolbar label for the per-page toggle: "50 / page" etc.
+    pub current_per_page_label: String,
+    /// `Some` when the URL carries an explicit `?per_page=…`. Hidden
+    /// in the search form so query submission keeps the user's
+    /// row-density choice; absent → fall back to model default.
+    pub active_per_page_override: Option<usize>,
     pub page: usize,
     pub total_pages: usize,
     pub per_page: usize,
@@ -484,6 +492,18 @@ pub(crate) struct FilterOptionCtx {
 /// dropdown reads as English, not as a query string.
 #[derive(Serialize)]
 pub(crate) struct SortOptionCtx {
+    pub label: String,
+    pub link: String,
+    pub is_active: bool,
+}
+
+/// One option in the toolbar's per-page dropdown. The link goes
+/// through `build_list_url` so search / filter / sort survive a
+/// row-density change. Page resets to 1 — staying on page N at a
+/// new density would land somewhere arbitrary.
+#[derive(Serialize)]
+pub(crate) struct PerPageOptionCtx {
+    pub value: usize,
     pub label: String,
     pub link: String,
     pub is_active: bool,
@@ -576,15 +596,19 @@ fn sort_direction_label(
 /// Compose a list-view URL with full query-state preservation.
 ///
 /// Every link the list view emits — filter chips, sort options,
-/// pagination, header-sort arrows — runs through here so a click on
-/// one widget doesn't silently drop the others. Inputs:
+/// pagination, header-sort arrows, per-page picker — runs through
+/// here so a click on one widget doesn't silently drop the others.
+/// Inputs:
 ///
-///   - `q`        — current search query; `""` skipped
-///   - `filters`  — currently-set filters as `(field, value)` pairs;
-///                  callers compose their own override (set, clear,
-///                  swap) before passing this in
-///   - `sort`     — the desired sort, or `None` for "model default"
-///   - `page`     — `1` is implicit and skipped from the URL
+///   - `q`         — current search query; `""` skipped
+///   - `filters`   — currently-set filters as `(field, value)` pairs;
+///                   callers compose their own override (set, clear,
+///                   swap) before passing this in
+///   - `sort`      — the desired sort, or `None` for "model default"
+///   - `page`      — `1` is implicit and skipped from the URL
+///   - `per_page`  — `Some(N)` carries an explicit row-density choice
+///                   into the URL; `None` means "use the model
+///                   default" (no `&per_page=…` segment emitted)
 ///
 /// Values are URL-encoded so search strings with spaces or unicode
 /// don't break the link.
@@ -594,6 +618,7 @@ fn build_list_url(
     filters: &[(String, String)],
     sort: Option<(&str, super::modeladmin::SortDir)>,
     page: usize,
+    per_page: Option<usize>,
 ) -> String {
     use super::modeladmin::SortDir;
     let mut parts: Vec<String> = Vec::new();
@@ -620,6 +645,9 @@ fn build_list_url(
     if page > 1 {
         parts.push(format!("page={}", page));
     }
+    if let Some(n) = per_page {
+        parts.push(format!("per_page={}", n));
+    }
     if parts.is_empty() {
         format!("/admin/{}", admin_name)
     } else {
@@ -637,6 +665,11 @@ pub(crate) fn list_ctx(
     mut filters: Vec<FilterGroupCtx>,
     page: usize,
     per_page: usize,
+    // `per_page_override = Some(N)` when the URL carried an allow-listed
+    // `?per_page=…`. `None` means the model default is in effect —
+    // every state-preserving link below then omits the segment so
+    // default URLs stay clean.
+    per_page_override: Option<usize>,
     total_rows: usize,
     // `active_sort = (column, direction)` carries the parsed override
     // from `?sort=&dir=`. `None` means the model's
@@ -677,6 +710,7 @@ pub(crate) fn list_ctx(
             &other,
             active_sort_ref,
             1,
+            per_page_override,
         );
         for opt in &mut group.options {
             let mut combined = other.clone();
@@ -687,12 +721,19 @@ pub(crate) fn list_ctx(
                 &combined,
                 active_sort_ref,
                 1,
+                per_page_override,
             );
         }
     }
 
-    let clear_all_filters_link =
-        build_list_url(entry.admin_name, &search_query, &[], active_sort_ref, 1);
+    let clear_all_filters_link = build_list_url(
+        entry.admin_name,
+        &search_query,
+        &[],
+        active_sort_ref,
+        1,
+        per_page_override,
+    );
 
     // Display-ready pills for the "active filters" strip. Each pill
     // resolves the option's friendly `value_label` from the group's
@@ -723,6 +764,7 @@ pub(crate) fn list_ctx(
                     &other,
                     active_sort_ref,
                     1,
+                    per_page_override,
                 ),
             })
         })
@@ -753,6 +795,7 @@ pub(crate) fn list_ctx(
                 entry.admin_name,
                 &search_query,
                 &active_filter_pairs,
+                per_page_override,
             );
             ListField {
                 name: f.name.to_string(),
@@ -779,6 +822,7 @@ pub(crate) fn list_ctx(
             &active_filter_pairs,
             None,
             1,
+            per_page_override,
         ),
         is_active: active_sort.is_none(),
     });
@@ -797,6 +841,7 @@ pub(crate) fn list_ctx(
                     &active_filter_pairs,
                     Some((f.name, dir)),
                     1,
+                    per_page_override,
                 ),
                 is_active,
             });
@@ -815,6 +860,7 @@ pub(crate) fn list_ctx(
             &active_filter_pairs,
             active_sort_ref,
             page - 1,
+            per_page_override,
         )
     });
     let next_page_link = (page < total_pages).then(|| {
@@ -824,6 +870,7 @@ pub(crate) fn list_ctx(
             &active_filter_pairs,
             active_sort_ref,
             page + 1,
+            per_page_override,
         )
     });
 
@@ -834,6 +881,7 @@ pub(crate) fn list_ctx(
             &active_filter_pairs,
             active_sort_ref,
             n,
+            per_page_override,
         )
     });
 
@@ -842,6 +890,33 @@ pub(crate) fn list_ctx(
         Some((col, SortDir::Desc)) => (Some(col.clone()), Some("desc")),
         None => (None, None),
     };
+
+    // Per-page allow-list mirrors the handler's set; values outside it
+    // are silently dropped server-side. Each option's link uses
+    // `Some(value)` for non-default densities so the override carries
+    // through, and `None` for the model default so the URL stays clean.
+    let per_page_choices: [usize; 4] = [25, 50, 100, 200];
+    let model_default_per_page = entry.list_per_page;
+    let per_page_options: Vec<PerPageOptionCtx> = per_page_choices
+        .iter()
+        .map(|&n| {
+            let override_for_link = (n != model_default_per_page).then_some(n);
+            PerPageOptionCtx {
+                value: n,
+                label: format!("{n} / page"),
+                link: build_list_url(
+                    entry.admin_name,
+                    &search_query,
+                    &active_filter_pairs,
+                    active_sort_ref,
+                    1,
+                    override_for_link,
+                ),
+                is_active: per_page == n,
+            }
+        })
+        .collect();
+    let current_per_page_label = format!("{per_page} / page");
     let field_names: Vec<&'static str> = entry.fields.iter().map(|f| f.name).collect();
     let field_types: Vec<crate::admin::FieldType> =
         entry.fields.iter().map(|f| f.field_type).collect();
@@ -892,6 +967,9 @@ pub(crate) fn list_ctx(
         current_sort_label,
         active_sort_field,
         active_sort_dir,
+        per_page_options,
+        current_per_page_label,
+        active_per_page_override: per_page_override,
         page,
         total_pages,
         per_page,
@@ -920,6 +998,7 @@ fn build_sort_link(
     admin_name: &str,
     q: &str,
     filters: &[(String, String)],
+    per_page: Option<usize>,
 ) -> (&'static str, String) {
     use super::modeladmin::SortDir;
     let (marker, new_sort) = match active {
@@ -927,7 +1006,10 @@ fn build_sort_link(
         Some((col, SortDir::Desc)) if col == name => ("desc", None),
         _ => ("", Some((name, SortDir::Asc))),
     };
-    (marker, build_list_url(admin_name, q, filters, new_sort, 1))
+    (
+        marker,
+        build_list_url(admin_name, q, filters, new_sort, 1, per_page),
+    )
 }
 
 // ---- Change form ----------------------------------------------------------

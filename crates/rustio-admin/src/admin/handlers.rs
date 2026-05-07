@@ -248,10 +248,17 @@ pub(crate) async fn list_model(
 
     // ---- Pagination: per_page from ?per_page= (allow-listed),
     // falling back to entry.list_per_page. page from ?page=, 1-indexed.
-    let per_page: i64 = qs
+    //
+    // `per_page_override` is preserved separately so URL-composing
+    // links downstream can decide whether the value is "default"
+    // (skip from URL) or "user-chosen" (carry it through). Without
+    // this distinction every state-preserving link would either drop
+    // the user's choice or pollute every URL with the default.
+    let per_page_override: Option<i64> = qs
         .get("per_page")
         .and_then(|s| s.parse::<i64>().ok())
-        .filter(|n| matches!(*n, 10 | 25 | 50 | 100))
+        .filter(|n| matches!(*n, 25 | 50 | 100 | 200));
+    let per_page: i64 = per_page_override
         .unwrap_or(entry.list_per_page as i64)
         .max(1);
     let page_raw: i64 = qs
@@ -308,6 +315,7 @@ pub(crate) async fn list_model(
         filter_groups,
         page as usize,
         per_page as usize,
+        per_page_override.map(|n| n as usize),
         total_rows as usize,
         active_sort.as_ref().map(|(c, d)| (c.clone(), *d)),
         csrf_token(req),
