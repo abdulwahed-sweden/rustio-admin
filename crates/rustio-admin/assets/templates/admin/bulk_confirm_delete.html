@@ -1,0 +1,39 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-form-shell">
+
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
+    <span>Delete {{ items|length }} {{ singular_name }}{% if items|length != 1 %}s{% endif %}</span>
+  </nav>
+  <h1>Are you sure?</h1>
+</header>
+
+<section class="rio-card rio-confirm">
+  <p>You are about to delete <strong>{{ items|length }}</strong> {{ singular_name }}{% if items|length != 1 %}s{% endif %}:</p>
+
+  <ul class="rio-cascade-list">
+    {% for it in items %}
+    <li>
+      <a href="/admin/{{ admin_name }}/{{ it.id }}/edit">#{{ it.id }}</a>
+      &mdash; <em>{{ it.label }}</em>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <p class="rio-meta">This cannot be undone. Each row is deleted individually so per-row hooks and audit entries fire as expected.</p>
+
+  <form method="post" action="/admin/{{ admin_name }}/bulk_delete" class="rio-form-actions">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="_ids" value="{{ ids_csv }}">
+    <input type="hidden" name="_confirmed" value="1">
+    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete {{ items|length }} {{ singular_name }}{% if items|length != 1 %}s{% endif %}</button>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
+    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">No, cancel</a>
+  </form>
+</section>
+
+</div>
+{% endblock %}

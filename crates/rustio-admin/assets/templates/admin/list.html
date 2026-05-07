@@ -109,11 +109,31 @@
 </div>
 {% endif %}
 
+{# Bulk-select form wraps the entire table so checked rows submit as
+ # a single comma-separated `_ids` field built by admin.js. The form
+ # POSTs to `/admin/{name}/bulk_delete`; the server's two-step flow
+ # (confirm → commit) takes over from there. JS toggles `.is-active`
+ # on the form when ≥1 checkbox is checked, which reveals the bulk
+ # bar. Without JS, the bulk bar stays hidden and users fall back to
+ # per-row Delete actions. #}
+<form method="post" action="/admin/{{ admin_name }}/bulk_delete" class="rio-bulk-form" data-rio-bulk>
+<input type="hidden" name="_csrf" value="{{ csrf_token }}">
+<input type="hidden" name="_ids" value="" data-rio-bulk-ids>
+
+<div class="rio-bulk-bar" role="region" aria-live="polite" aria-label="Bulk actions">
+  <span class="rio-bulk-bar-count"><strong data-rio-bulk-count>0</strong> selected</span>
+  <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Delete selected</button>
+  <button type="button" class="rio-bulk-bar-clear" data-rio-bulk-clear>Clear selection</button>
+</div>
+
 <section class="rio-card rio-list">
   {% if rows %}
   <table class="rio-table rio-table--striped">
     <thead>
       <tr>
+        <th class="rio-th rio-th--checkbox">
+          <input type="checkbox" class="rio-row-checkbox-all" data-rio-bulk-all aria-label="Select all rows">
+        </th>
         {% for f in fields %}
         <th class="rio-th rio-th--{{ f.kind }}{% if f.sort_active %} rio-th--sort-{{ f.sort_active }}{% endif %}">
           <a href="{{ f.sort_link }}" class="rio-th-sort">
@@ -127,6 +147,9 @@
     <tbody>
       {% for row in rows %}
       <tr>
+        <td class="rio-td rio-td--checkbox">
+          <input type="checkbox" class="rio-row-checkbox" data-rio-bulk-row value="{{ row.id }}" aria-label="Select row {{ row.id }}">
+        </td>
         {% for f in fields %}
         <td class="rio-td rio-td--{{ f.kind }}"{% if f.kind == "text" %} title="{{ row[f.name]|default(value='') }}"{% endif %}>
           {% if f.name == "id" %}
@@ -139,8 +162,8 @@
         </td>
         {% endfor %}
         <td class="rio-td rio-td--actions">
-          <a class="rio-button rio-button--ghost" href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>
-          <a class="rio-button rio-button--danger-ghost" href="/admin/{{ admin_name }}/{{ row.id }}/delete">{{ icon("trash", class="rio-icon") }} Delete</a>
+          <a class="rio-button rio-button--ghost rio-button--sm" href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>
+          <a class="rio-button rio-button--danger-ghost rio-button--sm" href="/admin/{{ admin_name }}/{{ row.id }}/delete">{{ icon("trash", class="rio-icon") }} Delete</a>
         </td>
       </tr>
       {% endfor %}
@@ -150,6 +173,8 @@
   <p class="rio-empty">No {{ display_name|lower }} yet. <a href="/admin/{{ admin_name }}/new">Add the first one.</a></p>
   {% endif %}
 </section>
+
+</form>
 
 {% if total_pages > 1 %}
 <nav class="rio-pagination" aria-label="Pagination">

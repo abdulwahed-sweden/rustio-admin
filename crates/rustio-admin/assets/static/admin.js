@@ -123,15 +123,84 @@
     });
   }
 
+  // ---- Bulk select ------------------------------------------------
+  // The list-view table is wrapped in a `<form data-rio-bulk>`. Each
+  // row has a checkbox; the header has a master checkbox; a hidden
+  // `_ids` input gets populated with the comma-separated selection
+  // before submit. The framework's FormData uses one value per key,
+  // so a CSV is the simplest wire format that survives the round
+  // trip — see handlers::handle_bulk_delete for the parser.
+  function initBulkSelect() {
+    const form = document.querySelector("[data-rio-bulk]");
+    if (!form) return;
+    const all = form.querySelector("[data-rio-bulk-all]");
+    const idsInput = form.querySelector("[data-rio-bulk-ids]");
+    const countEl = form.querySelector("[data-rio-bulk-count]");
+    const clearBtn = form.querySelector("[data-rio-bulk-clear]");
+    const rows = Array.from(form.querySelectorAll("[data-rio-bulk-row]"));
+    if (!rows.length) return;
+
+    function refresh() {
+      const checked = rows.filter((r) => r.checked);
+      const count = checked.length;
+
+      // Reflect selected count into the form: hidden CSV field for
+      // the POST, label in the bulk bar, `is-selected` on the row,
+      // and the bar's visibility (driven by `.is-active` on the form).
+      idsInput.value = checked.map((r) => r.value).join(",");
+      if (countEl) countEl.textContent = String(count);
+      form.classList.toggle("is-active", count > 0);
+      rows.forEach((r) => {
+        const tr = r.closest("tr");
+        if (tr) tr.classList.toggle("is-selected", r.checked);
+      });
+
+      // Master checkbox: checked when all selected, indeterminate
+      // when partial, unchecked when none.
+      if (all) {
+        all.checked = count > 0 && count === rows.length;
+        all.indeterminate = count > 0 && count < rows.length;
+      }
+    }
+
+    rows.forEach((r) => r.addEventListener("change", refresh));
+
+    if (all) {
+      all.addEventListener("change", () => {
+        rows.forEach((r) => { r.checked = all.checked; });
+        refresh();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        rows.forEach((r) => { r.checked = false; });
+        refresh();
+      });
+    }
+
+    // Guard against empty submit (Enter key on a focused checkbox,
+    // accidental click): block the POST when nothing is selected so
+    // the user lands back where they started instead of bouncing
+    // through `/admin/:model` via the empty-ids redirect.
+    form.addEventListener("submit", (e) => {
+      if (!idsInput.value) e.preventDefault();
+    });
+
+    refresh();
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initTheme();
       initSidebar();
       initDropdowns();
+      initBulkSelect();
     });
   } else {
     initTheme();
     initSidebar();
     initDropdowns();
+    initBulkSelect();
   }
 })();

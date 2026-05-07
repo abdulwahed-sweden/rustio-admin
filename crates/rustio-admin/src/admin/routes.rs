@@ -696,7 +696,7 @@ pub fn register_admin_routes(
         }
     });
     let c = ctx.clone();
-    router.post("/admin/:admin_name/:id/delete", move |req| {
+    let router = router.post("/admin/:admin_name/:id/delete", move |req| {
         let c = c.clone();
         async move {
             let name = model_name_from_req(&req)?;
@@ -706,6 +706,25 @@ pub fn register_admin_routes(
                 Guard::Allow(ident) => {
                     let id = parse_id(req.param("id"))?;
                     handlers::do_delete(&c, ident, &name, id).await
+                }
+            }
+        }
+    });
+
+    // Bulk delete — same permission gate as the per-row delete.
+    // Two-step flow: first POST renders the confirm page, second POST
+    // (with `_confirmed=1`) executes. See `handlers::handle_bulk_delete`
+    // for the full contract.
+    let c = ctx.clone();
+    router.post("/admin/:admin_name/bulk_delete", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "delete")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    handlers::handle_bulk_delete(&c, ident, &name, &req).await
                 }
             }
         }
