@@ -8,7 +8,9 @@
 [![CI](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml)
 [![License](https://img.shields.io/crates/l/rustio-admin.svg)](./LICENSE)
 
-> 🎨 **v0.1.1 released on 2026-05-07** — design-system pass. Self-hosted Geist + Geist Mono + Tajawal + Noto Naskh Arabic (SIL OFL-1.1, ~270 KB embedded), full typography token system (`--rio-font-sans` / `--rio-font-arabic` / `--rio-font-arabic-body` / `--rio-font-mono`, 9-step size scale with a 13 px floor and a 16 px body baseline, dedicated `--rio-lh-arabic: 1.9`), automatic `:lang(ar)` + `[dir="rtl"]` resolution, and a new crimson `#A0341A` brand accent across every default. Drop-in upgrade from 0.1.0 — no public API changes. See the [v0.1.1 changelog](./CHANGELOG.md#011--2026-05-07) and the [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1).
+> ✨ **v0.2.0 released on 2026-05-07** — premium-chrome release. List view, form view, and Auth pages all share one design language; dark mode is now a calm graphite workspace rather than an OLED-black hacker terminal. New list-view toolbar (filters dropdown / sort dropdown / per-page picker / active-filter pills / numbered pagination / search glyph) ships with full URL state preservation across every widget. Per-row + master checkboxes drive the new bulk select; projects register custom bulk actions via `ModelAdmin::bulk_actions()` next to the built-in delete. Form pages cap at 880 px editorial width with a grouped action bar. Sticky sidebar at tablet+. **Breaking change:** `AdminTheme` is now an override-patch type (`Option<String>` fields) — `admin.css` is the single source of truth, so out of the box no inline `<style>` is emitted at all. See the [v0.2.0 changelog](./CHANGELOG.md#020--2026-05-07) including the *Migrating from 0.1.x* section, and the [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.0).
+>
+> 🎨 **v0.1.1** (2026-05-07) — design-system pass. Self-hosted Geist + Geist Mono + Tajawal + Noto Naskh Arabic (SIL OFL-1.1, ~270 KB embedded), full typography token system, crimson `#A0341A` brand accent. [v0.1.1 changelog](./CHANGELOG.md#011--2026-05-07) · [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1).
 >
 > 🚀 **v0.1.0** (2026-05-07) — first public release. Three crates landed together: [`rustio-admin`](https://crates.io/crates/rustio-admin) (the library), [`rustio-admin-macros`](https://crates.io/crates/rustio-admin-macros) (the `RustioAdmin` derive), and [`rustio-admin-cli`](https://crates.io/crates/rustio-admin-cli) (the `rustio` binary: `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`). [v0.1.0 changelog](./CHANGELOG.md#010--2026-05-07) · [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0).
 
@@ -24,7 +26,7 @@
 
 ```toml
 [dependencies]
-rustio-admin = "0.1"
+rustio-admin = "0.2"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
@@ -88,9 +90,9 @@ cargo test  --workspace
 
 ## Status
 
-**v0.1.1 — released 2026-05-07.** Two releases shipped end-to-end against a local Postgres: [v0.1.0](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0) (initial public release; phases 1–15 of the strategic-reset rollout) and [v0.1.1](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1) (design-system pass — self-hosted fonts, full typography token system, crimson brand accent). Both browser-walked against the [`examples/minimal`](./examples/minimal/) skeleton and a fresh `rustio startproject` + `rustio startapp` flow; the [`classrooms`](https://github.com/abdulwahed-sweden/classrooms) project consumes the published crate from crates.io. See the [strategic reset plan](./rustio-admin-strategic-reset-plan.md) for the design and the [changelog](./CHANGELOG.md) for the per-release feature inventory.
+**v0.2.0 — released 2026-05-07.** Three releases shipped end-to-end against a local Postgres: [v0.1.0](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0) (initial public release; phases 1–15 of the strategic-reset rollout), [v0.1.1](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1) (design-system pass — self-hosted fonts, typography token system, crimson brand), and [v0.2.0](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.0) (premium chrome — list-view toolbar with filters / sort / per-page / pills / numbered pagination + URL state preservation, bulk select + project-defined bulk actions, form refresh, single-source-of-truth theme architecture, calm graphite dark mode). All three browser-walked against the [`examples/minimal`](./examples/minimal/) skeleton and a fresh `rustio startproject` + `rustio startapp` flow; the [`classrooms`](https://github.com/abdulwahed-sweden/classrooms) project consumes the published crate from crates.io. See the [strategic reset plan](./rustio-admin-strategic-reset-plan.md) for the design and the [changelog](./CHANGELOG.md) for the per-release feature inventory.
 
-Future work tracks under separate milestones — v0.2 candidates include richer filter widgets (date range, multi-select), bulk actions on the list page, inline forms, and dashboard widgets. The schema-contract / drift-validator / AI-planner work that originally lived in this repo's predecessor stays explicitly out of scope and will, if it returns at all, ship as a separate `rustio-pro-*` family of crates.
+Future work tracks under separate milestones — v0.3 candidates include richer filter widget kinds beyond `BoolYesNo` (date range, multi-select, foreign-key autocomplete), inline forms, dashboard widgets, and floating toast notifications. The schema-contract / drift-validator / AI-planner work that originally lived in this repo's predecessor stays explicitly out of scope and will, if it returns at all, ship as a separate `rustio-pro-*` family of crates.
 
 ## Non-goals
 
