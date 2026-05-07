@@ -1534,6 +1534,63 @@ pub(crate) fn confirm_delete_ctx(
     }
 }
 
+// ---- Bulk-delete confirmation -------------------------------------------
+
+#[derive(Serialize)]
+pub(crate) struct BulkConfirmDeleteCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: String,
+    pub entries: Vec<SidebarEntry>,
+    pub admin_name: &'static str,
+    pub display_name: &'static str,
+    pub singular_name: &'static str,
+    /// `(id, label)` for each row the user selected, in selection
+    /// order. Rendered as a list on the confirm page so the user
+    /// sees exactly what will be deleted.
+    pub items: Vec<BulkDeleteItem>,
+    /// Comma-separated IDs replayed into the confirm form's hidden
+    /// `_ids` field — same wire format the checkbox form posts.
+    pub ids_csv: String,
+    pub flash: Option<FlashCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct BulkDeleteItem {
+    pub id: i64,
+    pub label: String,
+}
+
+pub(crate) fn bulk_confirm_delete_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    entry: &AdminEntry,
+    items: Vec<BulkDeleteItem>,
+    csrf_token: String,
+) -> BulkConfirmDeleteCtx {
+    let ids_csv = items
+        .iter()
+        .map(|i| i.id.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    BulkConfirmDeleteCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: format!("Delete {} {}", items.len(), entry.display_name),
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        admin_name: entry.admin_name,
+        display_name: entry.display_name,
+        singular_name: entry.singular_name,
+        items,
+        ids_csv,
+        flash: None,
+    }
+}
+
 // ---- 403 Forbidden + generic admin error ---------------------------------
 
 #[derive(Serialize)]

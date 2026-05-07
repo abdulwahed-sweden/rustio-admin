@@ -565,6 +565,85 @@ pub(crate) async fn do_delete(
     Ok(Response::redirect(format!("/admin/{admin_name}")))
 }
 
+// ---- Bulk delete --------------------------------------------------------
+//
+// Two-step server flow that mirrors the single-row delete:
+//   1. POST /admin/:model/bulk_delete with `_ids=1,2,3` (no `_confirmed`)
+//      → render `bulk_confirm_delete.html` listing each row.
+//   2. POST same URL with `_confirmed=1` → execute `ops.delete` per id
+//      and redirect back to the list with no flash (per existing
+//      single-row delete behavior, the framework's flash channel is
+//      not yet wired beyond login/logout).
+//
+// `_ids` arrives as a single comma-separated string because
+// `FormData` is a flat HashMap (one value per key). The list-view
+// JS builds the CSV from checked rows; the confirm form replays it
+// verbatim. Bad / missing ids are silently skipped — a stale
+// checkbox set shouldn't 500 the page.
+
+const BULK_DELETE_MAX: usize = 1000;
+
+fn parse_bulk_ids(raw: &str) -> Vec<i64> {
+    raw.split(',')
+        .filter_map(|s| s.trim().parse::<i64>().ok())
+        .filter(|id| *id > 0)
+        .take(BULK_DELETE_MAX)
+        .collect()
+}
+
+pub(crate) async fn handle_bulk_delete(
+    ctx: &AdminCtx,
+    identity: Identity,
+    admin_name: &str,
+    req: &Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let form = req.form()?;
+
+    let raw_ids = form.get("_ids").unwrap_or_default();
+    let ids = parse_bulk_ids(raw_ids);
+    if ids.is_empty() {
+        return Ok(Response::redirect(format!("/admin/{admin_name}")));
+    }
+
+    if form.bool_flag("_confirmed") {
+        // Commit step. Loop per id so the existing per-row delete
+        // semantics (audit trail, FK cascade, hooks) fire for each.
+        // Errors short-circuit — if a delete fails midway the user
+        // sees the framework error page; the rows already deleted
+        // stay deleted (this matches the single-row delete path).
+        for id in &ids {
+            entry.ops.delete(&ctx.db, *id).await?;
+        }
+        return Ok(Response::redirect(format!("/admin/{admin_name}")));
+    }
+
+    // Confirm step. Resolve each id to a label so the user sees
+    // exactly what they're about to delete. Missing rows (deleted
+    // between selection and confirm) are dropped from the list.
+    let mut items: Vec<render::BulkDeleteItem> = Vec::with_capacity(ids.len());
+    for id in &ids {
+        if let Some(label) = entry.ops.object_label(&ctx.db, *id).await? {
+            items.push(render::BulkDeleteItem { id: *id, label });
+        }
+    }
+    if items.is_empty() {
+        return Ok(Response::redirect(format!("/admin/{admin_name}")));
+    }
+
+    let view = render::bulk_confirm_delete_ctx(
+        &identity,
+        &ctx.admin,
+        entry,
+        items,
+        csrf_token(req),
+    );
+    let body = ctx
+        .templates
+        .render("admin/bulk_confirm_delete.html", &view)?;
+    Ok(Response::html(body))
+}
+
 // ---- History pages -------------------------------------------------------
 
 pub(crate) async fn show_object_history(
