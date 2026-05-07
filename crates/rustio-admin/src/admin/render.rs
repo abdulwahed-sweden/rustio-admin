@@ -55,16 +55,23 @@ pub(crate) struct BaseContext {
     /// banner above the page content.
     pub is_demo_session: bool,
     pub demo_label: Option<String>,
-    /// Accent colour in `#rrggbb` form.
-    pub accent_hex: String,
+    /// `true` when the active `AdminTheme` patch sets at least one
+    /// field. Templates use it to skip emitting the inline `<style>`
+    /// block entirely when no overrides are configured — the framework
+    /// stylesheet is then the single source of truth.
+    pub has_theme_overrides: bool,
+    /// Accent colour in `#rrggbb` form, only `Some` when the project
+    /// patched it. `None` means *no override — admin.css owns it*.
+    pub accent_hex: Option<String>,
     /// Same colour as a space-separated RGB triplet (`"30 107 168"`)
-    /// for use inside `rgb(... / opacity)` expressions.
-    pub accent_rgb: String,
-    pub theme_bg: String,
-    pub theme_surface: String,
-    pub theme_text: String,
-    pub theme_text_muted: String,
-    pub theme_border: String,
+    /// for use inside `rgb(... / opacity)` expressions. `None` paired
+    /// with `accent_hex == None`.
+    pub accent_rgb: Option<String>,
+    pub theme_bg: Option<String>,
+    pub theme_surface: Option<String>,
+    pub theme_text: Option<String>,
+    pub theme_text_muted: Option<String>,
+    pub theme_border: Option<String>,
 }
 
 /// Convert an `#rrggbb` (or `rrggbb`) hex string into the
@@ -92,7 +99,7 @@ impl BaseContext {
         };
         let theme = admin.active_theme();
         let accent_hex = theme.accent.clone();
-        let accent_rgb = hex_to_rgb_triplet(&accent_hex);
+        let accent_rgb = accent_hex.as_deref().map(hex_to_rgb_triplet);
         Self {
             identity: identity.map(IdentityCtx::from),
             csrf_token,
@@ -102,6 +109,7 @@ impl BaseContext {
             footer_copyright: b.footer_copyright.clone(),
             is_demo_session,
             demo_label,
+            has_theme_overrides: theme.has_overrides(),
             accent_hex,
             accent_rgb,
             theme_bg: theme.bg.clone(),
@@ -441,8 +449,24 @@ pub(crate) fn list_ctx(
     csrf_token: String,
 ) -> ListCtx {
     let total_pages = total_rows.div_ceil(per_page.max(1)).max(1);
-    let fields: Vec<ListField> = entry
-        .fields
+
+    // Honour `ModelAdmin::list_display()`: when non-empty, render only
+    // those columns (in the declared order). Empty falls back to every
+    // model field. This is the contract documented on
+    // `AdminEntry::list_display`; previously the renderer iterated
+    // over `entry.fields` unconditionally and showed every column,
+    // including bulky `body` / `description` fields the model author
+    // had explicitly excluded.
+    let visible_fields: Vec<&AdminField> = if entry.list_display.is_empty() {
+        entry.fields.iter().collect()
+    } else {
+        entry
+            .list_display
+            .iter()
+            .filter_map(|name| entry.fields.iter().find(|f| f.name == *name))
+            .collect()
+    };
+    let fields: Vec<ListField> = visible_fields
         .iter()
         .map(|f| {
             let (sort_active, sort_link) = build_sort_link(f.name, &active_sort);

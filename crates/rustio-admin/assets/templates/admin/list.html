@@ -49,13 +49,13 @@
       {% for row in rows %}
       <tr>
         {% for f in fields %}
-        <td class="rio-td rio-td--{{ f.kind }}">
+        <td class="rio-td rio-td--{{ f.kind }}"{% if f.kind == "text" %} title="{{ row[f.name]|default(value='') }}"{% endif %}>
           {% if f.name == "id" %}
             <a href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ row.id }}</a>
           {% elif f.kind == "checkbox" %}
             {% if row[f.name] %}Yes{% else %}No{% endif %}
           {% else %}
-            {{ row[f.name]|default("") }}
+            {{ row[f.name]|default(value='') }}
           {% endif %}
         </td>
         {% endfor %}
