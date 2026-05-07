@@ -1,5 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
+<div class="rio-form-shell">
+
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>Delete {{ name }}</span>
@@ -18,8 +20,11 @@
 
   <form method="post" action="/admin/groups/{{ group_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--danger">Yes, delete</button>
+    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/groups/{{ group_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
   </form>
 </section>
+
+</div>
 {% endblock %}

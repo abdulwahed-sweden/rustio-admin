@@ -8,19 +8,26 @@
   </div>
 </header>
 
-<section class="rio-card">
+<section class="rio-card rio-list">
   {% if groups %}
   <table class="rio-table rio-table--striped">
-    <thead><tr><th>id</th><th>name</th><th>description</th><th>Actions</th></tr></thead>
+    <thead>
+      <tr>
+        <th class="rio-th">ID</th>
+        <th class="rio-th">Name</th>
+        <th class="rio-th">Description</th>
+        <th class="rio-th rio-th--actions">Actions</th>
+      </tr>
+    </thead>
     <tbody>
       {% for g in groups %}
       <tr>
-        <td>{{ g.id }}</td>
-        <td><a href="/admin/groups/{{ g.id }}/edit">{{ g.name }}</a></td>
-        <td>{{ g.description }}</td>
-        <td>
-          <a class="rio-button rio-button--ghost" href="/admin/groups/{{ g.id }}/edit">Edit</a>
-          <a class="rio-button rio-button--danger-ghost" href="/admin/groups/{{ g.id }}/delete">Delete</a>
+        <td class="rio-td rio-td--number">{{ g.id }}</td>
+        <td class="rio-td rio-td--text"><a href="/admin/groups/{{ g.id }}/edit">{{ g.name }}</a></td>
+        <td class="rio-td rio-td--text" title="{{ g.description }}">{{ g.description }}</td>
+        <td class="rio-td rio-td--actions">
+          <a class="rio-button rio-button--ghost rio-button--sm" href="/admin/groups/{{ g.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>
+          <a class="rio-button rio-button--danger-ghost rio-button--sm" href="/admin/groups/{{ g.id }}/delete">{{ icon("trash", class="rio-icon") }} Delete</a>
         </td>
       </tr>
       {% endfor %}

@@ -1,5 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
+<div class="rio-form-shell">
+
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>{{ name }}</span>
@@ -45,8 +47,11 @@
 
   <div class="rio-form-actions">
     <button type="submit" class="rio-button rio-button--primary">Save changes</button>
-    <a href="/admin/groups/{{ group_id }}/delete" class="rio-button rio-button--danger-ghost">Delete group</a>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
+    <a href="/admin/groups/{{ group_id }}/delete" class="rio-button rio-button--danger-ghost">{{ icon("trash", class="rio-icon") }} Delete group</a>
     <a href="/admin/groups" class="rio-button rio-button--ghost">Back to groups</a>
   </div>
 </form>
+
+</div>
 {% endblock %}
