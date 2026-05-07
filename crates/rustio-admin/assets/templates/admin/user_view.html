@@ -1,12 +1,14 @@
 {% extends "admin/_base.html" %}
 {% block content %}
+<div class="rio-form-shell">
+
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>{{ user.email }}</span>
   </nav>
   <div class="rio-page-actions">
     <h1>{{ user.full_name }}</h1>
-    {% if can_edit %}<a class="rio-button rio-button--primary" href="/admin/users/{{ user.id }}/edit">Edit</a>{% endif %}
+    {% if can_edit %}<a class="rio-button rio-button--primary" href="/admin/users/{{ user.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>{% endif %}
   </div>
 </header>
 
@@ -118,4 +120,6 @@
   {% endif %}
 </section>
 {% endif %}
+
+</div>
 {% endblock %}

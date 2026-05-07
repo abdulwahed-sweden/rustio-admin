@@ -8,30 +8,30 @@
   </div>
 </header>
 
-<section class="rio-card">
+<section class="rio-card rio-list">
   {% if users %}
   <table class="rio-table rio-table--striped">
     <thead>
       <tr>
-        <th>id</th>
-        <th>email</th>
-        <th>role</th>
-        <th>active</th>
-        <th>created</th>
-        <th>Actions</th>
+        <th class="rio-th">ID</th>
+        <th class="rio-th">Email</th>
+        <th class="rio-th">Role</th>
+        <th class="rio-th">Active</th>
+        <th class="rio-th">Created</th>
+        <th class="rio-th rio-th--actions">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for u in users %}
       <tr>
-        <td><a href="/admin/users/{{ u.id }}">{{ u.id }}</a></td>
-        <td><a href="/admin/users/{{ u.id }}">{{ u.email }}</a></td>
-        <td>{{ u.role }}</td>
-        <td>{% if u.is_active %}Yes{% else %}No{% endif %}</td>
-        <td>{{ u.created_at }}</td>
-        <td>
-          <a class="rio-button rio-button--ghost" href="/admin/users/{{ u.id }}/edit">Edit</a>
-          <a class="rio-button rio-button--danger-ghost" href="/admin/users/{{ u.id }}/delete">Delete</a>
+        <td class="rio-td rio-td--number"><a href="/admin/users/{{ u.id }}">{{ u.id }}</a></td>
+        <td class="rio-td rio-td--text" title="{{ u.email }}"><a href="/admin/users/{{ u.id }}">{{ u.email }}</a></td>
+        <td class="rio-td">{{ u.role }}</td>
+        <td class="rio-td">{% if u.is_active %}Yes{% else %}No{% endif %}</td>
+        <td class="rio-td rio-td--datetime">{{ u.created_at }}</td>
+        <td class="rio-td rio-td--actions">
+          <a class="rio-button rio-button--ghost rio-button--sm" href="/admin/users/{{ u.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>
+          <a class="rio-button rio-button--danger-ghost rio-button--sm" href="/admin/users/{{ u.id }}/delete">{{ icon("trash", class="rio-icon") }} Delete</a>
         </td>
       </tr>
       {% endfor %}

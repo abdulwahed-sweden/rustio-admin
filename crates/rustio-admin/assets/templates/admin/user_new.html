@@ -1,5 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
+<div class="rio-form-shell">
+
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>Add user</span>
@@ -26,7 +28,10 @@
 
   <div class="rio-form-actions">
     <button type="submit" class="rio-button rio-button--primary">Create user</button>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/users" class="rio-button rio-button--ghost">Cancel</a>
   </div>
 </form>
+
+</div>
 {% endblock %}

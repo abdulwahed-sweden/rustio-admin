@@ -857,6 +857,16 @@ pre code {
   border-color: transparent;
 }
 
+/* Compact button for inline row actions (Edit / Delete in table
+ * rows, etc.). Matches the proportions of a body-text affordance
+ * rather than a primary CTA. */
+.rio-button--sm {
+  padding: 0.3rem 0.55rem;
+  font-size: var(--rio-fs-sm);
+  gap: 0.3rem;
+}
+.rio-button--sm .rio-icon { width: 14px; height: 14px; }
+
 /* ============================================================
  * 5. Forms — fieldsets, fields, inputs
  * ============================================================ */

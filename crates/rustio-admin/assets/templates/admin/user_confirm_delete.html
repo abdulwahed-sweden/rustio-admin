@@ -1,5 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
+<div class="rio-form-shell">
+
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>Delete {{ email }}</span>
@@ -26,8 +28,11 @@
 
   <form method="post" action="/admin/users/{{ user_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--danger" {% if is_self or is_last_developer %}disabled{% endif %}>Yes, delete</button>
+    <button type="submit" class="rio-button rio-button--danger" {% if is_self or is_last_developer %}disabled{% endif %}>{{ icon("trash", class="rio-icon") }} Yes, delete</button>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/users/{{ user_id }}" class="rio-button rio-button--ghost">No, cancel</a>
   </form>
 </section>
+
+</div>
 {% endblock %}
