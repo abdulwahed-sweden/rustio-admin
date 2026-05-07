@@ -8,7 +8,9 @@
 [![CI](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml)
 [![License](https://img.shields.io/crates/l/rustio-admin.svg)](./LICENSE)
 
-> 🚀 **v0.1.0 released on 2026-05-07** — first public release on crates.io. Three crates landed together: [`rustio-admin`](https://crates.io/crates/rustio-admin) (the library), [`rustio-admin-macros`](https://crates.io/crates/rustio-admin-macros) (the `RustioAdmin` derive), and [`rustio-admin-cli`](https://crates.io/crates/rustio-admin-cli) (the `rustio` binary: `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`). See the [v0.1.0 changelog](./CHANGELOG.md#010--2026-05-07) for the full feature inventory and the [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0) for an immutable reference.
+> 🎨 **v0.1.1 released on 2026-05-07** — design-system pass. Self-hosted Geist + Geist Mono + Tajawal + Noto Naskh Arabic (SIL OFL-1.1, ~270 KB embedded), full typography token system (`--rio-font-sans` / `--rio-font-arabic` / `--rio-font-arabic-body` / `--rio-font-mono`, 9-step size scale with a 13 px floor and a 16 px body baseline, dedicated `--rio-lh-arabic: 1.9`), automatic `:lang(ar)` + `[dir="rtl"]` resolution, and a new crimson `#A0341A` brand accent across every default. Drop-in upgrade from 0.1.0 — no public API changes. See the [v0.1.1 changelog](./CHANGELOG.md#011--2026-05-07) and the [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1).
+>
+> 🚀 **v0.1.0** (2026-05-07) — first public release. Three crates landed together: [`rustio-admin`](https://crates.io/crates/rustio-admin) (the library), [`rustio-admin-macros`](https://crates.io/crates/rustio-admin-macros) (the `RustioAdmin` derive), and [`rustio-admin-cli`](https://crates.io/crates/rustio-admin-cli) (the `rustio` binary: `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`). [v0.1.0 changelog](./CHANGELOG.md#010--2026-05-07) · [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0).
 
 ## What you get
 
@@ -86,7 +88,7 @@ cargo test  --workspace
 
 ## Status
 
-**v0.1.0 — released 2026-05-07.** Browser-walked end-to-end against a local Postgres against both the [`examples/minimal`](./examples/minimal/) skeleton and a fresh `rustio startproject` + `rustio startapp` flow; the [`classrooms`](https://github.com/abdulwahed-sweden/classrooms) project consumes the published crate. See the [strategic reset plan](./rustio-admin-strategic-reset-plan.md) for the design and the [changelog](./CHANGELOG.md) for the feature inventory.
+**v0.1.1 — released 2026-05-07.** Two releases shipped end-to-end against a local Postgres: [v0.1.0](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0) (initial public release; phases 1–15 of the strategic-reset rollout) and [v0.1.1](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1) (design-system pass — self-hosted fonts, full typography token system, crimson brand accent). Both browser-walked against the [`examples/minimal`](./examples/minimal/) skeleton and a fresh `rustio startproject` + `rustio startapp` flow; the [`classrooms`](https://github.com/abdulwahed-sweden/classrooms) project consumes the published crate from crates.io. See the [strategic reset plan](./rustio-admin-strategic-reset-plan.md) for the design and the [changelog](./CHANGELOG.md) for the per-release feature inventory.
 
 Future work tracks under separate milestones — v0.2 candidates include richer filter widgets (date range, multi-select), bulk actions on the list page, inline forms, and dashboard widgets. The schema-contract / drift-validator / AI-planner work that originally lived in this repo's predecessor stays explicitly out of scope and will, if it returns at all, ship as a separate `rustio-pro-*` family of crates.
 
