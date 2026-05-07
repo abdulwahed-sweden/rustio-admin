@@ -252,6 +252,26 @@
  * users who never touch the toggle) and `[data-rio-theme="dark"]`
  * (for explicit overrides) so the cascade is symmetric.
  * ---------------------------------------------------------------- */
+/* Dark mode color tuning — three deliberate shifts vs. the light
+ * palette:
+ *
+ *  1. Accent is lifted from `#A0341A` (deep crimson) to `#C84934`
+ *     (warmer mid-crimson). The light crimson disappears into the
+ *     graphite surface (~1.5:1 contrast); the lifted variant pops
+ *     (~3.1:1) while keeping the same hue family so the brand
+ *     reads identically across modes. White-on-accent stays at
+ *     5.2:1 (passes WCAG AA body text).
+ *
+ *  2. Danger is shifted from `#F87171` (Tailwind red-400, reads
+ *     pink-pastel on graphite) to `#DC4444` — a serious, saturated
+ *     red that actually communicates destructive intent. White on
+ *     it hits 4.7:1 (passes AA body), good enough for the solid
+ *     "Yes, delete" button that uses it as background.
+ *
+ *  3. `text-strong` is pushed to pure `#FFFFFF` so page titles
+ *     stand clearly above the `#F3F4F6` body. Without that gap
+ *     the two reads as one tone.
+ */
 @media (prefers-color-scheme: dark) {
   :root {
     --rio-bg:        #2B313C;
@@ -259,7 +279,11 @@
     --rio-surface-2: #3B4352;
     --rio-surface-3: #444D5E;
 
-    --rio-text-strong: #F5F7FA;
+    --rio-accent:       #C84934;
+    --rio-accent-hover: #B23D2A;
+    --rio-accent-rgb:   200 73 52;
+
+    --rio-text-strong: #FFFFFF;
     --rio-text:        #F3F4F6;
     --rio-text-muted:  #D2D6DC;
     --rio-text-subtle: #B2B8C2;
@@ -270,7 +294,7 @@
 
     --rio-success: #34D399;
     --rio-warning: #FBBF24;
-    --rio-danger:  #F87171;
+    --rio-danger:  #DC4444;
     --rio-success-bg: #1F3D33;
     --rio-warning-bg: #3D2F18;
     --rio-danger-bg:  #3D2226;
@@ -290,7 +314,11 @@ html[data-rio-theme="dark"] {
   --rio-surface-2: #3B4352;
   --rio-surface-3: #444D5E;
 
-  --rio-text-strong: #F5F7FA;
+  --rio-accent:       #C84934;
+  --rio-accent-hover: #B23D2A;
+  --rio-accent-rgb:   200 73 52;
+
+  --rio-text-strong: #FFFFFF;
   --rio-text:        #F3F4F6;
   --rio-text-muted:  #D2D6DC;
   --rio-text-subtle: #B2B8C2;
@@ -301,7 +329,7 @@ html[data-rio-theme="dark"] {
 
   --rio-success: #34D399;
   --rio-warning: #FBBF24;
-  --rio-danger:  #F87171;
+  --rio-danger:  #DC4444;
   --rio-success-bg: #1F3D33;
   --rio-warning-bg: #3D2F18;
   --rio-danger-bg:  #3D2226;
@@ -1074,6 +1102,26 @@ pre code {
 .rio-list .rio-table td:first-child { padding-left: var(--rio-s5); }
 .rio-list .rio-table th:last-child,
 .rio-list .rio-table td:last-child { padding-right: var(--rio-s5); }
+
+/* Dashboard model index — the `<th>` cell holds the model name as a
+ * link. The generic `.rio-table th` rules render that as small
+ * uppercase accent-colored text, which fights the section h2 above
+ * it. Override here so the model name reads as a strong, plain link
+ * in the dashboard context. */
+.rio-app-models th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--rio-fs-md);
+  background: transparent;
+  border-bottom: 1px solid var(--rio-border-soft);
+  padding: 0.85rem var(--rio-s4);
+}
+.rio-app-models th a {
+  color: var(--rio-text-strong);
+  font-weight: var(--rio-fw-semibold);
+}
+.rio-app-models th a:hover { color: var(--rio-accent); text-decoration: none; }
+.rio-app-models td { padding: 0.85rem var(--rio-s4); border-bottom: 1px solid var(--rio-border-soft); }
 
 /* Definition lists for the user profile show-grid. */
 .rio-dl {
