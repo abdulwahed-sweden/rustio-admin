@@ -44,6 +44,22 @@
     </div>
   </div>
   {% endif %}
+
+  {% if sort_options %}
+  <div class="rio-dropdown" data-rio-dropdown>
+    <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+      Sort: <strong style="font-weight: 600; color: var(--rio-text-strong);">{{ current_sort_label }}</strong>
+      {{ icon("chevron-down", class="rio-chev") }}
+    </button>
+    <div class="rio-dropdown-panel" role="dialog" aria-label="Sort">
+      <div class="rio-dropdown-menu">
+        {% for opt in sort_options %}
+        <a href="{{ opt.link }}" class="rio-dropdown-item{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <section class="rio-card rio-list">
