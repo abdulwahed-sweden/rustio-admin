@@ -68,18 +68,18 @@ pub(crate) struct BaseContext {
 }
 
 /// Convert an `#rrggbb` (or `rrggbb`) hex string into the
-/// space-separated RGB-triplet form CSS variables expect (`37 99 235`
-/// for `#2563EB`). On any parse failure returns the framework default
+/// space-separated RGB-triplet form CSS variables expect (`160 52 26`
+/// for `#A0341A`). On any parse failure returns the framework default
 /// accent RGB so the admin chrome never breaks over a config typo.
 pub(crate) fn hex_to_rgb_triplet(hex: &str) -> String {
-    const FALLBACK: &str = "37 99 235"; // #2563EB — framework default cobalt
+    const FALLBACK: &str = "160 52 26"; // #A0341A — framework default crimson
     let h = hex.trim_start_matches('#');
     if h.len() != 6 || !h.chars().all(|c| c.is_ascii_hexdigit()) {
         return FALLBACK.into();
     }
-    let r = u8::from_str_radix(&h[0..2], 16).unwrap_or(37);
-    let g = u8::from_str_radix(&h[2..4], 16).unwrap_or(99);
-    let b = u8::from_str_radix(&h[4..6], 16).unwrap_or(235);
+    let r = u8::from_str_radix(&h[0..2], 16).unwrap_or(160);
+    let g = u8::from_str_radix(&h[2..4], 16).unwrap_or(52);
+    let b = u8::from_str_radix(&h[4..6], 16).unwrap_or(26);
     format!("{r} {g} {b}")
 }
 
