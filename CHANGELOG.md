@@ -4,6 +4,23 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [0.2.1] — 2026-05-07
+
+CLI-only patch. `rustio-admin` and `rustio-admin-macros` stay at 0.2.0.
+
+### Fixed
+
+- **`rustio startproject` scaffold template** pinned new projects to
+  `rustio-admin = "0.1"`. Cargo's `"0.1"` constraint resolves to
+  `>=0.1.0, <0.2.0`, so anyone who ran `cargo install rustio-admin-cli`
+  immediately after the 0.2.0 release would get a project locked to
+  the previous framework line and miss every 0.2.0 feature. The
+  scaffold now pins to `rustio-admin = "0.2"`.
+
+  Re-install with `cargo install rustio-admin-cli --force` to pick
+  up the corrected template; existing projects are unaffected (they
+  set their own pin in their own `Cargo.toml`).
+
 ## [0.2.0] — 2026-05-07
 
 Premium-chrome release. The list view, form view, and Auth pages all
