@@ -716,7 +716,7 @@ pub fn register_admin_routes(
     // (with `_confirmed=1`) executes. See `handlers::handle_bulk_delete`
     // for the full contract.
     let c = ctx.clone();
-    router.post("/admin/:admin_name/bulk_delete", move |req| {
+    let router = router.post("/admin/:admin_name/bulk_delete", move |req| {
         let c = c.clone();
         async move {
             let name = model_name_from_req(&req)?;
@@ -725,6 +725,29 @@ pub fn register_admin_routes(
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => {
                     handlers::handle_bulk_delete(&c, ident, &name, &req).await
+                }
+            }
+        }
+    });
+
+    // Project-defined bulk actions. Permission gated on `change` —
+    // bulk actions modify rows but don't delete them (delete has its
+    // own route). Project-side guard against further write-vs-read
+    // distinctions belongs inside `execute_bulk_action`.
+    let c = ctx.clone();
+    router.post("/admin/:admin_name/bulk/:action", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let action = req
+                .param("action")
+                .ok_or_else(|| Error::BadRequest("missing bulk action name".into()))?
+                .to_string();
+            let perm = perm_for(&c, &name, "change")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    handlers::handle_bulk_action(&c, ident, &name, &action, &req).await
                 }
             }
         }

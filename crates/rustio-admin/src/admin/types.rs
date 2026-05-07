@@ -166,6 +166,9 @@ pub struct AdminEntry {
     /// `ModelAdmin::fieldsets()`. Empty → fall back to the
     /// framework's name-heuristic grouping.
     pub fieldsets: &'static [super::modeladmin::Fieldset],
+    /// `ModelAdmin::bulk_actions()`. Empty by default — the bulk bar
+    /// only renders the framework's built-in Delete.
+    pub bulk_actions: &'static [super::modeladmin::BulkAction],
     pub(crate) ops: Arc<dyn AdminOps>,
 }
 
@@ -238,6 +241,33 @@ pub(crate) trait AdminOps: Send + Sync {
         db: &'a Db,
         id: i64,
     ) -> Pin<Box<dyn Future<Output = Result<Option<String>>> + Send + 'a>>;
+
+    /// Run a project-defined bulk action against the supplied row
+    /// ids. Called once per submission with the full id list, so the
+    /// implementation can choose between a single bulk SQL update or
+    /// a per-row loop. The default impl returns `BadRequest` with the
+    /// action name embedded — projects override to match on `name`
+    /// and apply the work; an unknown name surfaces as a clear error
+    /// page rather than a silent no-op.
+    ///
+    /// Note: the framework's built-in `delete` action is **not**
+    /// dispatched through here. It runs through the cascade-aware
+    /// `/bulk_delete` route which calls `delete()` per row. Override
+    /// `delete` instead if you need custom delete semantics.
+    fn execute_bulk_action<'a>(
+        &'a self,
+        _db: &'a Db,
+        name: &'a str,
+        _ids: &'a [i64],
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        let owned = name.to_string();
+        Box::pin(async move {
+            Err(crate::error::Error::BadRequest(format!(
+                "bulk action `{owned}` has no project handler — override \
+                 AdminOps::execute_bulk_action on this model to implement it"
+            )))
+        })
+    }
 }
 
 /// A row as shown on the list page.
@@ -448,6 +478,7 @@ impl Admin {
             list_per_page: M::list_per_page(),
             readonly_fields: M::readonly_fields(),
             fieldsets: M::fieldsets(),
+            bulk_actions: M::bulk_actions(),
             ops,
         });
         self
@@ -588,6 +619,7 @@ fn core_user_entry() -> AdminEntry {
         list_per_page: 50,
         readonly_fields: &[],
         fieldsets: &[],
+        bulk_actions: &[],
         ops: Arc::new(CoreUserOps),
     }
 }

@@ -18,7 +18,7 @@ pub use filters::{
     infer_filters, infer_filters_with_relations, mask_pii, FieldRole, FieldUI, FilterDef,
     FilterKind,
 };
-pub use modeladmin::{Fieldset, ModelAdmin, SortDir};
+pub use modeladmin::{BulkAction, Fieldset, ModelAdmin, SortDir};
 pub use relations::{
     InverseRelation, RegistryError, RelationRegistry, ResolvedRelation,
     RELATION_FILTER_DROPDOWN_CAP,

@@ -4,6 +4,7 @@
 //! an `Admin` (P6) or wired into the router.
 
 use chrono::{DateTime, Utc};
+use rustio_admin::admin::BulkAction;
 use rustio_admin::orm::{Model, Row, Value};
 use rustio_admin::{ModelAdmin, RustioAdmin};
 
@@ -32,6 +33,30 @@ impl ModelAdmin for Post {
     }
     fn ordering() -> &'static [&'static str] {
         &["-created_at"]
+    }
+
+    // Two demo bulk actions: registration is metadata-only here, so
+    // clicking either one round-trips through the framework's
+    // dispatcher and returns the default
+    // `AdminOps::execute_bulk_action` `Err` ("…has no project
+    // handler"). That's the framework's intended teaching surface —
+    // a real project would override the trait method to apply the
+    // work (e.g., `UPDATE posts SET featured = true WHERE id = ANY($1)`).
+    fn bulk_actions() -> &'static [BulkAction] {
+        &[
+            BulkAction {
+                name: "mark_featured",
+                label: "Mark as featured (demo)",
+                destructive: false,
+                confirm: true,
+            },
+            BulkAction {
+                name: "archive",
+                label: "Archive (demo)",
+                destructive: true,
+                confirm: true,
+            },
+        ]
     }
 }
 

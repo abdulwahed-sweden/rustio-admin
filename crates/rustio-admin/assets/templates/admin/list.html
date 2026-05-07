@@ -122,7 +122,13 @@
 
 <div class="rio-bulk-bar" role="region" aria-live="polite" aria-label="Bulk actions">
   <span class="rio-bulk-bar-count"><strong data-rio-bulk-count>0</strong> selected</span>
+  {# Built-in Delete uses the form's default action (/bulk_delete).
+   # Project-defined actions override via `formaction`, so the
+   # same form + same selected ids dispatch to different routes. #}
   <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Delete selected</button>
+  {% for btn in bulk_action_buttons %}
+  <button type="submit" formaction="{{ btn.form_action }}" class="rio-button{% if btn.destructive %} rio-button--danger{% endif %}">{{ btn.label }}</button>
+  {% endfor %}
   <button type="button" class="rio-bulk-bar-clear" data-rio-bulk-clear>Clear selection</button>
 </div>
 
