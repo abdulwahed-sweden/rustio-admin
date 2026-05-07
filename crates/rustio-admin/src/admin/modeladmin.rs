@@ -101,6 +101,46 @@ pub trait ModelAdmin: AdminModel {
     fn fieldsets() -> &'static [Fieldset] {
         &[]
     }
+
+    /// Custom bulk actions surfaced as extra buttons in the list-view
+    /// bulk bar (next to the framework's built-in Delete). Default:
+    /// none.
+    ///
+    /// `BulkAction` is metadata only — the dispatcher
+    /// (`AdminOps::execute_bulk_action`) is what actually runs the
+    /// action on the selected rows. Project models that need a custom
+    /// action override `AdminOps::execute_bulk_action` to match on
+    /// `name` and apply the work; the framework's default impl
+    /// returns a clear `BadRequest` for any name it doesn't recognise,
+    /// so a forgotten implementation surfaces as an error page rather
+    /// than a silent no-op.
+    fn bulk_actions() -> &'static [BulkAction] {
+        &[]
+    }
+}
+
+/// One project-defined bulk action declared by
+/// [`ModelAdmin::bulk_actions`]. Static metadata only — see
+/// `AdminOps::execute_bulk_action` for the runtime dispatcher.
+#[derive(Debug, Clone, Copy)]
+pub struct BulkAction {
+    /// Stable URL slug. Routed at `POST /admin/:model/bulk/:name`.
+    /// Use snake_case identifiers; the framework reserves `delete`
+    /// for its built-in cascade-aware delete (handled separately at
+    /// `/bulk_delete`).
+    pub name: &'static str,
+    /// Human-readable button label. Rendered as-is in the bulk bar
+    /// and on the confirmation page header.
+    pub label: &'static str,
+    /// `true` → render the button with the framework's destructive
+    /// (red) styling. Use for actions that lose data or change state
+    /// in a hard-to-undo way.
+    pub destructive: bool,
+    /// `true` → POST shows a confirmation page first listing every
+    /// selected row; the user must click again to commit. `false` →
+    /// execute on the first POST. Default in the recommended call
+    /// pattern is `true` for any action a user might regret.
+    pub confirm: bool,
 }
 
 /// One column to sort by, with direction.

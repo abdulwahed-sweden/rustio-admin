@@ -1,0 +1,40 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-form-shell">
+
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
+    <span>{{ action_label }}</span>
+  </nav>
+  <h1>{{ action_label }}</h1>
+</header>
+
+<section class="rio-card rio-confirm">
+  <p>You are about to apply <strong>{{ action_label }}</strong> to <strong>{{ items|length }}</strong> {{ singular_name }}{% if items|length != 1 %}s{% endif %}:</p>
+
+  <ul class="rio-cascade-list">
+    {% for it in items %}
+    <li>
+      <a href="/admin/{{ admin_name }}/{{ it.id }}/edit">#{{ it.id }}</a>
+      &mdash; <em>{{ it.label }}</em>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <form method="post" action="/admin/{{ admin_name }}/bulk/{{ action_name }}" class="rio-form-actions">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="_ids" value="{{ ids_csv }}">
+    <input type="hidden" name="_confirmed" value="1">
+    <button type="submit" class="rio-button {% if action_destructive %}rio-button--danger{% else %}rio-button--primary{% endif %}">
+      {% if action_destructive %}{{ icon("trash", class="rio-icon") }}{% endif %}
+      Confirm: {{ action_label }}
+    </button>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
+    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
+  </form>
+</section>
+
+</div>
+{% endblock %}

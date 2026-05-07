@@ -644,6 +644,86 @@ pub(crate) async fn handle_bulk_delete(
     Ok(Response::html(body))
 }
 
+/// Generic dispatcher for project-defined bulk actions registered via
+/// [`super::modeladmin::ModelAdmin::bulk_actions`]. Mirrors the
+/// `handle_bulk_delete` two-step flow: the first POST renders a
+/// generic confirmation page (when the action's `confirm == true`);
+/// the second (with `_confirmed=1`) calls
+/// `AdminOps::execute_bulk_action` and redirects.
+///
+/// `delete` is intentionally not routable here — it goes through the
+/// cascade-aware `/bulk_delete` path. We reject it here so an
+/// accidental registration of a `BulkAction { name: "delete", … }`
+/// doesn't shadow the built-in.
+pub(crate) async fn handle_bulk_action(
+    ctx: &AdminCtx,
+    identity: Identity,
+    admin_name: &str,
+    action_name: &str,
+    req: &Request,
+) -> Result<Response> {
+    if action_name == "delete" {
+        return Err(Error::BadRequest(
+            "the action name `delete` is reserved — use POST /admin/:model/bulk_delete".into(),
+        ));
+    }
+
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let action = entry
+        .bulk_actions
+        .iter()
+        .find(|a| a.name == action_name)
+        .copied()
+        .ok_or_else(|| {
+            Error::NotFound(format!(
+                "bulk action `{action_name}` is not registered on `{admin_name}`"
+            ))
+        })?;
+
+    let form = req.form()?;
+    let raw_ids = form.get("_ids").unwrap_or_default();
+    let ids = parse_bulk_ids(raw_ids);
+    if ids.is_empty() {
+        return Ok(Response::redirect(format!("/admin/{admin_name}")));
+    }
+
+    // Commit step. `_confirmed` is required only when the action
+    // declared `confirm: true`; one-click actions skip the confirm
+    // page entirely.
+    if form.bool_flag("_confirmed") || !action.confirm {
+        entry
+            .ops
+            .execute_bulk_action(&ctx.db, action.name, &ids)
+            .await?;
+        return Ok(Response::redirect(format!("/admin/{admin_name}")));
+    }
+
+    // Confirm step. Resolve labels for each id; rows that vanished
+    // between selection and confirm drop out silently.
+    let mut items: Vec<render::BulkDeleteItem> = Vec::with_capacity(ids.len());
+    for id in &ids {
+        if let Some(label) = entry.ops.object_label(&ctx.db, *id).await? {
+            items.push(render::BulkDeleteItem { id: *id, label });
+        }
+    }
+    if items.is_empty() {
+        return Ok(Response::redirect(format!("/admin/{admin_name}")));
+    }
+
+    let view = render::bulk_confirm_action_ctx(
+        &identity,
+        &ctx.admin,
+        entry,
+        action,
+        items,
+        csrf_token(req),
+    );
+    let body = ctx
+        .templates
+        .render("admin/bulk_confirm_action.html", &view)?;
+    Ok(Response::html(body))
+}
+
 // ---- History pages -------------------------------------------------------
 
 pub(crate) async fn show_object_history(

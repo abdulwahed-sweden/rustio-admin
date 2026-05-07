@@ -446,7 +446,20 @@ pub(crate) struct ListCtx {
     /// Whether the bulk-action UI should render. Always `false` until
     /// the bulk-action POST endpoint is wired in a later phase.
     pub bulk_actions_enabled: bool,
+    /// Project-defined bulk actions registered via
+    /// `ModelAdmin::bulk_actions()`. Rendered as extra buttons in
+    /// the list-view bulk bar next to the framework's built-in
+    /// Delete. Each button POSTs to `/admin/:model/bulk/:name`.
+    pub bulk_action_buttons: Vec<BulkActionBtnCtx>,
     pub flash: Option<FlashCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct BulkActionBtnCtx {
+    pub name: &'static str,
+    pub label: &'static str,
+    pub destructive: bool,
+    pub form_action: String,
 }
 
 /// `values` is flattened into the JSON object so template code can do
@@ -978,6 +991,16 @@ pub(crate) fn list_ctx(
         next_page_link,
         page_items,
         bulk_actions_enabled: false,
+        bulk_action_buttons: entry
+            .bulk_actions
+            .iter()
+            .map(|a| BulkActionBtnCtx {
+                name: a.name,
+                label: a.label,
+                destructive: a.destructive,
+                form_action: format!("/admin/{}/bulk/{}", entry.admin_name, a.name),
+            })
+            .collect(),
         flash: None,
     }
 }
@@ -1559,6 +1582,61 @@ pub(crate) struct BulkConfirmDeleteCtx {
 pub(crate) struct BulkDeleteItem {
     pub id: i64,
     pub label: String,
+}
+
+// ---- Bulk action confirmation (project-defined) -------------------------
+
+#[derive(Serialize)]
+pub(crate) struct BulkConfirmActionCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: String,
+    pub entries: Vec<SidebarEntry>,
+    pub admin_name: &'static str,
+    pub display_name: &'static str,
+    pub singular_name: &'static str,
+    /// The action's URL slug (e.g. `"publish"`) — replayed back into
+    /// the confirm form's `formaction` URL.
+    pub action_name: &'static str,
+    pub action_label: &'static str,
+    pub action_destructive: bool,
+    pub items: Vec<BulkDeleteItem>,
+    pub ids_csv: String,
+    pub flash: Option<FlashCtx>,
+}
+
+pub(crate) fn bulk_confirm_action_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    entry: &AdminEntry,
+    action: super::modeladmin::BulkAction,
+    items: Vec<BulkDeleteItem>,
+    csrf_token: String,
+) -> BulkConfirmActionCtx {
+    let ids_csv = items
+        .iter()
+        .map(|i| i.id.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    BulkConfirmActionCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: format!("{} — {} {}", action.label, items.len(), entry.display_name),
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        admin_name: entry.admin_name,
+        display_name: entry.display_name,
+        singular_name: entry.singular_name,
+        action_name: action.name,
+        action_label: action.label,
+        action_destructive: action.destructive,
+        items,
+        ids_csv,
+        flash: None,
+    }
 }
 
 pub(crate) fn bulk_confirm_delete_ctx(
