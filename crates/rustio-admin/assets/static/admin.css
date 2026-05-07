@@ -1332,12 +1332,20 @@ pre code {
 .rio-shell[data-sidebar="open"] .rio-sidebar { display: block; }
 .rio-sidebar-toggle { display: inline-flex; }
 
-/* Tablet: sidebar pinned in the flex row (no grid template needed). */
+/* Tablet: sidebar pinned in the flex row, sticky to the viewport just
+ * below the topbar. `align-self: flex-start` opts out of the row's
+ * stretch so the element keeps a viewport-height box; `overflow-y:
+ * auto` lets long sidebar content scroll independently when the
+ * navigation outgrows the screen. */
 @media (min-width: 768px) {
   .rio-sidebar {
     display: block;
     flex: 0 0 var(--rio-sidebar-w);
-    position: static;
+    align-self: flex-start;
+    position: sticky;
+    top: var(--rio-topbar-h);
+    height: calc(100vh - var(--rio-topbar-h));
+    overflow-y: auto;
     width: auto;
     max-width: none;
     box-shadow: none;
