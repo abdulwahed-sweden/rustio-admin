@@ -40,6 +40,24 @@ const ADMIN_CSS: &str = include_str!("../../assets/static/admin.css");
 /// build step.
 const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 
+/// Self-hosted fonts (SIL OFL-1.1, see assets/static/fonts/LICENSE.txt).
+/// Bundling them as bytes keeps the single-binary deploy story intact
+/// and avoids the FOUT/CDN round-trip every consuming app would
+/// otherwise inherit from a Google Fonts <link>.
+///
+/// Latin: Geist (variable wght 100..900) + Geist Mono (variable wght
+/// 100..900). Arabic: Tajawal (UI surfaces — buttons, sidebar, tables)
+/// in 400/500/700, plus Noto Naskh Arabic (paragraph body, variable
+/// wght 400..700).
+const FONT_GEIST: &[u8] = include_bytes!("../../assets/static/fonts/Geist-Variable.woff2");
+const FONT_GEIST_MONO: &[u8] =
+    include_bytes!("../../assets/static/fonts/GeistMono-Variable.woff2");
+const FONT_TAJAWAL_REG: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Regular.woff2");
+const FONT_TAJAWAL_MED: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Medium.woff2");
+const FONT_TAJAWAL_BOLD: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Bold.woff2");
+const FONT_NOTO_NASKH_AR: &[u8] =
+    include_bytes!("../../assets/static/fonts/NotoNaskhArabic-Variable.woff2");
+
 use super::handlers::{self, AdminCtx};
 use super::render;
 use super::types::Admin;
@@ -202,15 +220,17 @@ pub fn register_admin_routes(
     });
 
     // Embedded stylesheet + JS. The bytes are baked into the binary
-    // so single-binary deploy is preserved; the long cache lifetime
-    // keeps repeat-loads cheap.
+    // so single-binary deploy is preserved. CSS/JS use `no-cache`
+    // (revalidate every request) so theme + design tweaks roll out the
+    // moment the binary restarts; fonts (next block) keep their long
+    // immutable cache because their bytes never change per release.
     let router = router.get("/static/admin.css", |_req| async move {
         Ok(Response::new(
             hyper::StatusCode::OK,
             bytes::Bytes::from_static(ADMIN_CSS.as_bytes()),
         )
         .with_header("content-type", "text/css; charset=utf-8")
-        .with_header("cache-control", "public, max-age=3600"))
+        .with_header("cache-control", "no-cache, must-revalidate"))
     });
     let router = router.get("/static/admin.js", |_req| async move {
         Ok(Response::new(
@@ -218,8 +238,37 @@ pub fn register_admin_routes(
             bytes::Bytes::from_static(ADMIN_JS.as_bytes()),
         )
         .with_header("content-type", "application/javascript; charset=utf-8")
-        .with_header("cache-control", "public, max-age=3600"))
+        .with_header("cache-control", "no-cache, must-revalidate"))
     });
+
+    // Self-hosted fonts. Cache aggressively: file contents are
+    // immutable per build, so a 1-year cache is safe — the binary
+    // ships a fresh copy on the next release.
+    fn font_response(bytes: &'static [u8]) -> Response {
+        Response::new(hyper::StatusCode::OK, bytes::Bytes::from_static(bytes))
+            .with_header("content-type", "font/woff2")
+            .with_header("cache-control", "public, max-age=31536000, immutable")
+    }
+    let router = router.get("/static/fonts/Geist-Variable.woff2", |_req| async move {
+        Ok(font_response(FONT_GEIST))
+    });
+    let router = router.get(
+        "/static/fonts/GeistMono-Variable.woff2",
+        |_req| async move { Ok(font_response(FONT_GEIST_MONO)) },
+    );
+    let router = router.get("/static/fonts/Tajawal-Regular.woff2", |_req| async move {
+        Ok(font_response(FONT_TAJAWAL_REG))
+    });
+    let router = router.get("/static/fonts/Tajawal-Medium.woff2", |_req| async move {
+        Ok(font_response(FONT_TAJAWAL_MED))
+    });
+    let router = router.get("/static/fonts/Tajawal-Bold.woff2", |_req| async move {
+        Ok(font_response(FONT_TAJAWAL_BOLD))
+    });
+    let router = router.get(
+        "/static/fonts/NotoNaskhArabic-Variable.woff2",
+        |_req| async move { Ok(font_response(FONT_NOTO_NASKH_AR)) },
+    );
 
     // Public: login/logout.
     let c = ctx.clone();

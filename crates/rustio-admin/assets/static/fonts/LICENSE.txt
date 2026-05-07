@@ -1,0 +1,29 @@
+Fonts bundled with rustio-admin
+================================
+
+All fonts in this directory are licensed under the SIL Open Font
+License, Version 1.1 — full text at https://openfontlicense.org/.
+
+Latin UI + monospace
+--------------------
+  Geist-Variable.woff2          Copyright 2023 The Geist Font Project Authors
+  GeistMono-Variable.woff2      Copyright 2023 The Geist Mono Font Project Authors
+                                Source: https://github.com/vercel/geist-font
+
+Arabic UI (compact surfaces — buttons, labels, tables, badges)
+--------------------------------------------------------------
+  Tajawal-Regular.woff2     Copyright 2017 The Tajawal Project Authors
+  Tajawal-Medium.woff2      (Mohamed Gaber, Boutros International)
+  Tajawal-Bold.woff2        Source: https://github.com/Gue3bara/Tajawal
+
+Arabic body (paragraphs, descriptions, settings/help pages)
+-----------------------------------------------------------
+  NotoNaskhArabic-Variable.woff2
+                                Copyright 2022 The Noto Project Authors
+                                Source: https://github.com/notofonts/arabic
+                                Variable wght axis: 400..700
+
+Per the OFL-1.1, these fonts are bundled into the rustio-admin binary
+and re-distributed unmodified. The full OFL-1.1 text must accompany
+any redistribution; download a verbatim copy from the URL above or
+include this file alongside the woff2 binaries.

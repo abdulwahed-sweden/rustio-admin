@@ -5,31 +5,116 @@
  * Mobile-first, three breakpoints. Dark palette flips via the
  * combination of `prefers-color-scheme: dark` and an explicit
  * `data-rio-theme="dark"` attribute on `<html>`.
+ *
+ * Self-hosted fonts (SIL OFL-1.1, see /static/fonts/LICENSE.txt):
+ *
+ *   Latin / UI    — Geist Variable (wght 100..900)
+ *   Code          — Geist Mono Variable (wght 100..900)
+ *   Arabic UI     — Tajawal 400 / 500 / 700
+ *                   (compact surfaces: buttons, sidebar, tables, badges)
+ *   Arabic body   — Noto Naskh Arabic Variable (wght 400..700)
+ *                   (paragraphs, descriptions, long-form copy)
+ *
+ * The font binaries are baked into the rustio-admin binary; no CDN
+ * round-trip, no FOUT, no GDPR/tracking surface. Browsers select
+ * which Arabic face to load via `unicode-range` + the per-element
+ * `font-family` resolution rules in §1.b below.
  */
 
 /* ============================================================
- * 1. Variables + reset
+ * 0. @font-face — self-hosted, OFL-1.1
+ * ============================================================ */
+
+/* Geist (variable Latin) ------------------------------------- */
+@font-face {
+  font-family: "Geist";
+  src: url("/static/fonts/Geist-Variable.woff2") format("woff2-variations"),
+       url("/static/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/static/fonts/GeistMono-Variable.woff2") format("woff2-variations"),
+       url("/static/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tajawal (Arabic UI: compact surfaces) ---------------------- */
+/* Three static weights — Tajawal has no public variable axis. The
+ * unicode-range filters fetches to Arabic codepoints only. */
+@font-face {
+  font-family: "Tajawal";
+  src: url("/static/fonts/Tajawal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E, U+2010-2011, U+204F, U+2E41;
+}
+@font-face {
+  font-family: "Tajawal";
+  src: url("/static/fonts/Tajawal-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E, U+2010-2011, U+204F, U+2E41;
+}
+@font-face {
+  font-family: "Tajawal";
+  src: url("/static/fonts/Tajawal-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E, U+2010-2011, U+204F, U+2E41;
+}
+
+/* Noto Naskh Arabic (Arabic paragraph body) ------------------ */
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  src: url("/static/fonts/NotoNaskhArabic-Variable.woff2") format("woff2-variations"),
+       url("/static/fonts/NotoNaskhArabic-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E, U+2010-2011, U+204F, U+2E41;
+}
+
+/* ============================================================
+ * 1.a. Color / spacing tokens
  * ============================================================ */
 
 :root {
   /* The six theme tokens (also injected by _theme.html so a project
-   * override survives the cascade). Defaults match AdminTheme::default(). */
-  --rio-accent: #2563eb;
-  --rio-accent-rgb: 37 99 235;
-  --rio-bg: #f4f6fb;
+   * override survives the cascade). Defaults match AdminTheme::default().
+   *
+   * Brand accent — `#A0341A` (deep crimson, "Andalusian red"). Reserved
+   * for affordances: primary buttons, focus rings, active state, links,
+   * brand emblem. Never flood-filled across page chrome — surfaces stay
+   * neutral so the accent retains its weight as a call-to-action. */
+  --rio-accent: #A0341A;
+  --rio-accent-rgb: 160 52 26;
+  --rio-bg: #ebeef4;            /* deeper page bg — surfaces now visibly pop */
   --rio-surface: #ffffff;
-  --rio-text: #111827;
-  --rio-text-muted: #4b5563;
-  --rio-border: #d1d5db;
+  --rio-surface-2: #f5f7fb;     /* secondary surface (table head, hovered row) */
+  --rio-text: #0a0e1a;          /* near-black body text */
+  --rio-text-muted: #3d4452;    /* darker — strong reading contrast on surface */
+  --rio-text-subtle: #5e6577;   /* metadata + breadcrumbs */
+  --rio-border: #cdd3df;        /* darker for visible separation against bg */
+  --rio-border-strong: #b8c0cf; /* card outlines, table dividers */
 
-  /* Derived tokens — colors carry meaning across the UI. */
+  /* Derived tokens — colors carry meaning across the UI. Info-bg now
+   * reads as a soft warm wash instead of cobalt so it harmonises with
+   * the crimson accent rather than fighting it. */
   --rio-success: #15803d;
   --rio-warning: #b45309;
   --rio-danger: #b91c1c;
   --rio-success-bg: #ecfdf5;
   --rio-warning-bg: #fffbeb;
   --rio-danger-bg: #fef2f2;
-  --rio-info-bg: #eff6ff;
+  --rio-info-bg: #fdf3ef;
 
   /* Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. */
   --rio-s1: 0.25rem;
@@ -40,72 +125,330 @@
   --rio-s6: 2rem;
   --rio-s7: 3rem;
 
-  --rio-radius: 8px;
-  --rio-radius-sm: 4px;
+  --rio-radius: 10px;
+  --rio-radius-sm: 6px;
+  --rio-radius-lg: 14px;
   --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   --rio-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.10);
-  --rio-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --rio-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --rio-sidebar-w: 240px;
   --rio-topbar-h: 56px;
+
+  /* ----------------------------------------------------------
+   * 1.b. Typography tokens — three families, consistent scale.
+   * ---------------------------------------------------------- */
+
+  /* Latin UI — Geist leads, then Inter / Plex Sans, then platform UI. */
+  --rio-font-sans:
+    "Geist",
+    "Inter",
+    "IBM Plex Sans",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+
+  /* Arabic UI — compact admin surfaces (buttons, navbars, sidebar
+   * labels, table cells, badges, form labels). Tajawal first; Noto
+   * Naskh as a graceful fallback so Arabic text never lands on a
+   * Latin face. */
+  --rio-font-arabic:
+    "Tajawal",
+    "Noto Naskh Arabic",
+    system-ui,
+    sans-serif;
+
+  /* Arabic body — long-form copy, descriptions, settings/help pages.
+   * Noto Naskh has higher x-height + softer terminals → reads better
+   * in long paragraphs than Tajawal. */
+  --rio-font-arabic-body:
+    "Noto Naskh Arabic",
+    "Tajawal",
+    serif;
+
+  /* Code — Geist Mono, then JetBrains/Plex Mono, then platform mono. */
+  --rio-font-mono:
+    "Geist Mono",
+    "JetBrains Mono",
+    "IBM Plex Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+  /* Size scale — rem-based, 16px html root.
+   * Floor on small text is 13px (--rio-fs-xs); body lands at 16px. */
+  --rio-font-size-base: 1rem;        /* 16px — the body baseline */
+  --rio-fs-xs:    0.8125rem;          /* 13px — smallest helper text */
+  --rio-fs-sm:    0.875rem;           /* 14px — dense table/form helpers */
+  --rio-fs-md:    0.9375rem;          /* 15px — sidebar / nav / table cells */
+  --rio-fs-base:  1rem;               /* 16px — body, button label */
+  --rio-fs-lg:    1.0625rem;          /* 17px — main prose body */
+  --rio-fs-xl:    1.25rem;            /* 20px — section h3 */
+  --rio-fs-h3:    1.375rem;           /* 22px */
+  --rio-fs-h2:    1.625rem;           /* 26px */
+  --rio-fs-h1:    2.125rem;           /* 34px */
+  --rio-fs-display: 2.5rem;           /* 40px — hero / login title */
+
+  /* Line heights — tuned per script. Arabic needs more leading because
+   * Naskh letterforms hang above and below the baseline. */
+  --rio-lh-tight:  1.25;              /* h1/h2/h3, big display */
+  --rio-lh-ui:     1.45;              /* dense UI: buttons, tags, table */
+  --rio-lh-body:   1.6;               /* English paragraph body */
+  --rio-lh-arabic: 1.9;               /* Arabic paragraph body */
+
+  /* Weights — opt-in via tokens so the design system can tune
+   * regular/medium/semibold/bold without touching every site. */
+  --rio-fw-regular:  400;
+  --rio-fw-medium:   500;
+  --rio-fw-semibold: 600;
+  --rio-fw-bold:     700;
+
+  /* Tracking (Latin only — Arabic resets to 0 in §1.c). Geist is
+   * drawn for slight negative tracking on display sizes. */
+  --rio-tracking-display: -0.022em;
+  --rio-tracking-heading: -0.012em;
+  --rio-tracking-body:    -0.003em;
+  --rio-tracking-tabular: 0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --rio-bg: #0f172a;
-    --rio-surface: #1e293b;
-    --rio-text: #e5e7eb;
-    --rio-text-muted: #94a3b8;
-    --rio-border: #334155;
+    --rio-bg: #0b1120;
+    --rio-surface: #161e2e;
+    --rio-text: #f1f5f9;          /* crisper than the old #e5e7eb */
+    --rio-text-muted: #c0c8d6;    /* AAA contrast vs surface */
+    --rio-text-subtle: #8d97ab;
+    --rio-border: #2d384c;
     --rio-success-bg: #064e3b;
     --rio-warning-bg: #422006;
     --rio-danger-bg: #450a0a;
-    --rio-info-bg: #1e3a8a;
-    --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --rio-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --rio-info-bg: #3a1308;
+    --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --rio-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
   }
 }
 
 html[data-rio-theme="dark"] {
-  --rio-bg: #0f172a;
-  --rio-surface: #1e293b;
-  --rio-text: #e5e7eb;
-  --rio-text-muted: #94a3b8;
-  --rio-border: #334155;
+  --rio-bg: #0b1120;
+  --rio-surface: #161e2e;
+  --rio-text: #f1f5f9;
+  --rio-text-muted: #c0c8d6;
+  --rio-text-subtle: #8d97ab;
+  --rio-border: #2d384c;
   --rio-success-bg: #064e3b;
   --rio-warning-bg: #422006;
   --rio-danger-bg: #450a0a;
-  --rio-info-bg: #1e3a8a;
-  --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --rio-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --rio-info-bg: #3a1308;
+  --rio-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --rio-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 html[data-rio-theme="light"] {
-  --rio-bg: #f4f6fb;
+  --rio-bg: #ebeef4;
   --rio-surface: #ffffff;
-  --rio-text: #111827;
-  --rio-text-muted: #4b5563;
-  --rio-border: #d1d5db;
+  --rio-surface-2: #f5f7fb;
+  --rio-text: #0a0e1a;
+  --rio-text-muted: #3d4452;
+  --rio-text-subtle: #5e6577;
+  --rio-border: #cdd3df;
+  --rio-border-strong: #b8c0cf;
 }
+
+/* ============================================================
+ * 1.c. Reset + base typography
+ * ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+
+/* Set the html root font-size explicitly — a few browsers / user
+ * preferences ship a non-16px default, and our scale assumes 16px. */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  /* Tab character width in code blocks. */
+  tab-size: 2;
+}
+
 body {
   font-family: var(--rio-font-sans);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--rio-font-size-base);   /* 16px */
+  line-height: var(--rio-lh-body);        /* 1.6 */
+  font-weight: var(--rio-fw-regular);
   color: var(--rio-text);
   background: var(--rio-bg);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Safe global features — kerning + contextual alternates apply
+   * cleanly to every script. Stylistic alternates (Geist's ss01/ss03/
+   * cv11) are opted-in via .rio-latin so they never interfere with
+   * Tajawal / Noto Naskh / CJK shaping. */
+  font-feature-settings: "kern", "calt";
+  font-variant-ligatures: common-ligatures;
+  letter-spacing: var(--rio-tracking-body);
 }
-a { color: var(--rio-accent); text-decoration: none; }
+
+/* Latin-only display polish — auto-applies to Latin headings.
+ * Geist's "ss01" + "ss03" + "cv11" tighten figure widths and swap
+ * single-storey alternates so headings feel like a designed face. */
+.rio-latin,
+h1, h2, h3, h4,
+.rio-list-title, .rio-form-title, .rio-dash-greeting, .rio-auth-title {
+  font-feature-settings: "kern", "calt", "ss01", "ss03", "cv11";
+}
+
+/* ============================================================
+ * 1.d. Arabic-aware typography
+ * ------------------------------------------------------------
+ * Two contexts:
+ *   - UI surfaces  → Tajawal      (compact, geometric, dense UI)
+ *   - Body / prose → Noto Naskh   (humanist, paragraph-y)
+ * Both unicode-range trigger only on Arabic codepoints, so no
+ * Latin-only page pays the download cost.
+ * ============================================================ */
+
+/* Arabic UI context — anything tagged lang="ar" or dir="rtl" defaults
+ * to Tajawal. Strip Latin-tuned tracking + stylistic alternates so
+ * Arabic shaping isn't disrupted. */
+:lang(ar),
+[dir="rtl"],
+[dir="rtl"] *,
+.rio-arabic,
+.rio-arabic * {
+  font-family: var(--rio-font-arabic);
+  letter-spacing: 0 !important;
+  font-feature-settings: "kern" !important;
+  line-height: var(--rio-lh-ui);
+}
+
+/* Arabic body context — paragraphs, descriptions, help text.
+ * Switch to Noto Naskh + extra leading. Opt-in via lang="ar" on a
+ * <p> / blockquote / .rio-prose container, or via .rio-arabic-body. */
+p:lang(ar),
+li:lang(ar),
+blockquote:lang(ar),
+.rio-prose:lang(ar),
+.rio-prose:lang(ar) p,
+.rio-prose:lang(ar) li,
+.rio-arabic-body,
+.rio-arabic-body * {
+  font-family: var(--rio-font-arabic-body);
+  line-height: var(--rio-lh-arabic);
+  font-size: var(--rio-fs-lg);
+  font-weight: var(--rio-fw-regular);
+}
+
+/* ============================================================
+ * 1.e. Headings, links, paragraphs, code
+ * ============================================================ */
+
+h1, h2, h3, h4 {
+  margin: 0 0 var(--rio-s3);
+  line-height: var(--rio-lh-tight);
+  letter-spacing: var(--rio-tracking-heading);
+  color: var(--rio-text);
+}
+h1 {
+  font-size: var(--rio-fs-h1);            /* 34px */
+  font-weight: var(--rio-fw-bold);
+  letter-spacing: var(--rio-tracking-display);
+}
+h2 {
+  font-size: var(--rio-fs-h2);            /* 26px */
+  font-weight: var(--rio-fw-semibold);
+}
+h3 {
+  font-size: var(--rio-fs-h3);            /* 22px */
+  font-weight: var(--rio-fw-semibold);
+}
+h4 {
+  font-size: var(--rio-fs-md);            /* 15px — section subtitle */
+  font-weight: var(--rio-fw-semibold);
+  letter-spacing: 0;
+}
+
+/* Arabic-tagged headings — keep the size scale, drop the negative
+ * tracking. Tajawal carries enough weight for display sizes. */
+:lang(ar) h1, :lang(ar) h2, :lang(ar) h3, :lang(ar) h4,
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4,
+h1:lang(ar), h2:lang(ar), h3:lang(ar), h4:lang(ar) {
+  letter-spacing: 0;
+  font-family: var(--rio-font-arabic);
+  font-weight: var(--rio-fw-bold);
+}
+
+p { margin: 0 0 var(--rio-s4); }
+
+a { color: var(--rio-accent); text-decoration: none; font-weight: var(--rio-fw-medium); }
 a:hover { text-decoration: underline; }
-code { font-family: var(--rio-font-mono); font-size: 0.92em; }
-h1, h2, h3 { margin: 0 0 var(--rio-s3); line-height: 1.25; }
-h1 { font-size: 1.5rem; font-weight: 600; }
-h2 { font-size: 1.15rem; font-weight: 600; }
-h3 { font-size: 1rem; font-weight: 600; }
-p { margin: 0 0 var(--rio-s3); }
+
+code, kbd, samp {
+  font-family: var(--rio-font-mono);
+  font-size: 0.875em;                     /* relative to context */
+  font-variant-ligatures: none;           /* "==" stays as 2 glyphs */
+  font-feature-settings: "kern";
+  background: rgba(var(--rio-accent-rgb) / 0.07);
+  padding: 0.05em 0.35em;
+  border-radius: var(--rio-radius-sm);
+  letter-spacing: 0;
+}
+pre {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-fs-sm);            /* 14px */
+  line-height: 1.6;
+  font-variant-ligatures: none;
+  font-feature-settings: "kern";
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  padding: var(--rio-s3) var(--rio-s4);
+  overflow-x: auto;
+  margin: 0 0 var(--rio-s4);
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* ============================================================
+ * 1.f. Utility classes for typography
+ * ============================================================ */
+
+/* Tabular numerals on data — IDs, counts, timestamps. */
+.rio-num, [data-tabular] { font-variant-numeric: tabular-nums; }
+
+/* Strong, content-grade prose container (settings/help pages). */
+.rio-prose {
+  font-size: var(--rio-fs-lg);            /* 17px */
+  line-height: var(--rio-lh-body);        /* 1.6 */
+  max-width: 68ch;
+}
+.rio-prose p { margin: 0 0 var(--rio-s4); }
+.rio-prose:lang(ar) p { line-height: var(--rio-lh-arabic); }
+
+/* Force a specific size on muted / hint text — never below 13px. */
+.rio-text-xs { font-size: var(--rio-fs-xs); }
+.rio-text-sm { font-size: var(--rio-fs-sm); }
+.rio-text-md { font-size: var(--rio-fs-md); }
+
+/* Force-dense line-height for chip / badge / tag-like surfaces. */
+.rio-tight { line-height: var(--rio-lh-ui); }
+
+/* Mobile readability bump — push body up to 17px below 600px so
+ * thumb-typing forms and reading copy stays comfortable. */
+@media (max-width: 600px) {
+  html { font-size: 16.5px; }
+  .rio-prose { font-size: var(--rio-fs-lg); }
+}
 
 /* ============================================================
  * 2. Shell — topbar / sidebar / main / footer
@@ -121,7 +464,7 @@ p { margin: 0 0 var(--rio-s3); }
   padding: var(--rio-s2) var(--rio-s4);
   text-align: center;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
 }
 .rio-banner--demo {
   background: var(--rio-warning-bg);
@@ -142,20 +485,29 @@ p { margin: 0 0 var(--rio-s3); }
   z-index: 10;
 }
 .rio-topbar-brand {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-weight: var(--rio-fw-bold);
+  font-size: var(--rio-fs-lg);                 /* 17px */
   color: var(--rio-text);
+  letter-spacing: var(--rio-tracking-heading);
 }
 .rio-topbar-brand:hover { text-decoration: none; }
 .rio-topbar-nav {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: var(--rio-s3);
+  gap: var(--rio-s4);
   flex-wrap: wrap;
 }
-.rio-topbar-identity { color: var(--rio-text-muted); font-size: 0.9rem; }
-.rio-topbar-link { color: var(--rio-text-muted); }
+.rio-topbar-identity {
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-md);                 /* 15px */
+  font-weight: var(--rio-fw-regular);
+}
+.rio-topbar-link {
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-medium);
+}
 .rio-topbar-link:hover { color: var(--rio-text); }
 .rio-topbar-logout { display: inline; }
 .rio-sidebar-toggle {
@@ -171,9 +523,16 @@ p { margin: 0 0 var(--rio-s3); }
   background: none;
   border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
-  padding: var(--rio-s1) var(--rio-s2);
-  color: var(--rio-text);
+  padding: 0.45rem 0.8rem;
+  font-size: var(--rio-fs-xs);                 /* 13px floor */
+  font-weight: var(--rio-fw-medium);
+  color: var(--rio-text-muted);
   cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.rio-theme-toggle:hover {
+  border-color: rgb(var(--rio-accent-rgb));
+  color: var(--rio-text);
 }
 
 .rio-layout {
@@ -186,7 +545,7 @@ p { margin: 0 0 var(--rio-s3); }
 .rio-sidebar {
   background: var(--rio-surface);
   border-right: 1px solid var(--rio-border);
-  padding: var(--rio-s4);
+  padding: var(--rio-s5) var(--rio-s4);
 }
 .rio-sidebar-list {
   list-style: none;
@@ -194,28 +553,42 @@ p { margin: 0 0 var(--rio-s3); }
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s1);
+  gap: 0.15rem;
 }
 .rio-sidebar-section {
-  font-size: 0.75rem;
+  font-size: var(--rio-fs-xs);                 /* 13px floor */
+  font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--rio-text-muted);
-  margin-top: var(--rio-s4);
-  padding: 0 var(--rio-s2);
+  letter-spacing: 0.08em;
+  color: var(--rio-text-subtle);
+  margin: var(--rio-s5) 0 var(--rio-s2);
+  padding: 0 0.6rem;
 }
+.rio-sidebar-section:first-child { margin-top: 0; }
 .rio-sidebar-link {
   display: flex;
   align-items: center;
-  gap: var(--rio-s2);
-  padding: var(--rio-s2) var(--rio-s3);
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
   border-radius: var(--rio-radius-sm);
   color: var(--rio-text);
+  font-size: var(--rio-fs-md);                 /* 15px */
+  font-weight: var(--rio-fw-medium);
+  line-height: var(--rio-lh-ui);
+  transition: background 0.12s, color 0.12s;
 }
 .rio-sidebar-link:hover {
   background: rgba(var(--rio-accent-rgb) / 0.08);
+  color: rgb(var(--rio-accent-rgb));
   text-decoration: none;
 }
+.rio-sidebar-link .rio-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--rio-text-subtle);
+  transition: color 0.12s;
+}
+.rio-sidebar-link:hover .rio-icon { color: rgb(var(--rio-accent-rgb)); }
 
 .rio-main {
   padding: var(--rio-s5);
@@ -225,7 +598,7 @@ p { margin: 0 0 var(--rio-s3); }
 .rio-footer {
   padding: var(--rio-s3) var(--rio-s4);
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
   color: var(--rio-text-muted);
   border-top: 1px solid var(--rio-border);
 }
@@ -238,7 +611,7 @@ p { margin: 0 0 var(--rio-s3); }
   margin-bottom: var(--rio-s5);
 }
 .rio-breadcrumbs {
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
   color: var(--rio-text-muted);
   margin-bottom: var(--rio-s2);
 }
@@ -272,7 +645,7 @@ p { margin: 0 0 var(--rio-s3); }
 }
 .rio-meta {
   color: var(--rio-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
 }
 
 /* ============================================================
@@ -288,7 +661,7 @@ p { margin: 0 0 var(--rio-s3); }
   color: var(--rio-text);
   border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
-  font-size: 0.9rem;
+  font-size: var(--rio-fs-md);
   font-weight: 500;
   cursor: pointer;
   text-decoration: none;
@@ -351,7 +724,7 @@ p { margin: 0 0 var(--rio-s3); }
 .rio-field--full { grid-column: 1 / -1; }
 .rio-field-label {
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: var(--rio-fs-md);
   color: var(--rio-text);
 }
 .rio-required {
@@ -360,7 +733,7 @@ p { margin: 0 0 var(--rio-s3); }
 }
 .rio-field-hint {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--rio-fs-xs);
   color: var(--rio-text-muted);
 }
 .rio-field-errors {
@@ -368,7 +741,7 @@ p { margin: 0 0 var(--rio-s3); }
   margin: var(--rio-s1) 0 0;
   padding: 0;
   color: var(--rio-danger);
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
 }
 
 .rio-input,
@@ -440,7 +813,7 @@ p { margin: 0 0 var(--rio-s3); }
 }
 .rio-table th {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
   color: var(--rio-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -512,7 +885,7 @@ p { margin: 0 0 var(--rio-s3); }
   margin-bottom: var(--rio-s4);
 }
 .rio-filters-title {
-  font-size: 0.8rem;
+  font-size: var(--rio-fs-xs);
   text-transform: uppercase;
   color: var(--rio-text-muted);
   margin: 0 0 var(--rio-s2);
@@ -538,7 +911,7 @@ p { margin: 0 0 var(--rio-s3); }
   color: var(--rio-text);
   border: 1px solid var(--rio-border);
   border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: var(--rio-fs-sm);
 }
 .rio-filter-chip:hover { text-decoration: none; border-color: var(--rio-accent); }
 .rio-filter-chip--active {
@@ -558,7 +931,7 @@ p { margin: 0 0 var(--rio-s3); }
   padding: var(--rio-s1) var(--rio-s3);
   border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
-  font-size: 0.9rem;
+  font-size: var(--rio-fs-md);
   color: var(--rio-text);
 }
 .rio-pagination-link:hover { text-decoration: none; border-color: var(--rio-accent); }
@@ -571,7 +944,7 @@ p { margin: 0 0 var(--rio-s3); }
   display: inline-block;
   padding: var(--rio-s1) var(--rio-s3);
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--rio-fs-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;

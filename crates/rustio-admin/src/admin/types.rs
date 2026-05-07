@@ -303,14 +303,15 @@ pub struct AdminTheme {
 
 impl Default for AdminTheme {
     fn default() -> Self {
-        // Cobalt Blue light palette.
+        // Crimson light palette — matches admin.css :root defaults.
+        // Projects override via Admin::theme(...) or accent_color(...).
         Self {
-            accent: "#2563EB".into(),
-            bg: "#F4F6FB".into(),
+            accent: "#A0341A".into(),
+            bg: "#EBEEF4".into(),
             surface: "#FFFFFF".into(),
-            text: "#111827".into(),
-            text_muted: "#4B5563".into(),
-            border: "#D1D5DB".into(),
+            text: "#0A0E1A".into(),
+            text_muted: "#3D4452".into(),
+            border: "#CDD3DF".into(),
         }
     }
 }
