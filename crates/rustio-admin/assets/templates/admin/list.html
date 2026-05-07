@@ -8,27 +8,43 @@
   </div>
 </header>
 
-<form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar">
-  <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
-  <button type="submit" class="rio-button">Search</button>
-</form>
+<div class="rio-toolbar">
+  <form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar" role="search">
+    <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
+    <button type="submit" class="rio-button">Search</button>
+  </form>
 
-{% if filters %}
-<aside class="rio-filters" aria-label="Filters">
-  <h2 class="rio-filters-title">Filter by</h2>
-  {% for group in filters %}
-  <details class="rio-filter-group" open>
-    <summary>{{ group.label }}</summary>
-    <ul class="rio-filter-options">
-      <li><a href="/admin/{{ admin_name }}" class="rio-filter-chip{% if not group.current %} rio-filter-chip--active{% endif %}">All</a></li>
-      {% for opt in group.options %}
-      <li><a href="/admin/{{ admin_name }}?{{ group.field }}={{ opt.value }}" class="rio-filter-chip{% if opt.selected %} rio-filter-chip--active{% endif %}">{{ opt.label }}</a></li>
+  {% if filters %}
+  <div class="rio-dropdown" data-rio-dropdown>
+    <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+      {{ icon("filter", class="rio-icon") }}
+      Filters
+      {% if active_filter_count > 0 %}
+      <span class="rio-dropdown-badge" aria-label="{{ active_filter_count }} active filter">{{ active_filter_count }}</span>
+      {% endif %}
+      {{ icon("chevron-down", class="rio-chev") }}
+    </button>
+    <div class="rio-dropdown-panel" role="dialog" aria-label="Filters">
+      {% for group in filters %}
+      <div class="rio-dropdown-section">
+        <span class="rio-dropdown-label">{{ group.label }}</span>
+        <div class="rio-dropdown-options">
+          <a href="/admin/{{ admin_name }}" class="rio-dropdown-chip{% if not group.current %} is-active{% endif %}">All</a>
+          {% for opt in group.options %}
+          <a href="/admin/{{ admin_name }}?{{ group.field }}={{ opt.value }}" class="rio-dropdown-chip{% if opt.selected %} is-active{% endif %}">{{ opt.label }}</a>
+          {% endfor %}
+        </div>
+      </div>
       {% endfor %}
-    </ul>
-  </details>
-  {% endfor %}
-</aside>
-{% endif %}
+      {% if active_filter_count > 0 %}
+      <div class="rio-dropdown-footer">
+        <a href="/admin/{{ admin_name }}" class="rio-button">Clear all</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
 
 <section class="rio-card rio-list">
   {% if rows %}
