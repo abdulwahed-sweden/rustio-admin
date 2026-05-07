@@ -4,6 +4,232 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [0.2.0] — 2026-05-07
+
+Premium-chrome release. The list view, form view, and Auth pages all
+share one design language; dark mode is now a calm graphite workspace
+rather than an OLED-black hacker terminal. New list-view toolbar
+(filters / sort / per-page / active-filter pills / numbered
+pagination / search glyph) ships with full URL state preservation, and
+projects can register custom bulk actions alongside the built-in
+delete.
+
+> **Breaking change:** `AdminTheme` is now an override-patch type
+> with `Option<String>` fields instead of `String` snapshots; default
+> is *all `None`* (no inline `<style>` emitted at all).
+> `Admin::accent()` returns `Option<&str>`. See **Migrating from
+> 0.1.x** below.
+
+### Added — list view toolbar
+
+- **Filters dropdown panel.** The old stacked `<aside class="rio-filters">`
+  card is replaced by a single-row toolbar dropdown anchored next to
+  the search bar. Active filter count surfaces as an accent badge on
+  the toggle. Each chip is still an `<a href>` so navigation remains
+  the source of truth — no client state, no Apply step.
+- **Sort dropdown** with field-type-aware copy (`title (A → Z)`,
+  `created_at (newest first)`, `published (off → on)`). Toggle reads
+  `Sort: <current>`; menu lists every visible field × {asc, desc}
+  plus a leading **Default order** reset.
+- **Per-page picker dropdown** (`25 / 50 / 100 / 200 per page`). The
+  handler's allow-list changed from `[10, 25, 50, 100]` to
+  `[25, 50, 100, 200]` — the design mockup's set, more useful for
+  real workflows.
+- **Active-filter pills strip** below the toolbar (`Published: Yes
+  ×`). Each `×` drops only that filter while keeping query / sort /
+  other filters; a `Clear all` link resets every filter without
+  losing search / sort. Hidden when no filters are set, so the strip
+  has zero default-state cost.
+- **Numbered pagination** (`← Previous   1 [2] 3 … 9   Next →`).
+  Compresses past 7 pages to first / current ± 1 / last with `…`
+  markers. Active page is accent-filled.
+- **Search input glyph.** A magnifying-glass icon sits inside the
+  search field on the left.
+- **URL state preservation.** Every interactive widget — filter
+  chip, sort option, header sort, pagination, per-page picker —
+  composes its `href` through the new `build_list_url` helper so
+  clicking one never silently drops the others. The search form
+  carries hidden inputs for active filters / sort / per-page so
+  submitting a query keeps the rest of the state. URL-encoded
+  values; defaults skipped from the URL so `/admin/posts` stays
+  clean.
+- **Generic dropdown primitive** — `[data-rio-dropdown]` wrapper +
+  `.rio-dropdown-toggle` + `.rio-dropdown-panel`, plus two layout
+  variants (chip-row + vertical menu) — so future widgets reuse the
+  same machinery without new CSS.
+
+### Added — bulk select + bulk actions
+
+- **Per-row + master-row checkboxes** on the list view. Master shows
+  indeterminate state when partially selected.
+- **Sticky bulk action bar** (`N selected · Delete selected · Clear
+  selection`) that appears above the table when ≥ 1 row is checked.
+  Without JS the bar stays hidden — per-row Delete is the fallback,
+  no functional regression.
+- **Built-in bulk delete** — `POST /admin/:model/bulk_delete` with
+  the same two-step (confirm page → commit on `_confirmed=1`)
+  semantics as the per-row delete. Each row is deleted individually
+  so per-row hooks and audit entries fire as expected.
+- **Project-defined bulk actions.** New
+  `ModelAdmin::bulk_actions() -> &'static [BulkAction]` registers
+  buttons in the bulk bar; each routes to
+  `POST /admin/:model/bulk/:name`. Actions can be destructive (red
+  styling) and/or require confirmation. The runtime dispatcher is
+  `AdminOps::execute_bulk_action`, with a default `Err` that
+  surfaces a clear "no project handler" message — projects override
+  it to apply the work.
+
+### Added — form view + Auth refresh
+
+- **Editorial form shell.** Edit / new / confirm-delete /
+  password-change pages cap content at 880px and centre-align so
+  labels and inputs read at a comfortable line length. Single-column
+  field flow (the previous 2-col grid left gaps with sparse models).
+- **Action bar grouping.** New `.rio-form-actions-spacer` flex
+  pusher: primary save buttons sit left, secondary (History) and
+  destructive (Delete) + Cancel push right. Top divider grounds the
+  row.
+- **Auth pages on parity** — `users_list`, `groups_list` get the
+  proper `rio-th` / `rio-td--{number,text,datetime,actions}` classes
+  + compact `--sm` row buttons with icons. `user_edit`, `user_new`,
+  `group_edit`, `group_new`, `user_view`, `user_confirm_delete`,
+  `group_confirm_delete` all wrapped in the form shell.
+- **Sticky sidebar** at tablet+ widths (`position: sticky; top:
+  topbar-h; align-self: flex-start; height: calc(100vh -
+  topbar-h)`). Scrolls independently when long.
+
+### Added — design tokens
+
+- **Surface ladder** for layered depth without dramatic shadow:
+  `--rio-bg → --rio-surface → --rio-surface-2 → --rio-surface-3`.
+- **`--rio-text-strong`** for page titles + KPI numbers (white in
+  dark mode for clear hierarchy above the body).
+- **`--rio-border-soft`** for in-card row dividers, **`--rio-accent-hover`**
+  for primary-button hover state.
+- **Soft shadows** at `0.04–0.10` alpha — depth comes from layering,
+  not drop shadow.
+
+### Added — code-level hooks
+
+- New `BulkAction` struct (re-exported at `rustio_admin::admin::BulkAction`).
+- New `AdminOps::execute_bulk_action(db, name, ids)` trait method
+  with default `Err`.
+- New `build_list_url` URL composer in `render.rs`; new types
+  `SortOptionCtx`, `PerPageOptionCtx`, `ActiveFilterPillCtx`,
+  `PageItem`, `BulkActionBtnCtx`, `BulkConfirmDeleteCtx`,
+  `BulkConfirmActionCtx`, `BulkDeleteItem`.
+
+### Changed — theme architecture
+
+- **`AdminTheme` is now an override-patch type.** All fields are
+  `Option<String>`, defaulting to `None`. The framework stylesheet
+  (`admin.css`) is the single source of truth for every design
+  token; `AdminTheme` only injects overrides for fields a project
+  explicitly sets. Out of the box, **no inline `<style>` block is
+  emitted at all** — admin.css alone resolves the look.
+- **`_theme.html` placement flipped.** It now loads *after*
+  `<link rel="stylesheet" href="/static/admin.css">` in `_base.html`,
+  so a project override wins the cascade on source order without
+  needing `!important`. Selector list `html, html[data-rio-theme=
+  "light"], html[data-rio-theme="dark"]` makes overrides apply
+  across all theme states.
+- **`Admin::accent()` returns `Option<&str>`** (was `&str`). `None`
+  means *"no override — admin.css owns it"*.
+- **Inline theme bootstrap script** in `<head>` — reads
+  `localStorage["rio-theme"]` and sets `data-rio-theme` *before*
+  CSS loads, so the chosen mode lands on the first paint with no
+  flash-of-light-on-dark. The previous hardcoded `data-rio-theme=
+  "light"` defeated the "System" toggle option on every page reload.
+
+### Changed — dark mode
+
+- **Soft graphite, not near-black.** Page bg is now `#2B313C` (was
+  `#0b1120`); surfaces lift in 4–5% steps to `#444D5E`. Text scale
+  is warm slate (`#F3F4F6 / #D2D6DC / #B2B8C2`).
+- **Accent lifted** in dark from `#A0341A` (deep crimson) to
+  `#C84934` so primary buttons pop on graphite (~3.1:1 vs ~1.5:1)
+  while keeping the same warm-crimson hue family.
+- **Danger lifted** in dark from `#F87171` (pastel pink) to
+  `#DC4444` — a saturated red that communicates destructive intent
+  rather than candy.
+- **`text-strong`** in dark is now pure white for clear hierarchy
+  above the `#F3F4F6` body.
+
+### Changed — list view rendering
+
+- **`ModelAdmin::list_display()` now actually filters columns.** The
+  renderer was iterating over every model field unconditionally,
+  contradicting the doc comment on `AdminEntry::list_display`.
+  Models that declared `list_display = ["title", "published",
+  "created_at"]` were still rendering `body` and `id` and any other
+  field — now they render exactly what was declared.
+- **Datetime cells** render in monospace tabular nums with `nowrap`
+  so ISO timestamps don't break at the `T`.
+- **Text cells** clip to a single line with `min(20rem, 28vw)`
+  ellipsis; the template adds a `title=` attribute so hovering
+  reveals the full clipped value natively.
+
+### Changed — layout
+
+- **`.rio-layout` is flex, not grid.** The previous 2-column grid
+  reserved a 240px sidebar slot on every page, which crammed the
+  login card into a 240px-wide column when no sidebar was rendered
+  (visible disaster on `/admin/login`).
+- **`.rio-form` is a flex column with `gap`** so consecutive
+  `.rio-field` siblings have automatic spacing; `.rio-form-actions`
+  no longer needs its own `margin-top`.
+- **Main content cap** at 1280px on desktop so wide monitors don't
+  sprawl table rows across the full viewport.
+
+### Migrating from 0.1.x
+
+If you set theme tokens via struct literal:
+
+```rust
+// 0.1.x
+.theme(AdminTheme {
+    accent:     "#2563EB".into(),
+    bg:         "#F4F6FB".into(),
+    surface:    "#FFFFFF".into(),
+    text:       "#111827".into(),
+    text_muted: "#4B5563".into(),
+    border:     "#D1D5DB".into(),
+})
+```
+
+Either wrap each value in `Some(...)` (struct literal still works),
+or use the new fluent builder (recommended):
+
+```rust
+// 0.2.x — fluent
+.theme(
+    AdminTheme::new()
+        .accent("#2563EB")
+        .bg("#F4F6FB")
+        .surface("#FFFFFF")
+        .text("#111827")
+        .text_muted("#4B5563")
+        .border("#D1D5DB"),
+)
+```
+
+Setting fewer fields is now valid and recommended:
+
+```rust
+// 0.2.x — only override what you care about
+.accent_color("#FF8800")
+```
+
+Skipping fields is the new default — admin.css's tokens fill in
+everywhere you don't override, including dark-mode variants.
+
+If you read `Admin::accent()` returning `&str`, switch to
+`accent().unwrap_or(default)` or match on `Option`.
+
+If your `ModelAdmin` set `list_per_page = 10` expecting it to
+allow `?per_page=10`, switch to `25` or `?per_page=25`. The
+allow-list now starts at 25.
+
 ## [0.1.1] — 2026-05-07
 
 Design-system release. No public API surface changes — the typography,

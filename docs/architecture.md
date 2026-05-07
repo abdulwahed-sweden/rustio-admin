@@ -54,18 +54,20 @@ Located under `crates/rustio-admin/assets/templates/admin/`. Baked into the bina
 
 ```
 assets/templates/admin/
-├── _base.html             ← shell with named blocks
-├── _topbar.html           ← partial: brand + identity + theme toggle
-├── _sidebar.html          ← partial: nav with model entries + auth links
-├── _theme.html            ← partial: <style> tag injecting CSS custom properties
+├── _base.html                  ← shell with named blocks; inline theme bootstrap script
+├── _topbar.html                ← partial: brand + identity + theme toggle
+├── _sidebar.html               ← partial: nav with model entries + auth links
+├── _theme.html                 ← partial: <style> tag injecting AdminTheme overrides
 ├── includes/
-│   ├── _form_field.html   ← single render path for every widget
+│   ├── _form_field.html        ← single render path for every widget
 │   └── _field_errors.html
 ├── login.html
-├── index.html             ← dashboard
-├── list.html              ← changelist with sortable headers + filter chips + pagination
-├── form.html              ← generic create/edit form
+├── index.html                  ← dashboard
+├── list.html                   ← changelist (toolbar + filters + sort + per-page + pills + numbered pagination + bulk select)
+├── form.html                   ← generic create/edit form
 ├── confirm_delete.html
+├── bulk_confirm_delete.html    ← built-in cascade-aware bulk delete confirm
+├── bulk_confirm_action.html    ← generic confirm page for project-defined bulk actions
 ├── error.html / forbidden.html
 ├── object_history.html / log_entries.html
 ├── password_change.html
@@ -75,17 +77,30 @@ assets/templates/admin/
 
 ## CSS + JS
 
-Located under `crates/rustio-admin/assets/static/`. Single hand-written stylesheet (~715 LOC) and a minimal JS file (~91 LOC) for theme toggle + sidebar drawer. **No build step.** The CSS uses six CSS custom properties (`--rio-accent`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-muted`, `--rio-border`) which the `_theme.html` partial injects from the active `AdminTheme`; project re-skins are one `Admin::theme(...)` call away.
+Located under `crates/rustio-admin/assets/static/`. Single hand-written stylesheet (~1.9k LOC) and a minimal JS file (~210 LOC) for theme toggle + sidebar drawer + dropdown wiring + bulk select. **No build step.**
+
+The stylesheet is the single source of truth for every design token — light defaults at `:root`, dark variants under both `@media (prefers-color-scheme: dark)` and `html[data-rio-theme="dark"]`, and a symmetric `[data-rio-theme="light"]` block so an explicit user toggle while the OS is dark renders correctly. The token surface is wider than 0.1.x:
+
+- **Six override-point tokens** that `AdminTheme` can patch: `--rio-accent`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-muted`, `--rio-border`.
+- **Surface ladder** (`--rio-surface`, `--rio-surface-2`, `--rio-surface-3`) for layered depth.
+- **Text scale** (`--rio-text-strong`, `--rio-text`, `--rio-text-muted`, `--rio-text-subtle`) for clear hierarchy.
+- **Border scale** (`--rio-border-soft`, `--rio-border`, `--rio-border-strong`) for hover / dividers / focus rings.
+- **Typography scale** (sizes, line-heights, weights, family fallback chains).
+- **Spacing scale** (`--rio-s1` through `--rio-s7`).
+- **Three soft shadows** (xs / regular / lg) at `0.04–0.10` alpha.
+- **Brand accent semantics** plus **success / warning / danger / info** with per-theme tuned variants.
+
+`_theme.html` is **purely an override patch** — when `AdminTheme` has no fields set, the partial emits no markup at all and `admin.css` is the only style source. When fields are set, the partial emits a `<style>` block *after* `<link rel="stylesheet" href="/static/admin.css">` in `_base.html` with selector list `html, html[data-rio-theme="light"], html[data-rio-theme="dark"]` so an override wins cascade ties on source order without needing `!important`. Project re-skins are one `Admin::accent_color("…")` call away — the framework's own dark-mode resolution still applies for tokens you didn't override.
 
 Three responsive breakpoints (mobile-first):
 
 | Breakpoint | Layout |
 |---|---|
-| `< 768px`         | Single column. Sidebar collapsed off-canvas behind a hamburger. Tables horizontally scrollable. |
-| `≥ 768px`         | Two-column. Sidebar pinned. |
-| `≥ 1280px`        | Wider sidebar, more padding. |
+| `< 768px`  | Single column. Sidebar off-canvas behind a hamburger. Tables horizontally scrollable. |
+| `≥ 768px`  | Two-column flex row. Sidebar `position: sticky` below the topbar with its own internal scroll. |
+| `≥ 1280px` | Wider sidebar, more padding. Main content capped at 1280px so wide monitors don't sprawl table rows. |
 
-Dark mode flips on either `prefers-color-scheme: dark` (OS-level) or `<html data-rio-theme="dark">` (manual toggle, persisted to `localStorage`).
+Dark mode flips on either `prefers-color-scheme: dark` (OS-level) or `<html data-rio-theme="dark">` (manual toggle, persisted to `localStorage`). The mode is resolved by an inline bootstrap script in `<head>` *before* CSS loads, so the chosen mode lands on the first paint with no flash-of-light-on-dark.
 
 ## Public API surface
 
@@ -104,7 +119,7 @@ use rustio_admin::{
 
     // Admin
     Admin, AdminField, AdminModel, FieldType,
-    Fieldset, ModelAdmin,
+    BulkAction, Fieldset, ModelAdmin,
     register_admin_routes,
 
     // Macros
