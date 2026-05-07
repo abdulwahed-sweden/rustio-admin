@@ -280,39 +280,86 @@ impl Default for SiteBranding {
     }
 }
 
-/// Full admin chrome palette. Each field maps onto one of the
-/// framework's `--rio-*` design tokens defined in `_base.html`, so
-/// overriding these values via `Admin::theme(...)` re-skins the
-/// entire admin shell without touching CSS.
+/// Project-level override patch for the admin chrome palette.
 ///
-/// Defaults match the framework's current chrome so a project that
-/// doesn't call `.theme(...)` renders unchanged.
+/// `admin.css` is the single source of truth for the framework's design
+/// tokens (light defaults, dark mode, semantic surfaces, typography
+/// scale, …). `AdminTheme` is **purely a patch layer**: every field is
+/// `Option<String>` and defaults to `None`, meaning *“don’t override —
+/// let the stylesheet decide.”* Out of the box the framework emits no
+/// inline `<style>` block at all.
 ///
-/// Hex form (`#rrggbb` or `rrggbb`); leading `#` is auto-normalised
-/// at render time. Malformed values fall back to framework defaults
-/// rather than panic — the admin path never breaks over a config typo.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// Set a field — usually via the fluent builder methods or
+/// [`Admin::accent_color`] — to inject a `--rio-*` custom-property
+/// override on every page. Overrides apply across `data-rio-theme`
+/// states (system / light / dark) by emitting a multi-state selector
+/// after `admin.css`, so they win cascade ties without `!important`.
+///
+/// Values are hex (`#rrggbb` or `rrggbb`); the leading `#` is
+/// auto-normalised at construction. Malformed input is rejected at
+/// override time rather than panicking — the admin path never breaks
+/// over a config typo.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AdminTheme {
-    pub accent: String,
-    pub bg: String,
-    pub surface: String,
-    pub text: String,
-    pub text_muted: String,
-    pub border: String,
+    pub accent: Option<String>,
+    pub bg: Option<String>,
+    pub surface: Option<String>,
+    pub text: Option<String>,
+    pub text_muted: Option<String>,
+    pub border: Option<String>,
 }
 
-impl Default for AdminTheme {
-    fn default() -> Self {
-        // Crimson light palette — matches admin.css :root defaults.
-        // Projects override via Admin::theme(...) or accent_color(...).
-        Self {
-            accent: "#A0341A".into(),
-            bg: "#EBEEF4".into(),
-            surface: "#FFFFFF".into(),
-            text: "#0A0E1A".into(),
-            text_muted: "#3D4452".into(),
-            border: "#CDD3DF".into(),
-        }
+impl AdminTheme {
+    /// New empty patch — no overrides emitted, `admin.css` wins.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `true` when at least one field is set. Used by the renderer to
+    /// decide whether to emit the inline `<style>` block at all.
+    pub fn has_overrides(&self) -> bool {
+        self.accent.is_some()
+            || self.bg.is_some()
+            || self.surface.is_some()
+            || self.text.is_some()
+            || self.text_muted.is_some()
+            || self.border.is_some()
+    }
+
+    /// Override `--rio-accent`. Hex form, `#` optional.
+    pub fn accent(mut self, color: impl Into<String>) -> Self {
+        self.accent = Some(normalise_hex(color));
+        self
+    }
+
+    /// Override `--rio-bg` (page canvas).
+    pub fn bg(mut self, color: impl Into<String>) -> Self {
+        self.bg = Some(normalise_hex(color));
+        self
+    }
+
+    /// Override `--rio-surface` (cards, topbar, sidebar, table body).
+    pub fn surface(mut self, color: impl Into<String>) -> Self {
+        self.surface = Some(normalise_hex(color));
+        self
+    }
+
+    /// Override `--rio-text` (body text colour).
+    pub fn text(mut self, color: impl Into<String>) -> Self {
+        self.text = Some(normalise_hex(color));
+        self
+    }
+
+    /// Override `--rio-text-muted` (secondary text, breadcrumb links).
+    pub fn text_muted(mut self, color: impl Into<String>) -> Self {
+        self.text_muted = Some(normalise_hex(color));
+        self
+    }
+
+    /// Override `--rio-border` (default divider, card outline).
+    pub fn border(mut self, color: impl Into<String>) -> Self {
+        self.border = Some(normalise_hex(color));
+        self
     }
 }
 
@@ -356,25 +403,28 @@ impl Admin {
     }
 
     /// Set the admin chrome's accent colour. Hex form, with or without
-    /// the leading `#` (`"#1e6ba8"` and `"1e6ba8"` both work).
+    /// the leading `#` (`"#1e6ba8"` and `"1e6ba8"` both work). Replaces
+    /// any prior accent override; other [`AdminTheme`] fields are
+    /// left untouched.
     pub fn accent_color(mut self, color: impl Into<String>) -> Self {
-        self.theme.accent = normalise_hex(color);
+        self.theme.accent = Some(normalise_hex(color));
         self
     }
 
-    /// Set the entire admin chrome palette in one call. See
+    /// Replace the entire admin chrome palette patch in one call. See
     /// [`AdminTheme`] for the field-by-field contract.
     pub fn theme(mut self, theme: AdminTheme) -> Self {
         self.theme = theme;
         self
     }
 
-    /// Read-only access to the configured accent colour (`#rrggbb`).
-    pub fn accent(&self) -> &str {
-        &self.theme.accent
+    /// Read-only access to the configured accent colour, if any. `None`
+    /// means *“no override — admin.css owns it”*.
+    pub fn accent(&self) -> Option<&str> {
+        self.theme.accent.as_deref()
     }
 
-    /// Read-only access to the active full theme.
+    /// Read-only access to the active theme override patch.
     pub fn active_theme(&self) -> &AdminTheme {
         &self.theme
     }
