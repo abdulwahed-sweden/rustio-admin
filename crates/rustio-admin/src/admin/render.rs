@@ -402,6 +402,11 @@ pub(crate) struct ListCtx {
     /// search form renders these as hidden inputs so submitting a
     /// query doesn't drop the active filters.
     pub active_filter_pairs: Vec<(String, String)>,
+    /// Display-ready pills for every currently-set filter: friendly
+    /// label, pretty value, and a remove-link that drops only this
+    /// filter while keeping query / sort / other filters. Drives the
+    /// "active filters" strip below the toolbar.
+    pub active_filter_pills: Vec<ActiveFilterPillCtx>,
     /// URL the "Clear all" filters action navigates to: keeps the
     /// search query and sort, drops every filter.
     pub clear_all_filters_link: String,
@@ -425,6 +430,11 @@ pub(crate) struct ListCtx {
     /// boundary (page 1 has no prev; last page has no next).
     pub prev_page_link: Option<String>,
     pub next_page_link: Option<String>,
+    /// Numbered-page items for the pagination strip. For `total_pages
+    /// ≤ 7` every page is listed in order; otherwise the list is
+    /// compressed to first / current ±1 / last with `Ellipsis`
+    /// markers in the gaps. Always empty when `total_pages == 1`.
+    pub page_items: Vec<PageItem>,
     /// Whether the bulk-action UI should render. Always `false` until
     /// the bulk-action POST endpoint is wired in a later phase.
     pub bulk_actions_enabled: bool,
@@ -477,6 +487,69 @@ pub(crate) struct SortOptionCtx {
     pub label: String,
     pub link: String,
     pub is_active: bool,
+}
+
+/// One pill in the "active filters" strip below the toolbar. `label`
+/// is the field's human label, `value_label` is the option's display
+/// text (not the raw URL value), and `remove_link` is the URL that
+/// drops only this filter — query, sort, and the rest of the filter
+/// set are preserved.
+#[derive(Serialize)]
+pub(crate) struct ActiveFilterPillCtx {
+    pub label: String,
+    pub value_label: String,
+    pub remove_link: String,
+}
+
+/// One slot in the pagination strip — either a numbered page (with a
+/// pre-baked link and an active marker) or a `…` gap. The template
+/// renders the variant via the serialized `kind` discriminant.
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub(crate) enum PageItem {
+    Number {
+        number: usize,
+        link: String,
+        is_active: bool,
+    },
+    Ellipsis,
+}
+
+/// Build the numbered-page strip. Up to 7 pages render in full; past
+/// that the list compresses to first, current ± 1, last with `…` in
+/// the gaps. The build_link closure handles URL composition so this
+/// helper stays unaware of search / filter / sort state.
+fn build_page_items(
+    current: usize,
+    total: usize,
+    build_link: impl Fn(usize) -> String,
+) -> Vec<PageItem> {
+    if total <= 1 {
+        return Vec::new();
+    }
+    let mk = |n: usize| PageItem::Number {
+        number: n,
+        link: build_link(n),
+        is_active: n == current,
+    };
+    if total <= 7 {
+        return (1..=total).map(mk).collect();
+    }
+    let mut items: Vec<PageItem> = Vec::with_capacity(9);
+    items.push(mk(1));
+    if current > 3 {
+        items.push(PageItem::Ellipsis);
+    }
+    let start = current.saturating_sub(1).max(2);
+    let end = (current + 1).min(total - 1);
+    for n in start..=end {
+        items.push(mk(n));
+    }
+    if current + 2 < total {
+        items.push(PageItem::Ellipsis);
+    }
+    items.push(mk(total));
+    items
 }
 
 /// Field-type-aware copy for an `(field_type, direction)` pair.
@@ -621,6 +694,40 @@ pub(crate) fn list_ctx(
     let clear_all_filters_link =
         build_list_url(entry.admin_name, &search_query, &[], active_sort_ref, 1);
 
+    // Display-ready pills for the "active filters" strip. Each pill
+    // resolves the option's friendly `value_label` from the group's
+    // option list (so a stored "true" reads as "Yes", etc.), and its
+    // `remove_link` drops only this filter — search query, sort, and
+    // every other filter stay intact.
+    let active_filter_pills: Vec<ActiveFilterPillCtx> = filters
+        .iter()
+        .filter_map(|g| {
+            let v = g.current.as_ref()?;
+            let value_label = g
+                .options
+                .iter()
+                .find(|o| &o.value == v)
+                .map(|o| o.label.clone())
+                .unwrap_or_else(|| v.clone());
+            let other: Vec<(String, String)> = active_filter_pairs
+                .iter()
+                .filter(|(field, _)| field != &g.field)
+                .cloned()
+                .collect();
+            Some(ActiveFilterPillCtx {
+                label: g.label.clone(),
+                value_label,
+                remove_link: build_list_url(
+                    entry.admin_name,
+                    &search_query,
+                    &other,
+                    active_sort_ref,
+                    1,
+                ),
+            })
+        })
+        .collect();
+
     // Honour `ModelAdmin::list_display()`: when non-empty, render only
     // those columns (in the declared order). Empty falls back to every
     // model field. This is the contract documented on
@@ -720,6 +827,16 @@ pub(crate) fn list_ctx(
         )
     });
 
+    let page_items = build_page_items(page, total_pages, |n| {
+        build_list_url(
+            entry.admin_name,
+            &search_query,
+            &active_filter_pairs,
+            active_sort_ref,
+            n,
+        )
+    });
+
     let (active_sort_field, active_sort_dir) = match &active_sort {
         Some((col, SortDir::Asc)) => (Some(col.clone()), Some("asc")),
         Some((col, SortDir::Desc)) => (Some(col.clone()), Some("desc")),
@@ -768,6 +885,7 @@ pub(crate) fn list_ctx(
         search_query,
         active_filter_count: filters.iter().filter(|g| g.current.is_some()).count(),
         active_filter_pairs,
+        active_filter_pills,
         clear_all_filters_link,
         filters,
         sort_options,
@@ -780,6 +898,7 @@ pub(crate) fn list_ctx(
         total_rows,
         prev_page_link,
         next_page_link,
+        page_items,
         bulk_actions_enabled: false,
         flash: None,
     }

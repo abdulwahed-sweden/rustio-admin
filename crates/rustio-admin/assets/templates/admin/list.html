@@ -73,6 +73,20 @@
   {% endif %}
 </div>
 
+{% if active_filter_pills %}
+<div class="rio-active-filters" role="region" aria-label="Active filters">
+  <span class="rio-active-filters-label">Active</span>
+  {% for pill in active_filter_pills %}
+  <span class="rio-active-pill">
+    <span class="rio-active-pill-key">{{ pill.label }}:</span>
+    {{ pill.value_label }}
+    <a href="{{ pill.remove_link }}" class="rio-active-pill-x" aria-label="Remove {{ pill.label }} filter">×</a>
+  </span>
+  {% endfor %}
+  <a href="{{ clear_all_filters_link }}" class="rio-active-filters-clear">Clear all</a>
+</div>
+{% endif %}
+
 <section class="rio-card rio-list">
   {% if rows %}
   <table class="rio-table rio-table--striped">
@@ -119,6 +133,15 @@
 <nav class="rio-pagination" aria-label="Pagination">
   <span class="rio-meta">{{ total_rows }} total · page {{ page }} of {{ total_pages }}</span>
   {% if prev_page_link %}<a class="rio-pagination-link" href="{{ prev_page_link }}">← Previous</a>{% endif %}
+  {% for item in page_items %}
+    {% if item.kind == "ellipsis" %}
+      <span class="rio-pagination-ellipsis" aria-hidden="true">…</span>
+    {% elif item.is_active %}
+      <span class="rio-pagination-num is-active" aria-current="page">{{ item.number }}</span>
+    {% else %}
+      <a class="rio-pagination-num" href="{{ item.link }}">{{ item.number }}</a>
+    {% endif %}
+  {% endfor %}
   {% if next_page_link %}<a class="rio-pagination-link" href="{{ next_page_link }}">Next →</a>{% endif %}
 </nav>
 {% endif %}

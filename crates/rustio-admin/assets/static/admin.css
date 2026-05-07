@@ -1322,6 +1322,75 @@ pre code {
 }
 .rio-dropdown-footer .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
 
+/* ----- Active filters strip ---------------------------------------
+ * Compact row that surfaces every currently-set filter as a removable
+ * pill (`Field: value ×`). Sits between the toolbar and the table —
+ * gives the user a one-glance view of what's filtering the list and
+ * a one-click way to drop a single filter without opening the
+ * dropdown. Hidden when no filters are active. */
+.rio-active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: var(--rio-s4);
+  background: var(--rio-surface-2);
+  border: 1px dashed var(--rio-border);
+  border-radius: var(--rio-radius);
+  font-size: var(--rio-fs-sm);
+}
+.rio-active-filters-label {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rio-text-subtle);
+  margin-right: 0.2rem;
+}
+.rio-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.25rem 0.2rem 0.65rem;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: 999px;
+  color: var(--rio-text);
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+}
+.rio-active-pill-key { color: var(--rio-text-subtle); font-weight: var(--rio-fw-medium); }
+.rio-active-pill-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  color: var(--rio-text-subtle);
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+}
+.rio-active-pill-x:hover {
+  background: var(--rio-surface-3);
+  color: var(--rio-text-strong);
+  text-decoration: none;
+}
+.rio-active-filters-clear {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  text-decoration: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--rio-radius-sm);
+}
+.rio-active-filters-clear:hover {
+  color: var(--rio-accent);
+  text-decoration: none;
+}
+
 .rio-pagination {
   display: flex;
   align-items: center;
@@ -1332,7 +1401,8 @@ pre code {
   font-size: var(--rio-fs-md);
 }
 .rio-pagination .rio-meta { margin-right: auto; }
-.rio-pagination-link {
+.rio-pagination-link,
+.rio-pagination-num {
   padding: 0.4rem 0.85rem;
   border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
@@ -1340,13 +1410,30 @@ pre code {
   font-weight: var(--rio-fw-semibold);
   background: var(--rio-surface);
   color: var(--rio-text);
+  font-variant-numeric: tabular-nums;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-.rio-pagination-link:hover {
+.rio-pagination-link:hover,
+.rio-pagination-num:hover {
   text-decoration: none;
   background: var(--rio-surface-3);
   border-color: var(--rio-border-strong);
   color: var(--rio-text-strong);
+}
+/* Current page — accent fill, no hover swap. */
+.rio-pagination-num.is-active,
+.rio-pagination-num.is-active:hover {
+  background: var(--rio-accent);
+  border-color: var(--rio-accent);
+  color: #fff;
+  cursor: default;
+}
+/* `…` between far pages — ornamental, not clickable. */
+.rio-pagination-ellipsis {
+  padding: 0 0.35rem;
+  color: var(--rio-text-subtle);
+  font-weight: var(--rio-fw-bold);
+  user-select: none;
 }
 
 /* ============================================================
