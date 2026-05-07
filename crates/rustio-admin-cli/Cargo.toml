@@ -1,6 +1,10 @@
 [package]
 name = "rustio-admin-cli"
-version.workspace = true
+# Patch-bumped past the workspace 0.2.0 to ship the corrected
+# scaffold template (was pinning new projects to rustio-admin = "0.1"
+# even after the 0.2.0 framework release). Library + macros stay at
+# 0.2.0 — only the CLI's bundled template changed.
+version = "0.2.1"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
