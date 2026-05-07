@@ -1134,6 +1134,151 @@ pre code {
   border-color: rgb(var(--rio-accent-rgb) / 0.30);
 }
 
+/* ----- Toolbar + dropdown -----------------------------------------
+ * Generic primitive — used today by the Filters dropdown on the list
+ * view. Sort menus, per-page pickers, and any future "click button →
+ * floating panel" widget should reuse the same `.rio-dropdown`
+ * machinery. JS hook lives in admin.js (`[data-rio-dropdown]`) and
+ * just toggles `.is-open` on the wrapper. */
+
+.rio-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  margin-bottom: var(--rio-s4);
+  flex-wrap: wrap;
+}
+
+.rio-toolbar .rio-search-bar {
+  flex: 1;
+  min-width: 280px;
+  margin-bottom: 0;
+}
+
+.rio-dropdown { position: relative; display: inline-block; }
+
+.rio-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem var(--rio-s3) 0.55rem var(--rio-s4);
+  background: var(--rio-surface);
+  color: var(--rio-text);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  font: inherit;
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-semibold);
+  line-height: var(--rio-lh-ui);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.rio-dropdown-toggle:hover {
+  background: var(--rio-surface-3);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+}
+.rio-dropdown-toggle .rio-icon { width: 16px; height: 16px; opacity: 0.85; }
+.rio-dropdown-toggle .rio-chev {
+  width: 13px; height: 13px;
+  opacity: 0.55;
+  transition: transform 0.18s;
+}
+.rio-dropdown.is-open .rio-dropdown-toggle {
+  background: var(--rio-surface-3);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+}
+.rio-dropdown.is-open .rio-dropdown-toggle .rio-chev { transform: rotate(180deg); }
+
+/* Active-filter count badge — small accent pill on the toggle. */
+.rio-dropdown-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 6px;
+  background: var(--rio-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--rio-fw-bold);
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Floating panel — anchored to the toggle's right edge so it doesn't
+ * push past the viewport on a wide toolbar. JS toggles `.is-open`. */
+.rio-dropdown-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 320px;
+  max-width: min(420px, calc(100vw - var(--rio-s5)));
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  box-shadow: var(--rio-shadow-lg);
+  padding: var(--rio-s4);
+  z-index: 40;
+}
+.rio-dropdown.is-open .rio-dropdown-panel { display: block; }
+
+.rio-dropdown-section { margin-bottom: var(--rio-s4); }
+.rio-dropdown-section:last-of-type { margin-bottom: var(--rio-s3); }
+.rio-dropdown-label {
+  display: block;
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rio-text-subtle);
+  margin-bottom: var(--rio-s2);
+}
+.rio-dropdown-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* Dropdown chip — anchor that navigates on click (each chip is a
+ * `<a href="?field=value">`). The framework's filters are URL-driven,
+ * so no Apply step is needed: clicking a chip commits the filter. */
+.rio-dropdown-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  background: var(--rio-surface-2);
+  color: var(--rio-text);
+  border: 1px solid var(--rio-border);
+  border-radius: 14px;
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  line-height: var(--rio-lh-ui);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.rio-dropdown-chip:hover {
+  text-decoration: none;
+  background: var(--rio-surface-3);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+}
+.rio-dropdown-chip.is-active,
+.rio-dropdown-chip.is-active:hover {
+  background: rgb(var(--rio-accent-rgb) / 0.10);
+  color: var(--rio-accent);
+  border-color: rgb(var(--rio-accent-rgb) / 0.30);
+}
+
+.rio-dropdown-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--rio-s2);
+  padding-top: var(--rio-s3);
+  margin-top: var(--rio-s2);
+  border-top: 1px solid var(--rio-border-soft);
+}
+.rio-dropdown-footer .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
+
 .rio-pagination {
   display: flex;
   align-items: center;

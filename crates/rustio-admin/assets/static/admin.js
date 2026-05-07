@@ -79,13 +79,59 @@
     });
   }
 
+  // ---- Generic dropdown wiring ------------------------------------
+  // Any `[data-rio-dropdown]` wrapper that contains a
+  // `.rio-dropdown-toggle` and a `.rio-dropdown-panel` gets the same
+  // open/close machinery: click the toggle to flip `is-open`, click
+  // outside to close, Esc to close. The CSS reads `.is-open` and
+  // shows the panel + rotates the chevron.
+  function initDropdowns() {
+    const dropdowns = document.querySelectorAll("[data-rio-dropdown]");
+    if (!dropdowns.length) return;
+
+    dropdowns.forEach((dd) => {
+      const toggle = dd.querySelector(".rio-dropdown-toggle");
+      if (!toggle) return;
+      toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = dd.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", String(open));
+      });
+    });
+
+    document.addEventListener("click", (e) => {
+      dropdowns.forEach((dd) => {
+        if (dd.classList.contains("is-open") && !dd.contains(e.target)) {
+          dd.classList.remove("is-open");
+          const t = dd.querySelector(".rio-dropdown-toggle");
+          if (t) t.setAttribute("aria-expanded", "false");
+        }
+      });
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      dropdowns.forEach((dd) => {
+        if (!dd.classList.contains("is-open")) return;
+        dd.classList.remove("is-open");
+        const t = dd.querySelector(".rio-dropdown-toggle");
+        if (t) {
+          t.setAttribute("aria-expanded", "false");
+          t.focus();
+        }
+      });
+    });
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initTheme();
       initSidebar();
+      initDropdowns();
     });
   } else {
     initTheme();
     initSidebar();
+    initDropdowns();
   }
 })();

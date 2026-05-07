@@ -395,6 +395,9 @@ pub(crate) struct ListCtx {
     pub rows: Vec<ListRowCtx>,
     pub search_query: String,
     pub filters: Vec<FilterGroupCtx>,
+    /// Count of filter groups whose user-selected value is non-empty.
+    /// Drives the "Filters (N)" badge on the toolbar dropdown toggle.
+    pub active_filter_count: usize,
     pub page: usize,
     pub total_pages: usize,
     pub per_page: usize,
@@ -520,6 +523,7 @@ pub(crate) fn list_ctx(
             })
             .collect(),
         search_query,
+        active_filter_count: filters.iter().filter(|g| g.current.is_some()).count(),
         filters,
         page,
         total_pages,
