@@ -9,8 +9,19 @@
 </header>
 
 <div class="rio-toolbar">
+  {# The search form carries hidden inputs for every active filter +
+   # the current sort, so submitting a query keeps the rest of the
+   # list-view state intact. Page intentionally resets to 1 — a new
+   # query against page N rarely makes sense. #}
   <form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar" role="search">
     <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
+    {% for pair in active_filter_pairs %}
+    <input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">
+    {% endfor %}
+    {% if active_sort_field %}
+    <input type="hidden" name="sort" value="{{ active_sort_field }}">
+    <input type="hidden" name="dir" value="{{ active_sort_dir }}">
+    {% endif %}
     <button type="submit" class="rio-button">Search</button>
   </form>
 
@@ -29,16 +40,16 @@
       <div class="rio-dropdown-section">
         <span class="rio-dropdown-label">{{ group.label }}</span>
         <div class="rio-dropdown-options">
-          <a href="/admin/{{ admin_name }}" class="rio-dropdown-chip{% if not group.current %} is-active{% endif %}">All</a>
+          <a href="{{ group.all_link }}" class="rio-dropdown-chip{% if not group.current %} is-active{% endif %}">All</a>
           {% for opt in group.options %}
-          <a href="/admin/{{ admin_name }}?{{ group.field }}={{ opt.value }}" class="rio-dropdown-chip{% if opt.selected %} is-active{% endif %}">{{ opt.label }}</a>
+          <a href="{{ opt.link }}" class="rio-dropdown-chip{% if opt.selected %} is-active{% endif %}">{{ opt.label }}</a>
           {% endfor %}
         </div>
       </div>
       {% endfor %}
       {% if active_filter_count > 0 %}
       <div class="rio-dropdown-footer">
-        <a href="/admin/{{ admin_name }}" class="rio-button">Clear all</a>
+        <a href="{{ clear_all_filters_link }}" class="rio-button">Clear all</a>
       </div>
       {% endif %}
     </div>
@@ -107,8 +118,8 @@
 {% if total_pages > 1 %}
 <nav class="rio-pagination" aria-label="Pagination">
   <span class="rio-meta">{{ total_rows }} total · page {{ page }} of {{ total_pages }}</span>
-  {% if page > 1 %}<a class="rio-pagination-link" href="?page={{ page - 1 }}">← Previous</a>{% endif %}
-  {% if page < total_pages %}<a class="rio-pagination-link" href="?page={{ page + 1 }}">Next →</a>{% endif %}
+  {% if prev_page_link %}<a class="rio-pagination-link" href="{{ prev_page_link }}">← Previous</a>{% endif %}
+  {% if next_page_link %}<a class="rio-pagination-link" href="{{ next_page_link }}">Next →</a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}

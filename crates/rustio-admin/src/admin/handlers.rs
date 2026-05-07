@@ -205,22 +205,28 @@ pub(crate) async fn list_model(
                     value: "true".into(),
                     label: "Yes".into(),
                     selected: current.as_deref() == Some("true"),
+                    link: String::new(),
                 },
                 render::FilterOptionCtx {
                     value: "false".into(),
                     label: "No".into(),
                     selected: current.as_deref() == Some("false"),
+                    link: String::new(),
                 },
             ],
             // Other filter kinds need richer widgets — later phases.
             _ => Vec::new(),
         };
         if !options.is_empty() {
+            // `all_link` and per-option `link` are populated downstream
+            // in `render::list_ctx` once the search query and active
+            // filter set are known.
             filter_groups.push(render::FilterGroupCtx {
                 field: f.field,
                 label: f.label,
                 options,
                 current,
+                all_link: String::new(),
             });
         }
     }

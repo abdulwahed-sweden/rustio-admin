@@ -398,6 +398,13 @@ pub(crate) struct ListCtx {
     /// Count of filter groups whose user-selected value is non-empty.
     /// Drives the "Filters (N)" badge on the toolbar dropdown toggle.
     pub active_filter_count: usize,
+    /// `(field, value)` pairs for every currently-set filter. The
+    /// search form renders these as hidden inputs so submitting a
+    /// query doesn't drop the active filters.
+    pub active_filter_pairs: Vec<(String, String)>,
+    /// URL the "Clear all" filters action navigates to: keeps the
+    /// search query and sort, drops every filter.
+    pub clear_all_filters_link: String,
     /// Sort dropdown options — every visible field × {asc, desc} plus
     /// a "Default order" reset link. Pre-baked into ready-to-render
     /// `(label, href, is_active)` triplets.
@@ -405,10 +412,19 @@ pub(crate) struct ListCtx {
     /// Toolbar label for the Sort toggle: "Default order" when no
     /// override is in effect, otherwise the active option's label.
     pub current_sort_label: String,
+    /// Active sort field + direction surfaced as plain strings so the
+    /// search form can carry them as hidden inputs. `None` when no
+    /// sort override is in effect.
+    pub active_sort_field: Option<String>,
+    pub active_sort_dir: Option<&'static str>,
     pub page: usize,
     pub total_pages: usize,
     pub per_page: usize,
     pub total_rows: usize,
+    /// Pre-baked URLs for the pagination strip. `None` when at the
+    /// boundary (page 1 has no prev; last page has no next).
+    pub prev_page_link: Option<String>,
+    pub next_page_link: Option<String>,
     /// Whether the bulk-action UI should render. Always `false` until
     /// the bulk-action POST endpoint is wired in a later phase.
     pub bulk_actions_enabled: bool,
@@ -431,6 +447,13 @@ pub(crate) struct FilterGroupCtx {
     pub label: String,
     pub options: Vec<FilterOptionCtx>,
     pub current: Option<String>,
+    /// URL for the "All" chip — clears this group while keeping every
+    /// other piece of list state (search query, other filters, sort).
+    /// Pre-baked in `list_ctx` so the template doesn't reproduce the
+    /// URL-composition rules. Defaults to empty before `list_ctx`
+    /// patches it in (handlers don't construct this field directly).
+    #[serde(default)]
+    pub all_link: String,
 }
 
 #[derive(Serialize)]
@@ -438,6 +461,11 @@ pub(crate) struct FilterOptionCtx {
     pub value: String,
     pub label: String,
     pub selected: bool,
+    /// URL the chip navigates to: applies this option to its group
+    /// while preserving search / other filters / sort. Pre-baked in
+    /// `list_ctx`. Empty until then.
+    #[serde(default)]
+    pub link: String,
 }
 
 /// One option in the toolbar's Sort dropdown — a field × direction
@@ -472,6 +500,60 @@ fn sort_direction_label(
     }
 }
 
+/// Compose a list-view URL with full query-state preservation.
+///
+/// Every link the list view emits — filter chips, sort options,
+/// pagination, header-sort arrows — runs through here so a click on
+/// one widget doesn't silently drop the others. Inputs:
+///
+///   - `q`        — current search query; `""` skipped
+///   - `filters`  — currently-set filters as `(field, value)` pairs;
+///                  callers compose their own override (set, clear,
+///                  swap) before passing this in
+///   - `sort`     — the desired sort, or `None` for "model default"
+///   - `page`     — `1` is implicit and skipped from the URL
+///
+/// Values are URL-encoded so search strings with spaces or unicode
+/// don't break the link.
+fn build_list_url(
+    admin_name: &str,
+    q: &str,
+    filters: &[(String, String)],
+    sort: Option<(&str, super::modeladmin::SortDir)>,
+    page: usize,
+) -> String {
+    use super::modeladmin::SortDir;
+    let mut parts: Vec<String> = Vec::new();
+    if !q.is_empty() {
+        parts.push(format!("q={}", urlencoding::encode(q)));
+    }
+    for (field, value) in filters {
+        parts.push(format!(
+            "{}={}",
+            urlencoding::encode(field),
+            urlencoding::encode(value),
+        ));
+    }
+    if let Some((col, dir)) = sort {
+        parts.push(format!("sort={}", urlencoding::encode(col)));
+        parts.push(
+            match dir {
+                SortDir::Asc => "dir=asc",
+                SortDir::Desc => "dir=desc",
+            }
+            .to_string(),
+        );
+    }
+    if page > 1 {
+        parts.push(format!("page={}", page));
+    }
+    if parts.is_empty() {
+        format!("/admin/{}", admin_name)
+    } else {
+        format!("/admin/{}?{}", admin_name, parts.join("&"))
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn list_ctx(
     identity: &Identity,
@@ -479,7 +561,7 @@ pub(crate) fn list_ctx(
     entry: &AdminEntry,
     rows: Vec<ListRow>,
     search_query: String,
-    filters: Vec<FilterGroupCtx>,
+    mut filters: Vec<FilterGroupCtx>,
     page: usize,
     per_page: usize,
     total_rows: usize,
@@ -491,6 +573,53 @@ pub(crate) fn list_ctx(
     csrf_token: String,
 ) -> ListCtx {
     let total_pages = total_rows.div_ceil(per_page.max(1)).max(1);
+
+    // ---- URL-state preservation -------------------------------------
+    // Every link the list view emits — filter chips, sort options,
+    // pagination, header sort arrows — composes its href via
+    // `build_list_url` so clicking one widget never silently drops
+    // the others. `active_filter_pairs` is the canonical view of
+    // currently-set filters; widgets derive their override URLs from
+    // a copy of it.
+    let active_filter_pairs: Vec<(String, String)> = filters
+        .iter()
+        .filter_map(|g| g.current.as_ref().map(|v| (g.field.clone(), v.clone())))
+        .collect();
+    let active_sort_ref: Option<(&str, super::modeladmin::SortDir)> =
+        active_sort.as_ref().map(|(c, d)| (c.as_str(), *d));
+
+    // Patch each filter group's chip URLs in-place. "All" drops this
+    // group from the active set; an option link replaces the group's
+    // current value. Page resets to 1 — page N of one filter rarely
+    // matches up with page N of another.
+    for group in &mut filters {
+        let other: Vec<(String, String)> = active_filter_pairs
+            .iter()
+            .filter(|(field, _)| field != &group.field)
+            .cloned()
+            .collect();
+        group.all_link = build_list_url(
+            entry.admin_name,
+            &search_query,
+            &other,
+            active_sort_ref,
+            1,
+        );
+        for opt in &mut group.options {
+            let mut combined = other.clone();
+            combined.push((group.field.clone(), opt.value.clone()));
+            opt.link = build_list_url(
+                entry.admin_name,
+                &search_query,
+                &combined,
+                active_sort_ref,
+                1,
+            );
+        }
+    }
+
+    let clear_all_filters_link =
+        build_list_url(entry.admin_name, &search_query, &[], active_sort_ref, 1);
 
     // Honour `ModelAdmin::list_display()`: when non-empty, render only
     // those columns (in the declared order). Empty falls back to every
@@ -511,7 +640,13 @@ pub(crate) fn list_ctx(
     let fields: Vec<ListField> = visible_fields
         .iter()
         .map(|f| {
-            let (sort_active, sort_link) = build_sort_link(f.name, &active_sort);
+            let (sort_active, sort_link) = build_sort_link(
+                f.name,
+                &active_sort,
+                entry.admin_name,
+                &search_query,
+                &active_filter_pairs,
+            );
             ListField {
                 name: f.name.to_string(),
                 label: f.label.to_string(),
@@ -524,29 +659,38 @@ pub(crate) fn list_ctx(
 
     // Build the toolbar's Sort dropdown options. Each visible field
     // contributes two entries (asc + desc); a leading "Default order"
-    // entry resets to `ModelAdmin::ordering()`.
+    // entry resets to `ModelAdmin::ordering()`. Every link goes
+    // through `build_list_url` so search + filters survive a sort
+    // change.
     use super::modeladmin::SortDir;
     let mut sort_options: Vec<SortOptionCtx> = Vec::with_capacity(visible_fields.len() * 2 + 1);
     sort_options.push(SortOptionCtx {
         label: "Default order".to_string(),
-        link: format!("/admin/{}", entry.admin_name),
+        link: build_list_url(
+            entry.admin_name,
+            &search_query,
+            &active_filter_pairs,
+            None,
+            1,
+        ),
         is_active: active_sort.is_none(),
     });
     for f in &visible_fields {
         for dir in [SortDir::Asc, SortDir::Desc] {
             let dir_label = sort_direction_label(f.field_type, dir);
-            let dir_q = if matches!(dir, SortDir::Desc) {
-                "desc"
-            } else {
-                "asc"
-            };
             let is_active = matches!(
                 &active_sort,
                 Some((col, d)) if col == f.name && *d == dir
             );
             sort_options.push(SortOptionCtx {
                 label: format!("{} ({})", f.label, dir_label),
-                link: format!("/admin/{}?sort={}&dir={}", entry.admin_name, f.name, dir_q),
+                link: build_list_url(
+                    entry.admin_name,
+                    &search_query,
+                    &active_filter_pairs,
+                    Some((f.name, dir)),
+                    1,
+                ),
                 is_active,
             });
         }
@@ -556,6 +700,31 @@ pub(crate) fn list_ctx(
         .find(|o| o.is_active)
         .map(|o| o.label.clone())
         .unwrap_or_else(|| "Default order".to_string());
+
+    let prev_page_link = (page > 1).then(|| {
+        build_list_url(
+            entry.admin_name,
+            &search_query,
+            &active_filter_pairs,
+            active_sort_ref,
+            page - 1,
+        )
+    });
+    let next_page_link = (page < total_pages).then(|| {
+        build_list_url(
+            entry.admin_name,
+            &search_query,
+            &active_filter_pairs,
+            active_sort_ref,
+            page + 1,
+        )
+    });
+
+    let (active_sort_field, active_sort_dir) = match &active_sort {
+        Some((col, SortDir::Asc)) => (Some(col.clone()), Some("asc")),
+        Some((col, SortDir::Desc)) => (Some(col.clone()), Some("desc")),
+        None => (None, None),
+    };
     let field_names: Vec<&'static str> = entry.fields.iter().map(|f| f.name).collect();
     let field_types: Vec<crate::admin::FieldType> =
         entry.fields.iter().map(|f| f.field_type).collect();
@@ -598,13 +767,19 @@ pub(crate) fn list_ctx(
             .collect(),
         search_query,
         active_filter_count: filters.iter().filter(|g| g.current.is_some()).count(),
+        active_filter_pairs,
+        clear_all_filters_link,
         filters,
         sort_options,
         current_sort_label,
+        active_sort_field,
+        active_sort_dir,
         page,
         total_pages,
         per_page,
         total_rows,
+        prev_page_link,
+        next_page_link,
         bulk_actions_enabled: false,
         flash: None,
     }
@@ -615,16 +790,25 @@ pub(crate) fn list_ctx(
 ///   - column is the current sort, ascending  → click toggles to desc
 ///   - column is the current sort, descending → click clears the sort
 ///   - column is not the current sort         → click sets ascending
+///
+/// The URL goes through `build_list_url` so search query and active
+/// filters are preserved across header clicks. Page resets to 1
+/// because page N of one ordering rarely lines up with page N of
+/// another.
 fn build_sort_link(
     name: &'static str,
     active: &Option<(String, super::modeladmin::SortDir)>,
+    admin_name: &str,
+    q: &str,
+    filters: &[(String, String)],
 ) -> (&'static str, String) {
     use super::modeladmin::SortDir;
-    match active {
-        Some((col, SortDir::Asc)) if col == name => ("asc", format!("?sort={name}&dir=desc")),
-        Some((col, SortDir::Desc)) if col == name => ("desc", String::from("?")),
-        _ => ("", format!("?sort={name}&dir=asc")),
-    }
+    let (marker, new_sort) = match active {
+        Some((col, SortDir::Asc)) if col == name => ("asc", Some((name, SortDir::Desc))),
+        Some((col, SortDir::Desc)) if col == name => ("desc", None),
+        _ => ("", Some((name, SortDir::Asc))),
+    };
+    (marker, build_list_url(admin_name, q, filters, new_sort, 1))
 }
 
 // ---- Change form ----------------------------------------------------------
