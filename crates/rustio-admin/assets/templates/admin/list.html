@@ -14,13 +14,19 @@
    # list-view state intact. Page intentionally resets to 1 — a new
    # query against page N rarely makes sense. #}
   <form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar" role="search">
-    <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
+    <span class="rio-search-input-wrap">
+      {{ icon("search", class="rio-search-icon") }}
+      <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
+    </span>
     {% for pair in active_filter_pairs %}
     <input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">
     {% endfor %}
     {% if active_sort_field %}
     <input type="hidden" name="sort" value="{{ active_sort_field }}">
     <input type="hidden" name="dir" value="{{ active_sort_dir }}">
+    {% endif %}
+    {% if active_per_page_override %}
+    <input type="hidden" name="per_page" value="{{ active_per_page_override }}">
     {% endif %}
     <button type="submit" class="rio-button">Search</button>
   </form>
@@ -65,6 +71,22 @@
     <div class="rio-dropdown-panel" role="dialog" aria-label="Sort">
       <div class="rio-dropdown-menu">
         {% for opt in sort_options %}
+        <a href="{{ opt.link }}" class="rio-dropdown-item{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if per_page_options %}
+  <div class="rio-dropdown" data-rio-dropdown>
+    <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+      {{ current_per_page_label }}
+      {{ icon("chevron-down", class="rio-chev") }}
+    </button>
+    <div class="rio-dropdown-panel" role="dialog" aria-label="Rows per page">
+      <div class="rio-dropdown-menu">
+        {% for opt in per_page_options %}
         <a href="{{ opt.link }}" class="rio-dropdown-item{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
         {% endfor %}
       </div>
