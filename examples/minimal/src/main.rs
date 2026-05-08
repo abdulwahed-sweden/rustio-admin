@@ -49,6 +49,9 @@ async fn main() -> Result<()> {
 
     let router = Router::new()
         .middleware(middleware::logger)
+        // Per DESIGN_SYSTEM doctrine 8: correlation_id sits BEFORE
+        // csrf_protect so even rejected requests carry a trace id.
+        .middleware(middleware::correlation_id)
         .middleware(middleware::security_headers)
         .middleware(middleware::csrf_protect)
         .get("/", |_req| async {

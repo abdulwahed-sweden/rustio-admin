@@ -22,6 +22,21 @@ use super::render;
 use super::render::{BaseContext, FlashCtx, SidebarEntry};
 use super::types::Admin;
 
+/// Read the per-request correlation id stamped by the
+/// [`crate::middleware::correlation_id`] middleware. Used by every
+/// audit-record call site so rows written under one HTTP request
+/// share an id (doctrine 8 — forensically useful audit logs).
+///
+/// Returns `None` when the middleware isn't installed; the audit row
+/// then lands with a NULL `correlation_id` rather than a fabricated
+/// id. Projects should add `middleware::correlation_id` before
+/// `csrf_protect` to make this column always populated.
+fn correlation_id_from(req: &Request) -> Option<String> {
+    req.ctx()
+        .get::<crate::middleware::CorrelationId>()
+        .map(|c| c.as_str().to_string())
+}
+
 /// Read the client IP from the proxy headers a typical reverse-proxy
 /// emits. Used as the `ip_address` column on audit rows. Returns
 /// `None` when neither header is present so direct-LAN traffic still
@@ -343,6 +358,7 @@ pub(crate) async fn do_user_edit(
         summary.push_str("; password reset");
     }
     let ip = client_ip(&req);
+    let cid = correlation_id_from(&req);
     let _ = audit::record(
         &ctx.db,
         LogEntry {
@@ -352,6 +368,9 @@ pub(crate) async fn do_user_edit(
             object_id: user_id,
             ip_address: ip.as_deref(),
             summary,
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: None,
         },
     )
     .await;
@@ -956,6 +975,7 @@ pub(crate) async fn do_user_delete(
     auth::invalidate_user_cache(user_id);
 
     let ip = client_ip(&req);
+    let cid = correlation_id_from(&req);
     let _ = audit::record(
         &ctx.db,
         LogEntry {
@@ -965,6 +985,9 @@ pub(crate) async fn do_user_delete(
             object_id: user_id,
             ip_address: ip.as_deref(),
             summary: format!("deleted user {} ({})", target_email, target_role.as_str()),
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: None,
         },
     )
     .await;
@@ -1282,6 +1305,7 @@ pub(crate) async fn do_group_edit(
         ));
     }
     let ip = client_ip(&req);
+    let cid = correlation_id_from(&req);
     let _ = audit::record(
         &ctx.db,
         LogEntry {
@@ -1291,6 +1315,9 @@ pub(crate) async fn do_group_edit(
             object_id: group_id,
             ip_address: ip.as_deref(),
             summary,
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: None,
         },
     )
     .await;
@@ -1393,6 +1420,7 @@ pub(crate) async fn do_group_delete(
     }
 
     let ip = client_ip(&req);
+    let cid = correlation_id_from(&req);
     let _ = audit::record(
         &ctx.db,
         LogEntry {
@@ -1406,6 +1434,9 @@ pub(crate) async fn do_group_delete(
                 group_name.unwrap_or_else(|| format!("#{group_id}")),
                 user_ids.len(),
             ),
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: None,
         },
     )
     .await;
@@ -1546,6 +1577,7 @@ pub(crate) async fn do_new_user(
         let role = role_parsed.expect("role parsed when errors empty");
         let new_id = auth::create_user(&ctx.db, &email, password, role).await?;
         let ip = client_ip(&req);
+        let cid = correlation_id_from(&req);
         let _ = audit::record(
             &ctx.db,
             LogEntry {
@@ -1555,6 +1587,9 @@ pub(crate) async fn do_new_user(
                 object_id: new_id,
                 ip_address: ip.as_deref(),
                 summary: format!("created user {} as {}", email, role.as_str()),
+                correlation_id: cid.as_deref(),
+                session_id: None,
+                metadata: None,
             },
         )
         .await;
@@ -1669,6 +1704,7 @@ pub(crate) async fn do_new_group(
                 let r = Row::from_pg(&row);
                 let new_id: i64 = r.get_i64("id")?;
                 let ip = client_ip(&req);
+                let cid = correlation_id_from(&req);
                 let _ = audit::record(
                     &ctx.db,
                     LogEntry {
@@ -1678,6 +1714,9 @@ pub(crate) async fn do_new_group(
                         object_id: new_id,
                         ip_address: ip.as_deref(),
                         summary: format!("created group {name}"),
+                        correlation_id: cid.as_deref(),
+                        session_id: None,
+                        metadata: None,
                     },
                 )
                 .await;
