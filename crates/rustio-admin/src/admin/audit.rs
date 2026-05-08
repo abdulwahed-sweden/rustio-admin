@@ -140,6 +140,40 @@ pub struct LogEntry<'a> {
     pub object_id: i64,
     pub ip_address: Option<&'a str>,
     pub summary: String,
+    /// Per-request UUID (R0). All audit rows written under one HTTP
+    /// request share this id so a future `/admin/history/<id>` page
+    /// can reconstruct the chain of events ("admin reset password →
+    /// all sessions revoked → security email dispatched").
+    pub correlation_id: Option<&'a str>,
+    /// The session that performed the action, when applicable. CLI
+    /// emergency actions write `None`.
+    pub session_id: Option<i64>,
+    /// Structured before/after / extra metadata. JSONB column.
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl<'a> LogEntry<'a> {
+    /// Builder helper for the common case (every field that R0
+    /// added defaults to `None`). Existing call sites can migrate
+    /// incrementally.
+    pub fn new(
+        user_id: i64,
+        action_type: ActionType,
+        model_name: &'a str,
+        object_id: i64,
+    ) -> Self {
+        Self {
+            user_id,
+            action_type,
+            model_name,
+            object_id,
+            ip_address: None,
+            summary: String::new(),
+            correlation_id: None,
+            session_id: None,
+            metadata: None,
+        }
+    }
 }
 
 /// Write one row to the action log. Validates required fields before
@@ -162,8 +196,9 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     let now = Utc::now();
     sqlx::query(
         "INSERT INTO rustio_admin_actions
-             (user_id, action_type, model_name, object_id, timestamp, ip_address, summary)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+             (user_id, action_type, model_name, object_id, timestamp, ip_address, summary,
+              correlation_id, session_id, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     )
     .bind(entry.user_id)
     .bind(entry.action_type.as_str())
@@ -172,9 +207,74 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     .bind(now)
     .bind(entry.ip_address)
     .bind(&entry.summary)
+    .bind(entry.correlation_id)
+    .bind(entry.session_id)
+    .bind(entry.metadata.as_ref())
     .execute(db.pool())
     .await?;
     Ok(())
+}
+
+/// Internal typed representation of every audit `action_type` the
+/// framework emits. `pub(crate)` for now — doctrine 18 commits to a
+/// future public typed surface, but we don't promote it until 0.5.x.
+///
+/// Every framework call site MUST go through `AuditEvent::as_str()`
+/// rather than writing the string literal inline. The drift test
+/// below enumerates every variant and asserts nothing else lands in
+/// the live `rustio_admin_actions` audit stream.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // not all variants have call sites yet (R1+)
+pub(crate) enum AuditEvent {
+    UserCreated,
+    UserUpdated,
+    UserDeleted,
+    GroupCreated,
+    GroupUpdated,
+    GroupDeleted,
+    PasswordResetSelfRequest,
+    PasswordResetSelfConsume,
+    PasswordResetByOther,
+    AccountLocked,
+    AccountUnlocked,
+    MfaEnabled,
+    MfaDisabled,
+    MfaResetByOther,
+    SessionsRevokedSelf,
+    SessionsRevokedByOther,
+    SessionLogout,
+    EmergencyRecovery,
+}
+
+impl AuditEvent {
+    /// Stable lowercase identifier persisted as
+    /// `rustio_admin_actions.action_type`. Distinct from
+    /// `ActionType::as_str()` (the legacy create/update/delete trio)
+    /// — the two enums coexist; AuditEvent strings are richer and
+    /// will eventually replace ActionType in the public API.
+    #[allow(dead_code)]
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::UserCreated => "user_created",
+            Self::UserUpdated => "user_updated",
+            Self::UserDeleted => "user_deleted",
+            Self::GroupCreated => "group_created",
+            Self::GroupUpdated => "group_updated",
+            Self::GroupDeleted => "group_deleted",
+            Self::PasswordResetSelfRequest => "password_reset_self_request",
+            Self::PasswordResetSelfConsume => "password_reset_self_consume",
+            Self::PasswordResetByOther => "password_reset_by_other",
+            Self::AccountLocked => "account_locked",
+            Self::AccountUnlocked => "account_unlocked",
+            Self::MfaEnabled => "mfa_enabled",
+            Self::MfaDisabled => "mfa_disabled",
+            Self::MfaResetByOther => "mfa_reset_by_other",
+            Self::SessionsRevokedSelf => "sessions_revoked_self",
+            Self::SessionsRevokedByOther => "sessions_revoked_by_other",
+            Self::SessionLogout => "session_logout",
+            Self::EmergencyRecovery => "emergency_recovery",
+        }
+    }
 }
 
 /// Fetch the most recent `limit` admin actions, newest first.
@@ -250,4 +350,79 @@ fn row_to_action(r: &sqlx::postgres::PgRow) -> Result<AdminAction> {
         ip_address: r.try_get("ip_address")?,
         summary: r.try_get("summary")?,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Drift test for the internal AuditEvent enum (doctrine 18).
+    ///
+    /// Property: every variant's `as_str()` is unique across the
+    /// enum. Catches accidental copy-paste collisions during R1+
+    /// (`password_reset_self_request` vs
+    /// `password_reset_self_consume` — easy to mis-paste).
+    #[test]
+    fn audit_event_strings_are_unique() {
+        let events = [
+            AuditEvent::UserCreated,
+            AuditEvent::UserUpdated,
+            AuditEvent::UserDeleted,
+            AuditEvent::GroupCreated,
+            AuditEvent::GroupUpdated,
+            AuditEvent::GroupDeleted,
+            AuditEvent::PasswordResetSelfRequest,
+            AuditEvent::PasswordResetSelfConsume,
+            AuditEvent::PasswordResetByOther,
+            AuditEvent::AccountLocked,
+            AuditEvent::AccountUnlocked,
+            AuditEvent::MfaEnabled,
+            AuditEvent::MfaDisabled,
+            AuditEvent::MfaResetByOther,
+            AuditEvent::SessionsRevokedSelf,
+            AuditEvent::SessionsRevokedByOther,
+            AuditEvent::SessionLogout,
+            AuditEvent::EmergencyRecovery,
+        ];
+        let mut set = std::collections::HashSet::new();
+        for e in events {
+            assert!(set.insert(e.as_str()), "duplicate as_str() for {e:?}");
+        }
+        assert_eq!(set.len(), events.len());
+    }
+
+    /// All AuditEvent strings are snake_case ASCII (no whitespace, no
+    /// uppercase, no punctuation beyond `_`). Future SIEM integrations
+    /// will tokenize on these — keep them pre-normalised.
+    #[test]
+    fn audit_event_strings_are_snake_case() {
+        let events = [
+            AuditEvent::UserCreated,
+            AuditEvent::UserUpdated,
+            AuditEvent::UserDeleted,
+            AuditEvent::GroupCreated,
+            AuditEvent::GroupUpdated,
+            AuditEvent::GroupDeleted,
+            AuditEvent::PasswordResetSelfRequest,
+            AuditEvent::PasswordResetSelfConsume,
+            AuditEvent::PasswordResetByOther,
+            AuditEvent::AccountLocked,
+            AuditEvent::AccountUnlocked,
+            AuditEvent::MfaEnabled,
+            AuditEvent::MfaDisabled,
+            AuditEvent::MfaResetByOther,
+            AuditEvent::SessionsRevokedSelf,
+            AuditEvent::SessionsRevokedByOther,
+            AuditEvent::SessionLogout,
+            AuditEvent::EmergencyRecovery,
+        ];
+        for e in events {
+            let s = e.as_str();
+            assert!(!s.is_empty(), "{e:?} as_str is empty");
+            assert!(
+                s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'),
+                "{e:?}.as_str() = {s:?} is not snake_case"
+            );
+        }
+    }
 }

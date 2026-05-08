@@ -7,12 +7,14 @@ mod handlers;
 pub(crate) mod icons;
 pub mod modeladmin;
 mod ops;
+pub mod redact;
 pub mod relations;
 mod render;
 mod routes;
 mod types;
 
 pub use audit::{ensure_table, for_object, recent, record, ActionType, AdminAction, LogEntry};
+pub use redact::{redact_backup_code, redact_mfa_secret, redact_password, redact_token};
 pub use filters::{
     classify_field, field_ui_metadata, field_ui_metadata_with_relation, format_relation_cell,
     infer_filters, infer_filters_with_relations, mask_pii, FieldRole, FieldUI, FilterDef,
