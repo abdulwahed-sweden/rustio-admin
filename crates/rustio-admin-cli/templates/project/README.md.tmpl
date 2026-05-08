@@ -16,6 +16,9 @@ $EDITOR .env
 cargo install rustio-admin-cli
 rustio migrate apply
 rustio user create --email admin@{{name}}.local --role administrator
+# The CLI prompts twice for the password (echo-suppressed). The
+# plaintext value never reaches argv, ps output, or shell history.
+# Use --password '...' only inside CI or scripted bootstrap.
 
 # 4. Boot the admin
 cargo run
@@ -23,6 +26,37 @@ cargo run
 
 The admin lands at <http://127.0.0.1:8000/admin>. Sign in with the
 account from step 3.
+
+### Port already in use?
+
+`src/main.rs` binds to `127.0.0.1:8000`. If that port is taken on
+your machine, change the listen address in the file:
+
+```rust
+let addr = "127.0.0.1:8001".parse().expect("valid listen address");
+```
+
+Pick any free port; nothing else in the framework cares about the
+exact value. Re-run `cargo run`.
+
+## What you get after first login
+
+- Session-backed admin authentication (Argon2id passwords; cookies
+  carry random tokens, the database stores SHA-256 hashes only).
+- Postgres-backed users, groups, and per-model permissions (5-tier
+  role ladder: User · Staff · Supervisor · Administrator · Developer).
+- Permission matrix UI on the group edit page (model × action grid
+  with a per-row "All" toggle).
+- Audit history at `/admin/history` — every authority mutation
+  recorded with actor, target, IP, correlation id.
+- Active sessions page at `/admin/account/sessions` — every signed-in
+  device with IP, OS · browser, created-at, last-seen.
+- Correlation IDs on every request, surfaced in the
+  `x-correlation-id` response header and threaded into audit rows.
+- FK-hydrated list cells — `belongs_to` columns render as the target
+  row's display field with click-throughs.
+- Server-rendered templates baked into the binary; set
+  `RUSTIO_TEMPLATE_DIR=templates` to override any page on disk.
 
 ## Adding a model
 
@@ -34,6 +68,34 @@ rustio startapp comment       # generates src/comment.rs +
 The CLI prints the exact `mod` / `use` / `.model::<>()` lines to
 paste into `src/main.rs`. After that, `rustio migrate apply` and
 re-run; the `/admin/comments` pages light up.
+
+> **Note:** `migrations/0001_create_posts.sql` already exists from
+> the scaffold. Two valid paths from here: **(A)** keep the demo
+> `Post` as a smoke test and add new migrations as `0002_*.sql`,
+> `0003_*.sql`, … via `rustio startapp`; or **(B)** replace the demo
+> with your real domain — delete `migrations/0001_create_posts.sql`
+> and `src/post.rs`, remove the `Post` registration from
+> `src/main.rs`, and write your real `0001_*.sql` instead. **Do this
+> before the demo migration has been applied to a real database.**
+> Once it has run in production, treat migrations as append-only and
+> write a forward `0002_drop_posts.sql` instead.
+
+## Project philosophy
+
+- **Postgres-first.** Every query and every migration assumes
+  Postgres semantics.
+- **Operational clarity over magic.** No risk scoring, no AI
+  heuristics, no automatic decisions the operator can't read.
+- **Explicit model registration.** Models are listed by hand in
+  `src/main.rs`; the admin sidebar matches the source code.
+- **Server-rendered admin UI.** One Rust binary serves everything —
+  no SPA, no separate frontend build step.
+- **Security and auditability built into the lifecycle.** Authority
+  guards, hashed-at-rest sessions, centralised invalidation, audit
+  forensic chain — baked in.
+- **No AI, no cloud lock-in, no frontend build step.** The same
+  binary deploys to a $5 VPS, a kubernetes cluster, or an air-gapped
+  factory floor.
 
 For the full walkthrough see
 [`docs/getting-started.md`](https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/getting-started.md)
