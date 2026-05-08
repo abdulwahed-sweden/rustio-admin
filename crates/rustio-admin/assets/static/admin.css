@@ -84,19 +84,29 @@
 
 /* ============================================================
  * 1.a. Color / spacing tokens
+ *
+ *   === Tokens — colors ===
+ *
+ * Canonical color tokens for the framework. Every component below
+ * resolves through these `--rio-*` custom properties, so a project
+ * can override the whole palette by writing one `:root` block in its
+ * own stylesheet. There must be exactly ONE active definition per
+ * token; the dark-theme block at line ~275 is the only intentional
+ * override. If you add a new token here, document it in CHANGELOG.md
+ * under "Tokens — colors" so feature branches can't silently drift.
  * ============================================================ */
 
 :root {
-  /* The six theme tokens (also injected by _theme.html so a project
-   * override survives the cascade). Defaults match AdminTheme::default().
-   *
-   * Brand accent — `#A0341A` (deep crimson, "Andalusian red"). Reserved
-   * for affordances: primary buttons, focus rings, active state, links,
-   * brand emblem. Never flood-filled across page chrome — surfaces stay
-   * neutral so the accent retains its weight as a call-to-action. */
-  --rio-accent: #A0341A;
-  --rio-accent-hover: #832914;
-  --rio-accent-rgb: 160 52 26;
+  /* Brand accent — teal-emerald `#0F8C7E`. Reserved for affordances:
+   * primary buttons, focus rings, active state, links, brand emblem.
+   * Never flood-filled across page chrome — surfaces stay neutral so
+   * the accent retains its weight as a call-to-action. The previous
+   * crimson `#A0341A` was retired in 0.3.0 so the framework has one
+   * canonical accent across every admin page. Projects override the
+   * whole `:root` block to swap it. */
+  --rio-accent: #0F8C7E;
+  --rio-accent-hover: #0A6E62;
+  --rio-accent-rgb: 15 140 126;
 
   /* Surface ladder — five rungs, never pure white / pure black. Each
    * step lifts ~2–4% so depth comes from layering, not shadows. */
@@ -118,17 +128,17 @@
   --rio-border-strong: #C5CCD9; /* hover state, focused control */
 
   /* Derived tokens — colors carry meaning across the UI. Info-bg reads
-   * as a soft warm wash instead of cobalt so it harmonises with the
-   * crimson accent rather than fighting it. */
+   * as a soft cool wash that harmonises with the teal accent. */
   --rio-success: #15803D;
   --rio-warning: #B45309;
   --rio-danger:  #B91C1C;
   --rio-success-bg: #ECFDF5;
   --rio-warning-bg: #FFFBEB;
   --rio-danger-bg:  #FEF2F2;
-  --rio-info-bg:    #FDF3EF;
+  --rio-info-bg:    #ECFAF7;
 
-  /* Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. */
+  /* === Tokens — spacing ===
+   * Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. */
   --rio-s1: 0.25rem;
   --rio-s2: 0.5rem;
   --rio-s3: 0.75rem;
@@ -155,6 +165,13 @@
 
   /* ----------------------------------------------------------
    * 1.b. Typography tokens — three families, consistent scale.
+   *
+   *   === Tokens — typography ===
+   *
+   * Geist (Latin) + Tajawal / Noto Naskh (Arabic) + Geist Mono.
+   * The size scale `--rio-fs-xs … --rio-fs-3xl` is the canonical
+   * ladder; component styles below resolve through it. Adding a new
+   * size belongs in CHANGELOG.md.
    * ---------------------------------------------------------- */
 
   /* Latin UI — Geist leads, then Inter / Plex Sans, then platform UI. */
@@ -255,12 +272,12 @@
 /* Dark mode color tuning — three deliberate shifts vs. the light
  * palette:
  *
- *  1. Accent is lifted from `#A0341A` (deep crimson) to `#C84934`
- *     (warmer mid-crimson). The light crimson disappears into the
- *     graphite surface (~1.5:1 contrast); the lifted variant pops
- *     (~3.1:1) while keeping the same hue family so the brand
- *     reads identically across modes. White-on-accent stays at
- *     5.2:1 (passes WCAG AA body text).
+ *  1. Accent is lifted from `#0F8C7E` (light teal-emerald) to
+ *     `#3FAA9D` (mid teal). The deep light-mode teal disappears into
+ *     the graphite surface (~1.4:1 contrast); the lifted variant
+ *     pops (~3.2:1) while keeping the same hue family so the brand
+ *     reads identically across modes. White-on-accent stays above
+ *     4.5:1 (passes WCAG AA body text).
  *
  *  2. Danger is shifted from `#F87171` (Tailwind red-400, reads
  *     pink-pastel on graphite) to `#DC4444` — a serious, saturated
@@ -279,9 +296,9 @@
     --rio-surface-2: #3B4352;
     --rio-surface-3: #444D5E;
 
-    --rio-accent:       #C84934;
-    --rio-accent-hover: #B23D2A;
-    --rio-accent-rgb:   200 73 52;
+    --rio-accent:       #3FAA9D;
+    --rio-accent-hover: #5FBFB3;
+    --rio-accent-rgb:   63 170 157;
 
     --rio-text-strong: #FFFFFF;
     --rio-text:        #F3F4F6;
@@ -314,9 +331,9 @@ html[data-rio-theme="dark"] {
   --rio-surface-2: #3B4352;
   --rio-surface-3: #444D5E;
 
-  --rio-accent:       #C84934;
-  --rio-accent-hover: #B23D2A;
-  --rio-accent-rgb:   200 73 52;
+  --rio-accent:       #3FAA9D;
+  --rio-accent-hover: #5FBFB3;
+  --rio-accent-rgb:   63 170 157;
 
   --rio-text-strong: #FFFFFF;
   --rio-text:        #F3F4F6;
@@ -1059,6 +1076,124 @@ pre code {
   font-variant-numeric: tabular-nums;
   font-family: var(--rio-font-mono);
   font-size: var(--rio-fs-sm);
+}
+
+/* Foreign-key click-throughs in list cells. Reads as a link without
+ * shouting — underline on hover only, accent color on hover/focus. */
+.rio-fk-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--rio-border);
+}
+.rio-fk-link:hover,
+.rio-fk-link:focus {
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
+  outline: none;
+}
+
+/* ---------- Group permissions matrix ---------- *
+ * The Group edit page lays permissions out as a model × action grid
+ * instead of a flat alphabetical list. Wide enough for a 5-column
+ * layout (label + 4 actions + row-toggle) at the typical admin
+ * surface width; collapses to a horizontally scrollable container
+ * on narrow viewports. */
+.rio-perm-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--rio-fs-sm);
+  margin-top: var(--rio-s2);
+  margin-bottom: var(--rio-s3);
+}
+.rio-perm-matrix thead th {
+  text-align: center;
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rio-text-muted);
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--rio-border);
+  background: var(--rio-surface-2);
+}
+.rio-perm-matrix th.rio-perm-matrix__model {
+  text-align: left;
+}
+.rio-perm-matrix tbody th {
+  text-align: left;
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-strong);
+  padding: 10px 12px;
+  background: var(--rio-surface);
+}
+.rio-perm-matrix tbody td {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--rio-border-soft);
+}
+.rio-perm-matrix tbody tr:hover td,
+.rio-perm-matrix tbody tr:hover th {
+  background: var(--rio-surface-2);
+}
+.rio-perm-matrix tbody tr:last-child td,
+.rio-perm-matrix tbody tr:last-child th {
+  border-bottom: none;
+}
+.rio-perm-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+}
+.rio-perm-cell input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.rio-perm-cell__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.rio-perm-na {
+  color: var(--rio-text-subtle);
+  font-family: var(--rio-font-mono);
+}
+.rio-perm-row-all {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--rio-border);
+  background: var(--rio-surface);
+  color: var(--rio-text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.rio-perm-row-all:hover {
+  background: var(--rio-accent);
+  color: #fff;
+  border-color: var(--rio-accent);
+}
+.rio-perm-extras {
+  margin-top: var(--rio-s3);
+  padding: var(--rio-s2) 0 0;
+  border-top: 1px dashed var(--rio-border);
+}
+.rio-perm-extras summary {
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-muted);
+  cursor: pointer;
+  padding: 4px 0;
 }
 
 /* Datetime cells: monospace + nowrap so an ISO timestamp never breaks
