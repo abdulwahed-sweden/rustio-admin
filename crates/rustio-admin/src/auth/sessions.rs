@@ -55,6 +55,117 @@ pub(crate) async fn migrate_session_schema(db: &Db) -> Result<()> {
     Ok(())
 }
 
+/// Additive lifecycle migration introduced in 0.4.0 (`feat/session-token-hashing`).
+/// Adds:
+///
+/// - `session_id` — a stable BIGINT identifier separate from the
+///   token, so trust escalation can rotate the cookie without losing
+///   the session's identity. Backed by a sequence; existing rows are
+///   assigned ids on the ALTER.
+/// - `token_hash` — sha256 of the cookie token, URL-safe base64.
+///   Reads will prefer this over the plaintext `token` PK during a
+///   14-day transition window; new sessions populate it at insert.
+/// - `device_id` — nullable, reserved for future device-recognition
+///   work. R0 leaves it empty.
+/// - `trust_level` — `authenticated | elevated | mfa_verified`.
+///   Defaults to `authenticated` for existing rows.
+/// - `elevated_until` — re-auth wall expiry; populated by the future
+///   `/admin/reauth` endpoint.
+/// - `parent_session_id` — lineage anchor for trust-escalation
+///   rotation; future invalidations use it to revoke ancestor
+///   sessions when a child elevates.
+/// - `revoked_at` / `revoked_reason` — soft-delete with a typed
+///   reason. Replaces the old DELETE-on-logout flow (the row stays
+///   for audit retention until `purge_expired_sessions` reaps it).
+///
+/// Idempotent; safe to call on every boot.
+pub(crate) async fn migrate_session_lifecycle(db: &Db) -> Result<()> {
+    sqlx::query("CREATE SEQUENCE IF NOT EXISTS rustio_sessions_session_id_seq")
+        .execute(db.pool())
+        .await?;
+    sqlx::query(
+        "ALTER TABLE rustio_sessions \
+         ADD COLUMN IF NOT EXISTS session_id BIGINT NOT NULL DEFAULT \
+             nextval('rustio_sessions_session_id_seq')",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query(
+        "ALTER SEQUENCE rustio_sessions_session_id_seq OWNED BY rustio_sessions.session_id",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query("ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS token_hash TEXT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS device_id TEXT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query(
+        "ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS trust_level TEXT \
+         NOT NULL DEFAULT 'authenticated'",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query("ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS elevated_until TIMESTAMPTZ")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS parent_session_id BIGINT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_sessions ADD COLUMN IF NOT EXISTS revoked_reason TEXT")
+        .execute(db.pool())
+        .await?;
+
+    // CHECK constraint guarded via pg_constraint, since `IF NOT EXISTS`
+    // doesn't apply to constraints.
+    sqlx::query(
+        "DO $$ BEGIN \
+            IF NOT EXISTS ( \
+                SELECT 1 FROM pg_constraint \
+                WHERE conname = 'rustio_sessions_trust_level_check' \
+            ) THEN \
+                ALTER TABLE rustio_sessions \
+                ADD CONSTRAINT rustio_sessions_trust_level_check \
+                CHECK (trust_level IN ('authenticated', 'elevated', 'mfa_verified')); \
+            END IF; \
+        END $$",
+    )
+    .execute(db.pool())
+    .await?;
+
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS rustio_sessions_session_id_uq \
+         ON rustio_sessions (session_id)",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS rustio_sessions_token_hash_uq \
+         ON rustio_sessions (token_hash) \
+         WHERE revoked_at IS NULL AND token_hash IS NOT NULL",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS rustio_sessions_user_active_idx \
+         ON rustio_sessions (user_id) WHERE revoked_at IS NULL",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS rustio_sessions_parent_idx \
+         ON rustio_sessions (parent_session_id) WHERE parent_session_id IS NOT NULL",
+    )
+    .execute(db.pool())
+    .await?;
+
+    Ok(())
+}
+
 pub async fn create_session(db: &Db, user_id: i64) -> Result<String> {
     let token = random_token();
     let expires = Utc::now() + Duration::days(SESSION_LENGTH_DAYS);

@@ -39,6 +39,10 @@ pub(crate) const CREATE_TIMESTAMP_INDEX_SQL: &str =
 
 /// Ensure the `rustio_admin_actions` table and its indexes exist.
 /// Idempotent. Depends on `rustio_users` existing first.
+///
+/// 0.4.0 lifecycle additions: `metadata` JSONB, `correlation_id`, and
+/// `session_id`. The framework will populate these as recovery flows
+/// land in R1+; existing audit rows from 0.3.x stay valid with NULLs.
 pub async fn ensure_table(db: &Db) -> Result<()> {
     sqlx::query(CREATE_TABLE_SQL).execute(db.pool()).await?;
     sqlx::query(CREATE_MODEL_INDEX_SQL)
@@ -47,6 +51,30 @@ pub async fn ensure_table(db: &Db) -> Result<()> {
     sqlx::query(CREATE_TIMESTAMP_INDEX_SQL)
         .execute(db.pool())
         .await?;
+
+    // R0 (0.4.0) lifecycle additions — additive, idempotent.
+    sqlx::query("ALTER TABLE rustio_admin_actions ADD COLUMN IF NOT EXISTS metadata JSONB")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_admin_actions ADD COLUMN IF NOT EXISTS correlation_id TEXT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_admin_actions ADD COLUMN IF NOT EXISTS session_id BIGINT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS rustio_admin_actions_correlation_idx \
+         ON rustio_admin_actions (correlation_id) WHERE correlation_id IS NOT NULL",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS rustio_admin_actions_session_idx \
+         ON rustio_admin_actions (session_id) WHERE session_id IS NOT NULL",
+    )
+    .execute(db.pool())
+    .await?;
+
     Ok(())
 }
 

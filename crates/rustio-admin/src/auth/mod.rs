@@ -44,6 +44,7 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     migrate_user_schema(db).await?;
     init_session_tables(db).await?;
     sessions::migrate_session_schema(db).await?;
+    sessions::migrate_session_lifecycle(db).await?;
     init_permission_tables(db).await?;
     Ok(())
 }
