@@ -9,6 +9,7 @@
 pub mod admin;
 pub mod auth;
 pub mod background;
+pub mod email;
 pub mod error;
 pub mod http;
 pub mod middleware;
