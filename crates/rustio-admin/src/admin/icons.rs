@@ -64,12 +64,15 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
         r#"<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>"#);
 
     // Toolbar — search input glyph, filter dropdown trigger, chevrons.
-    m.insert("search",
-        r#"<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>"#);
-    m.insert("filter",
-        r#"<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>"#);
-    m.insert("chevron-down",
-        r#"<path d="m6 9 6 6 6-6"/>"#);
+    m.insert(
+        "search",
+        r#"<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>"#,
+    );
+    m.insert(
+        "filter",
+        r#"<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>"#,
+    );
+    m.insert("chevron-down", r#"<path d="m6 9 6 6 6-6"/>"#);
 
     m
 });
