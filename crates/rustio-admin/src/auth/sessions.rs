@@ -347,12 +347,173 @@ pub async fn create_session(db: &Db, user_id: i64) -> Result<String> {
     Ok(token)
 }
 
+/// Hard-delete a session row by cookie token. Retained as a
+/// pre-0.4.0 compatibility shim — internal callers are migrating to
+/// [`invalidate_sessions`], which soft-revokes via `revoked_at` and
+/// keeps the row available for the audit trail. New code MUST NOT
+/// call this directly; only the expired-row sweeper and the read-path
+/// stale-cleanup branch are allowed callers, both of which are
+/// inside this module.
 pub async fn delete_session(db: &Db, token: &str) -> Result<()> {
-    sqlx::query("DELETE FROM rustio_sessions WHERE token = $1")
+    sqlx::query("DELETE FROM rustio_sessions WHERE token = $1 OR token_hash = $2")
         .bind(token)
+        .bind(hash_token_for_storage(token))
         .execute(db.pool())
         .await?;
     Ok(())
+}
+
+/// Centralised session invalidation — the single legitimate writer of
+/// `rustio_sessions.revoked_at`.
+///
+/// Doctrine 22 (centralized invalidation) makes every revoke decision
+/// pass through here. Handlers MUST NOT issue raw `UPDATE … SET
+/// revoked_at` statements; a grep for that string in the source tree
+/// must return only this module. PR review enforces it.
+///
+/// What this function does:
+///
+/// - Resolves the [`SessionTarget`] into the set of session ids that
+///   are currently active and match.
+/// - Marks each row `revoked_at = NOW()` and `revoked_reason =
+///   reason.as_str()`.
+/// - Returns the affected ids in the [`InvalidationOutcome`] so the
+///   caller can write one audit row per revoked session, all sharing
+///   the supplied `correlation_id`.
+///
+/// Audit row writes are the caller's job (the audit module owns the
+/// `rustio_admin_actions` table; sessions own `rustio_sessions`). The
+/// reason is returned so the caller can render a typed `action_type`
+/// without re-deriving it.
+pub async fn invalidate_sessions(
+    db: &Db,
+    target: SessionTarget,
+    reason: SessionInvalidationReason,
+) -> Result<InvalidationOutcome> {
+    let reason_str = reason.as_str();
+    let revoked_ids: Vec<i64> = match target {
+        SessionTarget::User { user_id } => sqlx::query_scalar::<_, i64>(
+            "UPDATE rustio_sessions \
+                SET revoked_at = NOW(), revoked_reason = $2 \
+              WHERE user_id = $1 AND revoked_at IS NULL \
+            RETURNING session_id",
+        )
+        .bind(user_id)
+        .bind(reason_str)
+        .fetch_all(db.pool())
+        .await?,
+        SessionTarget::UserExceptCurrent {
+            user_id,
+            current_session_id,
+        } => sqlx::query_scalar::<_, i64>(
+            "UPDATE rustio_sessions \
+                SET revoked_at = NOW(), revoked_reason = $3 \
+              WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL \
+            RETURNING session_id",
+        )
+        .bind(user_id)
+        .bind(current_session_id)
+        .bind(reason_str)
+        .fetch_all(db.pool())
+        .await?,
+        SessionTarget::Single { session_id } => sqlx::query_scalar::<_, i64>(
+            "UPDATE rustio_sessions \
+                SET revoked_at = NOW(), revoked_reason = $2 \
+              WHERE session_id = $1 AND revoked_at IS NULL \
+            RETURNING session_id",
+        )
+        .bind(session_id)
+        .bind(reason_str)
+        .fetch_all(db.pool())
+        .await?,
+    };
+
+    Ok(InvalidationOutcome {
+        revoked_session_ids: revoked_ids,
+        reason: Some(reason),
+    })
+}
+
+/// Convenience wrapper for the existing logout flow. Routes through
+/// [`invalidate_sessions`] with `SessionTarget::Single` and
+/// `SessionInvalidationReason::Logout`.
+///
+/// Looks up the session by the cookie token (fast path: token_hash;
+/// fallback: plaintext for legacy 0.3.x sessions). Returns `Ok(())`
+/// even when no row matches — logout is idempotent.
+pub async fn logout_session(db: &Db, token: &str) -> Result<()> {
+    let token_hash = hash_token_for_storage(token);
+    let session_id: Option<i64> = sqlx::query_scalar::<_, i64>(
+        "SELECT session_id FROM rustio_sessions \
+          WHERE (token_hash = $1 OR (token_hash IS NULL AND token = $2)) \
+            AND revoked_at IS NULL \
+          LIMIT 1",
+    )
+    .bind(&token_hash)
+    .bind(token)
+    .fetch_optional(db.pool())
+    .await?;
+
+    if let Some(sid) = session_id {
+        invalidate_sessions(
+            db,
+            SessionTarget::Single { session_id: sid },
+            SessionInvalidationReason::Logout,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// List a user's currently-active sessions, ordered by `last_seen`
+/// descending so the active-sessions UI surfaces the most recently
+/// used row first. Excludes revoked + expired rows.
+pub async fn list_active_for_user(db: &Db, user_id: i64) -> Result<Vec<Session>> {
+    let rows = sqlx::query(
+        "SELECT session_id, user_id, trust_level, created_at, last_seen, expires_at, \
+                elevated_until, ip, user_agent \
+           FROM rustio_sessions \
+          WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > NOW() \
+          ORDER BY last_seen DESC",
+    )
+    .bind(user_id)
+    .fetch_all(db.pool())
+    .await?;
+
+    rows.iter()
+        .map(|r| {
+            let r = Row::from_pg(r);
+            Ok(Session {
+                session_id: r.get_i64("session_id")?,
+                user_id: r.get_i64("user_id")?,
+                trust_level: SessionTrust::parse(&r.get_string("trust_level")?),
+                created_at: r.get_datetime("created_at")?,
+                last_seen: r.get_datetime("last_seen")?,
+                expires_at: r.get_datetime("expires_at")?,
+                elevated_until: None, // optional column; reader lands when re-auth wall ships
+                ip: r.get_optional_string("ip")?,
+                user_agent: r.get_optional_string("user_agent")?,
+            })
+        })
+        .collect()
+}
+
+/// Resolve the cookie token to its `session_id` (active sessions
+/// only). Used by the active-sessions UI to mark which row is the
+/// current device, and by `UserExceptCurrent` callers.
+pub async fn current_session_id(db: &Db, token: &str) -> Result<Option<i64>> {
+    let token_hash = hash_token_for_storage(token);
+    let id: Option<i64> = sqlx::query_scalar::<_, i64>(
+        "SELECT session_id FROM rustio_sessions \
+          WHERE (token_hash = $1 OR (token_hash IS NULL AND token = $2)) \
+            AND revoked_at IS NULL AND expires_at > NOW() \
+          LIMIT 1",
+    )
+    .bind(&token_hash)
+    .bind(token)
+    .fetch_optional(db.pool())
+    .await?;
+    Ok(id)
 }
 
 pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identity>> {

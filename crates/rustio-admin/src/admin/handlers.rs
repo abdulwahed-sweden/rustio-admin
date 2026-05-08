@@ -135,9 +135,14 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
 }
 
 pub(crate) async fn do_logout(ctx: &AdminCtx, req: Request) -> Result<Response> {
+    // Logout routes through the centralized invalidate_sessions API
+    // (via `logout_session`) so the row is soft-revoked with
+    // `revoked_reason = 'logout'` rather than hard-deleted. This keeps
+    // the audit trail intact and uses the single legitimate writer of
+    // `revoked_at` (doctrine 22).
     if let Some(cookie) = req.header("cookie") {
         if let Some(token) = auth::session_token_from_cookie(cookie) {
-            auth::delete_session(&ctx.db, &token).await?;
+            auth::logout_session(&ctx.db, &token).await?;
         }
     }
     let clear = format!(
