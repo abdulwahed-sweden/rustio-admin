@@ -1061,6 +1061,20 @@ pre code {
   font-size: var(--rio-fs-sm);
 }
 
+/* Foreign-key click-throughs in list cells. Reads as a link without
+ * shouting — underline on hover only, accent color on hover/focus. */
+.rio-fk-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--rio-border);
+}
+.rio-fk-link:hover,
+.rio-fk-link:focus {
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
+  outline: none;
+}
+
 /* Datetime cells: monospace + nowrap so an ISO timestamp never breaks
  * at the `T`. Tabular figures keep columns aligned vertically. */
 .rio-td--datetime {

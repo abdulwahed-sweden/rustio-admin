@@ -306,6 +306,11 @@ pub(crate) async fn list_model(
             .await?;
     }
 
+    // Resolve every FK cell on this page from raw id to the target
+    // row's display label, and stash a click-through link for the
+    // template. One batched query per FK column on the model — N+1-safe.
+    hydrate_fk_cells(&ctx.db, &ctx.admin, entry, &mut page_result.rows).await?;
+
     let list = render::list_ctx(
         &identity,
         &ctx.admin,
@@ -877,4 +882,117 @@ pub(crate) async fn do_password_change(
     };
     let body = ctx.templates.render("admin/password_change.html", &view)?;
     Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
+}
+
+/// Resolve every foreign-key cell on the current list page from raw
+/// id (`"5"`) to the target row's display label (`"Anna Lindqvist"`)
+/// and remember the target's admin URL so the renderer can wrap the
+/// cell in an `<a>`.
+///
+/// Called by the list handler immediately after `entry.ops.list`. Runs
+/// at most one SELECT per FK column on the entry — so a list of 50
+/// orders with four FK columns issues exactly four extra queries
+/// regardless of page size, an N+1-safe batch design.
+///
+/// The hydration is silent on failure: a target row that's been
+/// deleted (or a relation that points at a missing model) leaves the
+/// cell holding the raw id with no link, so the user still sees
+/// *something* and the page never 500s on a stale FK.
+async fn hydrate_fk_cells(
+    db: &Db,
+    admin: &Admin,
+    entry: &super::types::AdminEntry,
+    rows: &mut [super::types::ListRow],
+) -> Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    let registry = super::relations::RelationRegistry::from_admin_entries(admin.entries());
+    if registry.is_empty() {
+        return Ok(());
+    }
+
+    // Iterate every column on the entry — relation-bearing columns are
+    // the only ones we hydrate. The cell index inside `ListRow.cells`
+    // is the same as the field index inside `entry.fields` (positional
+    // contract upheld by `display_values()`).
+    for (idx, field) in entry.fields.iter().enumerate() {
+        let Some(rel) = registry.belongs_to(entry.singular_name, field.name) else {
+            continue;
+        };
+        let Some(display_field) = &rel.target_display_field else {
+            // No display field on target → leave the raw id, no link.
+            continue;
+        };
+
+        // Collect distinct ids in this column on the current page.
+        // `OptionalI64` cells render empty when `None`; skip those.
+        let mut ids: Vec<i64> = Vec::with_capacity(rows.len());
+        for row in rows.iter() {
+            let Some(cell) = row.cells.get(idx) else {
+                continue;
+            };
+            if cell.is_empty() {
+                continue;
+            }
+            if let Ok(parsed) = cell.parse::<i64>() {
+                ids.push(parsed);
+            }
+        }
+        ids.sort_unstable();
+        ids.dedup();
+        if ids.is_empty() {
+            continue;
+        }
+
+        // Batch fetch (id, display) pairs for every distinct FK value
+        // observed on this page. One round-trip per FK column.
+        let sql = format!(
+            "SELECT id, {display}::text AS label FROM {table} WHERE id = ANY($1)",
+            display = display_field,
+            table = rel.target_table,
+        );
+        let fetched = match sqlx::query_as::<_, (i64, String)>(&sql)
+            .bind(&ids)
+            .fetch_all(db.pool())
+            .await
+        {
+            Ok(rows) => rows,
+            Err(e) => {
+                log::warn!(
+                    "FK hydration skipped for {}.{} → {}: {e}",
+                    entry.singular_name,
+                    field.name,
+                    rel.target_model,
+                );
+                continue;
+            }
+        };
+        let labels: HashMap<i64, String> = fetched.into_iter().collect();
+
+        // Substitute label + record link target on every matching cell.
+        for row in rows.iter_mut() {
+            let Some(cell) = row.cells.get_mut(idx) else {
+                continue;
+            };
+            if cell.is_empty() {
+                continue;
+            }
+            let Ok(parsed) = cell.parse::<i64>() else {
+                continue;
+            };
+            if let Some(label) = labels.get(&parsed) {
+                *cell = label.clone();
+                if let Some(slot) = row.cell_links.get_mut(idx) {
+                    *slot = Some(super::types::CellLink {
+                        admin_name: rel.target_admin_name.clone(),
+                        id: parsed,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

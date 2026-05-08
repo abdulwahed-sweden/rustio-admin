@@ -470,6 +470,11 @@ pub(crate) struct ListRowCtx {
     pub id: i64,
     #[serde(flatten)]
     pub values: HashMap<String, serde_json::Value>,
+    /// Per-column FK click-through links. Keyed by column name; value
+    /// is the target's `/admin/{admin_name}/{id}/edit` URL. Populated
+    /// by `handlers::hydrate_fk_cells` for relation-bearing columns
+    /// and consumed by the list template to wrap the cell in `<a>`.
+    pub links: HashMap<String, String>,
 }
 
 #[derive(Serialize)]
@@ -951,6 +956,8 @@ pub(crate) fn list_ctx(
             .map(|r| {
                 let mut values: HashMap<String, serde_json::Value> =
                     HashMap::with_capacity(field_names.len().saturating_sub(1));
+                let mut links: HashMap<String, String> = HashMap::new();
+                let cell_links = r.cell_links;
                 for (i, cell) in r.cells.into_iter().enumerate() {
                     if let Some(name) = field_names.get(i) {
                         // Skip the "id" key so the explicit struct field
@@ -965,9 +972,19 @@ pub(crate) fn list_ctx(
                             _ => serde_json::Value::String(cell),
                         };
                         values.insert((*name).to_string(), typed);
+                        if let Some(Some(link)) = cell_links.get(i) {
+                            links.insert(
+                                (*name).to_string(),
+                                format!("/admin/{}/{}/edit", link.admin_name, link.id),
+                            );
+                        }
                     }
                 }
-                ListRowCtx { id: r.id, values }
+                ListRowCtx {
+                    id: r.id,
+                    values,
+                    links,
+                }
             })
             .collect(),
         search_query,
