@@ -8,6 +8,14 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
 ### Added
 
+- **Group permissions matrix.** The Group edit page now lays out
+  permissions as a model × action grid (View / Add / Change / Delete
+  columns, one row per model) instead of a flat 60+ row alphabetical
+  checkbox list. Permissions whose codename doesn't fit the
+  `<table>.<action>_<singular>` pattern fall through to a collapsed
+  "Other permissions" group below the matrix so nothing is silently
+  dropped. Per-row "All" button toggles every permission for that
+  model in one click; degrades to plain multi-checkbox UX without JS.
 - **Foreign-key list-cell hydration.** List pages now resolve every
   `belongs_to` column on the current page from the raw id to the
   target row's display field, and wrap the cell in an
