@@ -4,6 +4,51 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [Unreleased]
+
+### Added
+
+- **Authority guards (`auth::guards`).** Five composable, server-side
+  guards enforce the rank model on every authority mutation:
+  `enforce_self_demote_safe`, `enforce_cross_rank_safe`,
+  `enforce_role_ceiling`, `enforce_no_orphan_role`. Guards return
+  `Error::Forbidden` with a clear human-readable reason; the HTTP
+  layer renders that reason on the standard 403 page. UI hiding is
+  treated as a courtesy, not security — every guard runs on POST
+  regardless of what the form said.
+- **Generalised orphan-prevention.** `auth::would_orphan_role(role)`
+  and `auth::would_orphan_protected()` cover every entry in
+  `auth::protected_roles()` (currently `[Administrator, Developer]`)
+  instead of only Developer. The pure verdict
+  `auth::verdict_for_orphan_role(...)` is exposed for unit testing
+  without a `Db`.
+- **Audit logging on authority mutations.** `do_user_edit`,
+  `do_new_user`, `do_user_delete`, `do_new_group`, `do_group_edit`,
+  and `do_group_delete` now write `rustio_admin_actions` rows with
+  actor, target, IP (read from `x-forwarded-for` / `x-real-ip`), and
+  a diff summary (role before / after, group / permission add and
+  remove sets, password-reset flag).
+- **Role dropdown ceiling.** `role_select_options(editor_rank)`
+  filters out roles strictly above the editor's own rank in both
+  user-new and user-edit forms. Server-side `enforce_role_ceiling`
+  catches forged POSTs as defense-in-depth.
+
+### Changed
+
+- **`Role::rank()` widened to `u32`** with spaced numeric values
+  (`User=100 / Staff=300 / Supervisor=600 / Administrator=900 /
+  Developer=1000`) so projects extending the rank ladder via group
+  labels have headroom between framework tiers. Compare relatively;
+  never match literally.
+
+### Deprecated
+
+- **`auth::would_orphan_developers`** — kept as a thin wrapper around
+  `auth::would_orphan_role(_, _, Role::Developer, _, _)` so external
+  callers keep compiling, but new code should use
+  `would_orphan_protected` to cover Administrator orphan-prevention
+  too.
+
 ## [0.2.1] — 2026-05-07
 
 CLI-only patch. `rustio-admin` and `rustio-admin-macros` stay at 0.2.0.

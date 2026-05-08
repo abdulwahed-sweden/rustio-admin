@@ -10,6 +10,7 @@
 //! the user's groups. The permission string is
 //! `<app>.<action>_<model>` — e.g. `posts.change_post`.
 
+pub mod guards;
 mod permissions;
 mod role;
 mod sessions;
@@ -21,15 +22,17 @@ pub use permissions::{
     init_permission_tables, permissions_for_user, register_model_permissions,
     remove_user_from_group, Permission, PermissionError, Superuser,
 };
-pub use role::Role;
+pub use role::{protected_roles, Role};
 pub use sessions::{
     create_session, delete_session, identity_from_session, init_session_tables,
     purge_expired_sessions, session_token_from_cookie, SESSION_COOKIE,
 };
+#[allow(deprecated)]
+pub use users::would_orphan_developers;
 pub use users::{
     create_user, find_user_by_email, hash_password, init_user_tables, load_user_profile, login,
-    migrate_user_schema, set_password, update_user_role, verify_password, would_orphan_developers,
-    Identity, StoredUser, UserProfile,
+    migrate_user_schema, set_password, update_user_role, verdict_for_orphan_role, verify_password,
+    would_orphan_protected, would_orphan_role, Identity, StoredUser, UserProfile,
 };
 
 use crate::error::Result;

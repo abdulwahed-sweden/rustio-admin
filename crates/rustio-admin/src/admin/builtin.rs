@@ -11,15 +11,45 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
-use crate::auth::{self, Identity, Role};
+use crate::auth::{self, guards, Identity, Role};
 use crate::error::{Error, Result};
 use crate::http::{Request, Response};
 use crate::orm::{Db, Row};
 use crate::templates::Templates;
 
+use super::audit::{self, ActionType, LogEntry};
 use super::render;
 use super::render::{BaseContext, FlashCtx, SidebarEntry};
 use super::types::Admin;
+
+/// Read the client IP from the proxy headers a typical reverse-proxy
+/// emits. Used as the `ip_address` column on audit rows. Returns
+/// `None` when neither header is present so direct-LAN traffic still
+/// audits cleanly with a NULL ip_address.
+fn client_ip(req: &Request) -> Option<String> {
+    if let Some(xff) = req.header("x-forwarded-for") {
+        // First entry is the original client; rest are proxy hops.
+        return xff.split(',').next().map(|s| s.trim().to_string());
+    }
+    req.header("x-real-ip").map(|s| s.to_string())
+}
+
+/// Fetch (id, role, is_active) for a target user. Used by the
+/// cross-rank guard before we let an editor touch another row.
+async fn load_target_user(db: &Db, user_id: i64) -> Result<(i64, Role, bool, String)> {
+    let row = sqlx::query("SELECT id, role, is_active, email FROM rustio_users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(db.pool())
+        .await?
+        .ok_or_else(|| Error::NotFound(format!("user #{user_id}")))?;
+    let r = Row::from_pg(&row);
+    Ok((
+        r.get_i64("id")?,
+        Role::parse(&r.get_string("role")?)?,
+        r.get_bool("is_active")?,
+        r.get_string("email")?,
+    ))
+}
 
 pub(crate) struct AuthAdminCtx {
     pub admin: Arc<Admin>,
@@ -162,7 +192,7 @@ pub(crate) async fn show_user_edit(
             .await?;
 
     let is_last_developer =
-        auth::would_orphan_developers(&ctx.db, user_id, Some(Role::User)).await?;
+        auth::would_orphan_role(&ctx.db, user_id, Role::Developer, Role::User, false).await?;
 
     let email_str = r.get_string("email")?;
     let role_str = r.get_string("role")?;
@@ -182,6 +212,7 @@ pub(crate) async fn show_user_edit(
             &email_str,
             &role_str,
             is_active_val,
+            identity.role.rank(),
         ),
         password_sections: render::user_edit_password_sections(),
         email: email_str,
@@ -225,32 +256,23 @@ pub(crate) async fn do_user_edit(
         .map(|s| s.to_string())
         .unwrap_or_default();
 
-    // Last-developer guard. Block any change that would leave the
-    // system with zero active developers. The helper is role-based;
-    // a deactivation is equivalent to removing this user from the
-    // active-developer pool, so we pass a non-Developer sentinel role
-    // in that case so the helper catches it.
-    let effective_role = if is_active { role } else { Role::User };
-    if auth::would_orphan_developers(&ctx.db, user_id, Some(effective_role)).await? {
-        let csrf = req
-            .ctx()
-            .get::<crate::middleware::CsrfGuard>()
-            .map(|g| g.token.clone())
-            .unwrap_or_default();
-        return render_user_edit_with_errors(
-            ctx,
-            &identity,
-            user_id,
-            role,
-            is_active,
-            wanted,
-            csrf,
-            vec!["Cannot demote or deactivate the last active developer. \
-                 Use rustio-cli to promote a backup developer first."
-                .into()],
-        )
-        .await;
-    }
+    // ---- Authority guards -------------------------------------------------
+    // Order: pure rank checks first (cheap, no DB), then the orphan
+    // check (one query). All guards return `Error::Forbidden` so the
+    // HTTP layer renders a 403 with the supplied reason.
+    let (_, target_role_before, _is_active_before, _) = load_target_user(&ctx.db, user_id).await?;
+    guards::enforce_self_demote_safe(&identity, user_id, role, is_active)?;
+    guards::enforce_cross_rank_safe(&identity, user_id, target_role_before)?;
+    guards::enforce_role_ceiling(&identity, role)?;
+    guards::enforce_no_orphan_role(&ctx.db, user_id, role, is_active).await?;
+
+    // Capture state BEFORE applying changes so audit rows carry a
+    // before/after diff.
+    let groups_before: Vec<i64> =
+        sqlx::query_scalar::<_, i64>("SELECT group_id FROM rustio_user_groups WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_all(ctx.db.pool())
+            .await?;
 
     sqlx::query(
         "UPDATE rustio_users SET role = $1, is_active = $2, updated_at = NOW() WHERE id = $3",
@@ -272,79 +294,76 @@ pub(crate) async fn do_user_edit(
     // back, that path's own invalidation covers us — but the
     // all-unchecked case lands here.
     auth::invalidate_user_cache(user_id);
-    for gid in wanted {
-        auth::add_user_to_group(&ctx.db, user_id, gid).await?;
+    for gid in &wanted {
+        auth::add_user_to_group(&ctx.db, user_id, *gid).await?;
     }
 
     if !new_password.is_empty() {
         auth::set_password(&ctx.db, user_id, &new_password).await?;
     }
 
+    // ---- Audit ------------------------------------------------------------
+    let mut summary = format!(
+        "role: {} → {}; active: {}",
+        target_role_before.as_str(),
+        role.as_str(),
+        is_active,
+    );
+    let added: Vec<i64> = wanted
+        .iter()
+        .copied()
+        .filter(|g| !groups_before.contains(g))
+        .collect();
+    let removed: Vec<i64> = groups_before
+        .iter()
+        .copied()
+        .filter(|g| !wanted.contains(g))
+        .collect();
+    if !added.is_empty() {
+        summary.push_str(&format!(
+            "; +groups [{}]",
+            added
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        ));
+    }
+    if !removed.is_empty() {
+        summary.push_str(&format!(
+            "; -groups [{}]",
+            removed
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        ));
+    }
+    if !new_password.is_empty() {
+        summary.push_str("; password reset");
+    }
+    let ip = client_ip(&req);
+    let _ = audit::record(
+        &ctx.db,
+        LogEntry {
+            user_id: identity.user_id,
+            action_type: ActionType::Update,
+            model_name: "User",
+            object_id: user_id,
+            ip_address: ip.as_deref(),
+            summary,
+        },
+    )
+    .await;
+
     Ok(Response::redirect("/admin/users"))
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn render_user_edit_with_errors(
-    ctx: &AuthAdminCtx,
-    identity: &Identity,
-    user_id: i64,
-    role: Role,
-    is_active: bool,
-    user_groups: Vec<i64>,
-    csrf: String,
-    errors: Vec<String>,
-) -> Result<Response> {
-    let row = sqlx::query("SELECT email FROM rustio_users WHERE id = $1")
-        .bind(user_id)
-        .fetch_optional(ctx.db.pool())
-        .await?;
-    let row = row.ok_or_else(|| Error::NotFound(format!("user #{user_id}")))?;
-    let r = Row::from_pg(&row);
-
-    let is_last_developer =
-        auth::would_orphan_developers(&ctx.db, user_id, Some(Role::User)).await?;
-
-    let email_str = r.get_string("email")?;
-    let role_str: String = role.as_str().into();
-
-    // The only error this fn produces is the last-developer orphan
-    // guard, which is a property of the role change. Key it onto
-    // `role` so the inline error renders next to the role select.
-    let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
-    for msg in &errors {
-        field_errors
-            .entry("role".into())
-            .or_default()
-            .push(msg.clone());
-    }
-    let mut identity_sections =
-        render::user_edit_identity_sections(&email_str, &role_str, is_active);
-    render::apply_field_errors(&mut identity_sections, &field_errors);
-    let view = UserEditCtx {
-        base: BaseContext::new(Some(identity), csrf, &ctx.admin),
-        page_title: format!("Edit user #{user_id}"),
-        entries: ctx
-            .admin
-            .entries()
-            .iter()
-            .filter(|e| !e.core)
-            .map(SidebarEntry::from)
-            .collect(),
-        user_id,
-        identity_sections,
-        password_sections: render::user_edit_password_sections(),
-        email: email_str,
-        role: role_str,
-        is_active,
-        all_groups: load_groups(&ctx.db).await?,
-        user_groups,
-        errors,
-        flash: None,
-        is_last_developer,
-    };
-    let body = ctx.templates.render("admin/user_edit.html", &view)?;
-    Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
-}
+// `render_user_edit_with_errors` was removed — the only error it
+// surfaced (last-developer orphan) now flows through the
+// authority-guard layer as `Error::Forbidden`, which the framework
+// renders via `forbidden.html` so we get a 403 with the same human
+// message at no extra cost.
 
 // ---------- User view (read-only profile) ----------
 
@@ -876,7 +895,7 @@ pub(crate) async fn show_user_delete(
 
     let is_self = identity.user_id == user_id;
     let is_last_developer =
-        auth::would_orphan_developers(&ctx.db, user_id, Some(Role::User)).await?;
+        auth::would_orphan_role(&ctx.db, user_id, Role::Developer, Role::User, false).await?;
 
     let email = r.get_string("email")?;
     let view = UserDeleteCtx {
@@ -908,7 +927,7 @@ pub(crate) async fn do_user_delete(
     ctx: &AuthAdminCtx,
     identity: Identity,
     user_id: i64,
-    _req: Request,
+    req: Request,
 ) -> Result<Response> {
     // Self-delete guard.
     if identity.user_id == user_id {
@@ -917,14 +936,15 @@ pub(crate) async fn do_user_delete(
         ));
     }
 
-    // Last-developer guard.
-    if auth::would_orphan_developers(&ctx.db, user_id, Some(Role::User)).await? {
-        return Err(Error::BadRequest(
-            "Cannot delete the last active developer. \
-             Use rustio-cli to promote a backup developer first."
-                .into(),
-        ));
-    }
+    // Authority guards. Cross-rank prevents a lower-rank user from
+    // deleting someone above them; orphan check covers every protected
+    // role (Administrator + Developer), not just Developer.
+    let (_, target_role, _, target_email) = load_target_user(&ctx.db, user_id).await?;
+    guards::enforce_cross_rank_safe(&identity, user_id, target_role)?;
+    // For delete, model the new state as `inactive` with a sentinel
+    // role; the orphan helper only cares whether the target stays in
+    // the protected pool, and `is_active=false` says "no".
+    guards::enforce_no_orphan_role(&ctx.db, user_id, Role::User, false).await?;
 
     sqlx::query("DELETE FROM rustio_users WHERE id = $1")
         .bind(user_id)
@@ -934,6 +954,20 @@ pub(crate) async fn do_user_delete(
     // Cascade through user_groups, user_permissions, and sessions
     // happens at the FK level. Drop the perm-cache entry.
     auth::invalidate_user_cache(user_id);
+
+    let ip = client_ip(&req);
+    let _ = audit::record(
+        &ctx.db,
+        LogEntry {
+            user_id: identity.user_id,
+            action_type: ActionType::Delete,
+            model_name: "User",
+            object_id: user_id,
+            ip_address: ip.as_deref(),
+            summary: format!("deleted user {} ({})", target_email, target_role.as_str()),
+        },
+    )
+    .await;
 
     Ok(Response::redirect("/admin/users"))
 }
@@ -1056,17 +1090,25 @@ pub(crate) async fn show_group_edit(
 
 pub(crate) async fn do_group_edit(
     ctx: &AuthAdminCtx,
-    _identity: Identity,
+    identity: Identity,
     group_id: i64,
     req: Request,
 ) -> Result<Response> {
     let form = req.form()?;
-    let name = form.required("name")?;
-    let description = form.get("description").unwrap_or("");
+    let name = form.required("name")?.to_string();
+    let description = form.get("description").unwrap_or("").to_string();
+
+    // Capture before-state for the audit diff.
+    let perms_before: Vec<i64> = sqlx::query_scalar::<_, i64>(
+        "SELECT permission_id FROM rustio_group_permissions WHERE group_id = $1",
+    )
+    .bind(group_id)
+    .fetch_all(ctx.db.pool())
+    .await?;
 
     sqlx::query("UPDATE rustio_groups SET name = $1, description = $2 WHERE id = $3")
-        .bind(name)
-        .bind(description)
+        .bind(&name)
+        .bind(&description)
         .bind(group_id)
         .execute(ctx.db.pool())
         .await?;
@@ -1077,6 +1119,7 @@ pub(crate) async fn do_group_edit(
         .execute(ctx.db.pool())
         .await?;
 
+    let mut perms_after: Vec<i64> = Vec::new();
     for (k, v) in form.as_map() {
         if let Some(id_str) = k.strip_prefix("perm_") {
             if v == "on" {
@@ -1089,10 +1132,56 @@ pub(crate) async fn do_group_edit(
                     .bind(pid)
                     .execute(ctx.db.pool())
                     .await?;
+                    perms_after.push(pid);
                 }
             }
         }
     }
+
+    let added: Vec<i64> = perms_after
+        .iter()
+        .copied()
+        .filter(|p| !perms_before.contains(p))
+        .collect();
+    let removed: Vec<i64> = perms_before
+        .iter()
+        .copied()
+        .filter(|p| !perms_after.contains(p))
+        .collect();
+    let mut summary = format!("name: {name}");
+    if !added.is_empty() {
+        summary.push_str(&format!(
+            "; +perms [{}]",
+            added
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        ));
+    }
+    if !removed.is_empty() {
+        summary.push_str(&format!(
+            "; -perms [{}]",
+            removed
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        ));
+    }
+    let ip = client_ip(&req);
+    let _ = audit::record(
+        &ctx.db,
+        LogEntry {
+            user_id: identity.user_id,
+            action_type: ActionType::Update,
+            model_name: "Group",
+            object_id: group_id,
+            ip_address: ip.as_deref(),
+            summary,
+        },
+    )
+    .await;
 
     Ok(Response::redirect("/admin/groups"))
 }
@@ -1163,9 +1252,9 @@ pub(crate) async fn show_group_delete(
 
 pub(crate) async fn do_group_delete(
     ctx: &AuthAdminCtx,
-    _identity: Identity,
+    identity: Identity,
     group_id: i64,
-    _req: Request,
+    req: Request,
 ) -> Result<Response> {
     // Capture every user that's losing this group BEFORE the cascade
     // wipes the M2M table.
@@ -1173,6 +1262,11 @@ pub(crate) async fn do_group_delete(
         sqlx::query_scalar("SELECT user_id FROM rustio_user_groups WHERE group_id = $1")
             .bind(group_id)
             .fetch_all(ctx.db.pool())
+            .await?;
+    let group_name: Option<String> =
+        sqlx::query_scalar("SELECT name FROM rustio_groups WHERE id = $1")
+            .bind(group_id)
+            .fetch_optional(ctx.db.pool())
             .await?;
 
     sqlx::query("DELETE FROM rustio_groups WHERE id = $1")
@@ -1182,9 +1276,27 @@ pub(crate) async fn do_group_delete(
 
     // Cache invalidation has to be explicit — the cascade ran in PG,
     // not via `remove_user_from_group`.
-    for uid in user_ids {
-        crate::auth::invalidate_user_cache(uid);
+    for uid in &user_ids {
+        crate::auth::invalidate_user_cache(*uid);
     }
+
+    let ip = client_ip(&req);
+    let _ = audit::record(
+        &ctx.db,
+        LogEntry {
+            user_id: identity.user_id,
+            action_type: ActionType::Delete,
+            model_name: "Group",
+            object_id: group_id,
+            ip_address: ip.as_deref(),
+            summary: format!(
+                "deleted group {} ({} users detached)",
+                group_name.unwrap_or_else(|| format!("#{group_id}")),
+                user_ids.len(),
+            ),
+        },
+    )
+    .await;
 
     Ok(Response::redirect("/admin/groups"))
 }
@@ -1210,6 +1322,7 @@ pub(crate) async fn show_new_user(
 ) -> Result<Response> {
     let email = String::new();
     let role: String = "staff".into();
+    let editor_rank = identity.role.rank();
     let view = UserNewCtx {
         base: BaseContext::new(Some(&identity), csrf, &ctx.admin),
         page_title: "Add user",
@@ -1220,7 +1333,7 @@ pub(crate) async fn show_new_user(
             .filter(|e| !e.core)
             .map(SidebarEntry::from)
             .collect(),
-        sections: render::user_new_form_sections(&email, &role),
+        sections: render::user_new_form_sections(&email, &role, editor_rank),
         email,
         role,
         errors: Vec::new(),
@@ -1300,9 +1413,39 @@ pub(crate) async fn do_new_user(
         field_errors.entry("password".into()).or_default().push(msg);
     }
 
+    // Role-ceiling guard: a user cannot create accounts with rank
+    // higher than their own. Runs only when the role string parsed
+    // cleanly; otherwise the validation block above already flagged
+    // it as an unknown role.
+    if errors.is_empty() {
+        if let Some(role) = role_parsed {
+            if let Err(e) = guards::enforce_role_ceiling(&identity, role) {
+                let msg = match e {
+                    Error::Forbidden(m) => m,
+                    other => other.to_string(),
+                };
+                errors.push(msg.clone());
+                field_errors.entry("role".into()).or_default().push(msg);
+            }
+        }
+    }
+
     if errors.is_empty() {
         let role = role_parsed.expect("role parsed when errors empty");
         let new_id = auth::create_user(&ctx.db, &email, password, role).await?;
+        let ip = client_ip(&req);
+        let _ = audit::record(
+            &ctx.db,
+            LogEntry {
+                user_id: identity.user_id,
+                action_type: ActionType::Create,
+                model_name: "User",
+                object_id: new_id,
+                ip_address: ip.as_deref(),
+                summary: format!("created user {} as {}", email, role.as_str()),
+            },
+        )
+        .await;
         return Ok(Response::redirect(format!("/admin/users/{new_id}/edit")));
     }
 
@@ -1311,7 +1454,7 @@ pub(crate) async fn do_new_user(
         .get::<crate::middleware::CsrfGuard>()
         .map(|g| g.token.clone())
         .unwrap_or_default();
-    let mut sections = render::user_new_form_sections(&email, &role_str);
+    let mut sections = render::user_new_form_sections(&email, &role_str, identity.role.rank());
     render::apply_field_errors(&mut sections, &field_errors);
     let view = UserNewCtx {
         base: BaseContext::new(Some(&identity), csrf, &ctx.admin),
@@ -1413,6 +1556,19 @@ pub(crate) async fn do_new_group(
             Ok(row) => {
                 let r = Row::from_pg(&row);
                 let new_id: i64 = r.get_i64("id")?;
+                let ip = client_ip(&req);
+                let _ = audit::record(
+                    &ctx.db,
+                    LogEntry {
+                        user_id: identity.user_id,
+                        action_type: ActionType::Create,
+                        model_name: "Group",
+                        object_id: new_id,
+                        ip_address: ip.as_deref(),
+                        summary: format!("created group {name}"),
+                    },
+                )
+                .await;
                 return Ok(Response::redirect(format!("/admin/groups/{new_id}/edit")));
             }
             Err(sqlx::Error::Database(db_err)) if db_err.constraint().is_some() => {
