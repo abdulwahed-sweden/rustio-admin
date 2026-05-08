@@ -1434,6 +1434,7 @@ dependencies = [
  "rustio-admin-macros",
  "serde",
  "serde_json",
+ "sha2",
  "sqlx",
  "subtle",
  "thiserror 1.0.69",

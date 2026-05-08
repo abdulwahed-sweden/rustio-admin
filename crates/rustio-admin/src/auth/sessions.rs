@@ -1,10 +1,26 @@
 //! DB-backed sessions.
+//!
+//! See `DESIGN_SESSIONS.md` for the canonical lifecycle, trust-level
+//! model, and invalidation reasons. Briefly:
+//!
+//! - A **session** is a device/browser context with a stable
+//!   [`SessionId`], a current [`SessionTrust`], and an issuance chain
+//!   tracked through `parent_session_id`.
+//! - Cookie tokens are sha-256-hashed at rest in `token_hash`; the
+//!   plaintext only exists in the user's cookie.
+//! - Trust escalation rotates the cookie (mints a new row, sets the
+//!   parent's `revoked_at` with reason `trust_escalation`).
+//! - All revocations go through [`invalidate_sessions`] — no other
+//!   code path writes `revoked_at`. Grep for `revoked_at` to verify.
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use rand::RngCore;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::orm::{Db, Row};
 
 use super::role::Role;
@@ -15,6 +31,150 @@ use super::users::Identity;
 pub const SESSION_COOKIE: &str = "rustio_session";
 
 const SESSION_LENGTH_DAYS: i64 = 14;
+
+/// Trust level a session has acquired. The login flow mints
+/// [`SessionTrust::Authenticated`]; the future re-auth wall promotes
+/// to [`SessionTrust::Elevated`]; a successful TOTP step on this
+/// session lifts to [`SessionTrust::MfaVerified`].
+///
+/// The variants are ordered: `Authenticated < Elevated <
+/// MfaVerified`. Compare via [`SessionTrust::satisfies`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SessionTrust {
+    Authenticated,
+    Elevated,
+    MfaVerified,
+}
+
+impl SessionTrust {
+    /// Stable lowercase identifier matching the SQL `trust_level`
+    /// column's CHECK constraint.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Authenticated => "authenticated",
+            Self::Elevated => "elevated",
+            Self::MfaVerified => "mfa_verified",
+        }
+    }
+
+    /// Numeric ladder for partial-order comparisons.
+    pub const fn rank(self) -> u8 {
+        match self {
+            Self::Authenticated => 1,
+            Self::Elevated => 2,
+            Self::MfaVerified => 3,
+        }
+    }
+
+    /// `self` is at least as trusted as `other`.
+    pub const fn satisfies(self, other: SessionTrust) -> bool {
+        self.rank() >= other.rank()
+    }
+
+    /// Parse from the SQL `trust_level` column. Defaults to
+    /// `Authenticated` on unknown input so a malformed migration
+    /// can't lock anyone out.
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "elevated" => Self::Elevated,
+            "mfa_verified" => Self::MfaVerified,
+            _ => Self::Authenticated,
+        }
+    }
+}
+
+/// Why a session is being invalidated. Drives both the audit
+/// `action_type` and decisions about whether to clear remembered MFA
+/// or mint a replacement session.
+///
+/// All [`invalidate_sessions`] callers pass one of these — the engine
+/// is the single writer of `revoked_at`. Free-form reasons are not
+/// allowed; doctrine 22 ("centralized invalidation") in
+/// `DESIGN_SYSTEM.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionInvalidationReason {
+    Logout,
+    Expired,
+    UserRequested,
+    AdministrativeRevoke,
+    PasswordReset,
+    PasswordResetByOther,
+    MfaEnabled,
+    MfaDisabled,
+    MfaDisabledByOther,
+    AuthorityEscalation,
+    EmergencyRecovery,
+    /// Token rotation that accompanies a trust escalation
+    /// (`Authenticated → Elevated`, etc.). The replacement session is
+    /// minted as the parent's child; this revokes the old token.
+    TrustEscalation,
+}
+
+impl SessionInvalidationReason {
+    /// Stable lowercase identifier persisted in
+    /// `rustio_sessions.revoked_reason` and used as the audit
+    /// `action_type` suffix.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Logout => "logout",
+            Self::Expired => "expired",
+            Self::UserRequested => "user_requested",
+            Self::AdministrativeRevoke => "administrative_revoke",
+            Self::PasswordReset => "password_reset",
+            Self::PasswordResetByOther => "password_reset_by_other",
+            Self::MfaEnabled => "mfa_enabled",
+            Self::MfaDisabled => "mfa_disabled",
+            Self::MfaDisabledByOther => "mfa_disabled_by_other",
+            Self::AuthorityEscalation => "authority_escalation",
+            Self::EmergencyRecovery => "emergency_recovery",
+            Self::TrustEscalation => "trust_escalation",
+        }
+    }
+}
+
+/// Which sessions an [`invalidate_sessions`] call targets.
+#[derive(Debug, Clone, Copy)]
+pub enum SessionTarget {
+    /// Every active session belonging to `user_id`.
+    User { user_id: i64 },
+    /// Every active session belonging to `user_id` except the one
+    /// identified by `current_session_id`. Used by "log me out
+    /// everywhere else" and by post-password-reset flows that want to
+    /// keep the current device alive.
+    UserExceptCurrent {
+        user_id: i64,
+        current_session_id: i64,
+    },
+    /// One specific session row.
+    Single { session_id: i64 },
+}
+
+/// One session row, reconstructed from `rustio_sessions`. Returned
+/// by [`list_active_for_user`] for the active-sessions UI.
+#[derive(Debug, Clone, Serialize)]
+pub struct Session {
+    pub session_id: i64,
+    pub user_id: i64,
+    pub trust_level: SessionTrust,
+    pub created_at: DateTime<Utc>,
+    pub last_seen: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub elevated_until: Option<DateTime<Utc>>,
+    pub ip: Option<String>,
+    pub user_agent: Option<String>,
+}
+
+/// Outcome of an [`invalidate_sessions`] call. Used by the audit
+/// pipeline to write one row per affected session and by the caller
+/// to decide whether to clear the user's cookie.
+#[derive(Debug, Clone, Default)]
+pub struct InvalidationOutcome {
+    /// `session_id`s that were transitioned from active to revoked.
+    pub revoked_session_ids: Vec<i64>,
+    /// Reason recorded for the audit pipeline.
+    pub reason: Option<SessionInvalidationReason>,
+}
 
 pub async fn init_session_tables(db: &Db) -> Result<()> {
     sqlx::query(
@@ -275,5 +435,62 @@ mod tests {
     fn random_token_has_reasonable_entropy() {
         // Rough sanity check — two consecutive tokens should differ.
         assert_ne!(random_token(), random_token());
+    }
+
+    // ---- typed session model ----
+
+    #[test]
+    fn session_trust_orders_correctly() {
+        assert!(SessionTrust::Authenticated.rank() < SessionTrust::Elevated.rank());
+        assert!(SessionTrust::Elevated.rank() < SessionTrust::MfaVerified.rank());
+        assert!(SessionTrust::MfaVerified.satisfies(SessionTrust::Elevated));
+        assert!(SessionTrust::MfaVerified.satisfies(SessionTrust::Authenticated));
+        assert!(SessionTrust::Authenticated.satisfies(SessionTrust::Authenticated));
+        assert!(!SessionTrust::Authenticated.satisfies(SessionTrust::Elevated));
+        assert!(!SessionTrust::Elevated.satisfies(SessionTrust::MfaVerified));
+    }
+
+    #[test]
+    fn session_trust_round_trips_through_sql() {
+        for tier in [
+            SessionTrust::Authenticated,
+            SessionTrust::Elevated,
+            SessionTrust::MfaVerified,
+        ] {
+            assert_eq!(SessionTrust::parse(tier.as_str()), tier);
+        }
+    }
+
+    #[test]
+    fn session_trust_parse_defaults_safely_on_unknown() {
+        // Unknown / malformed trust_level column → fall back to the
+        // weakest tier so a bad row can't accidentally elevate.
+        assert_eq!(SessionTrust::parse("garbage"), SessionTrust::Authenticated);
+        assert_eq!(SessionTrust::parse(""), SessionTrust::Authenticated);
+    }
+
+    #[test]
+    fn invalidation_reason_strings_are_distinct() {
+        // Property: as_str() values must be globally unique so audit
+        // rows are unambiguous.
+        let reasons = [
+            SessionInvalidationReason::Logout,
+            SessionInvalidationReason::Expired,
+            SessionInvalidationReason::UserRequested,
+            SessionInvalidationReason::AdministrativeRevoke,
+            SessionInvalidationReason::PasswordReset,
+            SessionInvalidationReason::PasswordResetByOther,
+            SessionInvalidationReason::MfaEnabled,
+            SessionInvalidationReason::MfaDisabled,
+            SessionInvalidationReason::MfaDisabledByOther,
+            SessionInvalidationReason::AuthorityEscalation,
+            SessionInvalidationReason::EmergencyRecovery,
+            SessionInvalidationReason::TrustEscalation,
+        ];
+        let mut set = std::collections::HashSet::new();
+        for r in reasons {
+            assert!(set.insert(r.as_str()), "duplicate as_str() for {r:?}");
+        }
+        assert_eq!(set.len(), reasons.len());
     }
 }
