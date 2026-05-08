@@ -4,6 +4,131 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [0.4.0] — 2026-05-09
+
+Session lifecycle + recovery foundations release. R0 of the universal
+account-recovery architecture documented in `DESIGN_SESSIONS.md` and
+`DESIGN_AUDIT.md`. **No password-reset flow yet** — that ships in R1
+(0.5.0). This release lays the safe foundation: hashed-at-rest session
+tokens, centralised invalidation, typed lifecycle vocabulary, audit
+forensic chain, and an email abstraction.
+
+> **Migrating from 0.3.x:** bump `rustio-admin = "0.4"` in your
+> project's `Cargo.toml`, then **add `middleware::correlation_id`
+> BEFORE `middleware::csrf_protect`** in your router so audit rows
+> get a populated `correlation_id`. Run `cargo update -p rustio-admin`.
+> The schema migration is additive; existing sessions continue to
+> authenticate through a 14-day plaintext-fallback window.
+
+### Added
+
+- **Hashed-at-rest session tokens.** `rustio_sessions.token_hash`
+  stores `sha256(cookie-token)`; the cookie keeps the plaintext.
+  Lookup: hash-first, with a plaintext fallback for the 14-day
+  transition window since release. After 14 days every legacy
+  session has expired and a 0.5.x patch can drop the fallback +
+  the plaintext column.
+- **Centralised session invalidation** (`auth::invalidate_sessions`).
+  The single legitimate writer of `rustio_sessions.revoked_at`. A
+  `grep -rE "revoked_at\s*="` returns only this function. Called by
+  logout, password reset (R1), MFA disable (R3), administrative
+  revoke (R2), and trust-escalation rotation. The companion
+  `auth::logout_session` is a thin wrapper for the existing logout
+  handler.
+- **Typed lifecycle vocabulary**: `SessionTrust`
+  (`Authenticated < Elevated < MfaVerified` with `satisfies()`),
+  `SessionInvalidationReason` (12 variants), `SessionTarget`
+  (`User` / `UserExceptCurrent` / `Single`), `Session` (read-only
+  view), `InvalidationOutcome`.
+- **`auth::list_active_for_user(db, user_id)`** + **`auth::current_session_id(db, token)`**
+  feed the new active-sessions UI.
+- **Read-only `/admin/account/sessions`** page. Lists every active
+  session for the signed-in user with: trust label, IP, short
+  user-agent summary (e.g. `macOS · Safari`), created_at, last-seen
+  relative time, expires relative time. Current device gets an
+  accent rail. Revoke buttons land in 0.5.x once the password-reset
+  flow exercises the invalidation engine end-to-end.
+- **`email::Mailer` trait + `LogMailer` default + `Mail::framework_envelope`.**
+  Defines the recovery-flow email primitive without locking the
+  framework into SMTP. The envelope appends a fixed security footer
+  (system name, timestamp, source IP, device summary, "if this was
+  not you" guidance) to every framework-emitted message.
+  `MailerError::ConfigurationMissing` is the hard-boot-failure
+  signal R1 will check.
+- **`audit::redact` helpers** (`redact_password`, `redact_token`,
+  `redact_mfa_secret`, `redact_backup_code`). `redact_token` returns
+  a non-reversible `<token:…XXXXXXXX>` 8-char SHA-256 fingerprint —
+  enough for log correlation without leaking the plaintext.
+- **`middleware::correlation_id`** stamps a UUID v7 on every
+  request, surfaces it in the `x-correlation-id` response header,
+  and stashes it in the request context for the audit pipeline.
+  Honours an inbound `x-correlation-id` header when shape-safe;
+  replaces adversarial inputs with a fresh v7. Designed to be
+  installed **before** `csrf_protect` so 403/429 rejections still
+  trace.
+- **Audit row gains structure**: new `metadata JSONB`,
+  `correlation_id TEXT`, `session_id BIGINT` columns + partial
+  indexes on the latter two. Existing handlers populate
+  `correlation_id` from the new middleware; `session_id` and
+  `metadata` are R1+ population.
+- **Internal `audit::AuditEvent` enum** (pub(crate) in 0.4.0) with
+  18 variants covering R0-R4 actions. Drift tests assert as_str()
+  uniqueness + snake_case shape so a copy-paste error fails CI.
+  Public typed surface lands in 0.5.x.
+- **`DESIGN_SESSIONS.md`** — canonical lifecycle reference: state
+  machine with invariants, token storage shape, trust-escalation
+  rotation rules, single-writer guarantee on `revoked_at`,
+  `SessionInvalidationReason` ↔ behaviour table, expiration / sweeper
+  paths, active-sessions UI contract, forensic correlation_id
+  story, versioning policy.
+- **`DESIGN_AUDIT.md`** — companion. Documents row shape, typed
+  evolution path, redaction helpers, forensic chain queries,
+  required middleware ordering, reserved metadata JSONB keys.
+
+### Changed
+
+- **Logout is now a soft revoke.** `do_logout` calls
+  `auth::logout_session` which routes through `invalidate_sessions`
+  with `reason = Logout`, setting `revoked_at = NOW()` and
+  `revoked_reason = 'logout'`. The row is preserved for audit;
+  `purge_expired_sessions` deletes it once `expires_at` passes.
+- **Session lookup excludes revoked rows.** `revoked_at IS NULL` is
+  part of every active-session query — a logged-out cookie cannot
+  re-authenticate regardless of which lookup path matched.
+- **`templates::render` logs render failures at error level.**
+  Previously the minijinja error was wrapped in `Error::Internal`
+  and never surfaced in any log target. The fix surfaced during R0
+  validation when a missing `EMBEDDED_TEMPLATES` registration
+  silently produced 500s. Diagnostic value is high; attack surface
+  is none — the message contains the template name and the
+  structured minijinja error, neither of which is user-supplied or
+  secret.
+- **Required middleware ordering.** Projects must install
+  `middleware::correlation_id` before `csrf_protect` in their
+  `Router::new()` chain. Without it, audit rows land with NULL
+  `correlation_id` (the framework does not fabricate ids).
+
+### Schema
+
+Additive, idempotent, runs on every boot:
+
+- `rustio_sessions`: `session_id BIGINT` (sequence-backed),
+  `token_hash TEXT`, `device_id TEXT` (reserved),
+  `trust_level TEXT` CHECK (`authenticated`/`elevated`/`mfa_verified`),
+  `elevated_until TIMESTAMPTZ`, `parent_session_id BIGINT`,
+  `revoked_at TIMESTAMPTZ`, `revoked_reason TEXT`. New unique
+  partial indexes on `session_id`, `token_hash`, plus `(user_id) WHERE revoked_at IS NULL`
+  and `parent_session_id` partial.
+- `rustio_admin_actions`: `metadata JSONB`, `correlation_id TEXT`,
+  `session_id BIGINT` + partial indexes.
+
+### Dependencies
+
+- `sha2 = "0.10"` (new) — session-token hashing at rest.
+- `uuid` gains the `v7` feature for time-sortable correlation ids.
+
+[0.4.0]: https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.4.0
+
 ## [0.3.0] — 2026-05-08
 
 Authority + design-system stabilization release. Server-side guards
