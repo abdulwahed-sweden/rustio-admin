@@ -8,6 +8,8 @@
 [![CI](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml)
 [![License](https://img.shields.io/crates/l/rustio-admin.svg)](./LICENSE)
 
+> 🔐 **v0.4.0** (2026-05-09) — session lifecycle + recovery foundations. Hashed-at-rest session tokens with a 14-day plaintext-fallback transition; centralized `invalidate_sessions` API as the single legitimate writer of `revoked_at` (logout is now a soft revoke); typed `SessionTrust` + `SessionInvalidationReason` + `SessionTarget` lifecycle vocabulary. New `email::Mailer` trait + `LogMailer` default + `framework_envelope`. `audit::redact` helpers (doctrine 11 — never log secrets). `correlation_id` middleware (UUID v7 stamped before CSRF so even rejected requests trace) + new `metadata` JSONB / `correlation_id` / `session_id` columns on the audit row. Read-only `/admin/account/sessions` page (revoke buttons land in 0.5.x). New `DESIGN_SESSIONS.md` + `DESIGN_AUDIT.md`. Downstream projects: bump to `rustio-admin = "0.4"`, install `middleware::correlation_id` BEFORE `csrf_protect`, then `cargo update -p rustio-admin`. [v0.4.0 changelog](./CHANGELOG.md#040--2026-05-09) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.4.0).
+>
 > 🛡 **v0.3.0** (2026-05-08) — authority + design-system stabilization. Server-side authority guards (self-demote / cross-rank / role-ceiling) with last-Administrator + last-Developer protection. Audit rows on every user/group authority mutation. Foreign-key list cells now resolve to display labels with click-throughs. Group permissions render as a model × action matrix instead of a flat 60+ checkbox list. Canonical accent moved to teal-emerald (`#0F8C7E` light / `#3FAA9D` dark) — retired the previous terracotta. New `DESIGN_SYSTEM.md` + PR template gate token-level changes behind a visual regression checklist. Downstream projects: bump to `rustio-admin = "0.3"` and `cargo update -p rustio-admin`. [v0.3.0 changelog](./CHANGELOG.md#030--2026-05-08) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.3.0).
 >
 > 🔧 **v0.2.1** (2026-05-07, CLI-only patch) — fixes the `rustio startproject` scaffold template, which was pinning new projects to `rustio-admin = "0.1"` and missing every 0.2.0 feature. Re-install the CLI with `cargo install rustio-admin-cli --force` to pick up the corrected template; existing projects are unaffected. [v0.2.1 changelog](./CHANGELOG.md#021--2026-05-07) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.1).
@@ -30,7 +32,7 @@
 
 ```toml
 [dependencies]
-rustio-admin = "0.3"
+rustio-admin = "0.4"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
