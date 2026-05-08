@@ -18,9 +18,8 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use subtle::ConstantTimeEq;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::orm::{Db, Row};
 
 use super::role::Role;
@@ -328,13 +327,23 @@ pub(crate) async fn migrate_session_lifecycle(db: &Db) -> Result<()> {
 
 pub async fn create_session(db: &Db, user_id: i64) -> Result<String> {
     let token = random_token();
+    let token_hash = hash_token_for_storage(&token);
     let expires = Utc::now() + Duration::days(SESSION_LENGTH_DAYS);
-    sqlx::query("INSERT INTO rustio_sessions (token, user_id, expires_at) VALUES ($1, $2, $3)")
-        .bind(&token)
-        .bind(user_id)
-        .bind(expires)
-        .execute(db.pool())
-        .await?;
+    // Both `token` (PRIMARY KEY) and `token_hash` are stored. The
+    // plaintext column is preserved so the 0.3.x fallback read path
+    // keeps working for sessions created before this commit; new
+    // sessions write both values so a future migration can drop the
+    // plaintext column without a data backfill.
+    sqlx::query(
+        "INSERT INTO rustio_sessions (token, token_hash, user_id, expires_at) \
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(&token)
+    .bind(&token_hash)
+    .bind(user_id)
+    .bind(expires)
+    .execute(db.pool())
+    .await?;
     Ok(token)
 }
 
@@ -347,16 +356,43 @@ pub async fn delete_session(db: &Db, token: &str) -> Result<()> {
 }
 
 pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identity>> {
+    // Fast path: lookup by sha-256 of the cookie token. Every session
+    // created in 0.4.0+ has `token_hash` populated, and the unique
+    // partial index `rustio_sessions_token_hash_uq` makes this an
+    // index seek. Revoked sessions (`revoked_at IS NOT NULL`) are
+    // excluded so a logged-out cookie never re-authenticates.
+    let token_hash = hash_token_for_storage(token);
     let row = sqlx::query(
-        "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, s.expires_at
-           FROM rustio_sessions s
-           JOIN rustio_users u ON u.id = s.user_id
-          WHERE s.token = $1",
+        "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
+                s.expires_at, s.token_hash IS NOT NULL AS hashed \
+           FROM rustio_sessions s \
+           JOIN rustio_users u ON u.id = s.user_id \
+          WHERE s.token_hash = $1 AND s.revoked_at IS NULL",
     )
-    .bind(token)
+    .bind(&token_hash)
     .fetch_optional(db.pool())
     .await?;
 
+    let row = match row {
+        Some(r) => Some(r),
+        // Slow path / transition fallback: pre-0.4.0 sessions have
+        // NULL `token_hash` and were keyed by plaintext `token` PK.
+        // Look those up so existing logged-in users aren't kicked out
+        // when 0.4.0 deploys. The fallback can be removed in a follow-
+        // up release once SESSION_LENGTH_DAYS (14d) has elapsed since
+        // 0.4.0 publish — every legacy session will have expired by
+        // then.
+        None => sqlx::query(
+            "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
+                    s.expires_at, FALSE AS hashed \
+               FROM rustio_sessions s \
+               JOIN rustio_users u ON u.id = s.user_id \
+              WHERE s.token = $1 AND s.token_hash IS NULL AND s.revoked_at IS NULL",
+        )
+        .bind(token)
+        .fetch_optional(db.pool())
+        .await?,
+    };
     let row = match row {
         Some(r) => r,
         None => return Ok(None),
@@ -364,19 +400,31 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
     let r = Row::from_pg(&row);
     let expires_at = r.get_datetime("expires_at")?;
     if expires_at < Utc::now() {
-        // Don't bother keeping the stale row around. Fire-and-forget.
+        // Don't bother keeping the stale row around. Fire-and-forget;
+        // the central invalidate_sessions API lands in the next
+        // commit and replaces this DELETE with a soft revoke. Until
+        // then a hard delete is consistent with prior behavior for
+        // expired rows (purge_expired_sessions also DELETEs).
         let _ = delete_session(db, token).await;
         return Ok(None);
     }
 
-    // Touch last_seen without holding the request back.
+    // Touch last_seen without holding the request back. Updates by
+    // token_hash on the fast path, falls back to token for legacy
+    // sessions so the activity timestamp lands on the right row.
     let db_clone = db.clone();
     let token_owned = token.to_string();
+    let token_hash_owned = token_hash.clone();
     tokio::spawn(async move {
-        let _ = sqlx::query("UPDATE rustio_sessions SET last_seen = NOW() WHERE token = $1")
-            .bind(&token_owned)
-            .execute(db_clone.pool())
-            .await;
+        let _ = sqlx::query(
+            "UPDATE rustio_sessions SET last_seen = NOW() \
+              WHERE (token_hash = $1 OR (token_hash IS NULL AND token = $2)) \
+                AND revoked_at IS NULL",
+        )
+        .bind(&token_hash_owned)
+        .bind(&token_owned)
+        .execute(db_clone.pool())
+        .await;
     });
 
     Ok(Some(Identity {
@@ -415,6 +463,21 @@ fn random_token() -> String {
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
+/// Hash a session-cookie token for at-rest storage in
+/// `rustio_sessions.token_hash`. SHA-256 of the URL-safe-base64
+/// plaintext, re-encoded as URL-safe-base64 (no padding) so the
+/// column accepts ASCII text.
+///
+/// SHA-256 is the right choice here (not Argon2): the input is a
+/// 256-bit random token, so brute force is infeasible regardless of
+/// the hash function's work factor; SHA-256 is fast enough to keep
+/// the session-lookup path under 1ms even at high RPS. Argon2 would
+/// add latency without security benefit for this input distribution.
+pub(crate) fn hash_token_for_storage(token: &str) -> String {
+    let digest = Sha256::digest(token.as_bytes());
+    URL_SAFE_NO_PAD.encode(digest)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -435,6 +498,41 @@ mod tests {
     fn random_token_has_reasonable_entropy() {
         // Rough sanity check — two consecutive tokens should differ.
         assert_ne!(random_token(), random_token());
+    }
+
+    #[test]
+    fn hash_token_is_deterministic() {
+        // Same input → same hash, every call. Required for the
+        // identity_from_session lookup to find the row.
+        let token = random_token();
+        assert_eq!(hash_token_for_storage(&token), hash_token_for_storage(&token));
+    }
+
+    #[test]
+    fn hash_token_differs_per_token() {
+        // Different inputs → different hashes (collision-resistance is
+        // the point).
+        let a = hash_token_for_storage("aaaa");
+        let b = hash_token_for_storage("aaab");
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn hash_token_output_is_url_safe_base64() {
+        let h = hash_token_for_storage("anything");
+        // 256 bits → 43 url-safe-no-pad base64 chars.
+        assert_eq!(h.len(), 43);
+        assert!(h.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+    }
+
+    #[test]
+    fn hash_token_does_not_leak_plaintext() {
+        // Property check — the hash output should bear no obvious
+        // resemblance to the plaintext, including substrings.
+        let plaintext = "secret-cookie-value-12345";
+        let h = hash_token_for_storage(plaintext);
+        assert!(!h.contains("secret"));
+        assert!(!h.contains("12345"));
     }
 
     // ---- typed session model ----
