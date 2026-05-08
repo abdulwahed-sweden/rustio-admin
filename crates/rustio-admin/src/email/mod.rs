@@ -205,11 +205,7 @@ fn redact_likely_tokens(s: &str) -> String {
 }
 
 fn is_token_url_char(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-        || matches!(
-            c,
-            '-' | '_' | '/' | ':' | '.' | '?' | '&' | '=' | '#'
-        )
+    c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '/' | ':' | '.' | '?' | '&' | '=' | '#')
 }
 
 /// Type-erased shared mailer reference. The framework's `Admin`

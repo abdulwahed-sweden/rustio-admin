@@ -392,40 +392,46 @@ pub async fn invalidate_sessions(
 ) -> Result<InvalidationOutcome> {
     let reason_str = reason.as_str();
     let revoked_ids: Vec<i64> = match target {
-        SessionTarget::User { user_id } => sqlx::query_scalar::<_, i64>(
-            "UPDATE rustio_sessions \
+        SessionTarget::User { user_id } => {
+            sqlx::query_scalar::<_, i64>(
+                "UPDATE rustio_sessions \
                 SET revoked_at = NOW(), revoked_reason = $2 \
               WHERE user_id = $1 AND revoked_at IS NULL \
             RETURNING session_id",
-        )
-        .bind(user_id)
-        .bind(reason_str)
-        .fetch_all(db.pool())
-        .await?,
+            )
+            .bind(user_id)
+            .bind(reason_str)
+            .fetch_all(db.pool())
+            .await?
+        }
         SessionTarget::UserExceptCurrent {
             user_id,
             current_session_id,
-        } => sqlx::query_scalar::<_, i64>(
-            "UPDATE rustio_sessions \
+        } => {
+            sqlx::query_scalar::<_, i64>(
+                "UPDATE rustio_sessions \
                 SET revoked_at = NOW(), revoked_reason = $3 \
               WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL \
             RETURNING session_id",
-        )
-        .bind(user_id)
-        .bind(current_session_id)
-        .bind(reason_str)
-        .fetch_all(db.pool())
-        .await?,
-        SessionTarget::Single { session_id } => sqlx::query_scalar::<_, i64>(
-            "UPDATE rustio_sessions \
+            )
+            .bind(user_id)
+            .bind(current_session_id)
+            .bind(reason_str)
+            .fetch_all(db.pool())
+            .await?
+        }
+        SessionTarget::Single { session_id } => {
+            sqlx::query_scalar::<_, i64>(
+                "UPDATE rustio_sessions \
                 SET revoked_at = NOW(), revoked_reason = $2 \
               WHERE session_id = $1 AND revoked_at IS NULL \
             RETURNING session_id",
-        )
-        .bind(session_id)
-        .bind(reason_str)
-        .fetch_all(db.pool())
-        .await?,
+            )
+            .bind(session_id)
+            .bind(reason_str)
+            .fetch_all(db.pool())
+            .await?
+        }
     };
 
     Ok(InvalidationOutcome {
@@ -543,16 +549,18 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
         // up release once SESSION_LENGTH_DAYS (14d) has elapsed since
         // 0.4.0 publish — every legacy session will have expired by
         // then.
-        None => sqlx::query(
-            "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
+        None => {
+            sqlx::query(
+                "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
                     s.expires_at, FALSE AS hashed \
                FROM rustio_sessions s \
                JOIN rustio_users u ON u.id = s.user_id \
               WHERE s.token = $1 AND s.token_hash IS NULL AND s.revoked_at IS NULL",
-        )
-        .bind(token)
-        .fetch_optional(db.pool())
-        .await?,
+            )
+            .bind(token)
+            .fetch_optional(db.pool())
+            .await?
+        }
     };
     let row = match row {
         Some(r) => r,
@@ -666,7 +674,10 @@ mod tests {
         // Same input → same hash, every call. Required for the
         // identity_from_session lookup to find the row.
         let token = random_token();
-        assert_eq!(hash_token_for_storage(&token), hash_token_for_storage(&token));
+        assert_eq!(
+            hash_token_for_storage(&token),
+            hash_token_for_storage(&token)
+        );
     }
 
     #[test]
@@ -683,7 +694,9 @@ mod tests {
         let h = hash_token_for_storage("anything");
         // 256 bits → 43 url-safe-no-pad base64 chars.
         assert_eq!(h.len(), 43);
-        assert!(h.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+        assert!(h
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
     }
 
     #[test]

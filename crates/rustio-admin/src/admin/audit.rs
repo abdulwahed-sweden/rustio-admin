@@ -156,12 +156,7 @@ impl<'a> LogEntry<'a> {
     /// Builder helper for the common case (every field that R0
     /// added defaults to `None`). Existing call sites can migrate
     /// incrementally.
-    pub fn new(
-        user_id: i64,
-        action_type: ActionType,
-        model_name: &'a str,
-        object_id: i64,
-    ) -> Self {
+    pub fn new(user_id: i64, action_type: ActionType, model_name: &'a str, object_id: i64) -> Self {
         Self {
             user_id,
             action_type,
@@ -420,7 +415,8 @@ mod tests {
             let s = e.as_str();
             assert!(!s.is_empty(), "{e:?} as_str is empty");
             assert!(
-                s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'),
+                s.chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'),
                 "{e:?}.as_str() = {s:?} is not snake_case"
             );
         }

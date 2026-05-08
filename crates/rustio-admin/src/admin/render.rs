@@ -2410,7 +2410,8 @@ mod tests {
 
     #[test]
     fn ua_summary_unknown_returns_truncated() {
-        let ua = "QuiteUnusualUserAgent/1.0 with extremely long descriptor that should be truncated";
+        let ua =
+            "QuiteUnusualUserAgent/1.0 with extremely long descriptor that should be truncated";
         let s = summarise_user_agent(Some(ua));
         assert!(s.len() <= 40);
     }
@@ -2422,8 +2423,14 @@ mod tests {
 
     #[test]
     fn trust_label_strings() {
-        assert_eq!(trust_label(crate::auth::SessionTrust::Authenticated), "Signed in");
+        assert_eq!(
+            trust_label(crate::auth::SessionTrust::Authenticated),
+            "Signed in"
+        );
         assert_eq!(trust_label(crate::auth::SessionTrust::Elevated), "Elevated");
-        assert_eq!(trust_label(crate::auth::SessionTrust::MfaVerified), "MFA verified");
+        assert_eq!(
+            trust_label(crate::auth::SessionTrust::MfaVerified),
+            "MFA verified"
+        );
     }
 }
