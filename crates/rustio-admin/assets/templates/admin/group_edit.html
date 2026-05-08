@@ -29,21 +29,81 @@
 
   <fieldset class="rio-fieldset">
     <legend>Permissions</legend>
-    {% if all_permissions %}
-    <ul class="rio-checkbox-list">
-      {% for p in all_permissions %}
-      <li>
-        <label class="rio-checkbox">
-          <input type="checkbox" name="perm_{{ p.id }}" value="on"{% if p.id in group_permissions %} checked{% endif %}>
-          <code>{{ p.name }}</code>
-        </label>
-      </li>
-      {% endfor %}
-    </ul>
+    {% if matrix.rows or matrix.extras %}
+
+    {% if matrix.rows %}
+    <table class="rio-perm-matrix">
+      <thead>
+        <tr>
+          <th class="rio-perm-matrix__model">Model</th>
+          {% for col in matrix.columns %}
+          <th class="rio-perm-matrix__col">{{ col|capitalize }}</th>
+          {% endfor %}
+          <th class="rio-perm-matrix__row-toggle" aria-label="Row toggle">All</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in matrix.rows %}
+        <tr data-rio-perm-row>
+          <th class="rio-perm-matrix__model">{{ row.label }}</th>
+          {% for cell in row.cells %}
+          <td class="rio-perm-matrix__cell">
+            {% if cell %}
+            <label class="rio-perm-cell" title="{{ cell.name }}">
+              <input type="checkbox" name="perm_{{ cell.id }}" value="on" data-rio-perm-checkbox{% if cell.checked %} checked{% endif %}>
+              <span class="rio-perm-cell__sr">{{ cell.name }}</span>
+            </label>
+            {% else %}
+            <span class="rio-perm-na" aria-hidden="true">—</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+          <td class="rio-perm-matrix__cell">
+            <button type="button" class="rio-perm-row-all" data-rio-perm-row-all>All</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if matrix.extras %}
+    <details class="rio-perm-extras">
+      <summary>Other permissions ({{ matrix.extras|length }})</summary>
+      <ul class="rio-checkbox-list">
+        {% for cell in matrix.extras %}
+        <li>
+          <label class="rio-checkbox">
+            <input type="checkbox" name="perm_{{ cell.id }}" value="on"{% if cell.checked %} checked{% endif %}>
+            <code>{{ cell.name }}</code>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+
     {% else %}
     <p class="rio-meta">No permissions registered yet. Permissions are seeded automatically by <code>Admin::seed_permissions</code>.</p>
     {% endif %}
   </fieldset>
+
+  <script>
+  // "All" buttons toggle every checkbox in their row. Pure DOM, no
+  // dependency on a JS bundle so the matrix degrades to plain
+  // multi-checkbox usage if scripts are off.
+  (function () {
+    document.querySelectorAll('[data-rio-perm-row-all]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var row = btn.closest('[data-rio-perm-row]');
+        if (!row) return;
+        var boxes = row.querySelectorAll('[data-rio-perm-checkbox]');
+        var allOn = Array.prototype.every.call(boxes, function (b) { return b.checked; });
+        boxes.forEach(function (b) { b.checked = !allOn; });
+      });
+    });
+  })();
+  </script>
 
   <div class="rio-form-actions">
     <button type="submit" class="rio-button rio-button--primary">Save changes</button>

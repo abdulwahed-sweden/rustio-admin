@@ -981,8 +981,11 @@ struct GroupEditCtx {
     group_id: i64,
     name: String,
     description: String,
-    all_permissions: Vec<PermRow>,
-    group_permissions: Vec<i64>,
+    /// Permissions organised as a model × action matrix. Rendered as a
+    /// table with one row per model and one column per CRUD action so
+    /// the operator can scan the whole grant set at a glance instead
+    /// of reading 60+ codenames in alphabetical order.
+    matrix: PermissionMatrix,
     errors: Vec<String>,
     flash: Option<FlashCtx>,
     sections: Vec<render::FormSection>,
@@ -992,6 +995,118 @@ struct GroupEditCtx {
 struct PermRow {
     id: i64,
     name: String,
+}
+
+/// One model's row in the permissions matrix. `cells` is parallel to
+/// `PermissionMatrix::columns` — index `i` corresponds to the i-th
+/// canonical action (view / add / change / delete). `None` means the
+/// model didn't register that action.
+#[derive(Serialize)]
+struct PermissionMatrixRow {
+    /// Humanised label, e.g. `"Cashiers"` from a `"cashiers.add_cashier"`
+    /// codename family.
+    label: String,
+    cells: Vec<Option<PermCell>>,
+}
+
+#[derive(Serialize, Clone)]
+struct PermCell {
+    id: i64,
+    /// Full codename, surfaced as `title=` / `aria-label` on the
+    /// checkbox so a power user can still confirm the exact
+    /// permission.
+    name: String,
+    checked: bool,
+}
+
+#[derive(Serialize)]
+struct PermissionMatrix {
+    /// Action column headers, in display order: View / Add / Change /
+    /// Delete. Action names follow Django convention because that's
+    /// what `Admin::seed_permissions` emits.
+    columns: &'static [&'static str],
+    rows: Vec<PermissionMatrixRow>,
+    /// Permissions whose codename doesn't fit the
+    /// `<table>.<action>_<singular>` shape. Rendered below the matrix
+    /// as a flat checkbox list so nothing is silently dropped.
+    extras: Vec<PermCell>,
+}
+
+/// Canonical CRUD actions, in scan order.
+const PERMISSION_ACTIONS: &[&str] = &["view", "add", "change", "delete"];
+
+/// Group `all` by table prefix and bucket each entry into the
+/// canonical view / add / change / delete column. Anything that
+/// doesn't match `<table>.<action>_<rest>` ends up in `extras` so the
+/// page never silently drops a permission.
+fn build_permission_matrix(all: &[PermRow], current: &[i64]) -> PermissionMatrix {
+    use std::collections::BTreeMap;
+
+    let current_set: std::collections::HashSet<i64> = current.iter().copied().collect();
+    let mut groups: BTreeMap<String, Vec<Option<PermCell>>> = BTreeMap::new();
+    let mut extras: Vec<PermCell> = Vec::new();
+
+    for p in all {
+        let parsed = p
+            .name
+            .split_once('.')
+            .and_then(|(table, rest)| {
+                rest.split_once('_').and_then(|(action, _tail)| {
+                    PERMISSION_ACTIONS
+                        .iter()
+                        .position(|&a| a == action)
+                        .map(|idx| (table.to_string(), idx))
+                })
+            });
+        let cell = PermCell {
+            id: p.id,
+            name: p.name.clone(),
+            checked: current_set.contains(&p.id),
+        };
+        match parsed {
+            Some((table, idx)) => {
+                let row = groups
+                    .entry(table)
+                    .or_insert_with(|| vec![None; PERMISSION_ACTIONS.len()]);
+                row[idx] = Some(cell);
+            }
+            None => extras.push(cell),
+        }
+    }
+
+    let rows: Vec<PermissionMatrixRow> = groups
+        .into_iter()
+        .map(|(table, cells)| PermissionMatrixRow {
+            label: humanise_table(&table),
+            cells,
+        })
+        .collect();
+
+    PermissionMatrix {
+        columns: PERMISSION_ACTIONS,
+        rows,
+        extras,
+    }
+}
+
+/// Title-case a snake-case table name into a model heading. Mirrors
+/// the macro's runtime humaniser so the matrix label matches what
+/// the rest of the admin uses for that model.
+fn humanise_table(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut next_upper = true;
+    for ch in s.chars() {
+        if ch == '_' {
+            out.push(' ');
+            next_upper = true;
+        } else if next_upper {
+            out.push(ch.to_ascii_uppercase());
+            next_upper = false;
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 pub(crate) async fn show_group_edit(
@@ -1031,6 +1146,7 @@ pub(crate) async fn show_group_edit(
 
     let name_str = r.get_string("name")?;
     let description_str = r.get_string("description")?;
+    let matrix = build_permission_matrix(&all, &current);
     let view = GroupEditCtx {
         base: BaseContext::new(Some(&identity), csrf, &ctx.admin),
         page_title: format!("Edit group #{group_id}"),
@@ -1045,8 +1161,7 @@ pub(crate) async fn show_group_edit(
         sections: render::group_form_sections(&name_str, &description_str),
         name: name_str,
         description: description_str,
-        all_permissions: all,
-        group_permissions: current,
+        matrix,
         errors: vec![],
         flash: None,
     };
