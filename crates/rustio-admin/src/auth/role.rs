@@ -31,15 +31,19 @@ pub enum Role {
 }
 
 impl Role {
-    /// Numeric rank used for `includes` comparisons. The actual values
-    /// only matter relative to each other.
-    pub fn rank(self) -> u8 {
+    /// Numeric rank used for `includes` comparisons and the
+    /// rank-ceiling guard. Values are spaced (100 / 300 / 600 / 900 /
+    /// 1000) so projects extending the ladder via group-rank labels
+    /// have room between tiers without colliding with a framework
+    /// role. The exact numbers are stable but should be compared
+    /// relatively, never matched literally.
+    pub const fn rank(self) -> u32 {
         match self {
-            Role::User => 2,
-            Role::Staff => 3,
-            Role::Supervisor => 4,
-            Role::Administrator => 5,
-            Role::Developer => 6,
+            Role::User => 100,
+            Role::Staff => 300,
+            Role::Supervisor => 600,
+            Role::Administrator => 900,
+            Role::Developer => 1000,
         }
     }
 
@@ -95,6 +99,22 @@ impl Role {
     pub fn bypasses_group_checks(self) -> bool {
         matches!(self, Role::Administrator | Role::Developer)
     }
+}
+
+/// Roles the framework refuses to lose its last active member of.
+///
+/// The orphan guards in `auth/guards.rs` and `auth::would_orphan_role`
+/// loop over this list and reject any change that would empty the
+/// active-member set for one of these tiers — the system stays
+/// recoverable from the UI even after staff turnover.
+///
+/// Currently `[Administrator, Developer]`. Both protect the panel
+/// itself: losing every Developer locks the platform-level recovery
+/// path; losing every Administrator locks the operational recovery
+/// path. Lower tiers are not protected — projects can run with zero
+/// Supervisors / Staff / Users without breaking authority.
+pub const fn protected_roles() -> &'static [Role] {
+    &[Role::Administrator, Role::Developer]
 }
 
 impl serde::Serialize for Role {

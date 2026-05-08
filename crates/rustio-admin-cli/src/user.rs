@@ -150,14 +150,18 @@ async fn set_role(db: Db, email: String, role: Role) -> Result<(), String> {
         .map_err(|e| format!("lookup: {e}"))?
         .ok_or_else(|| format!("no user with email {email}"))?;
 
-    // Last-developer guard mirrors the framework's user-edit path.
-    if auth::would_orphan_developers(&db, user.id, Some(role))
+    // Last-protected-role guard mirrors the framework's user-edit
+    // path. `would_orphan_protected` covers every protected role
+    // (Administrator + Developer), not just Developer — so a CLI-driven
+    // role change can't orphan an Administrator either.
+    if let Some(orphaned) = auth::would_orphan_protected(&db, user.id, role, true)
         .await
         .map_err(|e| format!("orphan check: {e}"))?
     {
-        return Err(
-            "Refusing — this change would leave the system with zero active developers.".into(),
-        );
+        return Err(format!(
+            "Refusing — this change would leave the system with zero active {}s.",
+            orphaned.label()
+        ));
     }
 
     auth::update_user_role(&db, user.id, role)
@@ -173,11 +177,14 @@ async fn delete(db: Db, email: String) -> Result<(), String> {
         .map_err(|e| format!("lookup: {e}"))?
         .ok_or_else(|| format!("no user with email {email}"))?;
 
-    if auth::would_orphan_developers(&db, user.id, Some(Role::User))
+    if let Some(orphaned) = auth::would_orphan_protected(&db, user.id, Role::User, false)
         .await
         .map_err(|e| format!("orphan check: {e}"))?
     {
-        return Err("Refusing — deleting this user would leave zero active developers.".into());
+        return Err(format!(
+            "Refusing — deleting this user would leave zero active {}s.",
+            orphaned.label()
+        ));
     }
 
     sqlx::query("DELETE FROM rustio_users WHERE id = $1")

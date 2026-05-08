@@ -282,48 +282,106 @@ pub async fn update_user_role(db: &Db, user_id: i64, role: Role) -> Result<()> {
     Ok(())
 }
 
-/// Would the proposed change leave the system with zero active Developers?
+/// Pure verdict for the orphan check, factored out so it can be
+/// unit-tested without a `Db`. The async wrapper [`would_orphan_role`]
+/// supplies `active_count` and `target_is_protected` from SQL.
 ///
-/// `new_role`:
-/// - `None` → user is being deleted entirely.
-/// - `Some(role)` → user's role is being changed to `role`.
+/// Returns `true` only when removing this user from the protected
+/// pool would empty it (count == 1 and the target user IS in that
+/// pool, AND the proposed new state would no longer satisfy
+/// membership).
+pub fn verdict_for_orphan_role(
+    active_count_in_protected: i64,
+    target_is_in_protected: bool,
+    new_role_is_protected: bool,
+    new_active: bool,
+) -> bool {
+    if !target_is_in_protected {
+        return false;
+    }
+    if active_count_in_protected != 1 {
+        return false;
+    }
+    // The target IS the only active member. Block unless the proposed
+    // state keeps them in the same protected role and active.
+    !(new_active && new_role_is_protected)
+}
+
+/// Would the proposed change leave the system with zero active members
+/// of `protected_role`?
+///
+/// `new_role` / `new_active` describe the target row's proposed state:
+/// - delete: pass `new_active = false` (the row goes away).
+/// - role change: pass the new role.
+/// - deactivate: pass `new_active = false`.
 ///
 /// Returns `true` only when:
-/// - exactly one active Developer exists, AND
-/// - the target user IS that Developer, AND
-/// - the action would remove their Developer status.
-///
-/// Used as a server-side guard in user-edit / user-delete handlers,
-/// and as a CLI warning before destructive role changes.
+/// - exactly one active member of `protected_role` exists, AND
+/// - the target user IS that member, AND
+/// - the proposed state would remove them from the protected pool.
+pub async fn would_orphan_role(
+    db: &Db,
+    user_id: i64,
+    protected_role: Role,
+    new_role: Role,
+    new_active: bool,
+) -> Result<bool> {
+    let active_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM rustio_users WHERE role = $1 AND is_active = TRUE",
+    )
+    .bind(protected_role.as_str())
+    .fetch_one(db.pool())
+    .await?;
+
+    let target_role_str: Option<String> =
+        sqlx::query_scalar("SELECT role FROM rustio_users WHERE id = $1 AND is_active = TRUE")
+            .bind(user_id)
+            .fetch_optional(db.pool())
+            .await?;
+    let target_is_in_protected = target_role_str.as_deref() == Some(protected_role.as_str());
+
+    Ok(verdict_for_orphan_role(
+        active_count,
+        target_is_in_protected,
+        new_role == protected_role,
+        new_active,
+    ))
+}
+
+/// Walk every entry in [`super::role::protected_roles`] and return
+/// the first protected role whose membership would be orphaned by
+/// the proposed change. `None` means the change is safe.
+pub async fn would_orphan_protected(
+    db: &Db,
+    user_id: i64,
+    new_role: Role,
+    new_active: bool,
+) -> Result<Option<Role>> {
+    for &role in super::role::protected_roles() {
+        if would_orphan_role(db, user_id, role, new_role, new_active).await? {
+            return Ok(Some(role));
+        }
+    }
+    Ok(None)
+}
+
+/// Legacy alias preserved so external callers keep compiling. Prefer
+/// [`would_orphan_protected`] which generalises across every role in
+/// [`super::role::protected_roles`].
+#[deprecated(
+    since = "0.3.0",
+    note = "use `would_orphan_protected` to cover every protected role, not just Developer"
+)]
 pub async fn would_orphan_developers(
     db: &Db,
     user_id: i64,
     new_role: Option<Role>,
 ) -> Result<bool> {
-    if matches!(new_role, Some(Role::Developer)) {
-        return Ok(false);
-    }
-
-    let active_dev_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM rustio_users \
-         WHERE role = 'developer' AND is_active = TRUE",
-    )
-    .fetch_one(db.pool())
-    .await?;
-
-    if active_dev_count == 0 {
-        return Ok(false);
-    }
-    if active_dev_count > 1 {
-        return Ok(false);
-    }
-
-    let target_role: Option<String> =
-        sqlx::query_scalar("SELECT role FROM rustio_users WHERE id = $1 AND is_active = TRUE")
-            .bind(user_id)
-            .fetch_optional(db.pool())
-            .await?;
-    Ok(target_role.as_deref() == Some("developer"))
+    let (role, active) = match new_role {
+        Some(r) => (r, true),
+        None => (Role::User, false),
+    };
+    would_orphan_role(db, user_id, Role::Developer, role, active).await
 }
 
 /// Verify credentials and create a session. Returns the session token
@@ -357,5 +415,49 @@ mod tests {
         let h = hash_password("secret").unwrap();
         assert!(verify_password("secret", &h));
         assert!(!verify_password("wrong", &h));
+    }
+
+    // ---- verdict_for_orphan_role ----
+
+    #[test]
+    fn verdict_safe_when_target_not_in_protected_pool() {
+        // Target is Staff; we're checking Administrator orphan-ness.
+        // Even if active_count == 0 the change is irrelevant to that pool.
+        assert!(!verdict_for_orphan_role(0, false, false, true));
+        assert!(!verdict_for_orphan_role(1, false, false, false));
+        assert!(!verdict_for_orphan_role(5, false, true, true));
+    }
+
+    #[test]
+    fn verdict_safe_when_more_than_one_member() {
+        // Target IS the protected role, but there's a second active
+        // member — losing this one keeps the floor satisfied.
+        assert!(!verdict_for_orphan_role(2, true, false, true));
+        assert!(!verdict_for_orphan_role(5, true, false, false));
+    }
+
+    #[test]
+    fn verdict_blocks_when_last_member_demoting() {
+        // active_count = 1, target IS that member, new state drops
+        // them out of the pool → block.
+        assert!(verdict_for_orphan_role(1, true, false, true));
+    }
+
+    #[test]
+    fn verdict_blocks_when_last_member_deactivating() {
+        // Same shape but new_active = false; new_role doesn't matter.
+        assert!(verdict_for_orphan_role(1, true, true, false));
+    }
+
+    #[test]
+    fn verdict_blocks_when_last_member_deleting() {
+        // Delete is modelled as new_active = false in the wrapper.
+        assert!(verdict_for_orphan_role(1, true, false, false));
+    }
+
+    #[test]
+    fn verdict_safe_when_last_member_keeps_role() {
+        // No-op save: still in pool, still active → safe.
+        assert!(!verdict_for_orphan_role(1, true, true, true));
     }
 }

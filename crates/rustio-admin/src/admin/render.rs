@@ -613,15 +613,15 @@ fn sort_direction_label(
 /// here so a click on one widget doesn't silently drop the others.
 /// Inputs:
 ///
-///   - `q`         — current search query; `""` skipped
-///   - `filters`   — currently-set filters as `(field, value)` pairs;
-///                   callers compose their own override (set, clear,
-///                   swap) before passing this in
-///   - `sort`      — the desired sort, or `None` for "model default"
-///   - `page`      — `1` is implicit and skipped from the URL
-///   - `per_page`  — `Some(N)` carries an explicit row-density choice
-///                   into the URL; `None` means "use the model
-///                   default" (no `&per_page=…` segment emitted)
+///   - `q` — current search query; `""` skipped
+///   - `filters` — currently-set filters as `(field, value)` pairs;
+///     callers compose their own override (set, clear, swap) before
+///     passing this in
+///   - `sort` — the desired sort, or `None` for "model default"
+///   - `page` — `1` is implicit and skipped from the URL
+///   - `per_page` — `Some(N)` carries an explicit row-density choice
+///     into the URL; `None` means "use the model default" (no
+///     `&per_page=…` segment emitted)
 ///
 /// Values are URL-encoded so search strings with spaces or unicode
 /// don't break the link.
@@ -1833,36 +1833,54 @@ pub(crate) struct PasswordChangeCtx {
 
 /// Role options for user_new / user_edit. Labels carry privilege
 /// descriptions; values are the role slugs the auth layer expects.
-pub(crate) fn role_select_options() -> Vec<SelectOption> {
-    vec![
-        SelectOption {
-            value: "user".to_string(),
-            label: "User (no admin access)".to_string(),
-        },
-        SelectOption {
-            value: "staff".to_string(),
-            label: "Staff (admin access; per-model group permissions)".to_string(),
-        },
-        SelectOption {
-            value: "supervisor".to_string(),
-            label: "Supervisor (view + edit; no destructive ops)".to_string(),
-        },
-        SelectOption {
-            value: "administrator".to_string(),
-            label: "Administrator (full coverage; bypasses group checks)".to_string(),
-        },
-        SelectOption {
-            value: "developer".to_string(),
-            label: "Developer (highest tier)".to_string(),
-        },
-    ]
+///
+/// `editor_rank` filters out roles strictly above the editor's own
+/// rank — first-line defense for the role-ceiling guard, so the user
+/// never sees an option the server would reject. Server-side
+/// `enforce_role_ceiling` catches forged POSTs as defense-in-depth;
+/// this function is reflection, not security.
+pub(crate) fn role_select_options(editor_rank: u32) -> Vec<SelectOption> {
+    let all = [
+        (crate::auth::Role::User, "user", "User (no admin access)"),
+        (
+            crate::auth::Role::Staff,
+            "staff",
+            "Staff (admin access; per-model group permissions)",
+        ),
+        (
+            crate::auth::Role::Supervisor,
+            "supervisor",
+            "Supervisor (view + edit; no destructive ops)",
+        ),
+        (
+            crate::auth::Role::Administrator,
+            "administrator",
+            "Administrator (full coverage; bypasses group checks)",
+        ),
+        (
+            crate::auth::Role::Developer,
+            "developer",
+            "Developer (highest tier)",
+        ),
+    ];
+    all.iter()
+        .filter(|(role, _, _)| role.rank() <= editor_rank)
+        .map(|(_, slug, label)| SelectOption {
+            value: (*slug).to_string(),
+            label: (*label).to_string(),
+        })
+        .collect()
 }
 
 /// FormField list for the user_new form. Two sections: Identity
 /// (email + password) and Role (the 5-option select). Caller passes
 /// the current values so re-render after validation failure preserves
-/// them.
-pub(crate) fn user_new_form_sections(email: &str, role: &str) -> Vec<FormSection> {
+/// them. `editor_rank` filters the role select per the ceiling guard.
+pub(crate) fn user_new_form_sections(
+    email: &str,
+    role: &str,
+    editor_rank: u32,
+) -> Vec<FormSection> {
     vec![
         FormSection {
             title: Some("Identity"),
@@ -1932,7 +1950,7 @@ pub(crate) fn user_new_form_sections(email: &str, role: &str) -> Vec<FormSection
                 ),
                 placeholder: None,
                 required: true,
-                options: Some(role_select_options()),
+                options: Some(role_select_options(editor_rank)),
                 multiple: false,
                 span: 2,
                 autocomplete: None,
@@ -2011,11 +2029,13 @@ pub(crate) fn group_form_sections(name: &str, description: &str) -> Vec<FormSect
 
 /// Identity section for user_edit. Email is disabled (read-only);
 /// role is the select; is_active is the checkbox. Built per render
-/// so values reflect the current row.
+/// so values reflect the current row. `editor_rank` filters the role
+/// select per the ceiling guard.
 pub(crate) fn user_edit_identity_sections(
     email: &str,
     role: &str,
     is_active: bool,
+    editor_rank: u32,
 ) -> Vec<FormSection> {
     vec![FormSection {
         title: Some("Identity"),
@@ -2055,7 +2075,7 @@ pub(crate) fn user_edit_identity_sections(
                 hint: None,
                 placeholder: None,
                 required: true,
-                options: Some(role_select_options()),
+                options: Some(role_select_options(editor_rank)),
                 multiple: false,
                 span: 2,
                 autocomplete: None,
