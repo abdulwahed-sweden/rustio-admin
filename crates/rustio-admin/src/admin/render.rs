@@ -328,6 +328,124 @@ pub(crate) fn dashboard_ctx(
     }
 }
 
+/// Template context for `/admin/account/sessions` (read-only in R0).
+#[derive(Serialize)]
+pub(crate) struct AccountSessionsCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub sessions: Vec<AccountSessionRowCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct AccountSessionRowCtx {
+    pub session_id: i64,
+    pub trust_label: &'static str,
+    pub is_current: bool,
+    pub ip: String,
+    pub ua_summary: String,
+    pub created_at: String,
+    pub last_seen_relative: String,
+    pub expires_relative: String,
+}
+
+pub(crate) fn account_sessions_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    sessions: Vec<crate::auth::Session>,
+    current_session_id: Option<i64>,
+    csrf_token: String,
+) -> AccountSessionsCtx {
+    let rows = sessions
+        .into_iter()
+        .map(|s| AccountSessionRowCtx {
+            session_id: s.session_id,
+            trust_label: trust_label(s.trust_level),
+            is_current: Some(s.session_id) == current_session_id,
+            ip: s.ip.unwrap_or_else(|| "—".to_string()),
+            ua_summary: summarise_user_agent(s.user_agent.as_deref()),
+            created_at: s.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            last_seen_relative: relative_time(s.last_seen),
+            expires_relative: relative_time(s.expires_at),
+        })
+        .collect();
+
+    AccountSessionsCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "Active sessions",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        sessions: rows,
+    }
+}
+
+const fn trust_label(t: crate::auth::SessionTrust) -> &'static str {
+    match t {
+        crate::auth::SessionTrust::Authenticated => "Signed in",
+        crate::auth::SessionTrust::Elevated => "Elevated",
+        crate::auth::SessionTrust::MfaVerified => "MFA verified",
+    }
+}
+
+/// Heuristic User-Agent → short summary. Doctrine 20 — no fancy
+/// risk scoring or device fingerprinting; just a deterministic
+/// substring lookup so the table cell reads "macOS · Safari" instead
+/// of an 80-char Mozilla string.
+///
+/// Returns "—" when no UA is recorded.
+pub(crate) fn summarise_user_agent(ua: Option<&str>) -> String {
+    let Some(ua) = ua else {
+        return "—".to_string();
+    };
+    let lc = ua.to_ascii_lowercase();
+
+    // Order matters: iPhone / iPad UAs still include "Mac OS X"
+    // (Apple convention), and Android UAs include "Linux". Check the
+    // most-specific identifiers first.
+    let os = if lc.contains("windows") {
+        "Windows"
+    } else if lc.contains("iphone") {
+        "iOS"
+    } else if lc.contains("ipad") {
+        "iPadOS"
+    } else if lc.contains("android") {
+        "Android"
+    } else if lc.contains("mac os x") || lc.contains("macos") {
+        "macOS"
+    } else if lc.contains("linux") {
+        "Linux"
+    } else {
+        "—"
+    };
+
+    let browser = if lc.contains("firefox") {
+        "Firefox"
+    } else if lc.contains("edg/") {
+        "Edge"
+    } else if lc.contains("opr/") || lc.contains("opera") {
+        "Opera"
+    } else if lc.contains("chrome") {
+        "Chrome"
+    } else if lc.contains("safari") {
+        "Safari"
+    } else if lc.contains("curl") {
+        "curl"
+    } else {
+        "—"
+    };
+
+    if os == "—" && browser == "—" {
+        ua.chars().take(40).collect()
+    } else {
+        format!("{os} · {browser}")
+    }
+}
+
 fn action_label(action_type: &str) -> &'static str {
     match action_type {
         "create" => "Created",
@@ -2245,4 +2363,67 @@ pub(crate) fn password_change_form_sections() -> Vec<FormSection> {
             },
         ],
     }]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ua_summary_macos_safari() {
+        let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+        assert_eq!(summarise_user_agent(Some(ua)), "macOS · Safari");
+    }
+
+    #[test]
+    fn ua_summary_windows_chrome() {
+        let ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+        assert_eq!(summarise_user_agent(Some(ua)), "Windows · Chrome");
+    }
+
+    #[test]
+    fn ua_summary_linux_firefox() {
+        let ua = "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0";
+        assert_eq!(summarise_user_agent(Some(ua)), "Linux · Firefox");
+    }
+
+    #[test]
+    fn ua_summary_android_chrome() {
+        let ua = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+        assert_eq!(summarise_user_agent(Some(ua)), "Android · Chrome");
+    }
+
+    #[test]
+    fn ua_summary_ios_safari() {
+        let ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+        assert_eq!(summarise_user_agent(Some(ua)), "iOS · Safari");
+    }
+
+    #[test]
+    fn ua_summary_curl_falls_through_to_unknown_os() {
+        // curl/8.4.0 — no OS identifier, only browser. Returns the raw
+        // UA truncated.
+        let ua = "curl/8.4.0";
+        let s = summarise_user_agent(Some(ua));
+        assert!(s.contains("curl"));
+    }
+
+    #[test]
+    fn ua_summary_unknown_returns_truncated() {
+        let ua = "QuiteUnusualUserAgent/1.0 with extremely long descriptor that should be truncated";
+        let s = summarise_user_agent(Some(ua));
+        assert!(s.len() <= 40);
+    }
+
+    #[test]
+    fn ua_summary_none_returns_dash() {
+        assert_eq!(summarise_user_agent(None), "—");
+    }
+
+    #[test]
+    fn trust_label_strings() {
+        assert_eq!(trust_label(crate::auth::SessionTrust::Authenticated), "Signed in");
+        assert_eq!(trust_label(crate::auth::SessionTrust::Elevated), "Elevated");
+        assert_eq!(trust_label(crate::auth::SessionTrust::MfaVerified), "MFA verified");
+    }
 }

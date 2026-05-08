@@ -884,6 +884,45 @@ pub(crate) async fn do_password_change(
     Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
 }
 
+/// `GET /admin/account/sessions` — read-only listing of the current
+/// user's active sessions.
+///
+/// Doctrine 7 (active sessions UX) treats this as a core security
+/// surface. The page shows every active session row for `identity`
+/// with: trust level, source IP (best-effort), short user-agent
+/// summary, created-at, last-seen-at, and a marker on the current
+/// session.
+///
+/// R0 ships **read-only**. Revoke buttons (`POST /admin/account/sessions/revoke`,
+/// `POST /admin/account/sessions/revoke-others`) land in R1 once
+/// the centralized invalidate_sessions API is fully exercised.
+pub(crate) async fn show_account_sessions(
+    ctx: &AdminCtx,
+    identity: crate::auth::Identity,
+    req: &Request,
+) -> Result<Response> {
+    // Resolve the cookie token → current session id so the template
+    // can mark the current device.
+    let cookie_token = req
+        .header("cookie")
+        .and_then(crate::auth::session_token_from_cookie);
+    let current_session_id = match &cookie_token {
+        Some(t) => crate::auth::current_session_id(&ctx.db, t).await?,
+        None => None,
+    };
+    let sessions = crate::auth::list_active_for_user(&ctx.db, identity.user_id).await?;
+
+    let view = render::account_sessions_ctx(
+        &identity,
+        &ctx.admin,
+        sessions,
+        current_session_id,
+        csrf_token(req),
+    );
+    let body = ctx.templates.render("admin/account_sessions.html", &view)?;
+    Ok(Response::html(body))
+}
+
 /// Resolve every foreign-key cell on the current list page from raw
 /// id (`"5"`) to the target row's display label (`"Anna Lindqvist"`)
 /// and remember the target's admin URL so the renderer can wrap the
