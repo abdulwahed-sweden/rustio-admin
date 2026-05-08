@@ -631,13 +631,8 @@ pub(crate) async fn handle_bulk_delete(
         return Ok(Response::redirect(format!("/admin/{admin_name}")));
     }
 
-    let view = render::bulk_confirm_delete_ctx(
-        &identity,
-        &ctx.admin,
-        entry,
-        items,
-        csrf_token(req),
-    );
+    let view =
+        render::bulk_confirm_delete_ctx(&identity, &ctx.admin, entry, items, csrf_token(req));
     let body = ctx
         .templates
         .render("admin/bulk_confirm_delete.html", &view)?;

@@ -50,8 +50,7 @@ const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 /// in 400/500/700, plus Noto Naskh Arabic (paragraph body, variable
 /// wght 400..700).
 const FONT_GEIST: &[u8] = include_bytes!("../../assets/static/fonts/Geist-Variable.woff2");
-const FONT_GEIST_MONO: &[u8] =
-    include_bytes!("../../assets/static/fonts/GeistMono-Variable.woff2");
+const FONT_GEIST_MONO: &[u8] = include_bytes!("../../assets/static/fonts/GeistMono-Variable.woff2");
 const FONT_TAJAWAL_REG: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Regular.woff2");
 const FONT_TAJAWAL_MED: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Medium.woff2");
 const FONT_TAJAWAL_BOLD: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Bold.woff2");
@@ -723,9 +722,7 @@ pub fn register_admin_routes(
             let perm = perm_for(&c, &name, "delete")?;
             match perm_guard(&c, &req, &perm).await? {
                 Guard::Redirect(r) => Ok(r),
-                Guard::Allow(ident) => {
-                    handlers::handle_bulk_delete(&c, ident, &name, &req).await
-                }
+                Guard::Allow(ident) => handlers::handle_bulk_delete(&c, ident, &name, &req).await,
             }
         }
     });
