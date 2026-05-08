@@ -116,8 +116,10 @@ impl Templates {
         let tmpl = env
             .get_template(name)
             .map_err(|e| Error::Internal(format!("template {name} not found: {e}")))?;
-        tmpl.render(ctx)
-            .map_err(|e| Error::Internal(format!("render {name}: {e}")))
+        tmpl.render(ctx).map_err(|e| {
+            log::error!("template render failed for {name}: {e:?}");
+            Error::Internal(format!("render {name}: {e}"))
+        })
     }
 
     /// Render with a per-model override hook.
@@ -391,6 +393,11 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
     (
         "admin/group_confirm_delete.html",
         include_str!("../assets/templates/admin/group_confirm_delete.html"),
+    ),
+    // Self-service account pages (R0+)
+    (
+        "admin/account_sessions.html",
+        include_str!("../assets/templates/admin/account_sessions.html"),
     ),
 ];
 
