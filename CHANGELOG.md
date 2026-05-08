@@ -32,14 +32,51 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
   filters out roles strictly above the editor's own rank in both
   user-new and user-edit forms. Server-side `enforce_role_ceiling`
   catches forged POSTs as defense-in-depth.
+- **Group permissions matrix.** The Group edit page now lays out
+  permissions as a model × action grid (View / Add / Change / Delete
+  columns, one row per model) instead of a flat 60+ row alphabetical
+  checkbox list. Permissions whose codename doesn't fit the
+  `<table>.<action>_<singular>` pattern fall through to a collapsed
+  "Other permissions" group below the matrix so nothing is silently
+  dropped. Per-row "All" button toggles every permission for that
+  model in one click; degrades to plain multi-checkbox UX without JS.
+- **Foreign-key list-cell hydration.** List pages now resolve every
+  `belongs_to` column on the current page from the raw id to the
+  target row's display field, and wrap the cell in an
+  `<a href="/admin/{admin_name}/{id}/edit">…</a>` so foreign-key
+  columns become click-throughs to the related row. The hydration is
+  N+1-safe by construction: at most one batched
+  `SELECT id, <display> FROM <target> WHERE id = ANY($1)` per FK
+  column on the entry, regardless of page size. Stale or
+  display-field-less FKs leave the raw id in place (no 500). New
+  `CellLink` type and a parallel `cell_links` vector on `ListRow`
+  carry the link metadata.
+- **`ListRowCtx.links: HashMap<String, String>`** exposes per-column
+  FK click-through URLs to the list template.
+- **`admin.css` token sectioning.** Banner comments
+  (`/* === Tokens — typography ===`, `colors`, `spacing`,
+  `components`) make canonical token blocks explicit so future
+  feature branches can't silently override the design system without
+  a visible diff in those sections.
 
 ### Changed
 
+- **Canonical accent moved from terracotta to teal-green.** Framework
+  default `--rio-accent` is now `#0F8C7E` (light) / `#3FAA9D` (dark).
+  Replaces the previous `#A0341A` / `#C84934`. Same value the
+  Bosphorus & Sham downstream had been overriding to in
+  `dashboard.css`; promoting it to the framework default removes the
+  duplicate-token-system risk and makes one accent the single source
+  of truth across every admin page (login, list, edit, group
+  permissions, dashboard).
 - **`Role::rank()` widened to `u32`** with spaced numeric values
   (`User=100 / Staff=300 / Supervisor=600 / Administrator=900 /
   Developer=1000`) so projects extending the rank ladder via group
   labels have headroom between framework tiers. Compare relatively;
   never match literally.
+- **`admin/list.html`** wraps a cell in `<a class="rio-fk-link">` when
+  `row.links[<field>]` is set. Cells without a registered relation
+  render unchanged.
 
 ### Deprecated
 

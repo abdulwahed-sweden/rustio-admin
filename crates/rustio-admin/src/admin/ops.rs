@@ -159,8 +159,19 @@ where
                 .into_iter()
                 .map(|r| {
                     let id = AdminModel::id(&r);
-                    let cells = r.display_values().into_iter().map(|(_, v)| v).collect();
-                    ListRow { id, cells }
+                    let cells: Vec<String> =
+                        r.display_values().into_iter().map(|(_, v)| v).collect();
+                    // FK hydration runs in the handler layer (where the
+                    // `RelationRegistry` is reachable). The ops layer
+                    // emits a parallel `cell_links` of all-None so the
+                    // invariant `cells.len() == cell_links.len()` holds
+                    // even for callers that bypass hydration.
+                    let cell_links = vec![None; cells.len()];
+                    ListRow {
+                        id,
+                        cells,
+                        cell_links,
+                    }
                 })
                 .collect();
             Ok(ListPage {
