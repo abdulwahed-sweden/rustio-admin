@@ -275,6 +275,26 @@ pub(crate) trait AdminOps: Send + Sync {
 pub struct ListRow {
     pub id: i64,
     pub cells: Vec<String>,
+    /// Optional link target per cell, parallel to `cells`. When
+    /// `Some`, the renderer wraps that cell's content in an
+    /// `<a href="/admin/{admin_name}/{id}/edit">…</a>` so foreign-key
+    /// columns become click-throughs to the related row. Populated by
+    /// the post-list hydration pass in `handlers::hydrate_fk_cells`;
+    /// `ConcreteOps::list` always emits a parallel vector of `None` of
+    /// matching length so callers that skip hydration still satisfy
+    /// the parallel-vector invariant.
+    pub cell_links: Vec<Option<CellLink>>,
+}
+
+/// One resolved foreign-key cell. The renderer turns this into
+/// `<a href="/admin/{admin_name}/{id}/edit">…</a>` around the cell's
+/// display label.
+#[derive(Debug, Clone)]
+pub struct CellLink {
+    /// Target model's admin slug (e.g. `"categories"` for `Category`).
+    pub admin_name: String,
+    /// Target row id.
+    pub id: i64,
 }
 
 /// The raw field values used to pre-fill the edit form.

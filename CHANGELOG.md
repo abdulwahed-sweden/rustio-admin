@@ -4,6 +4,30 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [Unreleased]
+
+### Added
+
+- **Foreign-key list-cell hydration.** List pages now resolve every
+  `belongs_to` column on the current page from the raw id to the
+  target row's display field, and wrap the cell in an
+  `<a href="/admin/{admin_name}/{id}/edit">…</a>` so foreign-key
+  columns become click-throughs to the related row. The hydration is
+  N+1-safe by construction: at most one batched
+  `SELECT id, <display> FROM <target> WHERE id = ANY($1)` per FK
+  column on the entry, regardless of page size. Stale or
+  display-field-less FKs leave the raw id in place (no 500). New
+  `CellLink` type and a parallel `cell_links` vector on `ListRow`
+  carry the link metadata.
+- **`ListRowCtx.links: HashMap<String, String>`** exposes per-column
+  FK click-through URLs to the list template.
+
+### Changed
+
+- **`admin/list.html`** wraps a cell in `<a class="rio-fk-link">` when
+  `row.links[<field>]` is set. Cells without a registered relation
+  render unchanged.
+
 ## [0.2.1] — 2026-05-07
 
 CLI-only patch. `rustio-admin` and `rustio-admin-macros` stay at 0.2.0.

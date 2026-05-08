@@ -162,6 +162,8 @@
             <a href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ row.id }}</a>
           {% elif f.kind == "checkbox" %}
             {% if row[f.name] %}Yes{% else %}No{% endif %}
+          {% elif row.links[f.name] %}
+            <a class="rio-fk-link" href="{{ row.links[f.name] }}">{{ row[f.name]|default(value='') }}</a>
           {% else %}
             {{ row[f.name]|default(value='') }}
           {% endif %}
