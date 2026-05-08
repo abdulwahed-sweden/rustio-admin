@@ -4,7 +4,29 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
-## [Unreleased]
+## [0.3.0] — 2026-05-08
+
+Authority + design-system stabilization release. Server-side guards
+enforce the rank model on every authority mutation; group permissions
+render as a model × action matrix instead of a flat alphabetical list;
+foreign-key columns on list pages resolve to display labels with
+click-throughs; the framework's canonical accent moves to
+teal-emerald with the previous terracotta retired. New
+`DESIGN_SYSTEM.md` codifies the authority + visual vocabulary, and a
+PR template gates token changes behind a visual regression checklist.
+
+> **Migrating from 0.2.x:** bump `rustio-admin = "0.3"` in your
+> project's `Cargo.toml`, run `cargo update -p rustio-admin`, then
+> hard-refresh the admin in your browser so the new `admin.css` is
+> fetched. If your project redefined `--rio-accent` in its own CSS
+> to swap to teal, that block is now redundant and can be deleted —
+> the framework default already serves the same value. Any other
+> `--rio-*` token redefinitions in project CSS are now considered
+> framework forks; see `DESIGN_SYSTEM.md §2` for the supported
+> override paths.
+
+[0.3.0]: https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.3.0
+
 
 ### Added
 
@@ -85,6 +107,23 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
   callers keep compiling, but new code should use
   `would_orphan_protected` to cover Administrator orphan-prevention
   too.
+
+### Documentation
+
+- **`DESIGN_SYSTEM.md`** at the repo root: canonical doctrine for
+  the framework's authority + visual vocabulary. Three principles
+  stated explicitly (UI hiding is reflection, not security · Rank
+  controls WHO; permissions control WHAT · Groups are permission
+  bundles, not authority roots), token ownership rules, Arabic
+  typography rules, branch + merge expectations, and a
+  versioning-of-the-design-system policy.
+- **`.github/pull_request_template.md`**: any PR touching
+  `admin.css`, token definitions, font-family declarations, or
+  `:root` blocks must complete a Token disclosure section (tokens
+  changed / migration impact / regression risk) and walk an 8-item
+  visual regression checklist (login / dashboard / tables / forms /
+  dark mode / Arabic rendering / mobile width / permission matrix)
+  before merging.
 
 ## [0.2.1] — 2026-05-07
 
