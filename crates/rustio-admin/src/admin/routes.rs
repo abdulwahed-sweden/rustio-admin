@@ -312,6 +312,21 @@ pub fn register_admin_routes(
         }
     });
 
+    // Self-service active-sessions listing (R0; read-only). Any
+    // logged-in user (User-tier and above) can see their own active
+    // sessions. Revoke buttons land in 0.5.x once the centralized
+    // invalidate_sessions API is fully exercised by R1 password reset.
+    let c = ctx.clone();
+    let router = router.get("/admin/account/sessions", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_account_sessions(&c, ident, &req).await,
+            }
+        }
+    });
+
     // Self-service password change. Any logged-in user (User-tier and
     // above). User-tier can change their own password even though
     // they can't access the dashboard.
