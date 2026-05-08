@@ -4,6 +4,44 @@ All notable changes to `rustio-admin` are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project
 adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
+## [Unreleased]
+
+### Documentation
+
+- **`docs/getting-started.md`** clarifies that `rustio user create`
+  prompts twice for the password (echo-suppressed) and that
+  `--password` should only appear in CI / scripted bootstrap so the
+  plaintext never lands on `argv`, in `ps` output, or in shell
+  history.
+- **Port-8000 troubleshooting** added — if the default
+  `127.0.0.1:8000` is occupied, projects edit the listen address in
+  the generated `src/main.rs` rather than introducing a new env var.
+- **Migrations clarification** — `rustio startproject` already
+  creates `migrations/0001_create_posts.sql`, so the walkthrough no
+  longer instructs `mkdir -p migrations`. Two valid paths are
+  documented:
+  - **Option A** keeps the demo `Post` as a smoke test and adds new
+    tables as `0002_*.sql`, `0003_*.sql`, … via `rustio startapp`.
+  - **Option B** replaces the demo with the real domain by deleting
+    `migrations/0001_create_posts.sql` and `src/post.rs` **before**
+    the demo migration has been applied to a real database. After
+    that point, migrations are append-only and a forward
+    `0002_drop_posts.sql` is the right move.
+- **"What you get after first login"** section enumerates the
+  capabilities a fresh project inherits (session-backed auth,
+  permission matrix, audit history, active sessions page,
+  correlation IDs, FK hydration, template overrides).
+- **"Project philosophy"** section codifies the framework's design
+  stance: Postgres-first, operational clarity over magic, explicit
+  model registration, server-rendered admin UI, security and
+  auditability built in, no AI / no cloud lock-in / no frontend
+  build step.
+- The same five clarifications mirror across the
+  `templates/project/README.md.tmpl` so newly scaffolded projects
+  ship with them in their own README.
+
+No runtime, auth, or session changes.
+
 ## [0.4.0] — 2026-05-09
 
 Session lifecycle + recovery foundations release. R0 of the universal
