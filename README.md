@@ -8,6 +8,8 @@
 [![CI](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml)
 [![License](https://img.shields.io/crates/l/rustio-admin.svg)](./LICENSE)
 
+> 🛡 **v0.3.0** (2026-05-08) — authority + design-system stabilization. Server-side authority guards (self-demote / cross-rank / role-ceiling) with last-Administrator + last-Developer protection. Audit rows on every user/group authority mutation. Foreign-key list cells now resolve to display labels with click-throughs. Group permissions render as a model × action matrix instead of a flat 60+ checkbox list. Canonical accent moved to teal-emerald (`#0F8C7E` light / `#3FAA9D` dark) — retired the previous terracotta. New `DESIGN_SYSTEM.md` + PR template gate token-level changes behind a visual regression checklist. Downstream projects: bump to `rustio-admin = "0.3"` and `cargo update -p rustio-admin`. [v0.3.0 changelog](./CHANGELOG.md#030--2026-05-08) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.3.0).
+>
 > 🔧 **v0.2.1** (2026-05-07, CLI-only patch) — fixes the `rustio startproject` scaffold template, which was pinning new projects to `rustio-admin = "0.1"` and missing every 0.2.0 feature. Re-install the CLI with `cargo install rustio-admin-cli --force` to pick up the corrected template; existing projects are unaffected. [v0.2.1 changelog](./CHANGELOG.md#021--2026-05-07) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.1).
 >
 > ✨ **v0.2.0 released on 2026-05-07** — premium-chrome release. List view, form view, and Auth pages all share one design language; dark mode is now a calm graphite workspace rather than an OLED-black hacker terminal. New list-view toolbar (filters dropdown / sort dropdown / per-page picker / active-filter pills / numbered pagination / search glyph) ships with full URL state preservation across every widget. Per-row + master checkboxes drive the new bulk select; projects register custom bulk actions via `ModelAdmin::bulk_actions()` next to the built-in delete. Form pages cap at 880 px editorial width with a grouped action bar. Sticky sidebar at tablet+. **Breaking change:** `AdminTheme` is now an override-patch type (`Option<String>` fields) — `admin.css` is the single source of truth, so out of the box no inline `<style>` is emitted at all. See the [v0.2.0 changelog](./CHANGELOG.md#020--2026-05-07) including the *Migrating from 0.1.x* section, and the [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.0).
@@ -28,7 +30,7 @@
 
 ```toml
 [dependencies]
-rustio-admin = "0.2"
+rustio-admin = "0.3"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
