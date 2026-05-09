@@ -447,8 +447,8 @@ That's it. No card redesign. No animation.
 > [new password]
 > [confirm new password]
 >
-> Password requirements: at least 12 characters.
-> *(R1 — the only rule is min length. R3 may add complexity.)*
+> Password requirements: at least *N* characters (where *N* is whatever the configured policy's `min_length()` returns; the form template renders the live value). The framework default is 10; your administrator may have configured a higher floor.
+> *(R1 — the only rule is min length, set by `Admin::password_policy(...)`. R3 may add complexity.)*
 >
 > [Save new password]
 
@@ -749,11 +749,17 @@ impl std::error::Error for PasswordPolicyError {}
 
 ```rust
 pub struct DefaultPasswordPolicy {
-    pub min_len: usize,  // 12
+    pub min_len: usize,  // 10
 }
 ```
 
-R1 ships with `min_len = 12`. Why 12: NIST SP 800-63B's reasonable floor for human-typed passwords with rate-limiting + lockout; matches the existing `MIN_PASSWORD_LEN` constant in `handlers.rs:850`.
+R1 ships with `min_len = 10`. Why 10: the secure-by-default baseline that is long enough to defeat trivial brute-force under Argon2id + per-IP rate-limiting (NIST SP 800-63B's recommended length floor is 8, with longer being preferable) without driving operators toward sticky-note workarounds. Production / regulated deployments are encouraged to override to 12+ via `Admin::password_policy(Arc::new(DefaultPasswordPolicy::with_min_len(12)))`; high-sensitivity deployments may want 16+ paired with an organisational complexity rule or a breach blocklist.
+
+The framework deliberately ships **no complexity-class rules** ("must contain a symbol", "must include uppercase") in the default — they demonstrably push humans toward predictable patterns without improving entropy meaningfully (NIST SP 800-63B Appendix A). Projects that need them implement a custom `PasswordPolicy`.
+
+Length is measured in Unicode `char`s (not bytes), so a 10-char password is 10 user-visible characters regardless of UTF-8 width.
+
+The previous `MIN_PASSWORD_LEN = 12` constant in `handlers.rs:850` is removed in commit #11, where the policy becomes the single source of truth for every password write in the framework.
 
 ### 13.3 Wiring
 
@@ -998,7 +1004,7 @@ Then a downstream validation pass against the live Stockholm POS DB. Then — an
 | Reset token TTL | **1 hour** | `Admin::recovery_policy(Arc::new(MyPolicy))` returning a different `Duration` from `reset_token_ttl()` |
 | Mailer failure user-visible behaviour | **Log + uniform user response.** Audit row carries `metadata.email_send_status = "failed"` | None — this is doctrine 9 (uniform responses defeat enumeration) |
 | Default `MfaPolicy` (touches R1 page copy via §8.3 — NO promotional banner) | **Optional.** R1 page copy does not mention MFA at all. R3 wires it. | `Admin::mfa_policy(MfaPolicy::Required)` ships in R3 |
-| Default `PasswordPolicy` floor | **`min_len = 12`** | `Admin::password_policy(Arc::new(MyComplexityPolicy))` |
+| Default `PasswordPolicy` floor | **`min_len = 10`** (production deployments encouraged to override to 12+; regulated to 16+) | `Admin::password_policy(Arc::new(DefaultPasswordPolicy::with_min_len(N)))` or a custom `PasswordPolicy` impl |
 | Default per-IP rate-limit on `POST /admin/forgot-password` | **5 / 15 min** | `RecoveryPolicy::request_rate_limit` override |
 | Default per-IP rate-limit on `POST /admin/reset-password/<t>` | **10 / 5 min** | `RecoveryPolicy::consume_rate_limit` override |
 | `AuditEvent` visibility | **`pub(crate)` → `pub`** in 0.5.0 | None — public commitment |
