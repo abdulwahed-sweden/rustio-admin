@@ -314,6 +314,18 @@ pub(crate) async fn do_user_edit(
     }
 
     if !new_password.is_empty() {
+        // TODO(R2): the generic admin-edit form's password field is a
+        // doctrine-22 spirit-violation. It changes another user's
+        // password without invalidating their sessions, without
+        // setting `must_change_password`, and without a typed
+        // `PasswordResetByOther` audit row. R2 introduces the
+        // dedicated `/admin/users/:id/reset-password` recovery route
+        // with the correct semantics; once it ships this code path
+        // either routes through the same recovery pipeline or is
+        // removed entirely. See `DESIGN_RECOVERY.md` §14.4 for the
+        // full callout. R1 leaves the path untouched (set_password
+        // now stamps `password_changed_at` for it automatically per
+        // §14.1) so R2 owns the recovery semantics in one place.
         auth::set_password(&ctx.db, user_id, &new_password).await?;
     }
 
