@@ -137,9 +137,11 @@ pub(crate) async fn migrate_user_recovery_schema(db: &Db) -> Result<()> {
     .execute(db.pool())
     .await?;
 
-    sqlx::query("ALTER TABLE rustio_users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ")
-        .execute(db.pool())
-        .await?;
+    sqlx::query(
+        "ALTER TABLE rustio_users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ",
+    )
+    .execute(db.pool())
+    .await?;
 
     Ok(())
 }
@@ -977,9 +979,8 @@ pub(crate) async fn consume_reset_token(
     entry.correlation_id = correlation_id;
     entry.ip_address = Some(&ip);
     entry.metadata = Some(metadata);
-    entry.summary = format!(
-        "password reset self-consumed; {revoked_session_count} session(s) revoked"
-    );
+    entry.summary =
+        format!("password reset self-consumed; {revoked_session_count} session(s) revoked");
     audit_record(db, entry).await?;
 
     Ok(ConsumeOutcome::Consumed {
@@ -1288,7 +1289,10 @@ mod tests {
     #[test]
     fn site_url_prefers_rfc7239_forwarded_first_hop() {
         let h = header_lookup(&[
-            ("forwarded", "for=1.2.3.4;proto=https;host=admin.example.com"),
+            (
+                "forwarded",
+                "for=1.2.3.4;proto=https;host=admin.example.com",
+            ),
             ("x-forwarded-proto", "http"),
             ("x-forwarded-host", "wrong.example.com"),
             ("host", "internal.local"),
@@ -1346,7 +1350,10 @@ mod tests {
         // must NOT poison the reset link. We refuse anything outside
         // {http, https} and fall through to the next source.
         let h = header_lookup(&[
-            ("forwarded", "for=1.2.3.4;proto=javascript;host=evil.example.com"),
+            (
+                "forwarded",
+                "for=1.2.3.4;proto=javascript;host=evil.example.com",
+            ),
             ("host", "fallback.example.com"),
         ]);
         assert_eq!(
@@ -1501,13 +1508,8 @@ mod tests {
                 revoked_session_count: 3,
             },
             ConsumeOutcome::Invalid,
-            ConsumeOutcome::PolicyRejected(PasswordPolicyError::TooShort {
-                min: 10,
-                actual: 4,
-            }),
-            ConsumeOutcome::PolicyRejected(PasswordPolicyError::Custom(
-                "stub rejected".into(),
-            )),
+            ConsumeOutcome::PolicyRejected(PasswordPolicyError::TooShort { min: 10, actual: 4 }),
+            ConsumeOutcome::PolicyRejected(PasswordPolicyError::Custom("stub rejected".into())),
             ConsumeOutcome::RateLimited,
         ] {
             let debug = format!("{outcome:?}");

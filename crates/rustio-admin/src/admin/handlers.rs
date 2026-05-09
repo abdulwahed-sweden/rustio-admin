@@ -128,8 +128,7 @@ pub(super) fn login_flash_for_query(
     if password_reset == Some("success") {
         return Some(render::FlashCtx {
             kind: "success",
-            message: "Your password has been updated. Sign in with your new password."
-                .to_string(),
+            message: "Your password has been updated. Sign in with your new password.".to_string(),
         });
     }
     None

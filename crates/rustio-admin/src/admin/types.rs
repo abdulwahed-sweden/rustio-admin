@@ -870,18 +870,21 @@ mod tests {
         // Default floor is 10 (per DESIGN_RECOVERY.md §13.2).
         assert_eq!(admin.active_password_policy().min_length(), 10);
         // Sanity: a 9-char password is rejected, a 10-char is accepted.
-        assert!(admin.active_password_policy().validate("nine_char").is_err());
-        assert!(admin.active_password_policy().validate("ten_chars_").is_ok());
+        assert!(admin
+            .active_password_policy()
+            .validate("nine_char")
+            .is_err());
+        assert!(admin
+            .active_password_policy()
+            .validate("ten_chars_")
+            .is_ok());
     }
 
     #[test]
     fn admin_password_policy_overrides_default() {
         struct StubPolicy;
         impl PasswordPolicy for StubPolicy {
-            fn validate(
-                &self,
-                _candidate: &str,
-            ) -> std::result::Result<(), PasswordPolicyError> {
+            fn validate(&self, _candidate: &str) -> std::result::Result<(), PasswordPolicyError> {
                 Err(PasswordPolicyError::Custom("stub rejected".into()))
             }
             fn min_length(&self) -> usize {
@@ -904,8 +907,14 @@ mod tests {
         let p = admin.active_recovery_policy();
         // Locked defaults from DESIGN_RECOVERY.md §17.
         assert_eq!(p.reset_token_ttl(), chrono::Duration::hours(1));
-        assert_eq!(p.request_rate_limit(), (5, std::time::Duration::from_secs(15 * 60)));
-        assert_eq!(p.consume_rate_limit(), (10, std::time::Duration::from_secs(5 * 60)));
+        assert_eq!(
+            p.request_rate_limit(),
+            (5, std::time::Duration::from_secs(15 * 60))
+        );
+        assert_eq!(
+            p.consume_rate_limit(),
+            (10, std::time::Duration::from_secs(5 * 60))
+        );
         assert!(!p.strict_mailer_required());
     }
 
@@ -947,8 +956,14 @@ mod tests {
         let admin = Admin::new().recovery_policy(Arc::new(StubRecoveryPolicy));
         let p = admin.active_recovery_policy();
         assert_eq!(p.reset_token_ttl(), chrono::Duration::hours(2));
-        assert_eq!(p.request_rate_limit(), (1, std::time::Duration::from_secs(60)));
-        assert_eq!(p.consume_rate_limit(), (2, std::time::Duration::from_secs(120)));
+        assert_eq!(
+            p.request_rate_limit(),
+            (1, std::time::Duration::from_secs(60))
+        );
+        assert_eq!(
+            p.consume_rate_limit(),
+            (2, std::time::Duration::from_secs(120))
+        );
         assert!(p.strict_mailer_required());
     }
 }
