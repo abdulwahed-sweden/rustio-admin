@@ -10,7 +10,9 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::auth::{DefaultPasswordPolicy, SharedPasswordPolicy};
+use crate::auth::{
+    DefaultPasswordPolicy, DefaultRecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
+};
 use crate::email::{LogMailer, SharedMailer};
 use crate::error::Result;
 use crate::http::FormData;
@@ -440,6 +442,14 @@ pub struct Admin {
     /// `Arc<dyn PasswordPolicy>` for the same reason as the mailer
     /// above (cheap clone, Send + Sync).
     pub(crate) password_policy: SharedPasswordPolicy,
+    /// The active recovery policy: reset-token TTL, rate-limit
+    /// shape, strict-mailer boot guard, public-site-URL derivation.
+    /// Defaults to [`DefaultRecoveryPolicy::new`]; projects override
+    /// via [`Admin::recovery_policy`]. Read by R1's recovery
+    /// handlers (commits #7–#9). Held as `Arc<dyn RecoveryPolicy>`
+    /// — same architectural pattern as the mailer and the password
+    /// policy above.
+    pub(crate) recovery_policy: SharedRecoveryPolicy,
 }
 
 impl Default for Admin {
@@ -464,6 +474,7 @@ impl Admin {
             theme: AdminTheme::default(),
             mailer: Arc::new(LogMailer),
             password_policy: Arc::new(DefaultPasswordPolicy::new()),
+            recovery_policy: Arc::new(DefaultRecoveryPolicy::new()),
         }
     }
 
@@ -565,6 +576,37 @@ impl Admin {
     /// seeds [`DefaultPasswordPolicy`] so this never returns `None`.
     pub fn active_password_policy(&self) -> &SharedPasswordPolicy {
         &self.password_policy
+    }
+
+    /// Replace the active recovery policy. R1 ships with
+    /// [`DefaultRecoveryPolicy`] (TTL 1h, request 5/15min, consume
+    /// 10/5min, strict-mailer guard off); production deployments
+    /// commonly opt into the strict guard via
+    /// `with_strict_mailer_required(true)` after registering a real
+    /// mailer (`DESIGN_RECOVERY.md` §12).
+    ///
+    /// Typical project wiring:
+    ///
+    /// ```ignore
+    /// use std::sync::Arc;
+    /// use rustio_admin::auth::DefaultRecoveryPolicy;
+    ///
+    /// let admin = Admin::new()
+    ///     .recovery_policy(Arc::new(
+    ///         DefaultRecoveryPolicy::new()
+    ///             .with_strict_mailer_required(true),
+    ///     ));
+    /// ```
+    pub fn recovery_policy(mut self, policy: SharedRecoveryPolicy) -> Self {
+        self.recovery_policy = policy;
+        self
+    }
+
+    /// Read-only access to the registered recovery policy. Returns
+    /// a borrow of the `Arc`. Always live — `Admin::new()` seeds
+    /// [`DefaultRecoveryPolicy`] so this never returns `None`.
+    pub fn active_recovery_policy(&self) -> &SharedRecoveryPolicy {
+        &self.recovery_policy
     }
 
     pub fn model<M>(mut self) -> Self
@@ -828,5 +870,45 @@ mod tests {
             .validate("anything-at-all-here")
             .unwrap_err();
         assert_eq!(err, PasswordPolicyError::Custom("stub rejected".into()));
+    }
+
+    #[test]
+    fn admin_new_installs_default_recovery_policy() {
+        let admin = Admin::new();
+        let p = admin.active_recovery_policy();
+        // Locked defaults from DESIGN_RECOVERY.md §17.
+        assert_eq!(p.reset_token_ttl(), chrono::Duration::hours(1));
+        assert_eq!(p.request_rate_limit(), (5, std::time::Duration::from_secs(15 * 60)));
+        assert_eq!(p.consume_rate_limit(), (10, std::time::Duration::from_secs(5 * 60)));
+        assert!(!p.strict_mailer_required());
+    }
+
+    #[test]
+    fn admin_recovery_policy_overrides_default() {
+        use crate::auth::RecoveryPolicy;
+
+        struct StubRecoveryPolicy;
+        impl RecoveryPolicy for StubRecoveryPolicy {
+            fn reset_token_ttl(&self) -> chrono::Duration {
+                chrono::Duration::hours(2)
+            }
+            fn request_rate_limit(&self) -> (u32, std::time::Duration) {
+                (1, std::time::Duration::from_secs(60))
+            }
+            fn consume_rate_limit(&self) -> (u32, std::time::Duration) {
+                (2, std::time::Duration::from_secs(120))
+            }
+            fn strict_mailer_required(&self) -> bool {
+                true
+            }
+            // public_site_url uses the trait's provided default.
+        }
+
+        let admin = Admin::new().recovery_policy(Arc::new(StubRecoveryPolicy));
+        let p = admin.active_recovery_policy();
+        assert_eq!(p.reset_token_ttl(), chrono::Duration::hours(2));
+        assert_eq!(p.request_rate_limit(), (1, std::time::Duration::from_secs(60)));
+        assert_eq!(p.consume_rate_limit(), (2, std::time::Duration::from_secs(120)));
+        assert!(p.strict_mailer_required());
     }
 }
