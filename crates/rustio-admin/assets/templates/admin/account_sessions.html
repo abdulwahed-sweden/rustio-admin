@@ -9,8 +9,6 @@
   <h1>{{ page_title }}</h1>
   <p class="rio-meta">
     Sessions currently signed in to your account. Revoke any session you don't recognise.
-    Revoke buttons ship in the next release; until then, contact an administrator if you
-    see something unexpected.
   </p>
 </header>
 
@@ -34,17 +32,29 @@
     </dl>
     <div class="rio-session__actions">
       {% if s.is_current %}
-      <span class="rio-meta">This session — revocation would sign you out.</span>
+      <span class="rio-meta">This session — use &ldquo;Sign out everywhere&rdquo; below to revoke it.</span>
       {% else %}
-      <button type="button" class="rio-button rio-button--ghost rio-button--sm" disabled
-              title="Revoke buttons ship in 0.5.0 alongside the password-reset flow.">
-        Revoke (coming in 0.5.0)
-      </button>
+      <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button type="submit" class="rio-button rio-button--ghost rio-button--sm">Revoke</button>
+      </form>
       {% endif %}
     </div>
   </li>
   {% endfor %}
 </ul>
+
+<div class="rio-session-bulk-actions">
+  <form method="post" action="/admin/account/sessions/revoke-others" class="rio-form-inline">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--ghost">Sign out of every other device</button>
+  </form>
+  <form method="post" action="/admin/account/sessions/revoke-all" class="rio-form-inline">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--ghost">Sign out everywhere</button>
+  </form>
+</div>
+
 {% else %}
 <p class="rio-empty">No active sessions. Sign in fresh to see this page populate.</p>
 {% endif %}
