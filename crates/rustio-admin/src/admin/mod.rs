@@ -13,7 +13,9 @@ mod render;
 mod routes;
 mod types;
 
-pub use audit::{ensure_table, for_object, recent, record, ActionType, AdminAction, LogEntry};
+pub use audit::{
+    ensure_table, for_object, recent, record, ActionType, AdminAction, AuditEvent, LogEntry,
+};
 pub use filters::{
     classify_field, field_ui_metadata, field_ui_metadata_with_relation, format_relation_cell,
     infer_filters, infer_filters_with_relations, mask_pii, FieldRole, FieldUI, FilterDef,
