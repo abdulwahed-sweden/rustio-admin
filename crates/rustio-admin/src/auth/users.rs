@@ -261,14 +261,38 @@ pub async fn load_user_profile(db: &Db, user_id: i64) -> Result<Option<UserProfi
     }
 }
 
+/// Re-hash and write a new password for `user_id`. Stamps both
+/// `password_changed_at` and `updated_at` to the same `NOW()` —
+/// `password_changed_at` is the doctrine-7 surface ("Password last
+/// changed: 2 days ago") that the active-sessions UI reads; the
+/// existing `updated_at` continues to track row-level edits.
+///
+/// R1 (DESIGN_RECOVERY.md §14.1) introduced the
+/// `password_changed_at` write here so every code path that mutates a
+/// password — self-change, self-reset, R2 admin-driven reset, R4 CLI
+/// emergency reset — stamps the column without each caller having to
+/// remember. Pre-0.5.0 rows have `NULL` for the column; it populates
+/// on the next change.
+///
+/// Callers that need to invalidate sessions (per doctrine 22) do so
+/// separately by calling `auth::invalidate_sessions(...)` after this
+/// returns. This function deliberately does NOT call into the session
+/// engine: a CLI flow may want to keep sessions live, and the auth-
+/// driven self-change wants to keep the current device alive
+/// (`SessionTarget::UserExceptCurrent`). Wiring it in here would
+/// remove that flexibility.
 pub async fn set_password(db: &Db, user_id: i64, new_password: &str) -> Result<()> {
     let hash = hash_password(new_password)?;
-    sqlx::query("UPDATE rustio_users SET password_hash = $1, updated_at = $2 WHERE id = $3")
-        .bind(&hash)
-        .bind(Utc::now())
-        .bind(user_id)
-        .execute(db.pool())
-        .await?;
+    sqlx::query(
+        "UPDATE rustio_users \
+            SET password_hash = $1, password_changed_at = $2, updated_at = $2 \
+          WHERE id = $3",
+    )
+    .bind(&hash)
+    .bind(Utc::now())
+    .bind(user_id)
+    .execute(db.pool())
+    .await?;
     Ok(())
 }
 
