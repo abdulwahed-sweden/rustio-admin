@@ -626,7 +626,13 @@ pub fn session_token_from_cookie(cookie_header: &str) -> Option<String> {
     None
 }
 
-fn random_token() -> String {
+/// Generate a 256-bit cryptographically-random URL-safe-base64
+/// token. Shared between session cookies and password-reset tokens
+/// (R1) — both want the same "random enough that brute force is
+/// infeasible regardless of any hash function's work factor"
+/// shape. `pub(crate)` so `auth::recovery` can call it without
+/// duplicating the helper; not in the public API.
+pub(crate) fn random_token() -> String {
     let mut bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)

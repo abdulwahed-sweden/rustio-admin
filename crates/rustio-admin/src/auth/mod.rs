@@ -12,7 +12,7 @@
 
 pub mod guards;
 mod permissions;
-mod recovery;
+pub(crate) mod recovery;
 mod role;
 mod sessions;
 mod users;
@@ -27,6 +27,12 @@ pub use recovery::{
     DefaultPasswordPolicy, DefaultRecoveryPolicy, PasswordPolicy, PasswordPolicyError,
     RecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
 };
+// `issue_reset_token` / `consume_reset_token` and the `IssueOutcome` /
+// `ConsumeOutcome` / `MailerEmailStatus` types live in `recovery`
+// (`pub(crate) mod recovery`) so the admin handlers in commit #8+
+// reach them as `crate::auth::recovery::*`. They are intentionally
+// NOT re-exported here — the framework owns the handler shape, and
+// projects compose recovery via the trait surfaces re-exported above.
 pub use role::{protected_roles, Role};
 pub use sessions::{
     create_session, current_session_id, delete_session, identity_from_session, init_session_tables,

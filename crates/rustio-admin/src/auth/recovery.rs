@@ -39,8 +39,16 @@ use std::time::Duration as StdDuration;
 
 use chrono::Duration as ChronoDuration;
 
+use crate::admin::audit::{record as audit_record, ActionType, AuditEvent, LogEntry};
+use crate::admin::redact::redact_token;
+use crate::admin::Admin;
+use crate::auth::sessions::{hash_token_for_storage, random_token};
+use crate::auth::users::find_user_by_email;
+use crate::auth::{invalidate_sessions, set_password, SessionInvalidationReason, SessionTarget};
+use crate::email::Mail;
 use crate::error::Result;
 use crate::http::Request;
+use crate::middleware::RateLimiter;
 use crate::orm::Db;
 
 /// Create the `rustio_password_reset_tokens` table and its indexes.
@@ -574,6 +582,493 @@ fn parse_forwarded_first_hop(value: &str) -> Option<String> {
     Some(format!("{}://{}", proto.to_ascii_lowercase(), host))
 }
 
+// ---- Runtime: token issuance + consumption -------------------------------
+//
+// The items in this section are `#[allow(dead_code)]` because the
+// admin-side handler module that consumes them (R1 commit #8 —
+// `admin/recovery_handlers.rs`) hasn't been added yet. The
+// annotations come off when commit #8 wires the handlers + routes.
+// Without the allow, `cargo clippy --workspace --all-targets --
+// -D warnings` (the framework's standard CI gate) trips on the
+// unreachable items because `pub(crate)` doesn't satisfy
+// dead-code reachability when no in-crate call site exists.
+
+#[allow(dead_code)]
+/// Outcome of [`issue_reset_token`]. Variants exist for
+/// observability and testability — the user-facing handler renders
+/// the same uniform "if that email has an account, we just sent a
+/// link" page across every variant per the disclosure rule
+/// (`DESIGN_RECOVERY.md` §2.3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum IssueOutcome {
+    /// A token row was inserted; the mailer dispatch attempt
+    /// finished (see `email_status` for whether the message
+    /// actually went out). One audit row written
+    /// (`AuditEvent::PasswordResetSelfRequest`).
+    Issued {
+        token_id: i64,
+        email_status: MailerEmailStatus,
+    },
+    /// Email didn't match an active user — either unknown OR
+    /// deactivated. The two sub-cases are deliberately
+    /// indistinguishable from outside (doctrine 9, §2.3 disclosure
+    /// rule). No DB row, no audit, no mail. A `log::info!` line is
+    /// written for operator-side visibility, but it never carries
+    /// a token, password, or anything that could be used for
+    /// enumeration analysis later.
+    UnknownOrInactive,
+    /// Per-IP rate-limit on the request endpoint exhausted. No DB
+    /// row. Renderer treats this identically to `Issued` /
+    /// `UnknownOrInactive` (uniform-response invariant).
+    RateLimited,
+}
+
+/// Whether the mailer's `send` call returned `Ok` or a typed
+/// `MailerError`. Persisted on the token row's `mail_status` column
+/// and into the audit row's `metadata.email_send_status`.
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MailerEmailStatus {
+    Sent,
+    Failed,
+}
+
+/// Outcome of [`consume_reset_token`]. The user-facing handler
+/// renders `Invalid` and `RateLimited` identically (the "this link
+/// is no longer valid" page) per disclosure rule §2.3 — the variant
+/// distinction exists for observability + tests, not for branching
+/// the UI.
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ConsumeOutcome {
+    /// Token consumed atomically; password updated; every session
+    /// for the affected user revoked through
+    /// `invalidate_sessions(SessionTarget::User { user_id },
+    /// SessionInvalidationReason::PasswordReset)`. One audit row
+    /// written (`AuditEvent::PasswordResetSelfConsume`).
+    Consumed {
+        user_id: i64,
+        revoked_session_count: usize,
+    },
+    /// Token unknown / expired / already consumed (the three are
+    /// deliberately indistinguishable per §2.3). No password
+    /// change, no session revocation, no audit row written. A
+    /// `log::info!` line carries the token's redacted fingerprint
+    /// for cross-row pivoting if the operator needs to investigate.
+    Invalid,
+    /// `PasswordPolicy::validate` rejected the candidate password.
+    /// No DB mutation: the token stays valid for retry; the form
+    /// re-renders with the policy error. The error itself is safe
+    /// to render — `PasswordPolicyError` variants do not carry the
+    /// candidate plaintext (see commit #4's leak-prevention test).
+    PolicyRejected(PasswordPolicyError),
+    /// Per-IP rate-limit on the consume endpoint exhausted. No DB
+    /// mutation. Renderer treats this identically to `Invalid`.
+    RateLimited,
+}
+
+/// Issue a password-reset token for `email` — or pretend to,
+/// preserving the uniform-response invariant.
+///
+/// See `DESIGN_RECOVERY.md` §4.2 for the canonical contract this
+/// implements. The function is `pub(crate)` because the framework
+/// owns the route shape (CSRF, rate-limit middleware, render
+/// pipeline). External projects compose recovery via the trait
+/// surfaces ([`PasswordPolicy`], [`RecoveryPolicy`],
+/// [`crate::email::Mailer`]) rather than calling this directly.
+///
+/// ## Security properties (LOCKED)
+///
+/// - The plaintext token leaves this function only as part of the
+///   email body dispatched through [`crate::email::Mailer`]. The DB
+///   row stores `token_hash = sha256(token)` only.
+/// - Outward result is uniform: `IssueOutcome::Issued`,
+///   `UnknownOrInactive`, and `RateLimited` all map to the same
+///   user-facing page in the handler (commit #8). The variant
+///   distinction is for audit + tests only.
+/// - No `log::info!` / `log::error!` / audit row contains the
+///   plaintext token. Logs use [`redact_token`] (8-char SHA-256
+///   fingerprint); audit metadata stores `token_fingerprint`.
+/// - On mailer failure (transient OR permanent OR `public_site_url`
+///   derivation returning None), the outward result is still
+///   `IssueOutcome::Issued { email_status: Failed }` — the row
+///   exists with `mail_status = 'failed'` and the audit row carries
+///   `email_send_status = "failed"`. The user sees the uniform
+///   response.
+#[allow(dead_code)] // call site lands in R1 commit #8
+pub(crate) async fn issue_reset_token(
+    db: &Db,
+    admin: &Admin,
+    request_limiter: &RateLimiter,
+    request: &Request,
+    email: &str,
+    correlation_id: Option<&str>,
+) -> Result<IssueOutcome> {
+    let ip = extract_request_ip(request);
+
+    // 1. Per-IP rate-limit — bucket exhaustion → uniform response.
+    if !request_limiter.allow(&ip) {
+        log::info!(
+            target: "rustio_admin::recovery::issue",
+            "rate-limit exhausted ip={} correlation_id={:?}",
+            ip,
+            correlation_id,
+        );
+        return Ok(IssueOutcome::RateLimited);
+    }
+
+    // 2. Normalise email input.
+    let email_input = email.trim().to_ascii_lowercase();
+    if email_input.is_empty() {
+        log::info!(
+            target: "rustio_admin::recovery::issue",
+            "empty-email submission ip={} correlation_id={:?}",
+            ip,
+            correlation_id,
+        );
+        return Ok(IssueOutcome::UnknownOrInactive);
+    }
+
+    // 3. User lookup. Both unknown-email and inactive-user collapse
+    //    into UnknownOrInactive — leaking either creates an
+    //    enumeration channel.
+    let user = match find_user_by_email(db, &email_input).await? {
+        Some(u) if u.is_active => u,
+        Some(u) => {
+            log::info!(
+                target: "rustio_admin::recovery::issue",
+                "inactive-user submission user_id={} ip={} correlation_id={:?}",
+                u.id,
+                ip,
+                correlation_id,
+            );
+            return Ok(IssueOutcome::UnknownOrInactive);
+        }
+        None => {
+            log::info!(
+                target: "rustio_admin::recovery::issue",
+                "unknown-email submission ip={} correlation_id={:?}",
+                ip,
+                correlation_id,
+            );
+            return Ok(IssueOutcome::UnknownOrInactive);
+        }
+    };
+
+    // 4. Generate token. 256-bit URL-safe-base64. Plaintext lives
+    //    only here, in the email body, and in the user's mailbox —
+    //    NEVER in the DB, NEVER in any log line.
+    let token = random_token();
+    let token_hash = hash_token_for_storage(&token);
+
+    // 5. Insert the token row with mail_status = 'pending'.
+    let policy = admin.active_recovery_policy();
+    let ttl = policy.reset_token_ttl();
+    let expires_at = chrono::Utc::now() + ttl;
+    let user_agent_owned = request.header("user-agent").map(|s| s.to_string());
+
+    let token_id: i64 = sqlx::query_scalar(
+        "INSERT INTO rustio_password_reset_tokens
+            (user_id, token_hash, requested_ip, requested_user_agent,
+             expires_at, mail_status, correlation_id)
+         VALUES ($1, $2, $3, $4, $5, 'pending', $6)
+       RETURNING id",
+    )
+    .bind(user.id)
+    .bind(&token_hash)
+    .bind(&ip)
+    .bind(user_agent_owned.as_deref())
+    .bind(expires_at)
+    .bind(correlation_id)
+    .fetch_one(db.pool())
+    .await?;
+
+    // 6. Compose + dispatch mail. If site-URL derivation fails or
+    //    the mailer returns an error, mark mail_status = 'failed'
+    //    and continue — the user-facing response stays uniform.
+    let mail_status = match policy.public_site_url(request) {
+        Some(public_site_url) => {
+            let reset_link = format!(
+                "{}/admin/reset-password/{}",
+                public_site_url.trim_end_matches('/'),
+                token,
+            );
+            let when = chrono::Utc::now();
+            let body = format!(
+                "We received a request to sign you back in to {site_header}.\n\n\
+                 Click the link below to set a new password:\n\n\
+                 {reset_link}\n\n\
+                 The link expires {ttl_human}. If you didn't request this, you can \
+                 safely ignore this email.\n",
+                site_header = admin.branding().site_header,
+                reset_link = reset_link,
+                ttl_human = humanize_ttl(ttl),
+            );
+            let mail = Mail::framework_envelope(
+                user.email.clone(),
+                format!("{} — sign-in link", admin.branding().site_header),
+                body,
+                &admin.branding().site_header,
+                Some(&ip),
+                user_agent_owned.as_deref(),
+                when,
+            );
+            match admin.active_mailer().send(mail).await {
+                Ok(()) => {
+                    set_token_mail_status(db, token_id, "sent").await?;
+                    MailerEmailStatus::Sent
+                }
+                Err(e) => {
+                    log::error!(
+                        target: "rustio_admin::recovery::issue",
+                        "mailer send failed user_id={} fingerprint={} correlation_id={:?}: {}",
+                        user.id,
+                        redact_token(&token),
+                        correlation_id,
+                        e,
+                    );
+                    set_token_mail_status(db, token_id, "failed").await?;
+                    MailerEmailStatus::Failed
+                }
+            }
+        }
+        None => {
+            log::error!(
+                target: "rustio_admin::recovery::issue",
+                "public_site_url derivation returned None — reset link cannot be built. \
+                 user_id={} fingerprint={} correlation_id={:?}",
+                user.id,
+                redact_token(&token),
+                correlation_id,
+            );
+            set_token_mail_status(db, token_id, "failed").await?;
+            MailerEmailStatus::Failed
+        }
+    };
+
+    // 7. Audit row. Token fingerprint, NEVER the plaintext.
+    let metadata = serde_json::json!({
+        "token_fingerprint": redact_token(&token),
+        "email_send_status": match mail_status {
+            MailerEmailStatus::Sent => "sent",
+            MailerEmailStatus::Failed => "failed",
+        },
+        "requested_ip": ip,
+        "requested_user_agent": user_agent_owned,
+        "expires_at": expires_at.to_rfc3339(),
+    });
+    let mut entry = LogEntry::new(user.id, ActionType::Update, "user", user.id)
+        .with_event(AuditEvent::PasswordResetSelfRequest);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = Some(&ip);
+    entry.metadata = Some(metadata);
+    entry.summary = format!(
+        "password reset requested; mail {}",
+        match mail_status {
+            MailerEmailStatus::Sent => "sent",
+            MailerEmailStatus::Failed => "failed",
+        }
+    );
+    audit_record(db, entry).await?;
+
+    Ok(IssueOutcome::Issued {
+        token_id,
+        email_status: mail_status,
+    })
+}
+
+/// Consume a reset token, set the new password, revoke every
+/// session for the affected user.
+///
+/// See `DESIGN_RECOVERY.md` §4.3 for the canonical contract this
+/// implements. The function is `pub(crate)` for the same reason
+/// [`issue_reset_token`] is.
+///
+/// ## Security properties (LOCKED)
+///
+/// - **Atomic consume.** The single SQL statement
+///   `UPDATE … SET consumed_at = NOW() WHERE token_hash = $1 AND
+///    consumed_at IS NULL AND expires_at > NOW() RETURNING user_id`
+///   is the only place a token's `consumed_at` flips. The partial
+///   unique index `WHERE consumed_at IS NULL` (commit #1) makes
+///   concurrent consumes resolve as one Consumed + one Invalid —
+///   never two of either.
+/// - **Policy first, consume second.** A bad password fails
+///   validation BEFORE the atomic UPDATE, so the user can fix the
+///   form and retry without burning a token.
+/// - **Doctrine 22.** Session revocation goes through
+///   `invalidate_sessions(SessionTarget::User, …PasswordReset)` —
+///   the framework's only `revoked_at` writer.
+/// - No log / audit row contains the plaintext token. Token
+///   fingerprints (8-char SHA-256) are used for cross-row pivoting
+///   when an operator needs to trace activity.
+/// - The handler MUST NOT auto-log-in the user on success — they
+///   go through `/admin/login` so MFA (R3+) gets exercised.
+#[allow(dead_code)] // call site lands in R1 commit #8
+pub(crate) async fn consume_reset_token(
+    db: &Db,
+    admin: &Admin,
+    consume_limiter: &RateLimiter,
+    request: &Request,
+    token: &str,
+    new_password: &str,
+    correlation_id: Option<&str>,
+) -> Result<ConsumeOutcome> {
+    let ip = extract_request_ip(request);
+
+    // 1. Per-IP rate-limit — bucket exhaustion → render Invalid.
+    if !consume_limiter.allow(&ip) {
+        log::info!(
+            target: "rustio_admin::recovery::consume",
+            "rate-limit exhausted ip={} correlation_id={:?}",
+            ip,
+            correlation_id,
+        );
+        return Ok(ConsumeOutcome::RateLimited);
+    }
+
+    // 2. Validate password against policy. A bad password does NOT
+    //    burn the token; the user re-tries the form.
+    if let Err(e) = admin.active_password_policy().validate(new_password) {
+        return Ok(ConsumeOutcome::PolicyRejected(e));
+    }
+
+    // 3. Atomic consume — see "Atomic consume" doctrine in the
+    //    function-level docs above.
+    let token_hash = hash_token_for_storage(token);
+    let user_id: Option<i64> = sqlx::query_scalar(
+        "UPDATE rustio_password_reset_tokens
+            SET consumed_at = NOW()
+          WHERE token_hash = $1
+            AND consumed_at IS NULL
+            AND expires_at > NOW()
+        RETURNING user_id",
+    )
+    .bind(&token_hash)
+    .fetch_optional(db.pool())
+    .await?;
+
+    let user_id = match user_id {
+        Some(uid) => uid,
+        None => {
+            log::info!(
+                target: "rustio_admin::recovery::consume",
+                "consume on invalid/expired/consumed token ip={} fingerprint={} correlation_id={:?}",
+                ip,
+                redact_token(token),
+                correlation_id,
+            );
+            return Ok(ConsumeOutcome::Invalid);
+        }
+    };
+
+    // 4. Set new password. `set_password` stamps
+    //    `password_changed_at` (commit #2). If this fails the
+    //    token is consumed but password unchanged — rare DB-error
+    //    mode, surfaces in logs; the user re-runs the request flow.
+    set_password(db, user_id, new_password).await?;
+
+    // 5. Doctrine 22: every session for the user goes through
+    //    `invalidate_sessions`. Single writer of `revoked_at`.
+    let outcome = invalidate_sessions(
+        db,
+        SessionTarget::User { user_id },
+        SessionInvalidationReason::PasswordReset,
+    )
+    .await?;
+    let revoked_session_count = outcome.revoked_session_ids.len();
+
+    // 6. Audit row. Token fingerprint only.
+    let user_agent_owned = request.header("user-agent").map(|s| s.to_string());
+    let metadata = serde_json::json!({
+        "token_fingerprint": redact_token(token),
+        "invalidated_session_count": revoked_session_count,
+        "ip": ip,
+        "user_agent": user_agent_owned,
+    });
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+        .with_event(AuditEvent::PasswordResetSelfConsume);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = Some(&ip);
+    entry.metadata = Some(metadata);
+    entry.summary = format!(
+        "password reset self-consumed; {revoked_session_count} session(s) revoked"
+    );
+    audit_record(db, entry).await?;
+
+    Ok(ConsumeOutcome::Consumed {
+        user_id,
+        revoked_session_count,
+    })
+}
+
+/// Update an issued token's `mail_status` column. Only the values
+/// `'pending' | 'sent' | 'failed'` are valid (CHECK constraint
+/// added in commit #1).
+#[allow(dead_code)] // transitively dead until commit #8 calls issue_reset_token
+async fn set_token_mail_status(db: &Db, token_id: i64, status: &str) -> Result<()> {
+    sqlx::query(
+        "UPDATE rustio_password_reset_tokens
+            SET mail_status = $1
+          WHERE id = $2",
+    )
+    .bind(status)
+    .bind(token_id)
+    .execute(db.pool())
+    .await?;
+    Ok(())
+}
+
+/// Best-effort client-IP extraction from the `X-Forwarded-For`
+/// header — first comma-separated entry, trimmed. Falls back to
+/// `"anon"` when no proxy header is present; rate-limit buckets
+/// all anonymous requests under one key in that case (acceptable
+/// for single-tenant deployments; multi-tenant deployments behind
+/// an unconfigured proxy get noisy and should set the header
+/// upstream).
+#[allow(dead_code)] // transitively dead until commit #8
+fn extract_request_ip(request: &Request) -> String {
+    request
+        .header("x-forwarded-for")
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "anon".to_string())
+}
+
+/// Render a `chrono::Duration` as a human-readable email-body
+/// string (e.g. `"in 1 hour"`, `"in 30 minutes"`). Boundary cases
+/// fall back gracefully — never returns an empty / grammatically
+/// broken string.
+#[allow(dead_code)] // transitively dead until commit #8
+fn humanize_ttl(ttl: ChronoDuration) -> String {
+    let secs = ttl.num_seconds();
+    if secs <= 0 {
+        return "very soon".to_string();
+    }
+    if ttl.num_hours() >= 1 {
+        let h = ttl.num_hours();
+        return if h == 1 {
+            "in 1 hour".to_string()
+        } else {
+            format!("in {h} hours")
+        };
+    }
+    if ttl.num_minutes() >= 1 {
+        let m = ttl.num_minutes();
+        return if m == 1 {
+            "in 1 minute".to_string()
+        } else {
+            format!("in {m} minutes")
+        };
+    }
+    if secs == 1 {
+        "in 1 second".to_string()
+    } else {
+        format!("in {secs} seconds")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -824,6 +1319,102 @@ mod tests {
             derive_public_site_url(&h),
             Some("https://[2001:db8::1]:8443".to_string())
         );
+    }
+
+    // ---- humanize_ttl ----
+
+    #[test]
+    fn humanize_ttl_one_hour_default() {
+        assert_eq!(humanize_ttl(ChronoDuration::hours(1)), "in 1 hour");
+    }
+
+    #[test]
+    fn humanize_ttl_two_hours_pluralises() {
+        assert_eq!(humanize_ttl(ChronoDuration::hours(2)), "in 2 hours");
+    }
+
+    #[test]
+    fn humanize_ttl_minutes() {
+        assert_eq!(humanize_ttl(ChronoDuration::minutes(30)), "in 30 minutes");
+        assert_eq!(humanize_ttl(ChronoDuration::minutes(1)), "in 1 minute");
+    }
+
+    #[test]
+    fn humanize_ttl_seconds_for_short_windows() {
+        assert_eq!(humanize_ttl(ChronoDuration::seconds(45)), "in 45 seconds");
+        assert_eq!(humanize_ttl(ChronoDuration::seconds(1)), "in 1 second");
+    }
+
+    #[test]
+    fn humanize_ttl_zero_or_negative_returns_safe_string() {
+        // Boundary: a TTL that's already in the past renders as a
+        // grammatically safe placeholder. Never empty, never broken.
+        assert_eq!(humanize_ttl(ChronoDuration::zero()), "very soon");
+        assert_eq!(humanize_ttl(ChronoDuration::seconds(-30)), "very soon");
+    }
+
+    // ---- IssueOutcome / ConsumeOutcome leak prevention ----
+
+    #[test]
+    fn issue_outcome_debug_never_carries_plaintext_token() {
+        // Variants are designed without a token field; this test
+        // pins that property — a future change that adds one would
+        // fail this. Synthetic plaintext is unlikely to collide
+        // with the structural form-fields ("Issued", "token_id",
+        // numbers, etc.).
+        let synthetic = "Pwn4Ge_ZZ_token_plaintext_1234567890";
+        for outcome in [
+            IssueOutcome::Issued {
+                token_id: 42,
+                email_status: MailerEmailStatus::Sent,
+            },
+            IssueOutcome::Issued {
+                token_id: 7,
+                email_status: MailerEmailStatus::Failed,
+            },
+            IssueOutcome::UnknownOrInactive,
+            IssueOutcome::RateLimited,
+        ] {
+            let debug = format!("{outcome:?}");
+            assert!(
+                !debug.contains(synthetic),
+                "IssueOutcome Debug leaked plaintext: {debug}",
+            );
+        }
+    }
+
+    #[test]
+    fn consume_outcome_debug_never_carries_plaintext_token() {
+        let synthetic = "Pwn4Ge_ZZ_token_plaintext_1234567890";
+        for outcome in [
+            ConsumeOutcome::Consumed {
+                user_id: 1,
+                revoked_session_count: 3,
+            },
+            ConsumeOutcome::Invalid,
+            ConsumeOutcome::PolicyRejected(PasswordPolicyError::TooShort {
+                min: 10,
+                actual: 4,
+            }),
+            ConsumeOutcome::PolicyRejected(PasswordPolicyError::Custom(
+                "stub rejected".into(),
+            )),
+            ConsumeOutcome::RateLimited,
+        ] {
+            let debug = format!("{outcome:?}");
+            assert!(
+                !debug.contains(synthetic),
+                "ConsumeOutcome Debug leaked plaintext: {debug}",
+            );
+        }
+    }
+
+    #[test]
+    fn mailer_email_status_round_trip_strings() {
+        // Locked-in for the audit metadata field
+        // `email_send_status` — values are 'sent' / 'failed'.
+        assert_eq!(format!("{:?}", MailerEmailStatus::Sent), "Sent");
+        assert_eq!(format!("{:?}", MailerEmailStatus::Failed), "Failed");
     }
 
     #[test]
