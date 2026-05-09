@@ -12,6 +12,7 @@
 
 pub mod guards;
 mod permissions;
+mod recovery;
 mod role;
 mod sessions;
 mod users;
@@ -48,5 +49,9 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     sessions::migrate_session_schema(db).await?;
     sessions::migrate_session_lifecycle(db).await?;
     init_permission_tables(db).await?;
+    // R1 (0.5.0) — self password recovery schema. See
+    // DESIGN_RECOVERY.md §9 for the contract.
+    recovery::migrate_user_recovery_schema(db).await?;
+    recovery::init_recovery_tables(db).await?;
     Ok(())
 }
