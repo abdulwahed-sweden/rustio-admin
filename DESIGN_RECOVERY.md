@@ -849,6 +849,51 @@ if errors.is_empty() {
 
 The inline `MIN_PASSWORD_LEN` constant in `handlers.rs` is removed; the policy is the source of truth.
 
+### 14.4 Deferred to R2 — admin-edit form's password field
+
+The admin-facing `/admin/users/:id/edit` form (handler:
+`admin/builtin.rs::do_user_edit`, call site at `builtin.rs:317`)
+includes a password input. When an administrator submits the form
+with a non-empty value, the handler calls `auth::set_password` for
+the target user. The path is a doctrine-22 spirit-violation that
+predates R0:
+
+- The target user's other sessions are NOT invalidated. They keep
+  using the previously-issued cookie until it naturally expires.
+- `must_change_password` is NOT set (the column doesn't exist
+  before R1 commit #1; even with the column present, the path
+  doesn't write it).
+- No typed `PasswordResetByOther` audit row is emitted. The
+  surrounding handler writes a generic user-update row that
+  includes the role / active diff but does not separately mark
+  "password was reset".
+
+R1 commit #2 made the drift *measurable* — every call to
+`set_password` now stamps `password_changed_at`, so the active-
+sessions UI will surface the timestamp regardless of which path
+mutated the row. The behavioural drift itself is **deferred to
+R2**, where the dedicated `/admin/users/:id/reset-password`
+recovery route lands with the correct semantics:
+
+- mandatory reason field;
+- generates a temporary password;
+- sets `must_change_password = TRUE`;
+- calls `invalidate_sessions(SessionTarget::User { user_id },
+  SessionInvalidationReason::PasswordResetByOther)`;
+- writes one `AuditEvent::PasswordResetByOther` row plus one
+  `SessionsRevokedByOther` per revoked session.
+
+**Open R2 design question:** once the dedicated reset route exists,
+either remove the password field from the generic edit form
+(recommended — the dedicated route is the doctrinally-correct
+surface) or route the form's password mutation through the same
+recovery pipeline. Either choice is consistent with doctrine 22;
+the form-field-removed option is cleaner and avoids two
+overlapping admin-driven password mutation paths.
+
+A `TODO(R2)` comment lives at the call site so the deferral
+doesn't get lost. R1 does not modify the call.
+
 ### 14.3 The active-sessions page revoke buttons
 
 `handlers.rs::show_account_sessions` already renders the page; R1 adds three new handlers next to it:
