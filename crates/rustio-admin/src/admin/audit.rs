@@ -149,7 +149,32 @@ pub struct LogEntry<'a> {
     /// emergency actions write `None`.
     pub session_id: Option<i64>,
     /// Structured before/after / extra metadata. JSONB column.
+    /// R2 emissions populate this with an *object* (not a scalar
+    /// or array) — the merge layer in [`record`] inserts
+    /// `actor_user_id` and similar typed sidecars into the object
+    /// before persistence, and a non-object value disables that
+    /// merge (the row still writes; a warning is logged).
     pub metadata: Option<serde_json::Value>,
+    /// The acting principal when this row records one user
+    /// performing an action on another (admin password reset,
+    /// admin lock/unlock, admin revoke-sessions, etc.). Persisted
+    /// under `metadata.actor_user_id` — the column itself doesn't
+    /// change.
+    ///
+    /// R2 emissions set this via [`LogEntry::with_actor`]; R0/R1
+    /// emissions leave it `None`. The legacy [`Self::user_id`]
+    /// field continues to carry the actor for backwards-compat
+    /// with `/admin/history`'s "who did what" view; `actor_user_id`
+    /// is the typed mirror that lets metadata consumers (SIEM,
+    /// future per-user audit pivots) read the actor without
+    /// relying on heuristics about which row-shape sets
+    /// `user_id` to actor vs. target.
+    ///
+    /// When `Some(id)` is set and `metadata` is also `Some(obj)`,
+    /// [`record`] inserts the key into the object. If the existing
+    /// metadata already contains `actor_user_id`, the typed-field
+    /// value wins — the struct field is the source of truth.
+    pub actor_user_id: Option<i64>,
     /// When `Some`, supersedes `action_type.as_str()` as the
     /// persisted `rustio_admin_actions.action_type` string. Set via
     /// [`LogEntry::with_event`]; the `action_type` field becomes a
@@ -175,8 +200,29 @@ impl<'a> LogEntry<'a> {
             correlation_id: None,
             session_id: None,
             metadata: None,
+            actor_user_id: None,
             event: None,
         }
+    }
+
+    /// Mark this entry as an admin acting on another user. The id
+    /// is persisted under `metadata.actor_user_id` by [`record`],
+    /// not as a separate column. Pair with `.with_event(...)` for
+    /// the canonical R2 admin-action shape, e.g.
+    ///
+    /// ```ignore
+    /// LogEntry::new(target_id, ActionType::Update, "user", target_id)
+    ///     .with_event(AuditEvent::PasswordResetByOther)
+    ///     .with_actor(admin_identity.user_id)
+    /// ```
+    ///
+    /// Auto-throttle (no actor) leaves this `None`; the row's
+    /// `user_id` column carries the affected user as the
+    /// closest-reasonable subject. See `DESIGN_R2_ORGANISATIONAL.md`
+    /// §5.2.
+    pub fn with_actor(mut self, actor_user_id: i64) -> Self {
+        self.actor_user_id = Some(actor_user_id);
+        self
     }
 
     /// Promote this entry's persisted `action_type` string from the
@@ -213,6 +259,51 @@ impl<'a> LogEntry<'a> {
     }
 }
 
+/// Merge `actor_user_id` into the persisted `metadata` JSONB column.
+///
+/// - When `actor_user_id` is `None`: returns `metadata` unchanged.
+/// - When `actor_user_id` is `Some(id)` and `metadata` is `None`:
+///   synthesizes `{"actor_user_id": id}`.
+/// - When `actor_user_id` is `Some(id)` and `metadata` is
+///   `Some(object)`: inserts the key, replacing any existing
+///   `actor_user_id` (the typed field wins — it is the source of
+///   truth for the actor association).
+/// - When `actor_user_id` is `Some(id)` and `metadata` is
+///   `Some(scalar | array)`: returns the original metadata
+///   unchanged and emits a `log::warn!`. The merge requires an
+///   object; non-object metadata is a programming error and the
+///   audit row is preferable to silent loss.
+///
+/// Pulled out as a free function so the merge contract is
+/// unit-testable without a database.
+fn build_persisted_metadata(
+    metadata: Option<serde_json::Value>,
+    actor_user_id: Option<i64>,
+) -> Option<serde_json::Value> {
+    let actor = match actor_user_id {
+        None => return metadata,
+        Some(id) => id,
+    };
+
+    match metadata {
+        None => Some(serde_json::json!({ "actor_user_id": actor })),
+        Some(mut value) => {
+            if let Some(obj) = value.as_object_mut() {
+                obj.insert("actor_user_id".to_string(), serde_json::json!(actor));
+                Some(value)
+            } else {
+                log::warn!(
+                    "audit::record: actor_user_id={} set but metadata is not a JSON object \
+                     ({:?}); writing row without merging actor — fix the call site",
+                    actor,
+                    value
+                );
+                Some(value)
+            }
+        }
+    }
+}
+
 /// Write one row to the action log. Validates required fields before
 /// touching the DB so a broken audit pipeline becomes visible.
 pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
@@ -232,6 +323,7 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
 
     let now = Utc::now();
     let action_type_str = entry.resolved_action_type();
+    let metadata = build_persisted_metadata(entry.metadata, entry.actor_user_id);
     sqlx::query(
         "INSERT INTO rustio_admin_actions
              (user_id, action_type, model_name, object_id, timestamp, ip_address, summary,
@@ -247,7 +339,7 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     .bind(&entry.summary)
     .bind(entry.correlation_id)
     .bind(entry.session_id)
-    .bind(entry.metadata.as_ref())
+    .bind(metadata.as_ref())
     .execute(db.pool())
     .await?;
     Ok(())
@@ -626,6 +718,90 @@ mod tests {
         let entry = LogEntry::new(1, ActionType::Create, "post", 99);
         assert!(entry.event.is_none());
         assert_eq!(entry.resolved_action_type(), "create");
+    }
+
+    // ---- LogEntry::with_actor + build_persisted_metadata (R2 #7) -----------
+
+    #[test]
+    fn log_entry_with_actor_sets_field() {
+        let entry = LogEntry::new(1, ActionType::Update, "user", 1).with_actor(7);
+        assert_eq!(entry.actor_user_id, Some(7));
+    }
+
+    #[test]
+    fn log_entry_default_actor_user_id_is_none() {
+        // R0/R1 emissions leave actor_user_id None — only R2 admin
+        // actions opt in via .with_actor(...).
+        let entry = LogEntry::new(1, ActionType::Update, "user", 1);
+        assert!(entry.actor_user_id.is_none());
+    }
+
+    #[test]
+    fn merge_returns_metadata_unchanged_when_no_actor() {
+        // None actor means no merge — even an existing
+        // actor_user_id key in the input is preserved verbatim.
+        let original = serde_json::json!({"reason": "x", "actor_user_id": 99});
+        let out = build_persisted_metadata(Some(original.clone()), None);
+        assert_eq!(out.unwrap(), original);
+
+        // None metadata + None actor → None.
+        assert!(build_persisted_metadata(None, None).is_none());
+    }
+
+    #[test]
+    fn merge_synthesizes_object_when_metadata_is_none() {
+        let out = build_persisted_metadata(None, Some(7)).unwrap();
+        assert_eq!(out, serde_json::json!({"actor_user_id": 7}));
+    }
+
+    #[test]
+    fn merge_inserts_into_existing_object() {
+        let input = serde_json::json!({"reason": "support ticket", "mode": "email"});
+        let out = build_persisted_metadata(Some(input), Some(7)).unwrap();
+        assert_eq!(
+            out,
+            serde_json::json!({
+                "reason": "support ticket",
+                "mode": "email",
+                "actor_user_id": 7
+            })
+        );
+    }
+
+    #[test]
+    fn merge_typed_actor_wins_over_existing_metadata_key() {
+        // Doctrine: the LogEntry struct field is the source of
+        // truth for the actor association. A handler that puts
+        // actor_user_id directly into metadata gets overridden
+        // when it also sets the typed field — preventing
+        // accidental inconsistency between the JSON key and the
+        // struct.
+        let input = serde_json::json!({"actor_user_id": 999, "extra": "x"});
+        let out = build_persisted_metadata(Some(input), Some(7)).unwrap();
+        assert_eq!(
+            out,
+            serde_json::json!({"actor_user_id": 7, "extra": "x"})
+        );
+    }
+
+    #[test]
+    fn merge_passes_through_non_object_metadata_with_warning() {
+        // Non-object metadata is a programming bug. The merge
+        // returns the original value unchanged so the row still
+        // writes (audit-row-loss is worse than missing actor
+        // metadata); a log::warn in the runtime path surfaces
+        // the bug. Here we just assert the row preserves shape.
+        let input = serde_json::json!(42);
+        let out = build_persisted_metadata(Some(input.clone()), Some(7)).unwrap();
+        assert_eq!(out, input);
+
+        let input = serde_json::json!(["a", "b"]);
+        let out = build_persisted_metadata(Some(input.clone()), Some(7)).unwrap();
+        assert_eq!(out, input);
+
+        let input = serde_json::json!("scalar");
+        let out = build_persisted_metadata(Some(input.clone()), Some(7)).unwrap();
+        assert_eq!(out, input);
     }
 
     /// The legacy `ActionType::parse` is a partial parser — it only

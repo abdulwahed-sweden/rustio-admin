@@ -369,6 +369,7 @@ pub(crate) async fn do_user_edit(
             correlation_id: cid.as_deref(),
             session_id: None,
             metadata: None,
+            actor_user_id: None,
             event: None,
         },
     )
@@ -987,6 +988,7 @@ pub(crate) async fn do_user_delete(
             correlation_id: cid.as_deref(),
             session_id: None,
             metadata: None,
+            actor_user_id: None,
             event: None,
         },
     )
@@ -1318,6 +1320,7 @@ pub(crate) async fn do_group_edit(
             correlation_id: cid.as_deref(),
             session_id: None,
             metadata: None,
+            actor_user_id: None,
             event: None,
         },
     )
@@ -1438,6 +1441,7 @@ pub(crate) async fn do_group_delete(
             correlation_id: cid.as_deref(),
             session_id: None,
             metadata: None,
+            actor_user_id: None,
             event: None,
         },
     )
@@ -1600,6 +1604,7 @@ pub(crate) async fn do_new_user(
                 correlation_id: cid.as_deref(),
                 session_id: None,
                 metadata: None,
+                actor_user_id: None,
                 event: None,
             },
         )
@@ -1733,6 +1738,7 @@ pub(crate) async fn do_new_group(
                         correlation_id: cid.as_deref(),
                         session_id: None,
                         metadata: None,
+                        actor_user_id: None,
                         event: None,
                     },
                 )
