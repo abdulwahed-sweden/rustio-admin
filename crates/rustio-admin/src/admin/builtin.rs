@@ -161,7 +161,6 @@ struct UserEditCtx {
     /// be rejected by `do_user_edit`.
     is_last_developer: bool,
     identity_sections: Vec<render::FormSection>,
-    password_sections: Vec<render::FormSection>,
 }
 
 #[derive(Serialize)]
@@ -229,7 +228,6 @@ pub(crate) async fn show_user_edit(
             is_active_val,
             identity.role.rank(),
         ),
-        password_sections: render::user_edit_password_sections(),
         email: email_str,
         role: role_str,
         is_active: is_active_val,
@@ -266,11 +264,6 @@ pub(crate) async fn do_user_edit(
             }
         }
     }
-    let new_password = form
-        .get("new_password")
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-
     // ---- Authority guards -------------------------------------------------
     // Order: pure rank checks first (cheap, no DB), then the orphan
     // check (one query). All guards return `Error::Forbidden` so the
@@ -313,21 +306,17 @@ pub(crate) async fn do_user_edit(
         auth::add_user_to_group(&ctx.db, user_id, *gid).await?;
     }
 
-    if !new_password.is_empty() {
-        // TODO(R2): the generic admin-edit form's password field is a
-        // doctrine-22 spirit-violation. It changes another user's
-        // password without invalidating their sessions, without
-        // setting `must_change_password`, and without a typed
-        // `PasswordResetByOther` audit row. R2 introduces the
-        // dedicated `/admin/users/:id/reset-password` recovery route
-        // with the correct semantics; once it ships this code path
-        // either routes through the same recovery pipeline or is
-        // removed entirely. See `DESIGN_RECOVERY.md` §14.4 for the
-        // full callout. R1 leaves the path untouched (set_password
-        // now stamps `password_changed_at` for it automatically per
-        // §14.1) so R2 owns the recovery semantics in one place.
-        auth::set_password(&ctx.db, user_id, &new_password).await?;
-    }
+    // The pre-R2 inline `new_password` field on this form is gone
+    // (DESIGN_RECOVERY.md §14.4 + DESIGN_R2_ORGANISATIONAL.md §11
+    // commit #4): admin-driven password resets now go through the
+    // dedicated /admin/users/:id/reset-password route (commit #15)
+    // which enforces the correct doctrine-22 semantics — typed
+    // PasswordResetByOther audit row, must_change_password = TRUE,
+    // and `invalidate_sessions(SessionTarget::User, ...,
+    // PasswordResetByOther)`. The generic edit form is intentionally
+    // *unable* to mutate passwords; this prevents the two
+    // overlapping admin-driven password mutation paths from drifting
+    // again.
 
     // ---- Audit ------------------------------------------------------------
     let mut summary = format!(
@@ -365,9 +354,6 @@ pub(crate) async fn do_user_edit(
                 .collect::<Vec<_>>()
                 .join(",")
         ));
-    }
-    if !new_password.is_empty() {
-        summary.push_str("; password reset");
     }
     let ip = client_ip(&req);
     let cid = correlation_id_from(&req);

@@ -51,15 +51,6 @@
     {% endif %}
   </fieldset>
 
-  {% for section in password_sections %}
-  <fieldset class="rio-fieldset">
-    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
-    <div class="rio-fieldset-grid">
-      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
-    </div>
-  </fieldset>
-  {% endfor %}
-
   <div class="rio-form-actions">
     <button type="submit" class="rio-button rio-button--primary">Save changes</button>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
