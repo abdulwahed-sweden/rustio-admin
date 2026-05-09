@@ -170,12 +170,64 @@ fn perm_for(ctx: &AdminCtx, admin_name: &str, action: &str) -> Result<String> {
     Ok(format!("{admin_name}.{action}_{singular}"))
 }
 
+/// Pure verdict for the R1 strict-mailer boot guard
+/// (`DESIGN_RECOVERY.md` §12.1). Returns an operator-facing error
+/// string when the policy demands a real mailer but `Admin::new()`'s
+/// default `LogMailer` is still in place; returns `Ok(())`
+/// otherwise.
+///
+/// Detection is deterministic and structural: it reads
+/// [`Admin::has_custom_mailer`] (set whenever
+/// [`Admin::mailer`] has been called). No `Arc::ptr_eq` against a
+/// freshly-constructed `LogMailer`; no environment heuristics; no
+/// hostname checks; no "production mode" guessing — the operator
+/// declares intent by calling `Admin::mailer(...)` (and opts the
+/// policy in via `RecoveryPolicy::strict_mailer_required(true)`).
+///
+/// The framework treats an explicit `Admin::mailer(...)` call as
+/// satisfying the guard even when the supplied mailer is itself a
+/// `LogMailer` — this is the documented escape hatch for projects
+/// that want to silence the guard during a migration window
+/// without yet wiring a real transport.
+fn strict_mailer_guard_check(admin: &Admin) -> std::result::Result<(), String> {
+    if admin.active_recovery_policy().strict_mailer_required() && !admin.has_custom_mailer() {
+        Err(
+            "rustio-admin: RecoveryPolicy::strict_mailer_required() = true but no mailer \
+             was registered via Admin::mailer(...).\n\n\
+             The framework's default LogMailer writes recovery emails to log::info! instead \
+             of sending them, which is unsuitable for production. Recovery routes are NOT \
+             registered with this configuration.\n\n\
+             To resolve, choose one:\n\
+              (a) register a real mailer before calling register_admin_routes:\n\
+                  Admin::mailer(Arc::new(MyProjectMailer::new(...)))\n\
+              (b) opt the policy out of strict mode (the framework default — dev / CI / \
+                  testing baseline):\n\
+                  RecoveryPolicy::strict_mailer_required(false)\n\n\
+             See DESIGN_RECOVERY.md §12.1 for the contract."
+                .to_string(),
+        )
+    } else {
+        Ok(())
+    }
+}
+
 pub fn register_admin_routes(
     router: Router,
     admin: Admin,
     db: Db,
     templates: Arc<Templates>,
 ) -> Router {
+    // R1 commit #9 — strict-mailer boot guard. Runs BEFORE any
+    // route registration so a misconfigured deployment fails
+    // loudly at startup rather than registering recovery routes
+    // against a production-unsafe default mailer
+    // (`DESIGN_RECOVERY.md` §12.1). The check is structural: see
+    // [`strict_mailer_guard_check`] for why we don't do
+    // pointer-equality tricks against the default LogMailer.
+    if let Err(msg) = strict_mailer_guard_check(&admin) {
+        panic!("{msg}");
+    }
+
     let ctx = Arc::new(AdminCtx::new(
         Arc::new(admin),
         db.clone(),
@@ -286,6 +338,72 @@ pub fn register_admin_routes(
     let router = router.post("/admin/logout", move |req| {
         let c = c.clone();
         async move { handlers::do_logout(&c, req).await }
+    });
+
+    // === R1 recovery routes ====================================
+    //
+    // MUST be registered BEFORE the `/admin/:admin_name` model
+    // wildcards lower down — without that ordering, a request to
+    // `/admin/forgot-password` would match `:admin_name =
+    // "forgot-password"` and route into the model CRUD handler.
+    //
+    // Recovery state (the rate-limit buckets) is built once here
+    // and cloned into each route closure so the buckets persist
+    // for the process lifetime. No global / static / OnceLock —
+    // the Arc lives in the closures.
+    //
+    // Strict-mailer boot guard already ran at the top of this fn
+    // (would have panicked if misconfigured); reaching this block
+    // means we have the operator's blessing to wire recovery.
+
+    let recovery_state = Arc::new(super::recovery_handlers::RecoveryState::from_admin(
+        &ctx.admin,
+    ));
+
+    let c = ctx.clone();
+    let router = router.get("/admin/forgot-password", move |req| {
+        let c = c.clone();
+        async move { super::recovery_handlers::show_forgot_password(&c, &req).await }
+    });
+
+    let c = ctx.clone();
+    let rs = recovery_state.clone();
+    let router = router.post("/admin/forgot-password", move |req| {
+        let c = c.clone();
+        let rs = rs.clone();
+        async move { super::recovery_handlers::do_forgot_password(&c, &rs, req).await }
+    });
+
+    let c = ctx.clone();
+    let router = router.get("/admin/forgot-password/sent", move |req| {
+        let c = c.clone();
+        async move { super::recovery_handlers::show_forgot_password_sent(&c, &req).await }
+    });
+
+    let c = ctx.clone();
+    let router = router.get("/admin/reset-password/:token", move |req| {
+        let c = c.clone();
+        async move {
+            let token = req
+                .param("token")
+                .ok_or_else(|| Error::BadRequest("missing token".into()))?
+                .to_string();
+            super::recovery_handlers::show_reset_password(&c, &req, &token).await
+        }
+    });
+
+    let c = ctx.clone();
+    let rs = recovery_state.clone();
+    let router = router.post("/admin/reset-password/:token", move |req| {
+        let c = c.clone();
+        let rs = rs.clone();
+        async move {
+            let token = req
+                .param("token")
+                .ok_or_else(|| Error::BadRequest("missing token".into()))?
+                .to_string();
+            super::recovery_handlers::do_reset_password(&c, &rs, req, &token).await
+        }
     });
 
     // Dashboard — Staff floor. User-tier sees the forbidden page.
@@ -855,5 +973,58 @@ mod tests {
         // Supervisor doesn't bypass; needs the per-model perm.
         let id = make_identity(Role::Supervisor, true);
         assert!(!perm_guard_verdict(&id, false));
+    }
+
+    // ---- strict_mailer_guard_check ----------------------------------------
+
+    /// Default `Admin::new()` doesn't override the mailer AND
+    /// doesn't enable strict mode — the guard passes.
+    #[test]
+    fn strict_mailer_guard_passes_for_default_admin() {
+        let admin = super::super::types::Admin::new();
+        assert!(strict_mailer_guard_check(&admin).is_ok());
+    }
+
+    /// Strict-mailer mode + default LogMailer = boot guard fires.
+    /// The error message is operator-actionable.
+    #[test]
+    fn strict_mailer_guard_fails_when_required_but_default_mailer() {
+        use crate::auth::DefaultRecoveryPolicy;
+        let admin = super::super::types::Admin::new().recovery_policy(std::sync::Arc::new(
+            DefaultRecoveryPolicy::new().with_strict_mailer_required(true),
+        ));
+        let err = strict_mailer_guard_check(&admin).expect_err("guard should fail");
+        assert!(
+            err.contains("strict_mailer_required"),
+            "error message must name the policy method: {err}"
+        );
+        assert!(
+            err.contains("Admin::mailer"),
+            "error message must direct the operator to the fix: {err}"
+        );
+    }
+
+    /// Strict-mailer mode + project-supplied mailer = guard passes.
+    /// Note: the explicit override flips the flag even when the
+    /// supplied value happens to be another LogMailer — the
+    /// operator's intent is what matters, not the concrete type.
+    #[test]
+    fn strict_mailer_guard_passes_when_mailer_was_explicitly_overridden() {
+        use crate::auth::DefaultRecoveryPolicy;
+        use crate::email::LogMailer;
+        let admin = super::super::types::Admin::new()
+            .recovery_policy(std::sync::Arc::new(
+                DefaultRecoveryPolicy::new().with_strict_mailer_required(true),
+            ))
+            .mailer(std::sync::Arc::new(LogMailer));
+        assert!(strict_mailer_guard_check(&admin).is_ok());
+    }
+
+    /// Project NOT in strict mode + default LogMailer = passes
+    /// (dev / CI / testing baseline).
+    #[test]
+    fn strict_mailer_guard_passes_when_strict_mode_disabled() {
+        let admin = super::super::types::Admin::new();
+        assert!(strict_mailer_guard_check(&admin).is_ok());
     }
 }

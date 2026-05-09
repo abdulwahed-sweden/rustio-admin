@@ -37,13 +37,6 @@
 //! - **`do_password_change` drift correction** is commit #11.
 //! - **Token sweeper** is commit #12.
 
-// Items in this module are unreferenced until R1 commit #9 wires
-// them into the router. The file-level allow avoids spamming
-// `cargo clippy --workspace --all-targets -- -D warnings` (the
-// framework's CI gate) with one warning per handler / context /
-// builder. The annotation comes off in commit #9.
-#![allow(dead_code)]
-
 use std::sync::Arc;
 
 use serde::Serialize;

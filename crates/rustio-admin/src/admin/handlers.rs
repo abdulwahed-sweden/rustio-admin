@@ -83,17 +83,19 @@ pub(super) fn csrf_token(req: &Request) -> String {
 }
 
 pub(crate) async fn show_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
-    // When the user just signed out, `do_logout` redirects here with
-    // `?logout=1`. Surface a green confirmation banner so the click
-    // feels acknowledged.
-    let flash = if req.query().get("logout").is_some() {
-        Some(render::FlashCtx {
-            kind: "success",
-            message: "You've been signed out.".to_string(),
-        })
-    } else {
-        None
-    };
+    // The login page surfaces two non-error flashes:
+    //
+    //  - `?logout=1`             — the user just signed out (`do_logout`
+    //                              redirects here).
+    //  - `?password_reset=success` — the user just consumed a recovery
+    //                              link in `do_reset_password`
+    //                              (R1 commit #8).
+    //
+    // Logic factored into the pure helper [`login_flash_for_query`] so
+    // the precedence + wording can be unit-tested without constructing
+    // a Request.
+    let q = req.query();
+    let flash = login_flash_for_query(q.get("logout").is_some(), q.get("password_reset"));
     let body = ctx.templates.render(
         "admin/login.html",
         &render::LoginCtx {
@@ -104,6 +106,87 @@ pub(crate) async fn show_login(ctx: &AdminCtx, req: Request) -> Result<Response>
         },
     )?;
     Ok(Response::html(body))
+}
+
+/// Pure verdict for the login page's flash banner.
+///
+/// Precedence: `logout` wins over `password_reset` when both query
+/// flags are present (matches user mental model — the most recent
+/// action is logout, since password-reset success ALSO routes through
+/// /admin/login but doesn't carry a logout flag). Unknown
+/// `password_reset` values fall through silently.
+pub(super) fn login_flash_for_query(
+    logout_present: bool,
+    password_reset: Option<&str>,
+) -> Option<render::FlashCtx> {
+    if logout_present {
+        return Some(render::FlashCtx {
+            kind: "success",
+            message: "You've been signed out.".to_string(),
+        });
+    }
+    if password_reset == Some("success") {
+        return Some(render::FlashCtx {
+            kind: "success",
+            message: "Your password has been updated. Sign in with your new password."
+                .to_string(),
+        });
+    }
+    None
+}
+
+#[cfg(test)]
+mod login_flash_tests {
+    use super::login_flash_for_query;
+
+    #[test]
+    fn no_query_params_produces_no_flash() {
+        assert!(login_flash_for_query(false, None).is_none());
+    }
+
+    #[test]
+    fn logout_flag_produces_signed_out_flash() {
+        let f = login_flash_for_query(true, None).expect("logout produces flash");
+        assert_eq!(f.kind, "success");
+        assert!(
+            f.message.contains("signed out"),
+            "logout flash missing expected wording: {}",
+            f.message
+        );
+    }
+
+    #[test]
+    fn password_reset_success_produces_locked_flash_copy() {
+        let f = login_flash_for_query(false, Some("success")).expect("reset success → flash");
+        assert_eq!(f.kind, "success");
+        // Locked copy from DESIGN_RECOVERY.md commit #9 spec.
+        assert_eq!(
+            f.message,
+            "Your password has been updated. Sign in with your new password."
+        );
+    }
+
+    #[test]
+    fn unknown_password_reset_value_falls_through_silently() {
+        // Defensive: only the literal "success" triggers the banner.
+        // "garbage" and arbitrary user input must not produce a flash.
+        assert!(login_flash_for_query(false, Some("garbage")).is_none());
+        assert!(login_flash_for_query(false, Some("")).is_none());
+        assert!(login_flash_for_query(false, Some("Success")).is_none()); // case-sensitive
+    }
+
+    #[test]
+    fn logout_takes_precedence_over_password_reset_when_both_present() {
+        // Edge case: query carries both flags. The most recent action
+        // is logout (post-reset success ALSO routes through login but
+        // doesn't itself carry a logout flag), so logout wording wins.
+        let f = login_flash_for_query(true, Some("success")).expect("flash present");
+        assert!(
+            f.message.contains("signed out"),
+            "expected logout wording when both flags present: {}",
+            f.message
+        );
+    }
 }
 
 pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {

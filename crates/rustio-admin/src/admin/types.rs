@@ -427,12 +427,20 @@ pub struct Admin {
     /// The outbound-mail handle. Defaults to [`LogMailer`]; projects
     /// override via [`Admin::mailer`]. R1+ recovery flows
     /// (`DESIGN_RECOVERY.md` §12) read this to dispatch reset emails;
-    /// no current 0.5.0 code path reads it directly until
-    /// `auth::recovery::issue_reset_token` lands in commit #7. Held
-    /// as `Arc<dyn Mailer>` so cloning the field is a single
-    /// reference-count bump and the field stays trivially Send +
-    /// Sync (the trait's supertraits are `Send + Sync`).
+    /// `auth::recovery::issue_reset_token` (R1 commit #7) reads it
+    /// at runtime. Held as `Arc<dyn Mailer>` so cloning the field is
+    /// a single reference-count bump and the field stays trivially
+    /// Send + Sync (the trait's supertraits are `Send + Sync`).
     pub(crate) mailer: SharedMailer,
+    /// Whether [`Admin::mailer`] has been called to replace the
+    /// default `LogMailer`. Used by the R1 commit #9 strict-mailer
+    /// boot guard to decide whether the project's deployment is
+    /// production-ready (see [`Admin::has_custom_mailer`]). Flipped
+    /// to `true` on any call to `mailer(...)`, including a call
+    /// that re-registers a `LogMailer` instance — explicit operator
+    /// override is enough; the framework does not peek inside the
+    /// trait object.
+    pub(crate) mailer_overridden: bool,
     /// The active password policy. Defaults to
     /// [`DefaultPasswordPolicy::new`] (`min_len = 10`); projects
     /// override via [`Admin::password_policy`]. Read by R1's reset
@@ -473,6 +481,7 @@ impl Admin {
             user_profile_ext: None,
             theme: AdminTheme::default(),
             mailer: Arc::new(LogMailer),
+            mailer_overridden: false,
             password_policy: Arc::new(DefaultPasswordPolicy::new()),
             recovery_policy: Arc::new(DefaultRecoveryPolicy::new()),
         }
@@ -537,6 +546,7 @@ impl Admin {
     /// emails through it.
     pub fn mailer(mut self, mailer: SharedMailer) -> Self {
         self.mailer = mailer;
+        self.mailer_overridden = true;
         self
     }
 
@@ -547,6 +557,22 @@ impl Admin {
     /// default, so this never returns `None`.
     pub fn active_mailer(&self) -> &SharedMailer {
         &self.mailer
+    }
+
+    /// Whether the project explicitly called [`Self::mailer`] to
+    /// register a mailer. Returns `false` for `Admin::new()` (the
+    /// framework's `LogMailer` default is in place); flips to `true`
+    /// on any subsequent call to `mailer(...)`, regardless of the
+    /// concrete type supplied — the framework trusts the operator's
+    /// explicit override.
+    ///
+    /// Read by the R1 strict-mailer boot guard: when
+    /// `RecoveryPolicy::strict_mailer_required() == true` and this
+    /// returns `false`, `register_admin_routes` panics at startup
+    /// rather than registering the recovery routes against a
+    /// production-unsafe default mailer.
+    pub fn has_custom_mailer(&self) -> bool {
+        self.mailer_overridden
     }
 
     /// Replace the active password policy. R1 ships with the
@@ -881,6 +907,20 @@ mod tests {
         assert_eq!(p.request_rate_limit(), (5, std::time::Duration::from_secs(15 * 60)));
         assert_eq!(p.consume_rate_limit(), (10, std::time::Duration::from_secs(5 * 60)));
         assert!(!p.strict_mailer_required());
+    }
+
+    #[test]
+    fn admin_new_has_no_custom_mailer() {
+        let admin = Admin::new();
+        assert!(!admin.has_custom_mailer());
+    }
+
+    #[test]
+    fn admin_mailer_builder_flips_override_flag() {
+        // Even when the override happens to register another LogMailer,
+        // the explicit call is what the strict-mailer guard reads.
+        let admin = Admin::new().mailer(Arc::new(crate::email::LogMailer));
+        assert!(admin.has_custom_mailer());
     }
 
     #[test]
