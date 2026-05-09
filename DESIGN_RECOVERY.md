@@ -597,14 +597,32 @@ pub trait RecoveryPolicy: Send + Sync {
     fn reset_token_ttl(&self) -> chrono::Duration;
     fn request_rate_limit(&self) -> (u32, std::time::Duration);
     fn consume_rate_limit(&self) -> (u32, std::time::Duration);
+    fn strict_mailer_required(&self) -> bool;
+    // Provided default delegates to `derive_public_site_url` (see §12.3).
+    fn public_site_url(&self, req: &Request) -> Option<String> { … }
 }
 
-pub struct DefaultRecoveryPolicy;
-impl RecoveryPolicy for DefaultRecoveryPolicy {
-    fn reset_token_ttl(&self) -> chrono::Duration { chrono::Duration::hours(1) }
-    fn request_rate_limit(&self) -> (u32, std::time::Duration) { (5, Duration::from_secs(900)) }
-    fn consume_rate_limit(&self) -> (u32, std::time::Duration) { (10, Duration::from_secs(300)) }
+pub struct DefaultRecoveryPolicy {
+    pub reset_token_ttl: chrono::Duration,
+    pub request_rate_limit: (u32, std::time::Duration),
+    pub consume_rate_limit: (u32, std::time::Duration),
+    pub strict_mailer_required: bool,
 }
+
+impl DefaultRecoveryPolicy {
+    pub fn new() -> Self { /* TTL 1h, request 5/15min, consume 10/5min, strict off */ }
+    pub fn with_reset_token_ttl(self, ttl: chrono::Duration) -> Self;
+    pub fn with_request_rate_limit(self, capacity: u32, window: std::time::Duration) -> Self;
+    pub fn with_consume_rate_limit(self, capacity: u32, window: std::time::Duration) -> Self;
+    pub fn with_strict_mailer_required(self, required: bool) -> Self;
+}
+
+impl RecoveryPolicy for DefaultRecoveryPolicy { /* fields → trait getters */ }
+```
+
+`SharedRecoveryPolicy = Arc<dyn RecoveryPolicy>` mirrors
+`SharedPasswordPolicy` / `SharedMailer` so the field on `Admin`
+clones cheaply and stays trivially Send + Sync.
 
 // the actual flow functions
 pub(crate) async fn issue_reset_token(...) -> Result<()>;
@@ -719,9 +737,27 @@ The framework envelope appends the canonical "When / From IP / Device / If this 
 
 ### 12.3 Site URL derivation
 
-`recovery_policy.public_site_url(req)` resolves the absolute base URL for the reset link. Default implementation: read `Forwarded` / `X-Forwarded-Proto` + `Host` headers, fall back to `http://{host}`. Projects override via `RecoveryPolicy::public_site_url(...)` if their reverse proxy doesn't set those headers.
+`recovery_policy.public_site_url(req)` resolves the absolute base URL for the reset link. Default implementation (`auth::recovery::derive_public_site_url`): priority-ordered header scan —
+
+1. **RFC 7239 `Forwarded`** — first comma-separated entry's `proto=` + `host=` pair.
+2. **`X-Forwarded-Proto` + `X-Forwarded-Host`** — first CSV entry of each. Both required to fall through if either's missing.
+3. **`Host`** — fall back with `http://`. (No HTTPS guesswork; the framework refuses to fabricate proto information.)
+
+`proto` is whitelisted to `{http, https}` (case-insensitive); `host` rejects empty / over-long / whitespace / control-character / CRLF inputs. Malformed values fall through to the next source rather than panic.
+
+**Trust boundary (LOCKED).** The default implementation honours these client-supplied inputs in the order above. **The operator's reverse proxy MUST strip incoming versions of these headers before adding its own.** The framework cannot know the deployment topology; if a hostile client can reach the process directly with `Forwarded: …` already set, the reset link in the dispatched email points wherever they ask.
+
+The framework's defences are limited to:
+
+- proto whitelist (no `javascript:` / `file:` / `data:` injection)
+- host charset restriction (no `\r\n` header smuggling)
+- length cap (253 chars, RFC 1035 hostname max)
+
+**These are not a substitute for proper proxy hygiene.** Projects that can't guarantee proxy hygiene SHOULD override `RecoveryPolicy::public_site_url` to return a fixed string read from project config at startup — that bypasses the entire header chain.
 
 **Fail-loud rule**: if neither the headers nor the override resolves, refuse to issue the token (`Error::Internal`) rather than emit a relative or broken URL. The user sees the uniform response anyway — they don't see the failure — but the audit row gets `metadata.email_send_status = "failed"` and the operator's log carries the error.
+
+**Why no async surface**: `public_site_url` is sync. A future requirement to consult a remote service (e.g. a per-tenant config table) would push the policy trait toward an `async` shape — that's a minor breaking change we'll cross when needed; today the value is derivable from request data without I/O, and the sync trait keeps the call site straightforward.
 
 ---
 

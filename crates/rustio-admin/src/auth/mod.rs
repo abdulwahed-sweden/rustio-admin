@@ -24,7 +24,8 @@ pub use permissions::{
     remove_user_from_group, Permission, PermissionError, Superuser,
 };
 pub use recovery::{
-    DefaultPasswordPolicy, PasswordPolicy, PasswordPolicyError, SharedPasswordPolicy,
+    DefaultPasswordPolicy, DefaultRecoveryPolicy, PasswordPolicy, PasswordPolicyError,
+    RecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
 };
 pub use role::{protected_roles, Role};
 pub use sessions::{
