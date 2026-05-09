@@ -583,17 +583,7 @@ fn parse_forwarded_first_hop(value: &str) -> Option<String> {
 }
 
 // ---- Runtime: token issuance + consumption -------------------------------
-//
-// The items in this section are `#[allow(dead_code)]` because the
-// admin-side handler module that consumes them (R1 commit #8 —
-// `admin/recovery_handlers.rs`) hasn't been added yet. The
-// annotations come off when commit #8 wires the handlers + routes.
-// Without the allow, `cargo clippy --workspace --all-targets --
-// -D warnings` (the framework's standard CI gate) trips on the
-// unreachable items because `pub(crate)` doesn't satisfy
-// dead-code reachability when no in-crate call site exists.
 
-#[allow(dead_code)]
 /// Outcome of [`issue_reset_token`]. Variants exist for
 /// observability and testability — the user-facing handler renders
 /// the same uniform "if that email has an account, we just sent a
@@ -626,7 +616,6 @@ pub(crate) enum IssueOutcome {
 /// Whether the mailer's `send` call returned `Ok` or a typed
 /// `MailerError`. Persisted on the token row's `mail_status` column
 /// and into the audit row's `metadata.email_send_status`.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MailerEmailStatus {
     Sent,
@@ -638,7 +627,6 @@ pub(crate) enum MailerEmailStatus {
 /// is no longer valid" page) per disclosure rule §2.3 — the variant
 /// distinction exists for observability + tests, not for branching
 /// the UI.
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ConsumeOutcome {
     /// Token consumed atomically; password updated; every session
@@ -695,7 +683,6 @@ pub(crate) enum ConsumeOutcome {
 ///   exists with `mail_status = 'failed'` and the audit row carries
 ///   `email_send_status = "failed"`. The user sees the uniform
 ///   response.
-#[allow(dead_code)] // call site lands in R1 commit #8
 pub(crate) async fn issue_reset_token(
     db: &Db,
     admin: &Admin,
@@ -904,7 +891,6 @@ pub(crate) async fn issue_reset_token(
 ///   when an operator needs to trace activity.
 /// - The handler MUST NOT auto-log-in the user on success — they
 ///   go through `/admin/login` so MFA (R3+) gets exercised.
-#[allow(dead_code)] // call site lands in R1 commit #8
 pub(crate) async fn consume_reset_token(
     db: &Db,
     admin: &Admin,
@@ -1002,10 +988,36 @@ pub(crate) async fn consume_reset_token(
     })
 }
 
+/// Non-mutating check used by the `GET /admin/reset-password/<token>`
+/// handler (R1 commit #8) to decide whether to render the new-
+/// password form or the "this link is no longer valid" card. The
+/// `POST` path still performs the atomic consume regardless — the
+/// GET-time check is purely a UX courtesy so a user clicking a
+/// stale link doesn't fill in the form before being told it's
+/// invalid.
+///
+/// Disclosure-equivalent to the consume path: returns `false` for
+/// unknown / expired / already-consumed tokens. The three sub-cases
+/// are deliberately indistinguishable to the caller so the renderer
+/// can't accidentally branch on them (`DESIGN_RECOVERY.md` §2.3).
+pub(crate) async fn check_reset_token_valid(db: &Db, token: &str) -> Result<bool> {
+    let token_hash = hash_token_for_storage(token);
+    let exists: Option<i64> = sqlx::query_scalar(
+        "SELECT 1 FROM rustio_password_reset_tokens
+          WHERE token_hash = $1
+            AND consumed_at IS NULL
+            AND expires_at > NOW()
+          LIMIT 1",
+    )
+    .bind(&token_hash)
+    .fetch_optional(db.pool())
+    .await?;
+    Ok(exists.is_some())
+}
+
 /// Update an issued token's `mail_status` column. Only the values
 /// `'pending' | 'sent' | 'failed'` are valid (CHECK constraint
 /// added in commit #1).
-#[allow(dead_code)] // transitively dead until commit #8 calls issue_reset_token
 async fn set_token_mail_status(db: &Db, token_id: i64, status: &str) -> Result<()> {
     sqlx::query(
         "UPDATE rustio_password_reset_tokens
@@ -1026,7 +1038,6 @@ async fn set_token_mail_status(db: &Db, token_id: i64, status: &str) -> Result<(
 /// for single-tenant deployments; multi-tenant deployments behind
 /// an unconfigured proxy get noisy and should set the header
 /// upstream).
-#[allow(dead_code)] // transitively dead until commit #8
 fn extract_request_ip(request: &Request) -> String {
     request
         .header("x-forwarded-for")
@@ -1040,7 +1051,6 @@ fn extract_request_ip(request: &Request) -> String {
 /// string (e.g. `"in 1 hour"`, `"in 30 minutes"`). Boundary cases
 /// fall back gracefully — never returns an empty / grammatically
 /// broken string.
-#[allow(dead_code)] // transitively dead until commit #8
 fn humanize_ttl(ttl: ChronoDuration) -> String {
     let secs = ttl.num_seconds();
     if secs <= 0 {

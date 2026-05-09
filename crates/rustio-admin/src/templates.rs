@@ -399,6 +399,19 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         "admin/account_sessions.html",
         include_str!("../assets/templates/admin/account_sessions.html"),
     ),
+    // Self-service password recovery (R1)
+    (
+        "admin/forgot_password.html",
+        include_str!("../assets/templates/admin/forgot_password.html"),
+    ),
+    (
+        "admin/forgot_password_sent.html",
+        include_str!("../assets/templates/admin/forgot_password_sent.html"),
+    ),
+    (
+        "admin/reset_password.html",
+        include_str!("../assets/templates/admin/reset_password.html"),
+    ),
 ];
 
 #[cfg(test)]
