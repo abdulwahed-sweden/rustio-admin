@@ -43,7 +43,7 @@ use crate::admin::audit::{record as audit_record, ActionType, AuditEvent, LogEnt
 use crate::admin::redact::redact_token;
 use crate::admin::Admin;
 use crate::auth::sessions::{hash_token_for_storage, random_token};
-use crate::auth::users::find_user_by_email;
+use crate::auth::users::{find_user_by_email, Identity};
 use crate::auth::{invalidate_sessions, set_password, SessionInvalidationReason, SessionTarget};
 use crate::email::Mail;
 use crate::error::Result;
@@ -300,6 +300,63 @@ impl PasswordPolicy for DefaultPasswordPolicy {
     }
 }
 
+// ---- Login throttle (R2) ---------------------------------------------------
+
+/// Auto-throttle parameters for the login flow
+/// (`DESIGN_R2_ORGANISATIONAL.md` §3.3 + §12 locked decisions).
+///
+/// All three knobs are exposed via [`RecoveryPolicy::login_throttle`]
+/// so projects override the threshold without authoring a full trait
+/// impl. The locked default matches `DESIGN_R2_ORGANISATIONAL.md` §12:
+/// 5 failed attempts within a 10-minute sliding window trigger a
+/// 15-minute soft lock. Soft locks do NOT revoke sessions
+/// (Doctrine 22 + §13 locked-decision: only manual lock revokes).
+///
+/// Field semantics:
+///
+/// - `max_attempts` — failure count that trips the soft lock when
+///   reached within `window_minutes`. The counter is anchored on
+///   `rustio_users.last_failed_login_at` (R2 commit #1 schema) and
+///   logically resets when the window elapses.
+/// - `window_minutes` — sliding window over which `max_attempts` is
+///   measured. Failures older than this are ignored when evaluating
+///   the threshold.
+/// - `lock_minutes` — duration of the soft lock written to
+///   `rustio_users.locked_until` when the threshold trips.
+///
+/// Setting `max_attempts = 0` is valid and disables the auto-throttle
+/// entirely (no failure ever trips a soft lock). Manual lock via
+/// `/admin/users/:id/lock` (R2 commit #16) is independent of this
+/// struct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LoginThrottle {
+    /// Failure threshold within `window_minutes` that trips a soft
+    /// lock. Default `5`.
+    pub max_attempts: u32,
+    /// Sliding-window length, in minutes. Default `10`.
+    pub window_minutes: i64,
+    /// Soft-lock duration, in minutes. Default `15`.
+    pub lock_minutes: i64,
+}
+
+impl LoginThrottle {
+    /// The framework's locked default
+    /// (`DESIGN_R2_ORGANISATIONAL.md` §12): **5 failures /
+    /// 10-minute window / 15-minute soft lock**. `const`-constructible
+    /// so projects use it in `static` recovery-policy builders.
+    pub const DEFAULT: Self = Self {
+        max_attempts: 5,
+        window_minutes: 10,
+        lock_minutes: 15,
+    };
+}
+
+impl Default for LoginThrottle {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 // ---- Recovery policy -------------------------------------------------------
 
 /// Tunables for the R1 recovery flow: token TTL, rate-limit shape,
@@ -377,6 +434,73 @@ pub trait RecoveryPolicy: Send + Sync {
     /// log line.
     fn public_site_url(&self, req: &Request) -> Option<String> {
         derive_public_site_url(|name| req.header(name).map(|s| s.to_string()))
+    }
+
+    // ---- R2 organisational-recovery extensions -----------------------------
+    //
+    // All three methods below have provided defaults so existing R1
+    // impls keep compiling. See `DESIGN_R2_ORGANISATIONAL.md` §6.3
+    // and §8.1 for the contract.
+
+    /// Auto-throttle parameters for the login flow. Default
+    /// [`LoginThrottle::DEFAULT`] (5 / 10min / 15min).
+    /// Projects override to relax for development environments
+    /// (`max_attempts: 100`) or tighten for high-sensitivity
+    /// deployments (`max_attempts: 3, lock_minutes: 60`).
+    ///
+    /// Setting `max_attempts = 0` disables the auto-throttle
+    /// entirely; manual lock via `/admin/users/:id/lock` (R2
+    /// commit #16) remains available.
+    fn login_throttle(&self) -> LoginThrottle {
+        LoginThrottle::default()
+    }
+
+    /// Window during which a session that has cleared the re-auth
+    /// wall (`/admin/reauth`) is considered *elevated* and may
+    /// access destructive admin-recovery surfaces (admin-driven
+    /// password reset, lock, unlock, revoke-sessions). Default
+    /// 15 minutes (`DESIGN_R2_ORGANISATIONAL.md` §12 locked-decision).
+    ///
+    /// Re-auth state lives on the session row's `elevated_until`
+    /// column (R0 schema, runtime lands in R2 commit #10). Returning
+    /// a duration of zero or negative is a no-op promotion: every
+    /// admin-recovery action will require a fresh re-auth.
+    fn reauth_window(&self) -> ChronoDuration {
+        ChronoDuration::minutes(15)
+    }
+
+    /// Multi-tenant readiness hook. Returns `Some(scoped_policy)` to
+    /// scope rate-limits / TTLs / lockout windows per tenant when an
+    /// authenticated identity is in scope; returns `None` to mean
+    /// "no scoping, the caller continues to use the
+    /// `Admin`-bound recovery policy unchanged".
+    ///
+    /// Default returns `None` — single-tenant deployments see no
+    /// change. Multi-tenant projects override to look up the
+    /// tenant from `identity.user_id` (or a project-specific
+    /// claim) and return a fresh `Arc<dyn RecoveryPolicy>`
+    /// with that tenant's tunables. Per
+    /// `DESIGN_R2_ORGANISATIONAL.md` §6.3 the framework call site
+    /// is:
+    ///
+    /// ```ignore
+    /// let policy = admin
+    ///     .recovery_policy
+    ///     .scope_for(&identity)
+    ///     .unwrap_or_else(|| Arc::clone(&admin.recovery_policy));
+    /// ```
+    ///
+    /// Why `Option<SharedRecoveryPolicy>` and not
+    /// `SharedRecoveryPolicy` (as the design doc's first sketch
+    /// suggested): returning a fresh `Arc<Self>` from `&self`
+    /// requires the trait method to either receive the policy's own
+    /// `Arc` as a parameter (awkward at every call site) or rely on
+    /// `dyn-clone` (extra dependency). `Option::None` expresses
+    /// "no override" without either. Multi-tenant impls return
+    /// `Some(Arc::new(per_tenant_policy))`, which is cheap and
+    /// idiomatic.
+    fn scope_for(&self, _identity: &Identity) -> Option<SharedRecoveryPolicy> {
+        None
     }
 }
 
@@ -1280,6 +1404,58 @@ mod tests {
     fn shared_recovery_policy_is_send_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<SharedRecoveryPolicy>();
+    }
+
+    // ---- R2 trait extensions -----------------------------------------------
+
+    #[test]
+    fn login_throttle_default_is_five_ten_fifteen() {
+        // Locked-decision per DESIGN_R2_ORGANISATIONAL.md §12.
+        let t = LoginThrottle::default();
+        assert_eq!(t.max_attempts, 5);
+        assert_eq!(t.window_minutes, 10);
+        assert_eq!(t.lock_minutes, 15);
+        // The const surface and the Default impl agree.
+        assert_eq!(t, LoginThrottle::DEFAULT);
+    }
+
+    #[test]
+    fn default_recovery_policy_login_throttle_is_default() {
+        let p = DefaultRecoveryPolicy::new();
+        assert_eq!(p.login_throttle(), LoginThrottle::DEFAULT);
+    }
+
+    #[test]
+    fn default_recovery_policy_reauth_window_is_fifteen_minutes() {
+        // Locked-decision per DESIGN_R2_ORGANISATIONAL.md §12.
+        let p = DefaultRecoveryPolicy::new();
+        assert_eq!(p.reauth_window(), ChronoDuration::minutes(15));
+    }
+
+    #[test]
+    fn default_recovery_policy_scope_for_returns_none() {
+        // Default impl signals "no per-tenant scoping". Multi-tenant
+        // projects override to return Some(scoped_arc); the framework
+        // call site (`admin.recovery_policy.scope_for(&identity)
+        // .unwrap_or_else(|| Arc::clone(&admin.recovery_policy))`)
+        // collapses None back to the original Arc.
+        use crate::auth::Role;
+        let identity = Identity {
+            user_id: 42,
+            email: "test@example.com".into(),
+            role: Role::User,
+            is_active: true,
+            is_demo: false,
+            demo_label: None,
+        };
+        let p = DefaultRecoveryPolicy::new();
+        assert!(p.scope_for(&identity).is_none());
+    }
+
+    #[test]
+    fn login_throttle_is_send_sync_copy() {
+        fn assert_send_sync_copy<T: Send + Sync + Copy>() {}
+        assert_send_sync_copy::<LoginThrottle>();
     }
 
     // ---- public_site_url derivation ----------------------------------------

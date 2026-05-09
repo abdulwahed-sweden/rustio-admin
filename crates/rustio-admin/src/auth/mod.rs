@@ -25,8 +25,8 @@ pub use permissions::{
     remove_user_from_group, Permission, PermissionError, Superuser,
 };
 pub use recovery::{
-    DefaultPasswordPolicy, DefaultRecoveryPolicy, PasswordPolicy, PasswordPolicyError,
-    RecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
+    DefaultPasswordPolicy, DefaultRecoveryPolicy, LoginThrottle, PasswordPolicy,
+    PasswordPolicyError, RecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
 };
 // `issue_reset_token` / `consume_reset_token` and the `IssueOutcome` /
 // `ConsumeOutcome` / `MailerEmailStatus` types live in `recovery`
