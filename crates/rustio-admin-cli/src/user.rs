@@ -3,6 +3,7 @@
 use clap::{Subcommand, ValueEnum};
 use sqlx::Row as _;
 
+use rustio_admin::auth::{DefaultPasswordPolicy, PasswordPolicy};
 use rustio_admin::{auth, Db, Role};
 
 /// CLI surface for `Role`. clap's derive needs `ValueEnum` and we
@@ -59,8 +60,6 @@ pub enum Action {
     },
 }
 
-const MIN_PASSWORD_LEN: usize = 8;
-
 pub async fn run(action: Action) -> Result<(), String> {
     let db = crate::db().await?;
     match action {
@@ -92,11 +91,15 @@ async fn create(db: Db, email: String, role: Role, password: Option<String>) -> 
         Some(p) => p,
         None => prompt_new_password()?,
     };
-    if pw.len() < MIN_PASSWORD_LEN {
-        return Err(format!(
-            "password must be at least {MIN_PASSWORD_LEN} characters"
-        ));
-    }
+    // Delegate to the framework's `DefaultPasswordPolicy` so the CLI
+    // floor stays in lockstep with admin-create-user and self-service
+    // password recovery (`DESIGN_R2_ORGANISATIONAL.md` §11). Projects
+    // that override `Admin::password_policy(...)` get their stronger
+    // policy on the web surfaces; the CLI is a bootstrap tool with
+    // no `Admin` instance available, so it uses the default floor
+    // (currently 10 chars).
+    let policy = DefaultPasswordPolicy::new();
+    policy.validate(&pw).map_err(|e| e.to_string())?;
 
     let id = auth::create_user(&db, &email, &pw, role)
         .await
