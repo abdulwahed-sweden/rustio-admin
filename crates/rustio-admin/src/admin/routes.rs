@@ -430,10 +430,8 @@ pub fn register_admin_routes(
         }
     });
 
-    // Self-service active-sessions listing (R0; read-only). Any
-    // logged-in user (User-tier and above) can see their own active
-    // sessions. Revoke buttons land in 0.5.x once the centralized
-    // invalidate_sessions API is fully exercised by R1 password reset.
+    // Self-service active-sessions listing (R0). Any logged-in user
+    // (User-tier and above) can see their own active sessions.
     let c = ctx.clone();
     let router = router.get("/admin/account/sessions", move |req| {
         let c = c.clone();
@@ -441,6 +439,49 @@ pub fn register_admin_routes(
             match role_guard(&c, &req, Role::User).await? {
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => handlers::show_account_sessions(&c, ident, &req).await,
+            }
+        }
+    });
+
+    // R1 commit #10 — active-sessions revoke buttons. All three
+    // POST routes go through `auth::invalidate_sessions` (Doctrine
+    // 22) and write `AuditEvent::SessionsRevokedSelf` per revoked
+    // id. The `/revoke-others` and `/revoke-all` literal segments
+    // sit at depth-4 while `:id/revoke` sits at depth-5, so segment
+    // count alone disambiguates them — no explicit ordering
+    // constraint between the three.
+    let c = ctx.clone();
+    let router = router.post("/admin/account/sessions/revoke-others", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_revoke_other_sessions(&c, ident, req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/account/sessions/revoke-all", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_revoke_all_sessions(&c, ident, req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/account/sessions/:id/revoke", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    handlers::do_revoke_session(&c, ident, req, id).await
+                }
             }
         }
     });

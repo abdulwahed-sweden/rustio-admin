@@ -1006,6 +1006,222 @@ pub(crate) async fn show_account_sessions(
     Ok(Response::html(body))
 }
 
+/// `POST /admin/account/sessions/<id>/revoke` — revoke a specific
+/// non-current session (R1 commit #10; `DESIGN_RECOVERY.md` §5.1).
+///
+/// Rejected if `session_id` matches the current device — the user
+/// should use `POST /admin/account/sessions/revoke-all` for that.
+/// Defense-in-depth check; the template does not expose the button
+/// for the current row.
+pub(crate) async fn do_revoke_session(
+    ctx: &AdminCtx,
+    identity: crate::auth::Identity,
+    req: Request,
+    session_id: i64,
+) -> Result<Response> {
+    let cookie_token = req
+        .header("cookie")
+        .and_then(crate::auth::session_token_from_cookie);
+    let current_session_id = match &cookie_token {
+        Some(t) => crate::auth::current_session_id(&ctx.db, t).await?,
+        None => None,
+    };
+    revoke_session_verdict(session_id, current_session_id)?;
+
+    let outcome = crate::auth::invalidate_sessions(
+        &ctx.db,
+        crate::auth::SessionTarget::Single { session_id },
+        crate::auth::SessionInvalidationReason::UserRequested,
+    )
+    .await?;
+
+    record_session_revocations(ctx, &identity, &outcome.revoked_session_ids, &req, "single").await;
+
+    Ok(Response::redirect("/admin/account/sessions"))
+}
+
+/// `POST /admin/account/sessions/revoke-others` — revoke every
+/// session for the user except the current one
+/// (`SessionTarget::UserExceptCurrent`). The user stays signed in
+/// on this device.
+///
+/// Edge case: when the cookie has expired between landing on the
+/// page and clicking the button (`current_session_id` resolves to
+/// `None`), we fall through to `SessionTarget::User` — there's no
+/// current device to keep alive, and the user is about to be
+/// redirected anyway when the framework's auth middleware notices
+/// the dead cookie on the next request.
+pub(crate) async fn do_revoke_other_sessions(
+    ctx: &AdminCtx,
+    identity: crate::auth::Identity,
+    req: Request,
+) -> Result<Response> {
+    let cookie_token = req
+        .header("cookie")
+        .and_then(crate::auth::session_token_from_cookie);
+    let current_session_id = match &cookie_token {
+        Some(t) => crate::auth::current_session_id(&ctx.db, t).await?,
+        None => None,
+    };
+
+    let target = match current_session_id {
+        Some(sid) => crate::auth::SessionTarget::UserExceptCurrent {
+            user_id: identity.user_id,
+            current_session_id: sid,
+        },
+        None => crate::auth::SessionTarget::User {
+            user_id: identity.user_id,
+        },
+    };
+
+    let outcome = crate::auth::invalidate_sessions(
+        &ctx.db,
+        target,
+        crate::auth::SessionInvalidationReason::UserRequested,
+    )
+    .await?;
+
+    record_session_revocations(ctx, &identity, &outcome.revoked_session_ids, &req, "others").await;
+
+    Ok(Response::redirect("/admin/account/sessions"))
+}
+
+/// `POST /admin/account/sessions/revoke-all` — revoke every session
+/// for the user, including the current one. The handler additionally
+/// clears the session cookie and redirects to `/admin/login?logout=1`
+/// so the existing logout flash banner ("You've been signed out.")
+/// surfaces on the login page.
+pub(crate) async fn do_revoke_all_sessions(
+    ctx: &AdminCtx,
+    identity: crate::auth::Identity,
+    req: Request,
+) -> Result<Response> {
+    let outcome = crate::auth::invalidate_sessions(
+        &ctx.db,
+        crate::auth::SessionTarget::User {
+            user_id: identity.user_id,
+        },
+        crate::auth::SessionInvalidationReason::UserRequested,
+    )
+    .await?;
+
+    record_session_revocations(ctx, &identity, &outcome.revoked_session_ids, &req, "all").await;
+
+    let clear_cookie = format!(
+        "{}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0",
+        crate::auth::SESSION_COOKIE
+    );
+    Ok(Response::redirect("/admin/login?logout=1").with_header("set-cookie", clear_cookie))
+}
+
+/// Pure verdict for the per-session revoke route. Returns
+/// `Err(BadRequest(...))` when `target_id` matches the current
+/// session id; the renderer maps that to a clean error page.
+///
+/// Pulled out so the defense-in-depth check can be unit-tested
+/// without a Db. The UI-side check (template hides the button on
+/// the current row) is a courtesy; THIS function is the security
+/// boundary.
+fn revoke_session_verdict(target_id: i64, current_session_id: Option<i64>) -> Result<()> {
+    if Some(target_id) == current_session_id {
+        return Err(Error::BadRequest(
+            "You can't revoke your current session here. Use \"Sign out everywhere\" \
+             to revoke every session including this one."
+                .into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Emit one `AuditEvent::SessionsRevokedSelf` row per revoked
+/// session id. All rows share the request's `correlation_id` so a
+/// future `/admin/history/<correlation_id>` page reconstructs the
+/// chain.
+///
+/// Audit-write failure is non-fatal — same trade-off documented in
+/// `auth::recovery::consume_reset_token`'s commit-#7 rationale: the
+/// sessions are ALREADY revoked (the immutable side effect ran
+/// inside `invalidate_sessions`); refusing to redirect would leave
+/// the user staring at a 500 page wondering whether the action took
+/// effect. We log + continue.
+async fn record_session_revocations(
+    ctx: &AdminCtx,
+    identity: &crate::auth::Identity,
+    revoked_ids: &[i64],
+    req: &Request,
+    via: &'static str,
+) {
+    let cid_owned = req
+        .ctx()
+        .get::<crate::middleware::CorrelationId>()
+        .map(|c| c.0.clone());
+    let ip_owned = req
+        .header("x-forwarded-for")
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    for revoked_id in revoked_ids {
+        let metadata = serde_json::json!({
+            "session_id": revoked_id,
+            "reason": "user_requested",
+            "via": via,
+        });
+        let mut entry = audit::LogEntry::new(
+            identity.user_id,
+            audit::ActionType::Update,
+            "user",
+            identity.user_id,
+        )
+        .with_event(audit::AuditEvent::SessionsRevokedSelf);
+        entry.correlation_id = cid_owned.as_deref();
+        entry.ip_address = ip_owned.as_deref();
+        entry.metadata = Some(metadata);
+        entry.summary = format!("session {revoked_id} revoked by user (via {via})");
+        if let Err(e) = audit::record(&ctx.db, entry).await {
+            log::error!(
+                target: "rustio_admin::sessions::revoke",
+                "audit::record failed for revoked session_id={} user_id={} via={}: {}",
+                revoked_id, identity.user_id, via, e,
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod revoke_session_verdict_tests {
+    use super::revoke_session_verdict;
+    use crate::error::Error;
+
+    #[test]
+    fn blocks_revoking_current_session() {
+        let r = revoke_session_verdict(42, Some(42));
+        assert!(matches!(r, Err(Error::BadRequest(_))));
+    }
+
+    #[test]
+    fn allows_revoking_different_session() {
+        assert!(revoke_session_verdict(42, Some(99)).is_ok());
+    }
+
+    #[test]
+    fn allows_when_no_current_session_resolved() {
+        // Edge case: cookie missing / expired between page-load and
+        // POST. Allow — there's no current session to protect.
+        assert!(revoke_session_verdict(42, None).is_ok());
+    }
+
+    #[test]
+    fn error_message_directs_user_to_revoke_all() {
+        let err = revoke_session_verdict(42, Some(42)).unwrap_err();
+        let msg = err.client_message();
+        assert!(
+            msg.contains("Sign out everywhere"),
+            "error must direct user to the right action: {msg}"
+        );
+    }
+}
+
 /// Resolve every foreign-key cell on the current list page from raw
 /// id (`"5"`) to the target row's display label (`"Anna Lindqvist"`)
 /// and remember the target's admin URL so the renderer can wrap the
