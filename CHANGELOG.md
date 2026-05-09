@@ -6,6 +6,10 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
 ## [Unreleased]
 
+No changes yet.
+
+## [0.5.0] — 2026-05-09
+
 R1 of the universal account-recovery architecture. Self-service
 password recovery is now end-to-end: the user clicks **Forgot your
 password?** on `/admin/login`, lands on `/admin/forgot-password`,
