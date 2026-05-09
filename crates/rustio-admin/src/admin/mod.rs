@@ -8,6 +8,7 @@ pub(crate) mod icons;
 pub mod modeladmin;
 mod ops;
 pub mod redact;
+pub(crate) mod recovery_handlers;
 pub mod relations;
 mod render;
 mod routes;
