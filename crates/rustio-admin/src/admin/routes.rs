@@ -937,6 +937,7 @@ mod tests {
             is_active,
             is_demo: false,
             demo_label: None,
+            must_change_password: false,
         }
     }
 
