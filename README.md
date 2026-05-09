@@ -81,6 +81,27 @@ For a complete project skeleton see [`examples/minimal/`](./examples/minimal/) a
 | [Strategic reset plan](./rustio-admin-strategic-reset-plan.md) | Why the framework exists, what's in/out of scope. |
 | [Changelog](./CHANGELOG.md)                         | Per-release summary. |
 
+## Architecture doctrine
+
+Security-sensitive flows are documented before they are implemented.
+The framework's authority, session, audit, and recovery behaviour is
+governed by four canonical contract documents — PR review compares
+against them, and changes that drift from them require a corresponding
+doc update. Lifecycle invariants are intentional: revoke semantics are
+centralized, audit chains are correlation-aware, recovery responses
+are uniform on the outward surface.
+
+| | |
+|---|---|
+| [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)     | Visual + token + branding contract. Color palette (teal-emerald `#0F8C7E` light / `#3FAA9D` dark), typography stack (Geist / Geist Mono / Tajawal / Noto Naskh Arabic), branch + merge expectations, versioning policy. |
+| [`DESIGN_SESSIONS.md`](./DESIGN_SESSIONS.md) | Session lifecycle state machine. `SessionTrust` ladder (Authenticated < Elevated < MfaVerified). The centralised invalidation contract — a grep for `revoked_at\s*=` across `crates/` returns only `auth::sessions::invalidate_sessions`. Token-rotation semantics on trust escalation. |
+| [`DESIGN_AUDIT.md`](./DESIGN_AUDIT.md)       | Audit row shape. The typed `AuditEvent` evolution path. Redaction helpers (never log secrets). Forensic chain semantics via per-request `correlation_id`. Required middleware ordering (`correlation_id` BEFORE `csrf_protect`). |
+| [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md) | Self-recovery contract (R1, ships in 0.5.0). Threat model. Recovery state machine. Token lifecycle (atomic single-use consume; no plaintext persistence). Uniform-response invariant on the outward surface. `PasswordPolicy` + `RecoveryPolicy` trait surface. Strict-mailer boot guard. Locked page copy. |
+
+The `.github/pull_request_template.md` walks the visual regression
+checklist and token-disclosure section before merging anything that
+touches authority, session, recovery, or visual surfaces.
+
 ## Workspace layout
 
 | Crate | Purpose |
