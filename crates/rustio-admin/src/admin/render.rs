@@ -2011,11 +2011,23 @@ pub(crate) fn role_select_options(editor_rank: u32) -> Vec<SelectOption> {
 /// (email + password) and Role (the 5-option select). Caller passes
 /// the current values so re-render after validation failure preserves
 /// them. `editor_rank` filters the role select per the ceiling guard.
+/// `min_length` populates the password hint so a project that
+/// overrides `Admin::password_policy(...)` sees its actual floor on
+/// the form — passed in from `Admin::active_password_policy().min_length()`,
+/// the same plumbing R1 commit #11 added for `password_change_form_sections`.
+///
+/// Pre-R2 the hint string was hardcoded to "8 characters"; R2
+/// commit #3 routed it through the policy so the framework default
+/// (10) and project overrides (12 / 16 / …) both render correctly.
 pub(crate) fn user_new_form_sections(
     email: &str,
     role: &str,
     editor_rank: u32,
+    min_length: usize,
 ) -> Vec<FormSection> {
+    let password_hint = format!(
+        "At least {min_length} characters. The user can change it later via Change password."
+    );
     vec![
         FormSection {
             title: Some("Identity"),
@@ -2049,10 +2061,7 @@ pub(crate) fn user_new_form_sections(
                     widget: "input",
                     input_type: "password",
                     value: String::new(),
-                    hint: Some(
-                        "At least 8 characters. The user can change it later via Change password."
-                            .to_string(),
-                    ),
+                    hint: Some(password_hint),
                     placeholder: None,
                     required: true,
                     options: None,

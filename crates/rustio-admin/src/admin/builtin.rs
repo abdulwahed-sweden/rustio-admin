@@ -1492,7 +1492,12 @@ pub(crate) async fn show_new_user(
             .filter(|e| !e.core)
             .map(SidebarEntry::from)
             .collect(),
-        sections: render::user_new_form_sections(&email, &role, editor_rank),
+        sections: render::user_new_form_sections(
+            &email,
+            &role,
+            editor_rank,
+            ctx.admin.active_password_policy().min_length(),
+        ),
         email,
         role,
         errors: Vec::new(),
@@ -1500,8 +1505,6 @@ pub(crate) async fn show_new_user(
     let body = ctx.templates.render("admin/user_new.html", &view)?;
     Ok(Response::html(body))
 }
-
-const MIN_NEW_USER_PASSWORD_LEN: usize = 8;
 
 /// Cheap email-shape check — `<x>@<y>.<z>` with non-empty parts.
 fn looks_like_email(s: &str) -> bool {
@@ -1564,10 +1567,15 @@ pub(crate) async fn do_new_user(
         }
     }
 
-    if password.len() < MIN_NEW_USER_PASSWORD_LEN {
-        let msg = format!(
-            "This password is too short. It must contain at least {MIN_NEW_USER_PASSWORD_LEN} characters."
-        );
+    // Validate against the live `Admin::active_password_policy()` so
+    // form floor + form hint + framework's `set_password` all agree on
+    // a single source of truth (R2 commit #3 — see
+    // `DESIGN_R2_ORGANISATIONAL.md` §11). Pre-R2 this used a local
+    // 8-char constant which could disagree with a project's
+    // `Admin::password_policy(...)` override and produce confusing
+    // "the form said 16 but it accepted 9" UX.
+    if let Err(policy_err) = ctx.admin.active_password_policy().validate(password) {
+        let msg = policy_err.to_string();
         errors.push(msg.clone());
         field_errors.entry("password".into()).or_default().push(msg);
     }
@@ -1618,7 +1626,12 @@ pub(crate) async fn do_new_user(
         .get::<crate::middleware::CsrfGuard>()
         .map(|g| g.token.clone())
         .unwrap_or_default();
-    let mut sections = render::user_new_form_sections(&email, &role_str, identity.role.rank());
+    let mut sections = render::user_new_form_sections(
+        &email,
+        &role_str,
+        identity.role.rank(),
+        ctx.admin.active_password_policy().min_length(),
+    );
     render::apply_field_errors(&mut sections, &field_errors);
     let view = UserNewCtx {
         base: BaseContext::new(Some(&identity), csrf, &ctx.admin),
