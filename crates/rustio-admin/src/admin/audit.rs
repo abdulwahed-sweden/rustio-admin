@@ -210,45 +210,90 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     Ok(())
 }
 
-/// Internal typed representation of every audit `action_type` the
-/// framework emits. `pub(crate)` for now — doctrine 18 commits to a
-/// future public typed surface, but we don't promote it until 0.5.x.
+/// Typed representation of every audit `action_type` the framework
+/// emits for authority + identity + recovery actions.
 ///
-/// Every framework call site MUST go through `AuditEvent::as_str()`
-/// rather than writing the string literal inline. The drift test
-/// below enumerates every variant and asserts nothing else lands in
-/// the live `rustio_admin_actions` audit stream.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // not all variants have call sites yet (R1+)
-pub(crate) enum AuditEvent {
+/// **Public-API stability (0.5.0):** the enum is `pub` from R1
+/// onwards (doctrine 18). External consumers — SIEM tooling, custom
+/// dashboards, integration tests — can match on these variants
+/// instead of (or in addition to) the persisted strings. The
+/// `as_str()` mapping is the single canonical boundary between the
+/// typed surface and the `rustio_admin_actions.action_type` TEXT
+/// column. Every existing variant's string is locked-in by the
+/// `audit_event_existing_variants_have_stable_strings` test below;
+/// renaming a string is a breaking change requiring a major version
+/// bump.
+///
+/// **Coexistence with `ActionType`:** the legacy
+/// `ActionType::{Create, Update, Delete}` trio writes the strings
+/// `"create" / "update" / "delete"`, used for generic CRUD on
+/// project-registered models. `AuditEvent` strings are richer
+/// (`"user_created"`, `"password_reset_self_consume"`, …) and used
+/// for the framework's own authority + identity + recovery surfaces.
+/// The two vocabularies are disjoint by design;
+/// `action_type_and_audit_event_vocabularies_dont_collide` asserts
+/// the disjointness.
+///
+/// **Future-extensibility:** `#[non_exhaustive]` lets future
+/// R-phases (R2 / R3 / R4) add variants without breaking external
+/// matchers. Variants whose call-sites haven't shipped yet are
+/// listed here in anticipation — `as_str()` returns the canonical
+/// string regardless of whether anything emits it. The roadmap
+/// in `DESIGN_RECOVERY.md` §16 + `ROADMAP.md` covers when each
+/// variant lights up.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum AuditEvent {
+    // ---- User / Group authority CRUD (R0+) ----
     UserCreated,
     UserUpdated,
     UserDeleted,
     GroupCreated,
     GroupUpdated,
     GroupDeleted,
+    // ---- Password lifecycle (R1+) ----
+    /// Authenticated user changed their own password via
+    /// `/admin/password_change`. R1 commit #11 wires emission.
+    PasswordChangedSelf,
+    /// Anonymous user requested a password-reset email via
+    /// `/admin/forgot-password`. R1 commit #7 wires emission.
     PasswordResetSelfRequest,
+    /// Anonymous user consumed a reset token + set a new password
+    /// via `/admin/reset-password/<token>`. R1 commit #7 wires
+    /// emission.
     PasswordResetSelfConsume,
+    /// An administrator reset another user's password. R2 wires
+    /// emission via the dedicated `/admin/users/<id>/reset-password`
+    /// route.
     PasswordResetByOther,
+    // ---- Account state (R2+) ----
     AccountLocked,
     AccountUnlocked,
+    // ---- MFA (R3+) ----
     MfaEnabled,
     MfaDisabled,
     MfaResetByOther,
+    // ---- Session lifecycle (R0/R1+) ----
     SessionsRevokedSelf,
     SessionsRevokedByOther,
     SessionLogout,
+    // ---- Layer-3 CLI (R4+) ----
     EmergencyRecovery,
 }
 
 impl AuditEvent {
     /// Stable lowercase identifier persisted as
-    /// `rustio_admin_actions.action_type`. Distinct from
-    /// `ActionType::as_str()` (the legacy create/update/delete trio)
-    /// — the two enums coexist; AuditEvent strings are richer and
-    /// will eventually replace ActionType in the public API.
-    #[allow(dead_code)]
-    pub(crate) const fn as_str(self) -> &'static str {
+    /// `rustio_admin_actions.action_type`.
+    ///
+    /// **Stability contract:** every string returned here is
+    /// part of the public API from 0.5.0 onwards. Existing values
+    /// are locked-in by
+    /// `audit_event_existing_variants_have_stable_strings` and
+    /// changing one is a breaking change requiring a major bump.
+    /// New `AuditEvent` variants may be added in minor versions
+    /// (the enum is `#[non_exhaustive]`); each new variant ships
+    /// with its locked string from day one.
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::UserCreated => "user_created",
             Self::UserUpdated => "user_updated",
@@ -256,6 +301,7 @@ impl AuditEvent {
             Self::GroupCreated => "group_created",
             Self::GroupUpdated => "group_updated",
             Self::GroupDeleted => "group_deleted",
+            Self::PasswordChangedSelf => "password_changed_self",
             Self::PasswordResetSelfRequest => "password_reset_self_request",
             Self::PasswordResetSelfConsume => "password_reset_self_consume",
             Self::PasswordResetByOther => "password_reset_by_other",
@@ -351,67 +397,50 @@ fn row_to_action(r: &sqlx::postgres::PgRow) -> Result<AdminAction> {
 mod tests {
     use super::*;
 
-    /// Drift test for the internal AuditEvent enum (doctrine 18).
-    ///
-    /// Property: every variant's `as_str()` is unique across the
-    /// enum. Catches accidental copy-paste collisions during R1+
-    /// (`password_reset_self_request` vs
-    /// `password_reset_self_consume` — easy to mis-paste).
+    /// Single source of truth for every `AuditEvent` variant the
+    /// framework currently exposes. Drift tests below iterate over
+    /// this constant; adding a new variant means adding it here.
+    /// CHANGELOG / DESIGN_AUDIT.md call out variant additions.
+    const ALL_AUDIT_EVENTS: &[AuditEvent] = &[
+        AuditEvent::UserCreated,
+        AuditEvent::UserUpdated,
+        AuditEvent::UserDeleted,
+        AuditEvent::GroupCreated,
+        AuditEvent::GroupUpdated,
+        AuditEvent::GroupDeleted,
+        AuditEvent::PasswordChangedSelf,
+        AuditEvent::PasswordResetSelfRequest,
+        AuditEvent::PasswordResetSelfConsume,
+        AuditEvent::PasswordResetByOther,
+        AuditEvent::AccountLocked,
+        AuditEvent::AccountUnlocked,
+        AuditEvent::MfaEnabled,
+        AuditEvent::MfaDisabled,
+        AuditEvent::MfaResetByOther,
+        AuditEvent::SessionsRevokedSelf,
+        AuditEvent::SessionsRevokedByOther,
+        AuditEvent::SessionLogout,
+        AuditEvent::EmergencyRecovery,
+    ];
+
+    /// Drift test (doctrine 18): every variant's `as_str()` is
+    /// unique. Catches copy-paste collisions when adding variants
+    /// — `password_reset_self_request` vs
+    /// `password_reset_self_consume` are easy to mis-paste.
     #[test]
     fn audit_event_strings_are_unique() {
-        let events = [
-            AuditEvent::UserCreated,
-            AuditEvent::UserUpdated,
-            AuditEvent::UserDeleted,
-            AuditEvent::GroupCreated,
-            AuditEvent::GroupUpdated,
-            AuditEvent::GroupDeleted,
-            AuditEvent::PasswordResetSelfRequest,
-            AuditEvent::PasswordResetSelfConsume,
-            AuditEvent::PasswordResetByOther,
-            AuditEvent::AccountLocked,
-            AuditEvent::AccountUnlocked,
-            AuditEvent::MfaEnabled,
-            AuditEvent::MfaDisabled,
-            AuditEvent::MfaResetByOther,
-            AuditEvent::SessionsRevokedSelf,
-            AuditEvent::SessionsRevokedByOther,
-            AuditEvent::SessionLogout,
-            AuditEvent::EmergencyRecovery,
-        ];
         let mut set = std::collections::HashSet::new();
-        for e in events {
+        for &e in ALL_AUDIT_EVENTS {
             assert!(set.insert(e.as_str()), "duplicate as_str() for {e:?}");
         }
-        assert_eq!(set.len(), events.len());
+        assert_eq!(set.len(), ALL_AUDIT_EVENTS.len());
     }
 
-    /// All AuditEvent strings are snake_case ASCII (no whitespace, no
-    /// uppercase, no punctuation beyond `_`). Future SIEM integrations
-    /// will tokenize on these — keep them pre-normalised.
+    /// Every `AuditEvent` string is snake_case ASCII. Future SIEM
+    /// integrations tokenise on these — keep them pre-normalised.
     #[test]
     fn audit_event_strings_are_snake_case() {
-        let events = [
-            AuditEvent::UserCreated,
-            AuditEvent::UserUpdated,
-            AuditEvent::UserDeleted,
-            AuditEvent::GroupCreated,
-            AuditEvent::GroupUpdated,
-            AuditEvent::GroupDeleted,
-            AuditEvent::PasswordResetSelfRequest,
-            AuditEvent::PasswordResetSelfConsume,
-            AuditEvent::PasswordResetByOther,
-            AuditEvent::AccountLocked,
-            AuditEvent::AccountUnlocked,
-            AuditEvent::MfaEnabled,
-            AuditEvent::MfaDisabled,
-            AuditEvent::MfaResetByOther,
-            AuditEvent::SessionsRevokedSelf,
-            AuditEvent::SessionsRevokedByOther,
-            AuditEvent::SessionLogout,
-            AuditEvent::EmergencyRecovery,
-        ];
-        for e in events {
+        for &e in ALL_AUDIT_EVENTS {
             let s = e.as_str();
             assert!(!s.is_empty(), "{e:?} as_str is empty");
             assert!(
@@ -420,5 +449,125 @@ mod tests {
                 "{e:?}.as_str() = {s:?} is not snake_case"
             );
         }
+    }
+
+    /// R1 commit #6: `PasswordChangedSelf` maps to the locked string
+    /// `"password_changed_self"`. The string is part of the public
+    /// API contract from 0.5.0; renaming requires a major bump.
+    #[test]
+    fn audit_event_password_changed_self_maps_correctly() {
+        assert_eq!(
+            AuditEvent::PasswordChangedSelf.as_str(),
+            "password_changed_self"
+        );
+    }
+
+    /// Stability contract for the public API: every existing
+    /// variant's string value is locked-in here. A change to any of
+    /// these strings is a breaking change requiring a major bump
+    /// (the persisted `rustio_admin_actions.action_type` column
+    /// would have rows referencing the old string from prior
+    /// installations). New variants may extend this list; existing
+    /// rows must keep their strings.
+    #[test]
+    fn audit_event_existing_variants_have_stable_strings() {
+        assert_eq!(AuditEvent::UserCreated.as_str(), "user_created");
+        assert_eq!(AuditEvent::UserUpdated.as_str(), "user_updated");
+        assert_eq!(AuditEvent::UserDeleted.as_str(), "user_deleted");
+        assert_eq!(AuditEvent::GroupCreated.as_str(), "group_created");
+        assert_eq!(AuditEvent::GroupUpdated.as_str(), "group_updated");
+        assert_eq!(AuditEvent::GroupDeleted.as_str(), "group_deleted");
+        assert_eq!(
+            AuditEvent::PasswordChangedSelf.as_str(),
+            "password_changed_self"
+        );
+        assert_eq!(
+            AuditEvent::PasswordResetSelfRequest.as_str(),
+            "password_reset_self_request"
+        );
+        assert_eq!(
+            AuditEvent::PasswordResetSelfConsume.as_str(),
+            "password_reset_self_consume"
+        );
+        assert_eq!(
+            AuditEvent::PasswordResetByOther.as_str(),
+            "password_reset_by_other"
+        );
+        assert_eq!(AuditEvent::AccountLocked.as_str(), "account_locked");
+        assert_eq!(AuditEvent::AccountUnlocked.as_str(), "account_unlocked");
+        assert_eq!(AuditEvent::MfaEnabled.as_str(), "mfa_enabled");
+        assert_eq!(AuditEvent::MfaDisabled.as_str(), "mfa_disabled");
+        assert_eq!(AuditEvent::MfaResetByOther.as_str(), "mfa_reset_by_other");
+        assert_eq!(
+            AuditEvent::SessionsRevokedSelf.as_str(),
+            "sessions_revoked_self"
+        );
+        assert_eq!(
+            AuditEvent::SessionsRevokedByOther.as_str(),
+            "sessions_revoked_by_other"
+        );
+        assert_eq!(AuditEvent::SessionLogout.as_str(), "session_logout");
+        assert_eq!(AuditEvent::EmergencyRecovery.as_str(), "emergency_recovery");
+    }
+
+    /// `ActionType` and `AuditEvent` are intentionally separate
+    /// vocabularies — `ActionType` writes generic CRUD strings
+    /// (`"create" / "update" / "delete"`) for project-registered
+    /// models; `AuditEvent` writes the framework's richer authority,
+    /// identity, and recovery vocabulary. The two namespaces must
+    /// stay disjoint so a SIEM consumer can route on the string
+    /// alone without disambiguation.
+    #[test]
+    fn action_type_and_audit_event_vocabularies_dont_collide() {
+        let action_type_strs = [
+            ActionType::Create.as_str(),
+            ActionType::Update.as_str(),
+            ActionType::Delete.as_str(),
+        ];
+        let mut set = std::collections::HashSet::new();
+        for s in action_type_strs {
+            assert!(set.insert(s), "duplicate ActionType string {s:?}");
+        }
+        for &e in ALL_AUDIT_EVENTS {
+            assert!(
+                set.insert(e.as_str()),
+                "AuditEvent::{:?} ({:?}) collides with ActionType",
+                e,
+                e.as_str()
+            );
+        }
+        assert_eq!(set.len(), action_type_strs.len() + ALL_AUDIT_EVENTS.len());
+    }
+
+    /// The legacy `ActionType::parse` is a partial parser — it only
+    /// recognises the original create/update/delete trio. Strings
+    /// emitted by `AuditEvent` (and any free-form legacy strings
+    /// already in older `rustio_admin_actions` rows) return `None`,
+    /// which the render layer maps to a neutral pill class without
+    /// panicking. This pins the property so a future change to
+    /// `ActionType::parse` doesn't accidentally start matching
+    /// AuditEvent strings.
+    #[test]
+    fn legacy_action_type_parser_returns_none_on_unknown_strings() {
+        // Legacy trio still parses.
+        assert_eq!(ActionType::parse("create"), Some(ActionType::Create));
+        assert_eq!(ActionType::parse("update"), Some(ActionType::Update));
+        assert_eq!(ActionType::parse("delete"), Some(ActionType::Delete));
+
+        // Every AuditEvent string is unrecognised by the legacy
+        // parser — the render layer falls through to "badge-neutral"
+        // for these, which is the documented behaviour.
+        for &e in ALL_AUDIT_EVENTS {
+            assert!(
+                ActionType::parse(e.as_str()).is_none(),
+                "ActionType::parse should not recognise AuditEvent string {:?}",
+                e.as_str()
+            );
+        }
+
+        // Pure garbage and free-form legacy strings.
+        assert!(ActionType::parse("garbage").is_none());
+        assert!(ActionType::parse("").is_none());
+        assert!(ActionType::parse("CREATE").is_none()); // case-sensitive
     }
 }
