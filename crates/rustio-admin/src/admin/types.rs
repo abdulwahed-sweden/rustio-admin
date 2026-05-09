@@ -10,6 +10,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use crate::email::{LogMailer, SharedMailer};
 use crate::error::Result;
 use crate::http::FormData;
 use crate::orm::{Db, Value};
@@ -420,6 +421,15 @@ pub struct Admin {
     pub(crate) site_branding: SiteBranding,
     pub(crate) user_profile_ext: Option<UserProfileExtensionFn>,
     pub(crate) theme: AdminTheme,
+    /// The outbound-mail handle. Defaults to [`LogMailer`]; projects
+    /// override via [`Admin::mailer`]. R1+ recovery flows
+    /// (`DESIGN_RECOVERY.md` §12) read this to dispatch reset emails;
+    /// no current 0.5.0 code path reads it directly until
+    /// `auth::recovery::issue_reset_token` lands in commit #7. Held
+    /// as `Arc<dyn Mailer>` so cloning the field is a single
+    /// reference-count bump and the field stays trivially Send +
+    /// Sync (the trait's supertraits are `Send + Sync`).
+    pub(crate) mailer: SharedMailer,
 }
 
 impl Default for Admin {
@@ -431,13 +441,18 @@ impl Default for Admin {
 impl Admin {
     /// Constructs a new `Admin` with the framework's core entries
     /// pre-seeded. The only core entry is `User`; project models are
-    /// added on top via [`Self::model`].
+    /// added on top via [`Self::model`]. The outbound mailer
+    /// defaults to [`LogMailer`] — safe for dev / CI / testing,
+    /// **not suitable for production** (recovery emails are written
+    /// to `log::info!` instead of being sent). Projects opt into a
+    /// real mailer via [`Self::mailer`].
     pub fn new() -> Self {
         Self {
             entries: vec![core_user_entry()],
             site_branding: SiteBranding::default(),
             user_profile_ext: None,
             theme: AdminTheme::default(),
+            mailer: Arc::new(LogMailer),
         }
     }
 
@@ -477,6 +492,39 @@ impl Admin {
     /// Read-only access to the active theme override patch.
     pub fn active_theme(&self) -> &AdminTheme {
         &self.theme
+    }
+
+    /// Replace the outbound mailer. Closes the
+    /// documented-but-unimplemented gap from 0.4.0 where the doc
+    /// comments described this method while the `Admin` struct had
+    /// no mailer field; landed in 0.5.0 alongside the R1 recovery
+    /// pipeline that consumes it (`DESIGN_RECOVERY.md` §10.3).
+    ///
+    /// Typical project wiring:
+    ///
+    /// ```ignore
+    /// use std::sync::Arc;
+    /// let admin = Admin::new()
+    ///     .mailer(Arc::new(MyProjectMailer::new(/* SES, Mailgun, … */)));
+    /// ```
+    ///
+    /// The framework imposes no transport. Anything that implements
+    /// the [`crate::email::Mailer`] trait (which is `Send + Sync`
+    /// and async-friendly) plugs in here. R1's recovery flow reads
+    /// this via [`Self::active_mailer`] and dispatches reset
+    /// emails through it.
+    pub fn mailer(mut self, mailer: SharedMailer) -> Self {
+        self.mailer = mailer;
+        self
+    }
+
+    /// Read-only access to the registered mailer. Returns a borrow
+    /// of the `Arc` so handlers can `.clone()` it cheaply when they
+    /// need to move the handle into an async future. Always returns
+    /// a live mailer — `Admin::new()` seeds [`LogMailer`] as the
+    /// default, so this never returns `None`.
+    pub fn active_mailer(&self) -> &SharedMailer {
+        &self.mailer
     }
 
     pub fn model<M>(mut self) -> Self
