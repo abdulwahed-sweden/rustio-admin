@@ -33,6 +33,8 @@ pub use recovery::{
 // reach them as `crate::auth::recovery::*`. They are intentionally
 // NOT re-exported here — the framework owns the handler shape, and
 // projects compose recovery via the trait surfaces re-exported above.
+// `purge_expired_reset_tokens` (R1 commit #12) is reached the same
+// way from `background::spawn_session_sweeper`.
 pub use role::{protected_roles, Role};
 pub use sessions::{
     create_session, current_session_id, delete_session, identity_from_session, init_session_tables,

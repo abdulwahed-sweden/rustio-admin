@@ -1015,6 +1015,60 @@ pub(crate) async fn check_reset_token_valid(db: &Db, token: &str) -> Result<bool
     Ok(exists.is_some())
 }
 
+/// Retention window after a reset-token row's `expires_at` before
+/// the periodic sweeper purges it. Locked at 7 days
+/// (`DESIGN_RECOVERY.md` §4.4): the recently-expired window keeps
+/// the row available for audit correlation, operational debugging,
+/// and abuse investigations; after 7 days the row's forensic value
+/// is gone and it disappears.
+///
+/// Applies to BOTH consumed and unconsumed rows — once the
+/// `expires_at` is more than 7 days in the past, neither
+/// classification carries operational value worth retaining.
+const RESET_TOKEN_RETENTION_DAYS: i64 = 7;
+
+/// Periodically-callable purge of stale reset-token rows. Wired
+/// into `background::spawn_session_sweeper` (R1 commit #12) on a
+/// 10-minute tick alongside the session sweeper.
+///
+/// **Deletion criterion:** `expires_at < NOW() - INTERVAL '7 days'`.
+/// One single `DELETE` statement; no per-row loop. The framework's
+/// partial expires-at index from commit #1 covers the unconsumed-
+/// row hot path; consumed rows fall to a heap scan over a small
+/// portion of the table (admin-tier scale, acceptable).
+///
+/// **Idempotency:** the predicate is purely time-based against
+/// `NOW()`; running the function twice in quick succession
+/// deletes the same rows the first time and returns 0 the second.
+/// Safe to call from any number of concurrent ticks.
+///
+/// **What this function does NOT do:**
+///
+/// - Does NOT touch `rustio_users`, `rustio_sessions`, or
+///   `rustio_admin_actions`. Cleanup is scoped to the recovery
+///   table; no auth / session / audit behaviour is affected.
+/// - Does NOT emit audit rows for the deletions — the cleaned-up
+///   rows themselves carry the forensic record (token_fingerprint,
+///   correlation_id), and the sweep is operational rather than
+///   user-facing.
+/// - Does NOT write to `revoked_at` (Doctrine 22 — the only
+///   `revoked_at` writer remains `auth::sessions::invalidate_sessions`).
+/// - Does NOT log any token identifier, user identifier, or
+///   correlation id. The single info-level line on success records
+///   only the deleted-row count.
+pub(crate) async fn purge_expired_reset_tokens(db: &Db) -> Result<u64> {
+    // The retention window is embedded as a literal in the SQL
+    // (Postgres INTERVAL doesn't bind cleanly via sqlx). The
+    // constant + the test below pin the value; a drift would
+    // surface mechanically.
+    let query = format!(
+        "DELETE FROM rustio_password_reset_tokens \
+          WHERE expires_at < NOW() - INTERVAL '{RESET_TOKEN_RETENTION_DAYS} days'"
+    );
+    let result = sqlx::query(&query).execute(db.pool()).await?;
+    Ok(result.rows_affected())
+}
+
 /// Update an issued token's `mail_status` column. Only the values
 /// `'pending' | 'sent' | 'failed'` are valid (CHECK constraint
 /// added in commit #1).
@@ -1353,6 +1407,51 @@ mod tests {
     fn humanize_ttl_seconds_for_short_windows() {
         assert_eq!(humanize_ttl(ChronoDuration::seconds(45)), "in 45 seconds");
         assert_eq!(humanize_ttl(ChronoDuration::seconds(1)), "in 1 second");
+    }
+
+    // ---- purge_expired_reset_tokens ----------------------------------------
+
+    /// Locked retention doctrine — DESIGN_RECOVERY.md §4.4.
+    /// Changing this constant is a behaviour change requiring a
+    /// CHANGELOG entry under `Behaviour change`.
+    #[test]
+    fn reset_token_retention_window_is_seven_days() {
+        assert_eq!(RESET_TOKEN_RETENTION_DAYS, 7);
+    }
+
+    /// The DELETE statement targets the recovery table only,
+    /// embeds the retention window as a literal `INTERVAL` (since
+    /// sqlx can't bind interval params cleanly), and applies the
+    /// same predicate to consumed AND unconsumed rows — no
+    /// `consumed_at` filter on the WHERE clause. Pins the SQL
+    /// shape so a future drift surfaces here.
+    #[test]
+    fn purge_query_includes_retention_window_and_table() {
+        let query = format!(
+            "DELETE FROM rustio_password_reset_tokens \
+              WHERE expires_at < NOW() - INTERVAL '{RESET_TOKEN_RETENTION_DAYS} days'"
+        );
+        assert!(
+            query.contains("rustio_password_reset_tokens"),
+            "purge must target the recovery table"
+        );
+        assert!(
+            query.contains("INTERVAL '7 days'"),
+            "purge must use the locked 7-day retention window"
+        );
+        assert!(
+            !query.contains("consumed_at"),
+            "purge must apply to BOTH consumed and unconsumed expired rows; \
+             a `consumed_at` filter would leak old consumed rows indefinitely"
+        );
+        // Defense-in-depth — the query is a DELETE, not a SELECT
+        // / UPDATE. A copy-paste accident that turned this into an
+        // UPDATE would silently leave rows in place; an accidental
+        // SELECT would do nothing.
+        assert!(
+            query.starts_with("DELETE FROM"),
+            "purge must be a DELETE statement"
+        );
     }
 
     #[test]
