@@ -2264,37 +2264,6 @@ pub(crate) fn user_edit_identity_sections(
     }]
 }
 
-/// Reset password section for user_edit. Single optional field;
-/// blank → keep existing password.
-pub(crate) fn user_edit_password_sections() -> Vec<FormSection> {
-    vec![FormSection {
-        title: Some("Reset password (optional)"),
-        fields: vec![FormField {
-            name: "new_password",
-            label: "New password".to_string(),
-            widget: "input",
-            input_type: "password",
-            value: String::new(),
-            hint: Some("Leave blank to keep the current password unchanged.".to_string()),
-            placeholder: None,
-            required: false,
-            options: None,
-            multiple: false,
-            span: 2,
-            autocomplete: Some("new-password"),
-            autofocus: false,
-            disabled: false,
-            maxlength: None,
-            searchable: false,
-            has_more: false,
-            search_url: None,
-            errors: vec![],
-            target_model: None,
-            checked: false,
-        }],
-    }]
-}
-
 /// Pre-built FormField list for the password-change form. Values are
 /// always empty (we never echo passwords back). The
 /// `min_length` parameter controls the live policy hint shown
