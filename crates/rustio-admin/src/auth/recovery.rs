@@ -1002,9 +1002,18 @@ pub(crate) async fn consume_reset_token(
 /// are deliberately indistinguishable to the caller so the renderer
 /// can't accidentally branch on them (`DESIGN_RECOVERY.md` §2.3).
 pub(crate) async fn check_reset_token_valid(db: &Db, token: &str) -> Result<bool> {
+    // Postgres treats `SELECT 1` as INT4; binding the result to
+    // `Option<i64>` produces a runtime decode mismatch that lands
+    // as a 500 (downstream validation pass caught it before
+    // 0.5.0 publish). We `SELECT id` instead — the `id` column is
+    // BIGSERIAL → INT8, matching `Option<i64>` cleanly, and the
+    // semantics of "does any row match" are identical. A mistaken
+    // `Option<i32>` would also work but would drift from the
+    // sibling `consume_reset_token` query that returns the same
+    // column shape.
     let token_hash = hash_token_for_storage(token);
     let exists: Option<i64> = sqlx::query_scalar(
-        "SELECT 1 FROM rustio_password_reset_tokens
+        "SELECT id FROM rustio_password_reset_tokens
           WHERE token_hash = $1
             AND consumed_at IS NULL
             AND expires_at > NOW()
