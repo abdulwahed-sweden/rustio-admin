@@ -23,6 +23,9 @@ pub use permissions::{
     init_permission_tables, permissions_for_user, register_model_permissions,
     remove_user_from_group, Permission, PermissionError, Superuser,
 };
+pub use recovery::{
+    DefaultPasswordPolicy, PasswordPolicy, PasswordPolicyError, SharedPasswordPolicy,
+};
 pub use role::{protected_roles, Role};
 pub use sessions::{
     create_session, current_session_id, delete_session, identity_from_session, init_session_tables,

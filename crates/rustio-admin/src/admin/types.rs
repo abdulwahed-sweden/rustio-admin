@@ -10,6 +10,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use crate::auth::{DefaultPasswordPolicy, SharedPasswordPolicy};
 use crate::email::{LogMailer, SharedMailer};
 use crate::error::Result;
 use crate::http::FormData;
@@ -430,6 +431,15 @@ pub struct Admin {
     /// reference-count bump and the field stays trivially Send +
     /// Sync (the trait's supertraits are `Send + Sync`).
     pub(crate) mailer: SharedMailer,
+    /// The active password policy. Defaults to
+    /// [`DefaultPasswordPolicy::new`] (`min_len = 10`); projects
+    /// override via [`Admin::password_policy`]. Read by R1's reset
+    /// consume flow (commit #7) and the corrected `do_password_change`
+    /// (commit #11) so a single source of truth governs every
+    /// password write across the framework. Held as
+    /// `Arc<dyn PasswordPolicy>` for the same reason as the mailer
+    /// above (cheap clone, Send + Sync).
+    pub(crate) password_policy: SharedPasswordPolicy,
 }
 
 impl Default for Admin {
@@ -453,6 +463,7 @@ impl Admin {
             user_profile_ext: None,
             theme: AdminTheme::default(),
             mailer: Arc::new(LogMailer),
+            password_policy: Arc::new(DefaultPasswordPolicy::new()),
         }
     }
 
@@ -525,6 +536,35 @@ impl Admin {
     /// default, so this never returns `None`.
     pub fn active_mailer(&self) -> &SharedMailer {
         &self.mailer
+    }
+
+    /// Replace the active password policy. R1 ships with the
+    /// length-only [`DefaultPasswordPolicy`] (`min_len = 10`);
+    /// production deployments commonly override to 12+, and
+    /// regulated deployments may ship a full custom impl with breach
+    /// blocklists or organisational complexity rules
+    /// (`DESIGN_RECOVERY.md` §13).
+    ///
+    /// Typical project wiring:
+    ///
+    /// ```ignore
+    /// use std::sync::Arc;
+    /// use rustio_admin::auth::DefaultPasswordPolicy;
+    ///
+    /// let admin = Admin::new()
+    ///     .password_policy(Arc::new(DefaultPasswordPolicy::with_min_len(16)));
+    /// ```
+    pub fn password_policy(mut self, policy: SharedPasswordPolicy) -> Self {
+        self.password_policy = policy;
+        self
+    }
+
+    /// Read-only access to the registered password policy. Returns
+    /// a borrow of the `Arc` so handlers can `.clone()` it cheaply
+    /// when needed. Always returns a live policy — `Admin::new()`
+    /// seeds [`DefaultPasswordPolicy`] so this never returns `None`.
+    pub fn active_password_policy(&self) -> &SharedPasswordPolicy {
+        &self.password_policy
     }
 
     pub fn model<M>(mut self) -> Self
@@ -750,3 +790,43 @@ impl AdminOps for CoreUserOps {
 // Test fixtures (PanicOps / FailingOps + AdminEntry::for_testing*) live
 // with the legacy `admin/macro_tests.rs` etc. that haven't been ported
 // yet. Re-add them here when the first in-tree test needs them.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::{PasswordPolicy, PasswordPolicyError};
+
+    #[test]
+    fn admin_new_installs_default_password_policy() {
+        let admin = Admin::new();
+        // Default floor is 10 (per DESIGN_RECOVERY.md §13.2).
+        assert_eq!(admin.active_password_policy().min_length(), 10);
+        // Sanity: a 9-char password is rejected, a 10-char is accepted.
+        assert!(admin.active_password_policy().validate("nine_char").is_err());
+        assert!(admin.active_password_policy().validate("ten_chars_").is_ok());
+    }
+
+    #[test]
+    fn admin_password_policy_overrides_default() {
+        struct StubPolicy;
+        impl PasswordPolicy for StubPolicy {
+            fn validate(
+                &self,
+                _candidate: &str,
+            ) -> std::result::Result<(), PasswordPolicyError> {
+                Err(PasswordPolicyError::Custom("stub rejected".into()))
+            }
+            fn min_length(&self) -> usize {
+                99
+            }
+        }
+
+        let admin = Admin::new().password_policy(Arc::new(StubPolicy));
+        assert_eq!(admin.active_password_policy().min_length(), 99);
+        let err = admin
+            .active_password_policy()
+            .validate("anything-at-all-here")
+            .unwrap_err();
+        assert_eq!(err, PasswordPolicyError::Custom("stub rejected".into()));
+    }
+}
