@@ -309,6 +309,15 @@ pub enum AuditEvent {
     /// emission via the dedicated `/admin/users/<id>/reset-password`
     /// route.
     PasswordResetByOther,
+    /// A user with `must_change_password = TRUE` completed the
+    /// forced rotation via `POST /admin/must-change-password`,
+    /// clearing the flag and (per `DESIGN_R2_ORGANISATIONAL.md`
+    /// §3.4) revoking every other session for the same user.
+    /// `metadata.triggered_by_audit_id` links back to the
+    /// originating `PasswordResetByOther` row;
+    /// `metadata.invalidated_session_count` records how many
+    /// sessions were revoked. R2 commit #12 wires emission.
+    ForcedPasswordChangeCompleted,
     // ---- Account state (R2+) ----
     AccountLocked,
     AccountUnlocked,
@@ -348,6 +357,7 @@ impl AuditEvent {
             Self::PasswordResetSelfRequest => "password_reset_self_request",
             Self::PasswordResetSelfConsume => "password_reset_self_consume",
             Self::PasswordResetByOther => "password_reset_by_other",
+            Self::ForcedPasswordChangeCompleted => "forced_password_change_completed",
             Self::AccountLocked => "account_locked",
             Self::AccountUnlocked => "account_unlocked",
             Self::MfaEnabled => "mfa_enabled",
@@ -455,6 +465,7 @@ mod tests {
         AuditEvent::PasswordResetSelfRequest,
         AuditEvent::PasswordResetSelfConsume,
         AuditEvent::PasswordResetByOther,
+        AuditEvent::ForcedPasswordChangeCompleted,
         AuditEvent::AccountLocked,
         AuditEvent::AccountUnlocked,
         AuditEvent::MfaEnabled,
@@ -535,6 +546,10 @@ mod tests {
         assert_eq!(
             AuditEvent::PasswordResetByOther.as_str(),
             "password_reset_by_other"
+        );
+        assert_eq!(
+            AuditEvent::ForcedPasswordChangeCompleted.as_str(),
+            "forced_password_change_completed"
         );
         assert_eq!(AuditEvent::AccountLocked.as_str(), "account_locked");
         assert_eq!(AuditEvent::AccountUnlocked.as_str(), "account_unlocked");
