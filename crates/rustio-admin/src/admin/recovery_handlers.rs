@@ -291,10 +291,7 @@ pub(crate) async fn do_forgot_password(
     Ok(Response::redirect("/admin/forgot-password/sent"))
 }
 
-pub(crate) async fn show_forgot_password_sent(
-    ctx: &AdminCtx,
-    req: &Request,
-) -> Result<Response> {
+pub(crate) async fn show_forgot_password_sent(ctx: &AdminCtx, req: &Request) -> Result<Response> {
     let view = ForgotPasswordSentCtx {
         base: BaseContext::new(None, csrf_token(req), &ctx.admin),
         page_title: "Check your email",
@@ -378,7 +375,10 @@ pub(crate) async fn do_reset_password(
             &req,
             token,
             min_length,
-            &[("new_password2", "The two password fields didn't match.".into())],
+            &[(
+                "new_password2",
+                "The two password fields didn't match.".into(),
+            )],
             cid,
         );
     }
