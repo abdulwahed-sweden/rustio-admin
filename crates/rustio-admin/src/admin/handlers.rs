@@ -869,26 +869,60 @@ pub(crate) async fn show_log_entries(
 
 // ---- Self-service password change ---------------------------------------
 
-/// Minimum acceptable password length. argon2 accepts arbitrary input,
-/// so this is policy not crypto.
-const MIN_PASSWORD_LEN: usize = 8;
-
 pub(crate) async fn show_password_change(
     ctx: &AdminCtx,
     identity: Identity,
     req: &Request,
 ) -> Result<Response> {
+    // R1 commit #11 — PRG terminus. After a successful POST,
+    // `do_password_change` redirects here with `?changed=1`; the
+    // GET-time render of the success card is idempotent, so a
+    // browser refresh re-renders the same confirmation without
+    // re-POSTing.
+    let just_changed = req.query().get("changed").is_some();
+    let min_length = ctx.admin.active_password_policy().min_length();
     let view = render::PasswordChangeCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
-        page_title: "Change password",
+        page_title: if just_changed {
+            "Password changed"
+        } else {
+            "Change password"
+        },
         errors: Vec::new(),
-        success: false,
-        sections: render::password_change_form_sections(),
+        success: just_changed,
+        sections: if just_changed {
+            Vec::new()
+        } else {
+            render::password_change_form_sections(min_length)
+        },
     };
     let body = ctx.templates.render("admin/password_change.html", &view)?;
     Ok(Response::html(body))
 }
 
+/// `POST /admin/password_change` — authenticated self-change flow.
+///
+/// R1 commit #11 brought this handler into parity with the recovery
+/// doctrine (`DESIGN_RECOVERY.md` §5.2 + §14.2):
+///
+/// - **PasswordPolicy is the single source of truth.** The legacy
+///   inline `MIN_PASSWORD_LEN` length check is gone; validation
+///   now goes through `admin.active_password_policy().validate(...)`.
+/// - **Doctrine 22.** After a successful change, every session
+///   except the current one is revoked via
+///   `invalidate_sessions(SessionTarget::UserExceptCurrent, …,
+///   SessionInvalidationReason::UserRequested)`. The current
+///   device stays signed in.
+/// - **Audit.** One `AuditEvent::PasswordChangedSelf` row plus one
+///   `AuditEvent::SessionsRevokedSelf` per revoked id, all sharing
+///   the request's `correlation_id`.
+/// - **PRG.** On success, returns 303 → /admin/password_change?changed=1
+///   so a browser refresh doesn't replay the POST.
+///
+/// On any validation failure (wrong old password, mismatched
+/// confirms, policy rejection), the form re-renders with field-
+/// level errors and **no DB mutation** — the user's old password
+/// is still in place; sessions are untouched.
 pub(crate) async fn do_password_change(
     ctx: &AdminCtx,
     identity: Identity,
@@ -908,6 +942,8 @@ pub(crate) async fn do_password_change(
             ))
         })?;
 
+    // ---- Validation (no DB mutation on failure). ----
+    //
     // Push every error twice: once into the global Vec (catch-all
     // banner) and once into the field-keyed map (`apply_field_errors`
     // copies the matching entry onto each FormField at re-render
@@ -930,10 +966,11 @@ pub(crate) async fn do_password_change(
             .or_default()
             .push(msg.into());
     }
-    if new1.len() < MIN_PASSWORD_LEN {
-        let msg = format!(
-            "This password is too short. It must contain at least {MIN_PASSWORD_LEN} characters."
-        );
+    if let Err(policy_err) = ctx.admin.active_password_policy().validate(new1) {
+        // PasswordPolicyError's Display impl is plaintext-free
+        // (commit #4 leak-prevention test pins this); rendering
+        // it directly to the form field is safe.
+        let msg = policy_err.to_string();
         errors.push(msg.clone());
         field_errors
             .entry("new_password1".into())
@@ -941,30 +978,110 @@ pub(crate) async fn do_password_change(
             .push(msg);
     }
 
-    if errors.is_empty() {
-        auth::set_password(&ctx.db, user.id, new1).await?;
+    if !errors.is_empty() {
+        let min_length = ctx.admin.active_password_policy().min_length();
+        let mut sections = render::password_change_form_sections(min_length);
+        render::apply_field_errors(&mut sections, &field_errors);
         let view = render::PasswordChangeCtx {
             base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
-            page_title: "Password changed",
-            errors: Vec::new(),
-            success: true,
-            sections: Vec::new(),
+            page_title: "Change password",
+            errors,
+            success: false,
+            sections,
         };
         let body = ctx.templates.render("admin/password_change.html", &view)?;
-        return Ok(Response::html(body));
+        return Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST));
     }
 
-    let mut sections = render::password_change_form_sections();
-    render::apply_field_errors(&mut sections, &field_errors);
-    let view = render::PasswordChangeCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
-        page_title: "Change password",
-        errors,
-        success: false,
-        sections,
+    // ---- Validation passed; mutate. ----
+
+    // 1. Hash + write the new password. `set_password` (commit #2)
+    //    stamps `password_changed_at` on the same UPDATE.
+    auth::set_password(&ctx.db, user.id, new1).await?;
+
+    // 2. Doctrine 22 — revoke other sessions through the centralised
+    //    invalidation API. Current device stays signed in.
+    //
+    //    Edge case: cookie expired between page-load and this POST
+    //    (`current_session_id` resolves to `None`). Fall through to
+    //    revoking ALL sessions — the user is on a stale cookie
+    //    anyway, and the framework's auth middleware will redirect
+    //    to login on the next request.
+    let cookie_token = req
+        .header("cookie")
+        .and_then(crate::auth::session_token_from_cookie);
+    let current_session_id = match &cookie_token {
+        Some(t) => crate::auth::current_session_id(&ctx.db, t).await?,
+        None => None,
     };
-    let body = ctx.templates.render("admin/password_change.html", &view)?;
-    Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
+    let target = match current_session_id {
+        Some(sid) => crate::auth::SessionTarget::UserExceptCurrent {
+            user_id: user.id,
+            current_session_id: sid,
+        },
+        None => crate::auth::SessionTarget::User { user_id: user.id },
+    };
+    let outcome = crate::auth::invalidate_sessions(
+        &ctx.db,
+        target,
+        crate::auth::SessionInvalidationReason::UserRequested,
+    )
+    .await?;
+    let revoked_session_count = outcome.revoked_session_ids.len();
+
+    // 3. Audit — one `PasswordChangedSelf` row + one
+    //    `SessionsRevokedSelf` per revoked id, all sharing the
+    //    request's correlation_id so a future
+    //    /admin/history/<correlation_id> page reconstructs the chain.
+    //
+    //    Audit-write failure is non-fatal — log + continue. Same
+    //    trade-off documented in `auth::recovery::consume_reset_token`
+    //    (commit #7) and `do_revoke_session` (commit #10): the
+    //    password is already changed and sessions already revoked
+    //    when the audit insert runs; refusing to redirect would
+    //    leave the user staring at a 500 page wondering whether
+    //    the action took effect.
+    let cid_owned = req
+        .ctx()
+        .get::<crate::middleware::CorrelationId>()
+        .map(|c| c.0.clone());
+    let ip_owned = req
+        .header("x-forwarded-for")
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    let metadata = serde_json::json!({
+        "invalidated_session_count": revoked_session_count,
+    });
+    let mut entry = audit::LogEntry::new(user.id, audit::ActionType::Update, "user", user.id)
+        .with_event(audit::AuditEvent::PasswordChangedSelf);
+    entry.correlation_id = cid_owned.as_deref();
+    entry.ip_address = ip_owned.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary =
+        format!("password changed by user; {revoked_session_count} other session(s) revoked");
+    if let Err(e) = audit::record(&ctx.db, entry).await {
+        log::error!(
+            target: "rustio_admin::password_change",
+            "audit::record (PasswordChangedSelf) failed for user_id={}: {}",
+            user.id, e,
+        );
+    }
+
+    record_session_revocations(
+        ctx,
+        &identity,
+        &outcome.revoked_session_ids,
+        &req,
+        "password_change",
+    )
+    .await;
+
+    // 4. PRG: redirect to GET so a refresh doesn't replay the POST.
+    //    `show_password_change` reads `?changed=1` and renders the
+    //    success card idempotently.
+    Ok(Response::redirect("/admin/password_change?changed=1"))
 }
 
 /// `GET /admin/account/sessions` — read-only listing of the current

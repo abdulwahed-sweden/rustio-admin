@@ -2286,9 +2286,20 @@ pub(crate) fn user_edit_password_sections() -> Vec<FormSection> {
     }]
 }
 
-/// Pre-built FormField list for the password-change form. Static; the
-/// values are always empty (we never echo passwords back).
-pub(crate) fn password_change_form_sections() -> Vec<FormSection> {
+/// Pre-built FormField list for the password-change form. Values are
+/// always empty (we never echo passwords back). The
+/// `min_length` parameter controls the live policy hint shown
+/// beneath the new-password input — passed in from
+/// `Admin::active_password_policy().min_length()` so a project that
+/// overrides the policy gets accurate copy on the form
+/// (`DESIGN_RECOVERY.md` §13).
+///
+/// Pre-R1 the hint string was hardcoded to "8 characters"; R1
+/// commit #11 routed it through the policy so the framework
+/// default (10) and project overrides (12 / 16 / …) both render
+/// correctly.
+pub(crate) fn password_change_form_sections(min_length: usize) -> Vec<FormSection> {
+    let new_password_hint = format!("At least {min_length} characters.");
     vec![FormSection {
         title: None,
         fields: vec![
@@ -2321,7 +2332,7 @@ pub(crate) fn password_change_form_sections() -> Vec<FormSection> {
                 widget: "input",
                 input_type: "password",
                 value: String::new(),
-                hint: Some("Your password must contain at least 8 characters.".to_string()),
+                hint: Some(new_password_hint),
                 placeholder: None,
                 required: true,
                 options: None,
@@ -2432,5 +2443,48 @@ mod tests {
             trust_label(crate::auth::SessionTrust::MfaVerified),
             "MFA verified"
         );
+    }
+
+    /// R1 commit #11 — `password_change_form_sections` reflects the
+    /// caller-supplied `min_length` so a project that overrides the
+    /// `PasswordPolicy` floor sees accurate copy on the form. The
+    /// pre-R1 hardcoded "8 characters" is gone.
+    #[test]
+    fn password_change_form_sections_renders_live_min_length() {
+        let sections = password_change_form_sections(10);
+        assert_eq!(sections.len(), 1);
+        let fields = &sections[0].fields;
+        // Three fields: old_password, new_password1, new_password2.
+        assert_eq!(fields.len(), 3);
+        assert_eq!(fields[0].name, "old_password");
+        assert_eq!(fields[1].name, "new_password1");
+        assert_eq!(fields[2].name, "new_password2");
+        // Hint reflects the caller's parameter, not a hardcoded
+        // "8" or "12".
+        assert_eq!(
+            fields[1].hint.as_deref(),
+            Some("At least 10 characters."),
+            "default-policy floor 10 must surface in the hint"
+        );
+
+        // Project override propagates.
+        let sections = password_change_form_sections(16);
+        assert_eq!(
+            sections[0].fields[1].hint.as_deref(),
+            Some("At least 16 characters."),
+        );
+    }
+
+    /// Old + confirm fields don't carry the hint — only the new-
+    /// password field does. Belt-and-braces: the policy minimum is
+    /// surfaced exactly once, beneath the input the user is typing
+    /// the new password into.
+    #[test]
+    fn password_change_form_sections_only_new_password_carries_hint() {
+        let sections = password_change_form_sections(10);
+        let fields = &sections[0].fields;
+        assert!(fields[0].hint.is_none(), "old_password must have no hint");
+        assert!(fields[1].hint.is_some(), "new_password1 must have the hint");
+        assert!(fields[2].hint.is_none(), "new_password2 must have no hint");
     }
 }
