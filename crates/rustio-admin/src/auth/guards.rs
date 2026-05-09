@@ -124,6 +124,7 @@ mod tests {
             is_active: true,
             is_demo: false,
             demo_label: None,
+            must_change_password: false,
         }
     }
 

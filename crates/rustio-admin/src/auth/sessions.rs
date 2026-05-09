@@ -531,6 +531,7 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
     let token_hash = hash_token_for_storage(token);
     let row = sqlx::query(
         "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
+                u.must_change_password, \
                 s.expires_at, s.token_hash IS NOT NULL AS hashed \
            FROM rustio_sessions s \
            JOIN rustio_users u ON u.id = s.user_id \
@@ -552,6 +553,7 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
         None => {
             sqlx::query(
                 "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
+                    u.must_change_password, \
                     s.expires_at, FALSE AS hashed \
                FROM rustio_sessions s \
                JOIN rustio_users u ON u.id = s.user_id \
@@ -603,6 +605,7 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
         is_active: r.get_bool("is_active")?,
         is_demo: r.get_bool("is_demo")?,
         demo_label: r.get_optional_string("demo_label")?,
+        must_change_password: r.get_bool("must_change_password")?,
     }))
 }
 
