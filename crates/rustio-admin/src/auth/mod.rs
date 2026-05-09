@@ -13,6 +13,7 @@
 pub mod guards;
 mod permissions;
 pub(crate) mod recovery;
+pub(crate) mod recovery_admin;
 mod role;
 mod sessions;
 mod users;
@@ -65,5 +66,11 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     // DESIGN_RECOVERY.md §9 for the contract.
     recovery::migrate_user_recovery_schema(db).await?;
     recovery::init_recovery_tables(db).await?;
+    // R2 (0.6.0) — organisational recovery schema (lockout columns +
+    // partial index). See DESIGN_R2_ORGANISATIONAL.md §4 for the
+    // contract. Schema is additive and orthogonal to R1's recovery
+    // tables; the runtime that reads these columns lands in later
+    // R2 commits.
+    recovery_admin::migrate_user_lockout_schema(db).await?;
     Ok(())
 }
