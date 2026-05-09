@@ -47,7 +47,16 @@ impl RateLimiter {
         Self::new(120, Duration::from_secs(60))
     }
 
-    fn allow(&self, key: &str) -> bool {
+    /// Try to consume one token from the bucket keyed by `key`.
+    /// Returns `true` when the request is allowed (token consumed)
+    /// and `false` when the bucket is empty.
+    ///
+    /// `pub(crate)` so the recovery module can drive its own
+    /// scoped buckets (per-IP request + consume limits) without
+    /// going through the global middleware path. The middleware
+    /// closure in [`rate_limit`] continues to be the only public
+    /// way to plug a limiter into the router.
+    pub(crate) fn allow(&self, key: &str) -> bool {
         let now = Instant::now();
         let mut entry = self.inner.buckets.entry(key.to_string()).or_insert(Bucket {
             tokens: self.inner.capacity as f64,

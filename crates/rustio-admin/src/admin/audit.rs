@@ -150,6 +150,14 @@ pub struct LogEntry<'a> {
     pub session_id: Option<i64>,
     /// Structured before/after / extra metadata. JSONB column.
     pub metadata: Option<serde_json::Value>,
+    /// When `Some`, supersedes `action_type.as_str()` as the
+    /// persisted `rustio_admin_actions.action_type` string. Set via
+    /// [`LogEntry::with_event`]; the `action_type` field becomes a
+    /// placeholder in that case (the convention is to pass
+    /// `ActionType::Update`). Used by R1+ recovery / authority /
+    /// identity emissions that need the richer typed vocabulary —
+    /// see `DESIGN_AUDIT.md` §3 + `DESIGN_RECOVERY.md` §6.
+    pub event: Option<AuditEvent>,
 }
 
 impl<'a> LogEntry<'a> {
@@ -167,6 +175,40 @@ impl<'a> LogEntry<'a> {
             correlation_id: None,
             session_id: None,
             metadata: None,
+            event: None,
+        }
+    }
+
+    /// Promote this entry's persisted `action_type` string from the
+    /// legacy [`ActionType`] (create/update/delete) trio to the
+    /// richer typed [`AuditEvent`]. The `action_type` field becomes
+    /// a placeholder; the convention is to pass `ActionType::Update`
+    /// to [`Self::new`] and chain `.with_event(...)`.
+    ///
+    /// ```ignore
+    /// let entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    ///     .with_event(AuditEvent::PasswordChangedSelf);
+    /// ```
+    ///
+    /// Use this for framework-internal authority + identity +
+    /// recovery audit rows per `DESIGN_AUDIT.md` §3 +
+    /// `DESIGN_RECOVERY.md` §6. Project code that records generic
+    /// CRUD on its own models continues to use [`Self::new`] alone
+    /// with the legacy `ActionType` trio.
+    pub fn with_event(mut self, event: AuditEvent) -> Self {
+        self.event = Some(event);
+        self
+    }
+
+    /// Resolve the persisted `action_type` string. The `event`
+    /// override wins when set; otherwise the legacy `action_type`
+    /// trio's lowercase string is used. Pulled out as a small helper
+    /// so the `record()` insert and any future read-side rendering
+    /// share one resolution rule.
+    pub(crate) fn resolved_action_type(&self) -> &'static str {
+        match self.event {
+            Some(e) => e.as_str(),
+            None => self.action_type.as_str(),
         }
     }
 }
@@ -189,6 +231,7 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     }
 
     let now = Utc::now();
+    let action_type_str = entry.resolved_action_type();
     sqlx::query(
         "INSERT INTO rustio_admin_actions
              (user_id, action_type, model_name, object_id, timestamp, ip_address, summary,
@@ -196,7 +239,7 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     )
     .bind(entry.user_id)
-    .bind(entry.action_type.as_str())
+    .bind(action_type_str)
     .bind(entry.model_name)
     .bind(entry.object_id)
     .bind(now)
@@ -537,6 +580,37 @@ mod tests {
             );
         }
         assert_eq!(set.len(), action_type_strs.len() + ALL_AUDIT_EVENTS.len());
+    }
+
+    // ---- LogEntry::with_event ----
+
+    #[test]
+    fn log_entry_with_event_overrides_action_type_persistence() {
+        // Without with_event(), the legacy ActionType wins.
+        let entry = LogEntry::new(1, ActionType::Update, "user", 1);
+        assert_eq!(entry.resolved_action_type(), "update");
+
+        // with_event() promotes to the richer AuditEvent string.
+        let entry = LogEntry::new(1, ActionType::Update, "user", 1)
+            .with_event(AuditEvent::PasswordChangedSelf);
+        assert_eq!(entry.resolved_action_type(), "password_changed_self");
+
+        // Different events resolve to their canonical string.
+        let entry = LogEntry::new(1, ActionType::Update, "user", 1)
+            .with_event(AuditEvent::PasswordResetSelfRequest);
+        assert_eq!(entry.resolved_action_type(), "password_reset_self_request");
+
+        let entry = LogEntry::new(1, ActionType::Update, "user", 1)
+            .with_event(AuditEvent::PasswordResetSelfConsume);
+        assert_eq!(entry.resolved_action_type(), "password_reset_self_consume");
+    }
+
+    #[test]
+    fn log_entry_default_event_is_none() {
+        // Backwards-compat: legacy callers continue to work.
+        let entry = LogEntry::new(1, ActionType::Create, "post", 99);
+        assert!(entry.event.is_none());
+        assert_eq!(entry.resolved_action_type(), "create");
     }
 
     /// The legacy `ActionType::parse` is a partial parser — it only
