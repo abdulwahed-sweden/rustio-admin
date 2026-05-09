@@ -6,16 +6,243 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
 ## [Unreleased]
 
+R1 of the universal account-recovery architecture. Self-service
+password recovery is now end-to-end: the user clicks **Forgot your
+password?** on `/admin/login`, lands on `/admin/forgot-password`,
+submits an email, receives a reset link (1-hour TTL, single-use),
+clicks through to `/admin/reset-password/<token>`, sets a new
+password, and is signed back in via `/admin/login`. Every session
+across every device is revoked at consume time. Active-session
+management (revoke single / others / all) is wired on the existing
+`/admin/account/sessions` page. The authenticated
+`/admin/password_change` flow is brought into parity with the
+recovery doctrine — successful changes now invalidate other devices
+and emit typed audit events. A 7-day forensic-retention sweeper
+trims old reset tokens automatically.
+
+> **Migrating from 0.4.x:** bump `rustio-admin = "0.5"` in your
+> project's `Cargo.toml` and `cargo update -p rustio-admin`. The
+> schema migration is additive (new `rustio_password_reset_tokens`
+> table + two new columns on `rustio_users`); existing users and
+> sessions are unaffected. No middleware changes required —
+> `correlation_id` BEFORE `csrf_protect` (added in 0.4.0) is still
+> the only ordering constraint. Recovery routes register
+> automatically via `register_admin_routes`. Production deployments
+> wiring a real `Mailer` should also opt the policy into strict
+> mode: `RecoveryPolicy::strict_mailer_required(true)` makes the
+> framework refuse to start with the default `LogMailer`.
+
+### Recovery
+
+- **Self-service forgot/reset password flow.** Five new routes:
+  `GET /admin/forgot-password`, `POST /admin/forgot-password`,
+  `GET /admin/forgot-password/sent`, `GET /admin/reset-password/:token`,
+  `POST /admin/reset-password/:token`. All sit alongside `/admin/login`
+  in the public surface; no role guard, CSRF preserved through the
+  existing `csrf_protect` middleware.
+- **Email-link reset tokens.** 256-bit cryptographically-random
+  URL-safe-base64 tokens; the plaintext leaves the framework only
+  in the email body dispatched through `email::Mailer::send` and in
+  the user's mailbox. The DB stores `sha256(token)` only — no
+  plaintext token persistence.
+- **Atomic single-use consume.** A single SQL statement
+  `UPDATE rustio_password_reset_tokens SET consumed_at = NOW()
+  WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > NOW()
+  RETURNING user_id` flips the row exclusively. Concurrent submissions
+  resolve as exactly one Consumed and one Invalid — never two of either.
+- **`PasswordPolicy` trait + `DefaultPasswordPolicy`.** Length-only
+  policy with `min_len: 10` baseline. Counts Unicode `char`s, not
+  bytes (a 10-char password is 10 user-visible characters regardless
+  of UTF-8 width). Projects override via
+  `Admin::password_policy(Arc::new(...))`; the framework deliberately
+  ships no complexity-class rules ("must contain a symbol") in the
+  default — NIST SP 800-63B Appendix A documents that complexity
+  classes push humans toward predictable patterns without raising
+  entropy meaningfully.
+- **`RecoveryPolicy` trait + `DefaultRecoveryPolicy`.** Tunables for
+  the recovery flow: `reset_token_ttl()` (1h), `request_rate_limit()`
+  (5 req / 15min / IP), `consume_rate_limit()` (10 req / 5min / IP),
+  `strict_mailer_required()` (false default), `public_site_url(&Request)`
+  with a provided default that honours `Forwarded` / `X-Forwarded-*`
+  / `Host` headers in priority order. Projects override via
+  `Admin::recovery_policy(Arc::new(...))`.
+- **Strict-mailer boot guard.** When
+  `RecoveryPolicy::strict_mailer_required() == true` and the project
+  hasn't called `Admin::mailer(...)` to override the default
+  `LogMailer`, `register_admin_routes` panics at startup with a
+  clear operator-actionable error message. The check is structural:
+  reads the new `Admin::has_custom_mailer()` flag (set by
+  `Admin::mailer(...)`), not pointer-equality tricks against
+  freshly-constructed defaults. Projects deliberately migrating can
+  re-register a `LogMailer` to silence the guard during transition.
+- **Reset-token sweeper integration.** `auth::recovery::purge_expired_reset_tokens`
+  runs alongside the existing session sweeper on the same 10-minute
+  tick. Deletes rows where `expires_at < NOW() - INTERVAL '7 days'`
+  (locked retention; covers consumed AND unconsumed expired rows).
+  Failure-isolated from the session sweep — a failure in either
+  doesn't prevent the other.
+
+### Sessions
+
+- **Active-sessions revoke buttons.** The R0 read-only
+  `/admin/account/sessions` page lights up. Three new POST routes:
+  `POST /admin/account/sessions/:id/revoke` (rejected if the id
+  matches the current device); `POST /admin/account/sessions/revoke-others`
+  (`SessionTarget::UserExceptCurrent`); `POST /admin/account/sessions/revoke-all`
+  (`SessionTarget::User`, additionally clears the cookie and
+  redirects to `/admin/login?logout=1`).
+- **Authenticated password change revokes other devices.** A
+  successful `POST /admin/password_change` now goes through
+  `auth::invalidate_sessions(SessionTarget::UserExceptCurrent { … },
+  SessionInvalidationReason::UserRequested)`. Current device stays
+  signed in; every other device is signed out and must re-authenticate
+  with the new password. PRG redirect to
+  `/admin/password_change?changed=1` so a browser refresh doesn't
+  replay the POST.
+- **Reset-password consume revokes all devices.** Successful
+  `POST /admin/reset-password/<token>` calls
+  `invalidate_sessions(SessionTarget::User, SessionInvalidationReason::PasswordReset)`
+  before redirecting to `/admin/login?password_reset=success`.
+- **Doctrine 22 preserved.** A grep across `crates/` for `revoked_at\s*=`
+  continues to return only the four lines inside
+  `auth::sessions::invalidate_sessions` (one docstring + three
+  `SessionTarget` arms). Centralised invalidation is the single
+  legitimate writer of `revoked_at` across all R1 paths.
+
+### Audit
+
+- **`AuditEvent` promoted to public API.** The enum is `pub` with
+  `#[non_exhaustive]` from 0.5.0; its `as_str()` mapping is the
+  canonical persisted-string boundary. Existing variant strings are
+  locked-in by `audit_event_existing_variants_have_stable_strings`
+  — renaming any of them is a breaking change requiring a major
+  version bump.
+- **New variant `PasswordChangedSelf`** maps to
+  `"password_changed_self"`. Emitted from the corrected
+  authenticated `/admin/password_change` handler.
+- **`PasswordResetSelfRequest` / `PasswordResetSelfConsume` /
+  `SessionsRevokedSelf`** emission paths wired. R0 declared the
+  variants; R1 lights them up.
+- **`LogEntry::with_event(AuditEvent)` builder** is the typed-event
+  boundary. Adds an optional `event: Option<AuditEvent>` field on
+  `LogEntry`; when set, the `record()` insert uses
+  `event.as_str()` as the persisted `action_type`. Backwards
+  compatible: existing struct-literal call sites pass `event: None`
+  and continue to write the legacy `ActionType` trio
+  (`create / update / delete`).
+- **Correlation-id chain semantics.** Every recovery event
+  (request → consume → set_password → revoke-N-sessions) shares
+  the originating request's `correlation_id`. A future
+  `/admin/history/<correlation_id>` page can reconstruct the full
+  chain. Metadata fields:
+  `token_fingerprint` (8-char SHA-256 redaction),
+  `email_send_status`, `requested_ip`, `requested_user_agent`,
+  `expires_at`, `invalidated_session_count`, `via`. Plaintext
+  tokens never appear in any field.
+
+### Security
+
+- **Token hashes only.** `rustio_password_reset_tokens.token_hash`
+  stores `sha256(token)` URL-safe-base64. Plaintext lives in the
+  email body and the user's mailbox; never in the DB, never in any
+  log line, never in audit metadata. Tests pin the property:
+  `IssueOutcome` and `ConsumeOutcome` Debug formats are
+  structurally token-free.
+- **Uniform outward responses on the recovery flow.** The
+  `do_forgot_password` handler always 303-redirects to
+  `/admin/forgot-password/sent` regardless of whether the email
+  matched, the user was active, or the IP was rate-limited. The
+  `do_reset_password` handler renders the same "this link is no
+  longer valid" page for unknown / expired / consumed / rate-limited
+  tokens. Variant-level distinctions exist for audit + observability,
+  never for branching the user-facing UI.
+- **No direct `revoked_at` writes.** Doctrine 22 single-writer
+  invariant preserved. Every revoke goes through
+  `auth::invalidate_sessions(SessionTarget::*, …)`.
+- **CSRF preserved across recovery flows.** The new POST routes
+  inherit the project's existing `csrf_protect` middleware; recovery
+  templates emit
+  `<input type="hidden" name="_csrf" value="{{ csrf_token }}">`
+  in every form.
+- **No plaintext password leakage.** `PasswordPolicyError` variants
+  carry only character counts (`TooShort { min, actual }`) or
+  project-supplied messages (`Custom(String)`); never the candidate
+  plaintext. Display + Debug renderings are property-tested
+  plaintext-free across the runtime / handler / template surfaces.
+- **Strict-mailer boot guard** (above) prevents production
+  deployments from accidentally running with the dev `LogMailer`
+  default — when opted in, the framework refuses to start.
+
+### Behaviour changes
+
+- **Authenticated password changes now sign out other devices.**
+  Pre-R1 behaviour: `POST /admin/password_change` updated the hash
+  and left other sessions live with the previously-issued cookies.
+  This contradicted Doctrine 22's spirit and has been a known drift
+  since 0.3.0. R1 closes it: the success path goes through
+  `invalidate_sessions(SessionTarget::UserExceptCurrent, …)` and
+  emits typed audit events. Users on multiple devices need to sign
+  in again on each non-current device with the new password.
+- **Default password minimum length 8 → 10.** Pre-R1 the
+  authenticated change handler used an inline `MIN_PASSWORD_LEN = 8`
+  constant; the policy framework didn't exist. R1 routes all
+  password mutations through `Admin::active_password_policy()`
+  with `DefaultPasswordPolicy::new()` returning `min_len: 10`.
+  Existing users with shorter passwords are NOT forced to change
+  — the policy fires only on new passwords during a change /
+  reset. Production deployments are encouraged to override to 12+
+  via `Admin::password_policy(Arc::new(DefaultPasswordPolicy::with_min_len(12)))`.
+- **Recovery tokens retained 7 days after expiry.** Issued tokens
+  expire after 1 hour; the row stays in
+  `rustio_password_reset_tokens` for 7 more days as a forensic
+  window (audit correlation, abuse investigation, operational
+  debugging) before the periodic sweeper purges it. Pre-R1: no
+  recovery table, no sweeper.
+- **Strict-mailer mode can fail startup intentionally.** When
+  `RecoveryPolicy::strict_mailer_required(true)` is set and the
+  default `LogMailer` is still in place, `register_admin_routes`
+  panics with a clear error. Default behaviour (dev / CI / testing)
+  is unchanged: `strict_mailer_required = false`, framework boots,
+  reset emails appear in `log::info!` output.
+- **`MIN_PASSWORD_LEN` constant removed from `admin/handlers.rs`.**
+  Was effectively private (a non-exported `const` in a binary-internal
+  module); no external project should have depended on it. The
+  constant's parallel implementation in `rustio-admin-cli`
+  (`user.rs:62`, used by `rustio user create`) is unchanged at 8
+  characters and remains a separate validation surface — R2 work
+  will likely route CLI user creation through the same
+  `PasswordPolicy` for consistency.
+
 ### Documentation
 
+- **`DESIGN_RECOVERY.md`** added (~1100 lines) — the canonical R1
+  contract. Covers: threat model, recovery state machine, token
+  lifecycle, atomic-consume semantics, invalidation rules, audit
+  event plan, rate-limit strategy, UX doctrine + locked page copy,
+  schema/migration plan, module + types layout, route table,
+  mailer integration + boot guard, `PasswordPolicy` +
+  `RecoveryPolicy` trait surface, integration deltas (with a
+  `§14.4` callout parking the admin-edit form's password field for
+  R2 cleanup), test plan, 12-commit atomic implementation plan,
+  locked decisions table, PR review checklist. Read-orientation
+  for operators; PR-review surface for contributors.
+- **Doctrine cross-links.** `README.md` gains an *Architecture
+  doctrine* section listing the four canonical contracts —
+  `DESIGN_SYSTEM.md`, `DESIGN_SESSIONS.md`, `DESIGN_AUDIT.md`,
+  `DESIGN_RECOVERY.md` — with one-line summaries. Communicates
+  that recovery / session / audit behaviour is doctrine-driven,
+  invariants are intentional, revoke semantics are centralized,
+  audit chains are correlation-aware, security-sensitive flows
+  are documented before implementation.
 - **`docs/getting-started.md`** clarifies that `rustio user create`
   prompts twice for the password (echo-suppressed) and that
   `--password` should only appear in CI / scripted bootstrap so the
   plaintext never lands on `argv`, in `ps` output, or in shell
-  history.
+  history. *(landed pre-R1 under `[Unreleased]`)*
 - **Port-8000 troubleshooting** added — if the default
   `127.0.0.1:8000` is occupied, projects edit the listen address in
   the generated `src/main.rs` rather than introducing a new env var.
+  *(pre-R1)*
 - **Migrations clarification** — `rustio startproject` already
   creates `migrations/0001_create_posts.sql`, so the walkthrough no
   longer instructs `mkdir -p migrations`. Two valid paths are
@@ -26,21 +253,71 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
     `migrations/0001_create_posts.sql` and `src/post.rs` **before**
     the demo migration has been applied to a real database. After
     that point, migrations are append-only and a forward
-    `0002_drop_posts.sql` is the right move.
+    `0002_drop_posts.sql` is the right move. *(pre-R1)*
 - **"What you get after first login"** section enumerates the
   capabilities a fresh project inherits (session-backed auth,
   permission matrix, audit history, active sessions page,
-  correlation IDs, FK hydration, template overrides).
+  correlation IDs, FK hydration, template overrides). *(pre-R1)*
 - **"Project philosophy"** section codifies the framework's design
   stance: Postgres-first, operational clarity over magic, explicit
   model registration, server-rendered admin UI, security and
   auditability built in, no AI / no cloud lock-in / no frontend
-  build step.
-- The same five clarifications mirror across the
-  `templates/project/README.md.tmpl` so newly scaffolded projects
-  ship with them in their own README.
+  build step. *(pre-R1)*
+- **`templates/project/README.md.tmpl`** mirrors the same five
+  pre-R1 clarifications so newly scaffolded projects ship with them
+  in their own README. *(pre-R1)*
 
-No runtime, auth, or session changes.
+### Internal
+
+- **`auth::recovery` module** — new submodule (`pub(crate)` from
+  `auth::mod`) holding the schema migrations
+  (`init_recovery_tables`, `migrate_user_recovery_schema`), the
+  trait surface (`PasswordPolicy`, `RecoveryPolicy`, plus
+  `Default*` impls and `Shared*` type aliases), the runtime
+  primitives (`issue_reset_token`, `consume_reset_token`,
+  `check_reset_token_valid`), and the periodic sweeper
+  (`purge_expired_reset_tokens`).
+- **`admin/recovery_handlers.rs`** — new submodule (`pub(crate)`)
+  holding the five HTTP handlers, the `RecoveryState` carrier (two
+  `Arc<RateLimiter>` buckets), and the per-page render contexts.
+- **`set_password` stamps `password_changed_at`.** Single SQL
+  statement updates `password_hash` + `password_changed_at` +
+  `updated_at` to the same `NOW()`. Surface unchanged: callers see
+  the same `(db, user_id, new_password) -> Result<()>` signature.
+- **`Admin::mailer(...)` builder.** Closes the
+  documented-but-unimplemented gap from 0.4.0. Builder field
+  `mailer: SharedMailer`, accessor `Admin::active_mailer()`,
+  override flag `Admin::has_custom_mailer()` for the strict-mailer
+  guard. `Admin::new()` defaults to `Arc::new(LogMailer)`.
+- **`Admin::password_policy(...)` + `Admin::recovery_policy(...)`**
+  builders following the same `mailer` pattern. Both default to
+  framework-supplied implementations seeded by `Admin::new()`.
+- **Recovery sweeper integration** in `background::spawn_session_sweeper`.
+  Same 10-minute interval as R0; recovery sweep runs after the
+  session sweep with independent failure handling — neither sweep
+  failure prevents the other from running on this tick or future
+  ticks. New log target `rustio_admin::recovery_sweeper`.
+- **`RateLimiter::allow(key)` promoted to `pub(crate)`** so the
+  recovery handlers can drive their own scoped buckets without
+  routing through the global middleware.
+- **`auth::sessions::random_token` promoted to `pub(crate)`** so
+  the recovery module reuses the same 256-bit URL-safe-base64
+  token generator the session module already shipped — single
+  source of truth.
+- **`pub(crate) mod recovery`** in `auth/mod.rs` — the recovery
+  module is reachable as `crate::auth::recovery::*` from sibling
+  modules without `pub use` re-exports for every internal item.
+
+No public-API breakage. The `Admin` struct gains four pub(crate)
+fields (`mailer`, `mailer_overridden`, `password_policy`,
+`recovery_policy`) and four public methods
+(`mailer / has_custom_mailer / password_policy /
+active_password_policy / recovery_policy / active_recovery_policy
+/ active_mailer`); existing constructors and accessors are
+unchanged. `LogEntry` gains one optional field (`event:
+Option<AuditEvent>`) and one builder method
+(`with_event(AuditEvent)`); existing struct-literal call sites add
+`event: None` and continue working unchanged.
 
 ## [0.4.0] — 2026-05-09
 
