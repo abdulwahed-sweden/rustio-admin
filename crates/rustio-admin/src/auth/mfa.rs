@@ -47,10 +47,21 @@
 //!   refusal when `MfaPolicy != Disabled` and the env var is
 //!   unset lands in a later commit. Round-trip + tamper +
 //!   wrong-key detection are pinned by unit tests. R3 commit #3.
+//! - [`generate_backup_codes`] / [`hash_backup_code`] /
+//!   [`verify_backup_code`] / [`normalise_backup_code`] +
+//!   [`BACKUP_CODE_COUNT`] / [`BACKUP_CODE_LEN`] — the
+//!   backup-code surface (§8.1, D2 + D7). 8 codes per batch in
+//!   the locked `XXXX-XXXX` format from the 31-char
+//!   ambiguity-stripped alphabet (no `0/O/1/I/L`); Argon2id with
+//!   low-memory params (`m = 16 MiB`, `t = 2`, `p = 1`); the
+//!   normalise function uppercases and strips the hyphen so the
+//!   user can copy with or without the separator. Every helper
+//!   is marked `#[allow(dead_code)]` until the enrolment +
+//!   verification runtime wires the call sites in R3 commits
+//!   #6 and #7. R3 commit #4.
 //!
 //! Subsequent commits will add: TOTP step generator + verifier
-//! (RFC 6238, hand-rolled — §9.4), Argon2id backup-code hasher
-//! with low-memory params (§8.1), enrolment / verification /
+//! (RFC 6238, hand-rolled — §9.4), enrolment / verification /
 //! disable / regeneration runtime functions (§9), and `MfaPolicy`
 //! routing into `login_guard` (§12.3).
 //!
@@ -83,9 +94,11 @@
 
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key as GcmKey, Nonce};
+use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
+use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
-use rand::RngCore;
+use rand::{Rng, RngCore};
 
 use crate::auth::Role;
 use crate::error::{Error, Result};
@@ -236,6 +249,165 @@ pub fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
     cipher
         .decrypt(nonce, ciphertext)
         .map_err(|_| Error::Internal("MFA ciphertext failed AEAD verification".into()))
+}
+
+// -----------------------------------------------------------------
+// Backup codes (R3 commit #4)
+// -----------------------------------------------------------------
+
+/// Number of backup codes generated per batch. Locked at 8 per
+/// `DESIGN_R3_MFA.md` Appendix B. Industry-standard range is
+/// 8-16; 8 is enough for emergency use without bloating the
+/// post-enrolment confirmation page.
+#[allow(dead_code)] // call site lands in R3 commit #6 (enrolment runtime)
+pub const BACKUP_CODE_COUNT: usize = 8;
+
+/// Backup-code length in characters, excluding the visual
+/// hyphen separator at position 4. Locked at 8 (rendered as
+/// `XXXX-XXXX`) per `DESIGN_R3_MFA.md` Appendix B.
+pub const BACKUP_CODE_LEN: usize = 8;
+
+/// 31-character ambiguity-stripped alphabet for backup codes.
+/// Excludes `0` / `O` (digit zero / letter O), `1` / `I` /
+/// `L` (digit one / letter I / letter L). Per
+/// `DESIGN_R3_MFA.md` Appendix B locked decision; the alphabet
+/// is the persistence contract — changing it breaks any code
+/// that was issued under a different alphabet.
+///
+/// Entropy per backup code: `8 chars × log2(31) ≈ 39.6 bits`
+/// — adequate for single-use rate-limited verification. The
+/// design doc rounds to "≈41 bits" approximately.
+const BACKUP_CODE_ALPHABET: &[u8] = b"23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+/// Argon2id parameters for backup-code hashing. Locked at
+/// `m = 16 MiB / t = 2 / p = 1` per `DESIGN_R3_MFA.md` §8.1.
+///
+/// Lower than full password Argon2id (default `m ≈ 19 MiB`)
+/// because backup codes have higher entropy per character than
+/// passwords and verification runs on every login attempt that
+/// tries a backup code (up to `BACKUP_CODE_COUNT` rows). Full
+/// Argon2id would add latency without strengthening the
+/// security model meaningfully.
+fn backup_code_argon2() -> Result<Argon2<'static>> {
+    let params = Params::new(16 * 1024, 2, 1, None)
+        .map_err(|e| Error::Internal(format!("argon2 params: {e}")))?;
+    Ok(Argon2::new(Algorithm::Argon2id, Version::V0x13, params))
+}
+
+/// Generate a fresh batch of backup codes.
+///
+/// Returns `count` strings of the form `XXXX-XXXX` where each
+/// `X` is drawn unbiased from [`BACKUP_CODE_ALPHABET`] using
+/// `rand::thread_rng().gen_range(...)`. The hyphen is purely
+/// visual — at storage time the framework normalises away
+/// hyphens via [`normalise_backup_code`].
+///
+/// **Plaintext lifecycle (D2).** The returned strings are the
+/// only place the plaintext exists. Callers MUST hash via
+/// [`hash_backup_code`] before persisting and MUST render the
+/// plaintext to the user exactly once on the enrolment /
+/// regeneration success page. After that response, the
+/// plaintext is dropped from memory.
+///
+/// Typical caller pattern (R3 commit #6):
+///
+/// ```ignore
+/// let codes = generate_backup_codes(BACKUP_CODE_COUNT);
+/// let hashes: Vec<String> = codes
+///     .iter()
+///     .map(|c| hash_backup_code(c))
+///     .collect::<Result<_>>()?;
+/// // INSERT hashes into rustio_mfa_backup_codes
+/// // RENDER `codes` to the user once, then drop
+/// ```
+#[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) +
+                    // commit when regenerate_backup_codes lands
+pub fn generate_backup_codes(count: usize) -> Vec<String> {
+    let mut rng = rand::thread_rng();
+    let alphabet_len = BACKUP_CODE_ALPHABET.len();
+    (0..count)
+        .map(|_| {
+            // 8 chars + 1 hyphen = 9 chars total.
+            let mut out = String::with_capacity(BACKUP_CODE_LEN + 1);
+            for i in 0..BACKUP_CODE_LEN {
+                if i == 4 {
+                    out.push('-');
+                }
+                let idx = rng.gen_range(0..alphabet_len);
+                out.push(BACKUP_CODE_ALPHABET[idx] as char);
+            }
+            out
+        })
+        .collect()
+}
+
+/// Normalise a user-submitted backup code for hash comparison.
+///
+/// Strips every non-alphanumeric character (so `XXXX-XXXX`,
+/// `XXXXXXXX`, `xxxx xxxx`, `xxxx-xxxx`, etc. all collapse to
+/// the same canonical form) and uppercases. The hash compare
+/// runs on the canonical form.
+///
+/// Idempotent: `normalise(normalise(x)) == normalise(x)`.
+#[allow(dead_code)] // call site lands in R3 commit #8 (consume_backup_code runtime)
+pub fn normalise_backup_code(input: &str) -> String {
+    input
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_uppercase()
+}
+
+/// Hash a backup code with Argon2id (low-memory params).
+///
+/// Generates a fresh 16-byte salt per call from the OS RNG.
+/// Returns the PHC string (`$argon2id$v=19$m=16384,t=2,p=1$...`)
+/// suitable for storage in `rustio_mfa_backup_codes.code_hash`.
+/// The PHC string is self-describing — verification reads the
+/// params from the hash itself.
+///
+/// The caller normalises the plaintext via
+/// [`normalise_backup_code`] before passing to this function so
+/// the user's hyphen / casing variation does not affect the
+/// hash.
+///
+/// **Failure modes** (all `Error::Internal` — the failure is
+/// operator-side at boot, not user-facing):
+///
+/// - Argon2id parameter construction fails (should not happen
+///   with the locked `m / t / p` values).
+/// - Hashing itself fails (rare; usually OOM under contrived
+///   conditions).
+#[allow(dead_code)] // call site lands in R3 commit #6 (enrolment runtime)
+pub fn hash_backup_code(plaintext: &str) -> Result<String> {
+    let argon2 = backup_code_argon2()?;
+    let salt = SaltString::generate(&mut rand::thread_rng());
+    let hash = argon2
+        .hash_password(plaintext.as_bytes(), &salt)
+        .map_err(|e| Error::Internal(format!("argon2 hash: {e}")))?;
+    Ok(hash.to_string())
+}
+
+/// Verify a normalised backup-code candidate against a stored
+/// PHC hash.
+///
+/// Reads the Argon2 parameters from the PHC string itself, so
+/// the verifier does not need to know the params used at hash
+/// time. Constant-time at the Argon2id primitive level.
+///
+/// Returns `false` for any failure shape — invalid PHC string,
+/// param mismatch, hash mismatch, etc. The caller does not
+/// distinguish causes; the user-facing response is uniform per
+/// `DESIGN_R3_MFA.md` §4.4.
+#[allow(dead_code)] // call site lands in R3 commit #8 (consume_backup_code runtime)
+pub fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
+    let parsed = match PasswordHash::new(hash) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+    Argon2::default()
+        .verify_password(plaintext.as_bytes(), &parsed)
+        .is_ok()
 }
 
 /// Framework-wide MFA enforcement policy.
@@ -508,5 +680,127 @@ mod tests {
         let too_short = [0u8; 27];
         let result = unwrap_secret(&too_short, &key);
         assert!(result.is_err(), "input below 28 bytes must reject");
+    }
+
+    // ---- backup codes (R3 commit #4) -----------------------------
+
+    #[test]
+    fn alphabet_is_31_chars_no_ambiguous() {
+        // The 31-char alphabet excludes 0/O/1/I/L per
+        // DESIGN_R3_MFA.md Appendix B. This test pins the
+        // alphabet — if a future commit accidentally adds an
+        // ambiguous character, the suite catches it.
+        assert_eq!(BACKUP_CODE_ALPHABET.len(), 31);
+        for &b in BACKUP_CODE_ALPHABET {
+            let c = b as char;
+            assert!(c.is_ascii_alphanumeric(), "non-alphanumeric: {c:?}");
+            assert!(
+                !matches!(c, '0' | 'O' | '1' | 'I' | 'L'),
+                "ambiguous char in alphabet: {c:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn generate_returns_count_codes() {
+        let codes = generate_backup_codes(BACKUP_CODE_COUNT);
+        assert_eq!(codes.len(), BACKUP_CODE_COUNT);
+    }
+
+    #[test]
+    fn each_code_is_xxxx_dash_xxxx_shape() {
+        let codes = generate_backup_codes(8);
+        for code in &codes {
+            assert_eq!(code.len(), BACKUP_CODE_LEN + 1, "wrong length: {code:?}");
+            assert_eq!(
+                code.chars().nth(4),
+                Some('-'),
+                "hyphen missing at position 4: {code:?}"
+            );
+            // Every non-hyphen char is in the locked alphabet.
+            for (i, c) in code.chars().enumerate() {
+                if i == 4 {
+                    continue;
+                }
+                assert!(
+                    BACKUP_CODE_ALPHABET.contains(&(c as u8)),
+                    "char {c:?} at position {i} not in alphabet"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn generated_codes_are_unique_within_batch() {
+        // Birthday-bound for 8 codes from a 31^8 ≈ 9 × 10^11
+        // space is well below the collision threshold. A repeated
+        // code in a single batch would indicate the RNG is broken
+        // or the alphabet is much smaller than expected.
+        let codes = generate_backup_codes(64);
+        let unique: std::collections::HashSet<_> = codes.iter().cloned().collect();
+        assert_eq!(unique.len(), 64, "batch contained duplicates");
+    }
+
+    #[test]
+    fn normalise_strips_hyphens_and_uppercases() {
+        assert_eq!(normalise_backup_code("ABCD-EFGH"), "ABCDEFGH");
+        assert_eq!(normalise_backup_code("abcd-efgh"), "ABCDEFGH");
+        assert_eq!(normalise_backup_code("AbCdEfGh"), "ABCDEFGH");
+        assert_eq!(normalise_backup_code(" abcd efgh "), "ABCDEFGH");
+        assert_eq!(normalise_backup_code("abcdefgh"), "ABCDEFGH");
+    }
+
+    #[test]
+    fn normalise_is_idempotent() {
+        let once = normalise_backup_code("xxxx-yyyy");
+        let twice = normalise_backup_code(&once);
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn hash_verify_round_trip() {
+        let code = "ABCDEFGH";
+        let hash = hash_backup_code(code).expect("hashing must succeed");
+        assert!(verify_backup_code(code, &hash), "round-trip must verify");
+    }
+
+    #[test]
+    fn hash_uses_argon2id_low_memory_params() {
+        // Argon2's PHC string carries the params; this test pins
+        // them so a future "let's tune Argon2" change either
+        // updates the locked-decision table OR fails the suite
+        // here.
+        let hash = hash_backup_code("ABCDEFGH").expect("hash succeeds");
+        assert!(hash.starts_with("$argon2id$"), "wrong algorithm: {hash}");
+        assert!(
+            hash.contains("m=16384,t=2,p=1"),
+            "params drifted from locked m=16MB/t=2/p=1: {hash}"
+        );
+    }
+
+    #[test]
+    fn verify_rejects_wrong_code() {
+        let hash = hash_backup_code("ABCDEFGH").expect("hash succeeds");
+        assert!(!verify_backup_code("WRONGCDE", &hash));
+    }
+
+    #[test]
+    fn verify_rejects_invalid_phc_string() {
+        // Garbage hash must not panic — must return false.
+        assert!(!verify_backup_code("ABCDEFGH", "not-a-phc-hash"));
+        assert!(!verify_backup_code("ABCDEFGH", ""));
+    }
+
+    #[test]
+    fn separate_hash_calls_yield_different_phc_strings() {
+        // Fresh salt per call ⇒ same plaintext hashes differently.
+        // Without this, an attacker who learns one hash trivially
+        // recognises whether two users share the same code.
+        let a = hash_backup_code("ABCDEFGH").expect("a");
+        let b = hash_backup_code("ABCDEFGH").expect("b");
+        assert_ne!(a, b, "fresh salt must produce different hashes");
+        // But both still verify the original code.
+        assert!(verify_backup_code("ABCDEFGH", &a));
+        assert!(verify_backup_code("ABCDEFGH", &b));
     }
 }
