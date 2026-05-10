@@ -6,8 +6,12 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
 ## [Unreleased]
 
-R2 of the universal account-recovery architecture. Targets 0.6.0.
-Where R1 covered the user-initiated path (forgot / reset / change),
+No changes yet.
+
+## [0.6.0] — 2026-05-10
+
+R2 of the universal account-recovery architecture. Where R1
+covered the user-initiated path (forgot / reset / change),
 R2 covers the **admin-initiated** path: an Administrator can reset
 another user's password (email or temp-password mode), lock /
 unlock an account, force a password rotation on next sign-in, and
