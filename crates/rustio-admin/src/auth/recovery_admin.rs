@@ -3,9 +3,11 @@
 //! See `DESIGN_R2_ORGANISATIONAL.md` for the canonical contract this
 //! module implements. R2 ships in 0.6.0; this module owns every
 //! recovery-related runtime fn except the existing R1 self-recovery
-//! flow (which lives in `auth::recovery`). The route-registration
-//! commit (#17) and the testcontainers integration test harness
-//! land later per `DESIGN_R2_ORGANISATIONAL.md` §11.
+//! flow (which lives in `auth::recovery`). The HTTP wrappers live in
+//! `admin::admin_recovery_handlers`; routes are registered in
+//! `admin::routes::register_admin_routes` (R2 commit #17). The
+//! testcontainers integration test harness lands later per
+//! `DESIGN_R2_ORGANISATIONAL.md` §10.3 / §11.
 //!
 //! ## What lives here today
 //!
@@ -326,7 +328,6 @@ pub(crate) async fn record_successful_login(db: &Db, user_id: i64) -> Result<()>
 /// `false` and every admin-recovery action will require a fresh
 /// re-auth. That's the documented escape hatch when a project sets
 /// `reauth_window = ChronoDuration::zero()`.
-#[allow(dead_code)] // call site lands in R2 commit #11 (re-auth handler)
 pub(crate) async fn promote_session_elevated(
     db: &Db,
     session_id: i64,
@@ -356,7 +357,6 @@ pub(crate) async fn promote_session_elevated(
 /// commit #11). The post-reauth handler then promotes the session
 /// and redirects back to the original URL, which now passes the
 /// check.
-#[allow(dead_code)] // call sites land in R2 commits #15 / #16 (admin recovery handlers)
 pub(crate) async fn check_session_elevated(db: &Db, session_id: i64) -> Result<bool> {
     let row = sqlx::query(
         "SELECT elevated_until FROM rustio_sessions \
@@ -530,7 +530,6 @@ pub(crate) enum AdminTempPwOutcome {
 /// via `SessionInvalidationReason::PasswordReset`. The path is
 /// audit-distinguishable from a self-initiated reset by the
 /// `PasswordResetByOther` event type on this issue row.
-#[allow(dead_code)] // call site lands in R2 commit #15 (admin reset handler)
 pub(crate) async fn issue_admin_reset_token(
     db: &Db,
     admin: &Admin,
@@ -696,7 +695,6 @@ pub(crate) async fn issue_admin_reset_token(
 /// [`crate::auth::invalidate_sessions`] with
 /// `SessionInvalidationReason::PasswordResetByOther`. No direct
 /// `revoked_at` write.
-#[allow(dead_code)] // call site lands in R2 commit #15 (admin reset handler)
 pub(crate) async fn admin_set_temp_password(
     db: &Db,
     request: &Request,
@@ -892,7 +890,6 @@ pub(crate) enum AdminRevokeOutcome {
 /// Doctrine 22: revocation goes through
 /// `auth::invalidate_sessions`. This fn never writes
 /// `revoked_at` directly.
-#[allow(dead_code)] // call site lands in R2 commit #16 handler
 pub(crate) async fn lock_user_account(
     db: &Db,
     request: &Request,
@@ -984,7 +981,6 @@ pub(crate) async fn lock_user_account(
 /// is a no-op at the row level. The audit row still emits, which
 /// matters for forensic-trace completeness when an admin re-runs
 /// unlock after losing the response.
-#[allow(dead_code)] // call site lands in R2 commit #16 handler
 pub(crate) async fn unlock_user_account(
     db: &Db,
     request: &Request,
@@ -1032,7 +1028,6 @@ pub(crate) async fn unlock_user_account(
 /// `auth::invalidate_sessions`. No `AccountLocked` audit row
 /// emits because no lock was applied; only the per-revoked-session
 /// `SessionsRevokedByOther` rows.
-#[allow(dead_code)] // call site lands in R2 commit #16 handler
 pub(crate) async fn admin_revoke_sessions(
     db: &Db,
     request: &Request,

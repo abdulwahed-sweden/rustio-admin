@@ -544,6 +544,75 @@ pub fn register_admin_routes(
         }
     });
 
+    // === R2 re-auth wall (R2 commit #11) ====================================
+    //
+    // Standalone wall: any authenticated user can promote their own
+    // session into the elevated band by re-entering their password.
+    // The handler validates `return_to` strictly (only `/admin*`
+    // paths; see `admin_recovery_handlers::validate_return_to`).
+    // Any role from User-tier upward.
+
+    let c = ctx.clone();
+    let router = router.get("/admin/reauth", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::admin_recovery_handlers::show_reauth(&c, ident, &req).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/reauth", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::admin_recovery_handlers::do_reauth(&c, ident, req).await
+                }
+            }
+        }
+    });
+
+    // === R2 forced password rotation (R2 commit #12) ========================
+    //
+    // The `must_change_password` interstitial is the only writeable
+    // surface a user can reach while their flag is TRUE. The path is
+    // on `MUST_CHANGE_WHITELIST`; the `login_guard` redirect therefore
+    // skips it (otherwise the rotation would be unreachable). Role::User
+    // matches: any authenticated user can be forced to rotate, even a
+    // User-tier account that can't access the dashboard.
+
+    let c = ctx.clone();
+    let router = router.get("/admin/must-change-password", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::admin_recovery_handlers::show_must_change_password(&c, ident, &req).await
+                }
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/must-change-password", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::admin_recovery_handlers::do_must_change_password(&c, ident, req).await
+                }
+            }
+        }
+    });
+
     // --- Built-in users admin (admin-only) ---
     let c = ctx.clone();
     let ac = auth_ctx.clone();
@@ -648,6 +717,145 @@ pub fn register_admin_routes(
                 Guard::Allow(ident) => {
                     let id = parse_id(req.param("id"))?;
                     super::builtin::do_user_delete(&ac, ident, id, req).await
+                }
+            }
+        }
+    });
+
+    // === R2 admin-driven recovery routes ====================================
+    //
+    // Registered alongside the existing `/admin/users/:id/...` cluster
+    // (per `DESIGN_R2_ORGANISATIONAL.md` §7.2 — user-related cluster
+    // contiguous). All gated `Role::Administrator`; the cross-rank
+    // safety check + the re-auth wall are enforced INSIDE the
+    // handlers (commits #15 / #16) so a Supervisor probe doesn't even
+    // reach the form.
+    //
+    // Insertion-order note: these are 4-segment routes, so the
+    // 3-segment `/admin/users/:id` read-only view further down doesn't
+    // conflict regardless of order. Placing them before the 3-segment
+    // view keeps the user routes lexically clustered.
+
+    // GET /admin/users/:id/reset-password — admin reset form (R2 #15).
+    let c = ctx.clone();
+    let router = router.get("/admin/users/:id/reset-password", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::show_admin_reset_password(&c, ident, id, &req)
+                        .await
+                }
+            }
+        }
+    });
+
+    // POST /admin/users/:id/reset-password — apply admin reset (R2 #15).
+    let c = ctx.clone();
+    let router = router.post("/admin/users/:id/reset-password", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::do_admin_reset_password(&c, ident, id, req)
+                        .await
+                }
+            }
+        }
+    });
+
+    // GET /admin/users/:id/lock — lock confirmation form (R2 #16).
+    let c = ctx.clone();
+    let router = router.get("/admin/users/:id/lock", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::show_lock_user(&c, ident, id, &req).await
+                }
+            }
+        }
+    });
+
+    // POST /admin/users/:id/lock — apply manual lock (R2 #16).
+    let c = ctx.clone();
+    let router = router.post("/admin/users/:id/lock", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::do_lock_user(&c, ident, id, req).await
+                }
+            }
+        }
+    });
+
+    // GET /admin/users/:id/unlock — unlock confirmation form (R2 #16).
+    let c = ctx.clone();
+    let router = router.get("/admin/users/:id/unlock", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::show_unlock_user(&c, ident, id, &req).await
+                }
+            }
+        }
+    });
+
+    // POST /admin/users/:id/unlock — clear lock (R2 #16).
+    let c = ctx.clone();
+    let router = router.post("/admin/users/:id/unlock", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::do_unlock_user(&c, ident, id, req).await
+                }
+            }
+        }
+    });
+
+    // GET /admin/users/:id/revoke-sessions — revoke confirmation form
+    // (R2 #16).
+    let c = ctx.clone();
+    let router = router.get("/admin/users/:id/revoke-sessions", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::show_admin_revoke_sessions(&c, ident, id, &req)
+                        .await
+                }
+            }
+        }
+    });
+
+    // POST /admin/users/:id/revoke-sessions — revoke all sessions (R2 #16).
+    let c = ctx.clone();
+    let router = router.post("/admin/users/:id/revoke-sessions", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    super::admin_recovery_handlers::do_admin_revoke_sessions(&c, ident, id, req)
+                        .await
                 }
             }
         }
