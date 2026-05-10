@@ -82,10 +82,19 @@
 //!   touches `rustio_users.mfa_enabled` and writes
 //!   `rustio_mfa_backup_codes`. The HTTP handler that calls it
 //!   lands in a later commit. R3 commit #6.
+//! - [`verify_totp_for_user`] / [`VerifyOutcome`] — the TOTP
+//!   verification runtime (§4.2, D4). Reads the encrypted
+//!   secret + `mfa_last_used_step` from the user row,
+//!   decrypts via [`unwrap_secret`], runs [`verify_totp`]
+//!   against the candidate, and rejects steps at or below
+//!   the stored value (D4 replay protection). On success
+//!   stamps the new step. No audit row — TOTP success is
+//!   captured via the session-promotion `parent_session_id`
+//!   lineage per §8.3, not a separate event. R3 commit #7.
 //!
-//! Subsequent commits will add: verification (login second
-//! factor) / disable / regeneration runtime functions (§9),
-//! and `MfaPolicy` routing into `login_guard` (§12.3).
+//! Subsequent commits will add: backup-code consume runtime
+//! (§4.4), disable / regeneration runtime functions (§9), and
+//! `MfaPolicy` routing into `login_guard` (§12.3).
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -793,6 +802,177 @@ pub async fn confirm_enrolment(
     Ok(EnrolOutcome::Enrolled {
         plain_backup_codes: plain_codes,
     })
+}
+
+// -----------------------------------------------------------------
+// Verification runtime — TOTP login second factor (R3 commit #7)
+// -----------------------------------------------------------------
+
+/// Outcome of [`verify_totp_for_user`]. Lets the verify
+/// handler render the right page without embedding HTTP
+/// concerns in the runtime layer.
+///
+/// All four variants collapse to a uniform user-facing
+/// response per `DESIGN_R3_MFA.md` §3.1 disclosure rules —
+/// the handler must NOT render different copy for `Replay`
+/// vs `Invalid` vs `NotEnrolled`. The variant distinctions
+/// exist for forensic logging, future audit emission, and
+/// internal debugging only.
+#[allow(dead_code)] // variants light up at the verify handler in a later commit
+pub enum VerifyOutcome {
+    /// The candidate code matched within the skew window AND
+    /// the matched step is strictly greater than
+    /// `mfa_last_used_step`. The runtime has stamped the new
+    /// step; the caller proceeds with trust escalation
+    /// (mint a fresh `mfa_verified` session row, revoke the
+    /// pending row, swap the cookie).
+    Verified { step_used: u64 },
+    /// The candidate matched cryptographically but the matched
+    /// step is at or below `mfa_last_used_step` — D4 replay
+    /// protection. Cause: a network-captured code, a
+    /// double-submit, or clock drift on the user's device.
+    /// Caller MUST NOT trust-escalate; user-facing copy is
+    /// uniform with `Invalid`.
+    Replay { last_used_step: u64 },
+    /// The candidate did not match within the configured skew
+    /// window, or the candidate string was not parseable as a
+    /// 6-digit number.
+    Invalid,
+    /// The user row exists but `mfa_enabled = FALSE`. Should
+    /// not happen if the verify handler checks state up-front,
+    /// but the runtime refuses anyway to keep the contract
+    /// honest.
+    NotEnrolled,
+}
+
+/// Verify a TOTP candidate for an enrolled user.
+///
+/// **Inputs.**
+///
+/// - `user_id` — the user being challenged.
+/// - `candidate_code_str` — the 6-digit string the user typed.
+///   Whitespace-trimmed and parsed to `u32`; invalid input
+///   collapses to `VerifyOutcome::Invalid`.
+/// - `step_seconds` — TOTP step interval (locked at 30s per
+///   Appendix B).
+/// - `skew_steps` — accepted skew window (locked at ±1 per
+///   Appendix B).
+/// - `key` — the AES-256-GCM key for at-rest decryption.
+///   Future: when the `MfaSecretKeyResolver` trait lands,
+///   this becomes a resolver lookup keyed by the row's
+///   `mfa_secret_key_id`. For now (R3 commit #7) the
+///   framework assumes a single active key (`key_id = 1`).
+///
+/// **Steps.**
+///
+/// 1. Parse `candidate_code_str` as a 6-digit `u32`. Failure
+///    → `Invalid`.
+/// 2. SELECT `mfa_enabled`, `mfa_secret_ciphertext`,
+///    `mfa_last_used_step` from `rustio_users`. Missing row
+///    → `Error::NotFound`.
+/// 3. If `!mfa_enabled` → `NotEnrolled`.
+/// 4. If ciphertext is `NULL` while `mfa_enabled = TRUE` →
+///    `Error::Internal` (corrupted state — cannot happen
+///    via the framework's own writes).
+/// 5. [`unwrap_secret`] decrypts the ciphertext under `key`.
+///    Decryption failure surfaces as `Error::Internal` (key
+///    mismatch or tampering — operator-side recovery).
+/// 6. [`verify_totp`] against the secret. No match within the
+///    skew window → `Invalid`.
+/// 7. **D4 replay check.** If the matched step is at or below
+///    `mfa_last_used_step` → `Replay`. The previously-stored
+///    step value rides in the variant for forensic logging.
+/// 8. UPDATE `mfa_last_used_step` to the just-verified step.
+/// 9. Return `Verified { step_used }`.
+///
+/// **No audit row.** TOTP success is captured via the
+/// session-promotion `parent_session_id` lineage per §8.3.
+/// Backup-code consume DOES emit `AuditEvent::MfaCodeConsumed`
+/// (R3 commit #8).
+///
+/// **Doctrine 22.** This function does not write `revoked_at`.
+/// The trust-escalation that follows (mint fresh
+/// `mfa_verified` row + revoke pending row + swap cookie)
+/// runs through `auth::sessions::invalidate_sessions` at the
+/// handler level — not here.
+#[allow(dead_code)] // call site lands at the verify POST handler in a later commit
+pub async fn verify_totp_for_user(
+    db: &Db,
+    user_id: i64,
+    candidate_code_str: &str,
+    step_seconds: u64,
+    skew_steps: u32,
+    key: &MfaKey,
+) -> Result<VerifyOutcome> {
+    use sqlx::Row as _;
+
+    // 1. Parse the candidate as a 6-digit u32.
+    let candidate = match candidate_code_str.trim().parse::<u32>() {
+        Ok(n) if n < 1_000_000 => n,
+        _ => return Ok(VerifyOutcome::Invalid),
+    };
+
+    // 2. Read MFA state from the user row.
+    let row = sqlx::query(
+        "SELECT mfa_enabled, mfa_secret_ciphertext, mfa_last_used_step \
+         FROM rustio_users WHERE id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(db.pool())
+    .await?;
+    let row = row.ok_or_else(|| Error::NotFound(format!("user {user_id} not found")))?;
+
+    let mfa_enabled: bool = row.try_get("mfa_enabled")?;
+    if !mfa_enabled {
+        return Ok(VerifyOutcome::NotEnrolled);
+    }
+
+    let ciphertext: Option<Vec<u8>> = row.try_get("mfa_secret_ciphertext")?;
+    let last_used_step: Option<i64> = row.try_get("mfa_last_used_step")?;
+
+    let ciphertext = ciphertext.ok_or_else(|| {
+        Error::Internal(format!(
+            "user {user_id} has mfa_enabled=TRUE but mfa_secret_ciphertext IS NULL"
+        ))
+    })?;
+
+    // 3. Decrypt the secret. Failure here is operator-side:
+    //    wrong key (rotation issue) or tampered ciphertext (DB
+    //    attack). Both surface as Error::Internal; the user
+    //    sees a uniform error response from the handler.
+    let secret_bytes = unwrap_secret(&ciphertext, key)?;
+
+    // 4. Verify the candidate against the secret + skew window.
+    let now_unix = Utc::now().timestamp().max(0) as u64;
+    let step = match verify_totp(&secret_bytes, candidate, now_unix, step_seconds, skew_steps) {
+        Some(step) => step,
+        None => return Ok(VerifyOutcome::Invalid),
+    };
+
+    // 5. D4 replay protection. mfa_last_used_step is monotonic
+    //    per user; a TOTP code from a step ≤ the stored value
+    //    is rejected even if it just verified cryptographically.
+    //    A NULL last-used-step (theoretically unreachable after
+    //    confirm_enrolment stamps it; included defensively) is
+    //    treated as -1 so any non-negative step value passes
+    //    the comparison.
+    let last = last_used_step.unwrap_or(-1);
+    if (step as i64) <= last {
+        return Ok(VerifyOutcome::Replay {
+            last_used_step: last.max(0) as u64,
+        });
+    }
+
+    // 6. Stamp the new step. Subsequent verifications with the
+    //    same step value (replay) will be rejected at step 5
+    //    above.
+    sqlx::query("UPDATE rustio_users SET mfa_last_used_step = $1 WHERE id = $2")
+        .bind(step as i64)
+        .bind(user_id)
+        .execute(db.pool())
+        .await?;
+
+    Ok(VerifyOutcome::Verified { step_used: step })
 }
 
 /// Framework-wide MFA enforcement policy.
