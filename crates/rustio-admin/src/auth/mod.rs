@@ -19,6 +19,7 @@ mod role;
 mod sessions;
 mod users;
 
+pub use mfa::MfaPolicy;
 pub(crate) use permissions::invalidate_user_cache;
 pub use permissions::{
     add_user_to_group, check_permission, create_group, grant_to_group, grant_to_user,

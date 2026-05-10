@@ -11,7 +11,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::auth::{
-    DefaultPasswordPolicy, DefaultRecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
+    DefaultPasswordPolicy, DefaultRecoveryPolicy, MfaPolicy, SharedPasswordPolicy,
+    SharedRecoveryPolicy,
 };
 use crate::email::{LogMailer, SharedMailer};
 use crate::error::Result;
@@ -458,6 +459,16 @@ pub struct Admin {
     /// — same architectural pattern as the mailer and the password
     /// policy above.
     pub(crate) recovery_policy: SharedRecoveryPolicy,
+    /// The active MFA enforcement policy. Defaults to
+    /// [`MfaPolicy::Optional`]; projects opt into enforcement via
+    /// [`Admin::require_mfa`]. Plain `Copy` enum (no `Arc`
+    /// indirection) — the four variants encode every operator
+    /// choice: rejected (`Disabled`), opt-in (`Optional`),
+    /// universal (`Required`), or per-role (`RequiredForRoles`).
+    /// The `login_guard` consults this field after successful
+    /// password verification (R3 commit #15); this commit lands
+    /// the data, the routing follows.
+    pub(crate) mfa_policy: MfaPolicy,
 }
 
 impl Default for Admin {
@@ -484,6 +495,7 @@ impl Admin {
             mailer_overridden: false,
             password_policy: Arc::new(DefaultPasswordPolicy::new()),
             recovery_policy: Arc::new(DefaultRecoveryPolicy::new()),
+            mfa_policy: MfaPolicy::default(),
         }
     }
 
@@ -633,6 +645,51 @@ impl Admin {
     /// [`DefaultRecoveryPolicy`] so this never returns `None`.
     pub fn active_recovery_policy(&self) -> &SharedRecoveryPolicy {
         &self.recovery_policy
+    }
+
+    /// Replace the active MFA enforcement policy. R3 ships with
+    /// [`MfaPolicy::Optional`] as the default — pre-R3 framework
+    /// behaviour, no opt-in required. Production deployments that
+    /// want MFA enforcement opt in via this builder.
+    ///
+    /// **Forward-only enforcement (D6).** Switching to
+    /// [`MfaPolicy::Required`] does NOT retroactively revoke
+    /// existing sessions; the `login_guard` redirects users
+    /// without MFA to `/admin/mfa/enroll` at the next request.
+    /// The pattern mirrors R2's `must_change_password`
+    /// interstitial (`DESIGN_R3_MFA.md` §12.3).
+    ///
+    /// **Boot guard (D1).** When `MfaPolicy != Disabled`, the
+    /// framework refuses to boot if `RUSTIO_SECRET_KEY` is
+    /// unset — the env var is required for AES-256-GCM
+    /// encryption of TOTP secrets at rest. The boot check lands
+    /// in a later R3 commit; this builder records the policy
+    /// without the check.
+    ///
+    /// Typical project wiring:
+    ///
+    /// ```ignore
+    /// use rustio_admin::auth::{MfaPolicy, Role};
+    ///
+    /// // Universal:
+    /// let admin = Admin::new().require_mfa(MfaPolicy::Required);
+    ///
+    /// // Privileged roles only:
+    /// const PRIVILEGED: &[Role] = &[Role::Administrator, Role::Supervisor];
+    /// let admin = Admin::new()
+    ///     .require_mfa(MfaPolicy::RequiredForRoles(PRIVILEGED));
+    /// ```
+    pub fn require_mfa(mut self, policy: MfaPolicy) -> Self {
+        self.mfa_policy = policy;
+        self
+    }
+
+    /// Read-only access to the active MFA policy. Returns by
+    /// value — the policy is `Copy`. Always live — `Admin::new()`
+    /// seeds [`MfaPolicy::default`] (`Optional`) so this never
+    /// returns `None`.
+    pub fn active_mfa_policy(&self) -> MfaPolicy {
+        self.mfa_policy
     }
 
     pub fn model<M>(mut self) -> Self
