@@ -1,29 +1,32 @@
 //! HTTP handlers for the R2 organisational-recovery surface
-//! (`DESIGN_R2_ORGANISATIONAL.md` §3.5 + §11). R2 commit #11 lands
-//! the standalone re-auth wall; the admin-driven password reset,
-//! lock, unlock, and revoke handlers land in commits #15 / #16, and
-//! the must-change-password interstitial lands in commit #12.
+//! (`DESIGN_R2_ORGANISATIONAL.md` §3 + §11). Routes are registered
+//! in `admin::routes::register_admin_routes` (R2 commit #17). This
+//! module owns the handlers themselves; runtime fns live in
+//! `auth::recovery_admin`.
 //!
-//! ## Re-auth wall (this commit)
+//! ## Routes wired through this module
 //!
-//! - `GET  /admin/reauth` → [`show_reauth`]
-//! - `POST /admin/reauth` → [`do_reauth`]
-//!
-//! Routes are NOT registered in this commit; commit #17 wires every
-//! R2 route together. The handlers exist so the wall is functionally
-//! complete and unit-testable in isolation.
+//! - `GET  /admin/reauth`                       → [`show_reauth`]
+//! - `POST /admin/reauth`                       → [`do_reauth`]
+//! - `GET  /admin/must-change-password`         → [`show_must_change_password`]
+//! - `POST /admin/must-change-password`         → [`do_must_change_password`]
+//! - `GET  /admin/users/:id/reset-password`     → [`show_admin_reset_password`]
+//! - `POST /admin/users/:id/reset-password`     → [`do_admin_reset_password`]
+//! - `GET  /admin/users/:id/lock`               → [`show_lock_user`]
+//! - `POST /admin/users/:id/lock`               → [`do_lock_user`]
+//! - `GET  /admin/users/:id/unlock`             → [`show_unlock_user`]
+//! - `POST /admin/users/:id/unlock`             → [`do_unlock_user`]
+//! - `GET  /admin/users/:id/revoke-sessions`    → [`show_admin_revoke_sessions`]
+//! - `POST /admin/users/:id/revoke-sessions`    → [`do_admin_revoke_sessions`]
 //!
 //! ## What this module does NOT do
 //!
-//! - Sensitive route integration. Commits #15 / #16 add
-//!   `check_session_elevated` calls in front of admin reset / lock /
-//!   unlock / revoke handlers. Today nothing requires re-auth.
-//! - Audit rows. Re-auth itself does not write to
-//!   `rustio_admin_actions` — the audit chain begins at the
-//!   destructive action (commits #14-#16). A failed re-auth attempt
-//!   is silently re-rendered with a uniform error, no log row.
-//! - Session revocation. Doctrine 22 untouched; promotion only
-//!   extends the elevation window via
+//! - Audit rows on the re-auth wall. Re-auth itself does not write
+//!   to `rustio_admin_actions` — the audit chain begins at the
+//!   destructive action. A failed re-auth attempt is silently
+//!   re-rendered with a uniform error, no log row.
+//! - Session revocation in the re-auth wall. Doctrine 22 untouched;
+//!   promotion only extends the elevation window via
 //!   `auth::recovery_admin::promote_session_elevated`, which never
 //!   touches `revoked_at`.
 //!
@@ -149,7 +152,6 @@ struct ReauthCtx {
 /// VALIDATED value, never the raw query string — the POST handler
 /// therefore receives a value that has already passed at least one
 /// validation pass (and re-validates anyway).
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn show_reauth(
     ctx: &AdminCtx,
     identity: Identity,
@@ -181,7 +183,6 @@ pub(crate) async fn show_reauth(
 /// row, no `revoked_at` mutation. Doctrine 22 holds — promotion
 /// writes only `elevated_until` and `trust_level`, never
 /// `revoked_at`.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn do_reauth(
     ctx: &AdminCtx,
     identity: Identity,
@@ -271,7 +272,6 @@ struct MustChangePasswordCtx {
 /// is FALSE on the identity, so a curious authenticated user can't
 /// bypass the old-password requirement that the regular
 /// `/admin/password_change` flow enforces.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn show_must_change_password(
     ctx: &AdminCtx,
     identity: Identity,
@@ -322,7 +322,6 @@ pub(crate) async fn show_must_change_password(
 ///   user "rotating" to the same temp password the admin issued
 ///   (the temp value may have been logged or shared); forces a
 ///   fresh secret the admin no longer knows.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn do_must_change_password(
     ctx: &AdminCtx,
     identity: Identity,
@@ -657,7 +656,6 @@ async fn current_session_id_for(ctx: &AdminCtx, req: &Request) -> Result<Option<
 ///    redirect to `/admin/reauth?return_to=<this path>`.
 /// 4. Render the form with `mode='email'` selected by default and
 ///    an empty reason field.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn show_admin_reset_password(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -718,7 +716,6 @@ pub(crate) async fn show_admin_reset_password(
 /// `InactiveTarget` outcomes both surface as a form-level banner.
 /// Cross-rank failures bubble through `Error::Forbidden` and
 /// render the framework's 403 page.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn do_admin_reset_password(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -952,7 +949,6 @@ fn parse_lock_duration(
 }
 
 /// `GET /admin/users/:id/lock` — render the lock confirmation form.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn show_lock_user(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -989,7 +985,6 @@ pub(crate) async fn show_lock_user(
 }
 
 /// `POST /admin/users/:id/lock` — apply the lock.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn do_lock_user(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -1076,7 +1071,6 @@ pub(crate) async fn do_lock_user(
 }
 
 /// `GET /admin/users/:id/unlock` — render the unlock confirmation form.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn show_unlock_user(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -1117,7 +1111,6 @@ pub(crate) async fn show_unlock_user(
 }
 
 /// `POST /admin/users/:id/unlock` — clear the lock.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn do_unlock_user(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -1128,7 +1121,6 @@ pub(crate) async fn do_unlock_user(
 }
 
 /// `GET /admin/users/:id/revoke-sessions` — render the revoke confirmation form.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn show_admin_revoke_sessions(
     ctx: &AdminCtx,
     actor_identity: Identity,
@@ -1169,7 +1161,6 @@ pub(crate) async fn show_admin_revoke_sessions(
 }
 
 /// `POST /admin/users/:id/revoke-sessions` — revoke all sessions.
-#[allow(dead_code)] // route registration lands in R2 commit #17
 pub(crate) async fn do_admin_revoke_sessions(
     ctx: &AdminCtx,
     actor_identity: Identity,
