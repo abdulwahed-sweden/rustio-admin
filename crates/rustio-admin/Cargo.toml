@@ -63,6 +63,12 @@ argon2 = { version = "0.5", default-features = false, features = [
     "rand",
 ] }
 sha2 = "0.10"
+# AES-256-GCM AEAD for TOTP secret encryption at rest (R3 / D1).
+# `default-features = false` drops the `std` and `getrandom`
+# auto-features; we drive nonce generation from the existing
+# `rand` crate for consistency with session-token generation in
+# `auth::sessions::random_token`.
+aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
 once_cell = "1"
 thiserror = "1"
 
