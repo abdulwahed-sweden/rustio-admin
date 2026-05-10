@@ -55,9 +55,15 @@
 use std::collections::HashMap;
 
 use serde::Serialize;
+use sqlx::Row as SqlxRow;
 
-use crate::auth::{self, Identity};
-use crate::error::Result;
+use crate::auth::guards::enforce_cross_rank_safe;
+use crate::auth::recovery_admin::{
+    admin_set_temp_password, check_session_elevated, issue_admin_reset_token, AdminActor,
+    AdminIssueOutcome, AdminTempPwOutcome,
+};
+use crate::auth::{self, Identity, Role};
+use crate::error::{Error, Result};
 use crate::http::{Request, Response};
 
 use super::audit;
@@ -499,6 +505,379 @@ pub(crate) async fn do_must_change_password(
     .await;
 
     Ok(Response::redirect("/admin"))
+}
+
+// ---- Admin-driven password reset (R2 commit #15) ---------------------------
+//
+// Routes (registered in commit #17, gated `Role::Administrator` +
+// cross-rank-safe + re-auth):
+//   GET  /admin/users/:id/reset-password → show_admin_reset_password
+//   POST /admin/users/:id/reset-password → do_admin_reset_password
+//
+// The runtime fns in `auth::recovery_admin` (commit #14) do the
+// heavy lifting; this layer wraps them in HTTP, enforces the
+// re-auth wall, validates the form, and renders outcomes.
+//
+// Audit emissions all live in commit #14's runtime — the headline
+// `PasswordResetByOther` row plus per-revoked-session
+// `SessionsRevokedByOther` rows for temp_pw mode. This handler
+// adds no new audit rows.
+
+#[derive(Serialize)]
+struct AdminResetPasswordCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: String,
+    target_user_id: i64,
+    target_email: String,
+    /// `true` when a temp_pw / email-mode operation just succeeded;
+    /// the template switches into the success-card layout. The
+    /// runtime split is preserved (form vs. success rendered from
+    /// the same template) because the temp_pw success page has no
+    /// distinct URL — refresh on a 303 destination would lose the
+    /// plaintext, so the POST handler renders directly.
+    success: bool,
+    /// Form-level error banner for validation failures + the
+    /// `UnknownTarget` / `InactiveTarget` runtime outcomes.
+    errors: Vec<String>,
+    /// Field-keyed errors (currently `reason`).
+    field_errors: HashMap<String, Vec<String>>,
+    /// Carries the previously-submitted reason so re-renders
+    /// preserve admin input on validation failure.
+    reason: String,
+    /// Mode the admin had selected on the failing submission;
+    /// the radio buttons render `checked` based on this. Defaults
+    /// to `"email"` on first GET.
+    mode: String,
+    // Success-state fields (populated only when `success == true`).
+    /// `"email"` or `"temp_pw"` — the mode that succeeded.
+    success_mode: String,
+    /// For temp_pw success: the plaintext temp password to render
+    /// once. Empty string in every other state. The plaintext
+    /// EXISTS only in this template render — never logged, never
+    /// audited, never persisted in any other column. Refreshing
+    /// the page re-POSTs and re-issues a NEW temp password
+    /// (rotating the previous one out); the template warns
+    /// against refresh.
+    temp_password: String,
+    /// For email success: `"sent"` or `"failed"`. Empty otherwise.
+    email_status: String,
+    /// For temp_pw success: how many sibling sessions were
+    /// revoked. 0 in every other state.
+    revoked_session_count: usize,
+}
+
+impl AdminResetPasswordCtx {
+    fn form(
+        base: BaseContext,
+        target_user_id: i64,
+        target_email: String,
+        reason: String,
+        mode: String,
+        errors: Vec<String>,
+        field_errors: HashMap<String, Vec<String>>,
+    ) -> Self {
+        Self {
+            base,
+            page_title: format!("Reset password — {target_email}"),
+            target_user_id,
+            target_email,
+            success: false,
+            errors,
+            field_errors,
+            reason,
+            mode,
+            success_mode: String::new(),
+            temp_password: String::new(),
+            email_status: String::new(),
+            revoked_session_count: 0,
+        }
+    }
+}
+
+/// Look up the target user. Returns `(email, is_active, role)` or
+/// `None` for missing. Sibling of `recovery_admin::load_admin_reset_target`
+/// extended with `role` because the cross-rank guard needs it; the
+/// handler's pre-validation does its own DB hit so the runtime fn
+/// can stay role-free.
+async fn load_target(
+    db: &crate::orm::Db,
+    target_user_id: i64,
+) -> Result<Option<(String, bool, Role)>> {
+    let row = sqlx::query("SELECT email, is_active, role FROM rustio_users WHERE id = $1")
+        .bind(target_user_id)
+        .fetch_optional(db.pool())
+        .await?;
+    match row {
+        Some(r) => {
+            let email: String = r.try_get("email")?;
+            let is_active: bool = r.try_get("is_active")?;
+            let role_str: String = r.try_get("role")?;
+            let role = Role::parse(&role_str)?;
+            Ok(Some((email, is_active, role)))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Compute the re-auth redirect URL for `/admin/users/:id/reset-password`.
+/// Bounce to `/admin/reauth?return_to=<encoded path>` so the user re-auths
+/// and lands back here after promotion.
+fn reauth_redirect_for(target_user_id: i64) -> Response {
+    let path = format!("/admin/users/{target_user_id}/reset-password");
+    Response::redirect(format!(
+        "/admin/reauth?return_to={}",
+        urlencoding::encode(&path)
+    ))
+}
+
+/// Resolve the actor's session id from the request's cookie. Returns
+/// None on any of: missing cookie header, malformed token, no current
+/// session row. Caller treats None as "not elevated".
+async fn current_session_id_for(ctx: &AdminCtx, req: &Request) -> Result<Option<i64>> {
+    let cookie = match req.header("cookie") {
+        Some(c) => c,
+        None => return Ok(None),
+    };
+    let token = match auth::session_token_from_cookie(cookie) {
+        Some(t) => t,
+        None => return Ok(None),
+    };
+    auth::current_session_id(&ctx.db, &token).await
+}
+
+/// `GET /admin/users/:id/reset-password` — render the reset form.
+///
+/// Order of checks:
+/// 1. Target user exists (404 if not).
+/// 2. Cross-rank: actor's role must dominate target's
+///    (`Error::Forbidden` propagates → 403 page).
+/// 3. Re-auth wall: actor's session must be elevated. If not, 303
+///    redirect to `/admin/reauth?return_to=<this path>`.
+/// 4. Render the form with `mode='email'` selected by default and
+///    an empty reason field.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn show_admin_reset_password(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: &Request,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let session_id = current_session_id_for(ctx, req).await?;
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(reauth_redirect_for(target_user_id));
+    }
+
+    let view = AdminResetPasswordCtx::form(
+        BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        target_user_id,
+        target_email,
+        String::new(),
+        "email".to_string(),
+        Vec::new(),
+        HashMap::new(),
+    );
+    let body = ctx
+        .templates
+        .render("admin/admin_reset_password.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/users/:id/reset-password` — apply the reset.
+///
+/// Same authority + re-auth checks as the GET. On a successful
+/// dispatch:
+///
+/// - **email mode** → 303 redirect to `/admin/users` (PRG; the
+///   user list shows the target row and the admin can verify
+///   the reset). Audit row already emitted by the runtime; the
+///   admin's success signal is the redirect destination
+///   re-rendering normally, plus the audit log entry an operator
+///   can confirm in `/admin/history`.
+/// - **temp_pw mode** → 200 render of the success card with the
+///   plaintext temp password. NOT a redirect: the temp must
+///   survive the response, and a 303 destination GET cannot
+///   carry plaintext. Refreshing the success page re-POSTs and
+///   re-issues a NEW temp password — the template warns the
+///   admin not to refresh.
+///
+/// Failures collapse to a re-render of the form with field /
+/// banner errors. The runtime's `UnknownTarget` and
+/// `InactiveTarget` outcomes both surface as a form-level banner.
+/// Cross-rank failures bubble through `Error::Forbidden` and
+/// render the framework's 403 page.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn do_admin_reset_password(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: Request,
+) -> Result<Response> {
+    let (target_email, target_is_active, target_role) =
+        match load_target(&ctx.db, target_user_id).await? {
+            Some(t) => t,
+            None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+        };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let session_id = current_session_id_for(ctx, &req).await?;
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(reauth_redirect_for(target_user_id));
+    }
+
+    let form = req.form()?;
+    let mode = form.get("mode").unwrap_or("email").trim().to_string();
+    let reason = form.get("reason").unwrap_or("").trim().to_string();
+
+    // Validate. Reason floor 8 chars per §12 locked-decision.
+    let mut errors: Vec<String> = Vec::new();
+    let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+
+    if reason.chars().count() < 8 {
+        let msg = "Reason must be at least 8 characters.".to_string();
+        errors.push(msg.clone());
+        field_errors.entry("reason".into()).or_default().push(msg);
+    }
+    if mode != "email" && mode != "temp_pw" {
+        errors.push(format!("Unknown mode: {mode:?}."));
+    }
+    if !target_is_active {
+        errors.push(format!(
+            "{target_email} is currently disabled. Re-enable the account before resetting."
+        ));
+    }
+
+    let render_form = |ctx: &AdminCtx,
+                       errors: Vec<String>,
+                       field_errors: HashMap<String, Vec<String>>|
+     -> Result<Response> {
+        let view = AdminResetPasswordCtx::form(
+            BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+            target_user_id,
+            target_email.clone(),
+            reason.clone(),
+            mode.clone(),
+            errors,
+            field_errors,
+        );
+        let body = ctx
+            .templates
+            .render("admin/admin_reset_password.html", &view)?;
+        Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
+    };
+
+    if !errors.is_empty() {
+        return render_form(ctx, errors, field_errors);
+    }
+
+    // Dispatch to the runtime. The actor's identity carries email +
+    // user_id; bundle into AdminActor for the runtime call.
+    let actor = AdminActor {
+        user_id: actor_identity.user_id,
+        email: &actor_identity.email,
+    };
+    let cid = correlation_id_from(&req);
+
+    match mode.as_str() {
+        "email" => {
+            let outcome = issue_admin_reset_token(
+                &ctx.db,
+                &ctx.admin,
+                &req,
+                target_user_id,
+                actor,
+                &reason,
+                cid.as_deref(),
+            )
+            .await?;
+            match outcome {
+                AdminIssueOutcome::Issued { .. } => {
+                    // PRG: 303 to the user list. Audit row already
+                    // written by the runtime; the admin can pivot
+                    // via /admin/history.
+                    Ok(Response::redirect("/admin/users"))
+                }
+                AdminIssueOutcome::UnknownTarget => {
+                    Err(Error::NotFound(format!("user #{target_user_id}")))
+                }
+                AdminIssueOutcome::InactiveTarget => render_form(
+                    ctx,
+                    vec![format!(
+                        "{target_email} is currently disabled. Re-enable before resetting."
+                    )],
+                    HashMap::new(),
+                ),
+            }
+        }
+        "temp_pw" => {
+            let outcome = admin_set_temp_password(
+                &ctx.db,
+                &req,
+                target_user_id,
+                actor,
+                &reason,
+                cid.as_deref(),
+            )
+            .await?;
+            match outcome {
+                AdminTempPwOutcome::Set {
+                    temp_password,
+                    revoked_session_count,
+                    ..
+                } => {
+                    // 200 render with the plaintext temp password.
+                    // PRG-violation accepted — the temp value cannot
+                    // survive a 303 → GET redirect. Template warns
+                    // against refresh.
+                    let view = AdminResetPasswordCtx {
+                        base: BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+                        page_title: format!("Password reset for {target_email}"),
+                        target_user_id,
+                        target_email: target_email.clone(),
+                        success: true,
+                        errors: Vec::new(),
+                        field_errors: HashMap::new(),
+                        reason: String::new(),
+                        mode: String::new(),
+                        success_mode: "temp_pw".to_string(),
+                        temp_password,
+                        email_status: String::new(),
+                        revoked_session_count,
+                    };
+                    let body = ctx
+                        .templates
+                        .render("admin/admin_reset_password.html", &view)?;
+                    Ok(Response::html(body))
+                }
+                AdminTempPwOutcome::UnknownTarget => {
+                    Err(Error::NotFound(format!("user #{target_user_id}")))
+                }
+                AdminTempPwOutcome::InactiveTarget => render_form(
+                    ctx,
+                    vec![format!(
+                        "{target_email} is currently disabled. Re-enable before resetting."
+                    )],
+                    HashMap::new(),
+                ),
+            }
+        }
+        _ => unreachable!("mode validated above"),
+    }
 }
 
 #[cfg(test)]
