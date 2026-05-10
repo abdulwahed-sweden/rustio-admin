@@ -72,5 +72,16 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     // tables; the runtime that reads these columns lands in later
     // R2 commits.
     recovery_admin::migrate_user_lockout_schema(db).await?;
+    // R2 (0.6.0) — surfaced by the testcontainers integration suite:
+    // `rustio_admin_actions` was previously created lazily on first
+    // dashboard hit (`handlers::ensure_audit_ready`), so any audit-
+    // emitting path that ran BEFORE someone visited `/admin` would
+    // fail. The R2 audit-heavy paths (auto-throttle, admin reset,
+    // admin lock/unlock/revoke, forced rotation) made this latent
+    // issue routinely reachable. Creating the table eagerly during
+    // boot closes the gap; `ensure_table` is already idempotent so
+    // this is safe to call alongside the lazy path that still
+    // exists in the dashboard handler.
+    crate::admin::audit::ensure_table(db).await?;
     Ok(())
 }
