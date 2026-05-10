@@ -1,19 +1,29 @@
-# rustio-admin
+<p align="center">
+  <img src="docs/assets/rustio-logo.png" alt="RustIO" width="250">
+</p>
 
-Postgres-first administrative framework for Rust applications.
+<p align="center">
+  <strong>rustio-admin</strong>
+</p>
 
-Built around explicit authority boundaries, typed audit trails,
-session lifecycle control, and doctrine-first design.
+<p align="center">
+  Postgres-first administrative framework for Rust applications.
+</p>
 
-[![crates.io](https://img.shields.io/crates/v/rustio-admin.svg?label=rustio-admin)](https://crates.io/crates/rustio-admin)
-[![crates.io](https://img.shields.io/crates/v/rustio-admin-cli.svg?label=rustio-admin-cli)](https://crates.io/crates/rustio-admin-cli)
-[![docs.rs](https://img.shields.io/docsrs/rustio-admin)](https://docs.rs/rustio-admin)
-[![CI](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml)
-[![License](https://img.shields.io/crates/l/rustio-admin.svg)](./LICENSE)
+<p align="center">
+  <a href="https://crates.io/crates/rustio-admin"><img alt="rustio-admin on crates.io" src="https://img.shields.io/crates/v/rustio-admin.svg?label=rustio-admin"></a>
+  <a href="https://crates.io/crates/rustio-admin-cli"><img alt="rustio-admin-cli on crates.io" src="https://img.shields.io/crates/v/rustio-admin-cli.svg?label=rustio-admin-cli"></a>
+  <a href="https://docs.rs/rustio-admin"><img alt="docs.rs" src="https://img.shields.io/docsrs/rustio-admin"></a>
+  <a href="https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/crates/l/rustio-admin.svg"></a>
+</p>
 
-> **Latest release: v0.6.0** — admin-driven recovery, re-auth wall,
-> login throttling, forced password rotation.
-> See [`CHANGELOG.md`](./CHANGELOG.md) for migration notes and prior releases.
+---
+
+Authentication, sessions, audit trails, and recovery are designed
+as one system, not assembled as separate parts.
+
+Postgres only. No build step. Single binary deployment.
 
 
 ## 30-second example
