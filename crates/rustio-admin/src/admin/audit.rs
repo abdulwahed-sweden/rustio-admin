@@ -778,10 +778,7 @@ mod tests {
         // struct.
         let input = serde_json::json!({"actor_user_id": 999, "extra": "x"});
         let out = build_persisted_metadata(Some(input), Some(7)).unwrap();
-        assert_eq!(
-            out,
-            serde_json::json!({"actor_user_id": 7, "extra": "x"})
-        );
+        assert_eq!(out, serde_json::json!({"actor_user_id": 7, "extra": "x"}));
     }
 
     #[test]
