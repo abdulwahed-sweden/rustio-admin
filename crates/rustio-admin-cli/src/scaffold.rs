@@ -68,7 +68,7 @@ pub fn project(name: &str) -> Result<(), String> {
     println!();
     println!("Next steps:");
     println!("  cd {name}");
-    println!("  cp .env.example .env       # edit DATABASE_URL if needed");
+    println!("  cp .env.example .env       # safe local defaults; edit before production");
     println!("  rustio migrate apply       # creates the posts table");
     println!("  rustio user create --email admin@{name}.local --role administrator");
     println!("  cargo run                  # boots http://127.0.0.1:8000/admin");
