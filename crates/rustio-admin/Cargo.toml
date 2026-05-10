@@ -69,6 +69,14 @@ sha2 = "0.10"
 # `rand` crate for consistency with session-token generation in
 # `auth::sessions::random_token`.
 aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
+# HMAC-SHA1 for RFC 6238 TOTP (R3 / commit #5). Authenticator
+# apps (Google Authenticator, Authy, 1Password, Bitwarden,
+# Aegis, Raivo, etc.) default to SHA-1; `algorithm=SHA256`
+# variants exist but interop is best with the SHA-1 default.
+# `hmac` and `sha1` are RustCrypto traits — same family as the
+# already-pulled `sha2`. Tiny dep tree, MIT/Apache-2.0.
+hmac = "0.12"
+sha1 = "0.10"
 once_cell = "1"
 thiserror = "1"
 
