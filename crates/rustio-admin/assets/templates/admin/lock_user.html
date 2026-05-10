@@ -1,0 +1,99 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-form-shell">
+
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/users">Users</a> ·
+    <a href="/admin/users/{{ target_user_id }}/edit">{{ target_email }}</a> ·
+    <span>Lock</span>
+  </nav>
+  <h1>Lock account — {{ target_email }}</h1>
+</header>
+
+<p class="rio-meta">
+  Apply a manual lock. Sessions are revoked immediately; sign-in is refused
+  until the lock expires (or an admin unlocks the account).
+</p>
+
+{% if errors %}
+<div class="rio-flash rio-flash--error" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/admin/users/{{ target_user_id }}/lock" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+  <fieldset class="rio-fieldset">
+    <legend>Duration</legend>
+    <label class="rio-radio">
+      <input type="radio" name="duration" value="15min"{% if duration == "15min" %} checked{% endif %}>
+      <span>15 minutes</span>
+    </label>
+    <label class="rio-radio">
+      <input type="radio" name="duration" value="1h"{% if duration == "1h" %} checked{% endif %}>
+      <span>1 hour</span>
+    </label>
+    <label class="rio-radio">
+      <input type="radio" name="duration" value="24h"{% if duration == "24h" %} checked{% endif %}>
+      <span>24 hours</span>
+    </label>
+    <label class="rio-radio">
+      <input type="radio" name="duration" value="7d"{% if duration == "7d" %} checked{% endif %}>
+      <span>7 days</span>
+    </label>
+    <label class="rio-radio">
+      <input type="radio" name="duration" value="indefinite"{% if duration == "indefinite" %} checked{% endif %}>
+      <span>Indefinite — until an admin unlocks</span>
+    </label>
+    <label class="rio-radio">
+      <input type="radio" name="duration" value="freeform"{% if duration == "freeform" %} checked{% endif %}>
+      <span>
+        Freeform:
+        <input
+          type="number"
+          name="freeform_minutes"
+          value="{{ freeform_minutes }}"
+          min="1"
+          step="1"
+          placeholder="minutes"
+          class="rio-input rio-input--inline"
+          style="width: 8em;"
+        > minutes
+      </span>
+    </label>
+    {% if "duration" in field_errors %}
+      <p class="rio-field-error">{{ field_errors["duration"][0] }}</p>
+    {% endif %}
+  </fieldset>
+
+  <fieldset class="rio-fieldset">
+    <legend>Reason</legend>
+    <label class="rio-label" for="rio-reason">
+      Reason
+      <span class="rio-meta">(audited; minimum 8 characters)</span>
+    </label>
+    <textarea
+      id="rio-reason"
+      name="reason"
+      rows="3"
+      required
+      minlength="8"
+      class="rio-input"
+      autofocus
+    >{{ reason }}</textarea>
+    {% if "reason" in field_errors %}
+      <p class="rio-field-error">{{ field_errors["reason"][0] }}</p>
+    {% endif %}
+  </fieldset>
+
+  <div class="rio-form-actions">
+    <button type="submit" class="rio-button rio-button--danger">Lock account</button>
+    <a href="/admin/users/{{ target_user_id }}/edit" class="rio-button rio-button--ghost">Cancel</a>
+  </div>
+</form>
+
+</div>
+{% endblock %}

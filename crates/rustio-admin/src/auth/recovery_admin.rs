@@ -1,11 +1,11 @@
 //! Organisational recovery (R2).
 //!
 //! See `DESIGN_R2_ORGANISATIONAL.md` for the canonical contract this
-//! module implements. R2 ships in 0.6.0; the lock / unlock / revoke
-//! runtime fns (`lock_user_account`, `unlock_user_account`,
-//! `admin_revoke_sessions`), the handlers, the templates, and the
-//! testcontainers integration test harness land in subsequent atomic
-//! commits per `DESIGN_R2_ORGANISATIONAL.md` §11.
+//! module implements. R2 ships in 0.6.0; this module owns every
+//! recovery-related runtime fn except the existing R1 self-recovery
+//! flow (which lives in `auth::recovery`). The route-registration
+//! commit (#17) and the testcontainers integration test harness
+//! land later per `DESIGN_R2_ORGANISATIONAL.md` §11.
 //!
 //! ## What lives here today
 //!
@@ -33,6 +33,13 @@
 //!   the unified §5.1 metadata schema; temp_pw additionally emits
 //!   per-revoked-session `SessionsRevokedByOther` rows. R2 commit
 //!   #14 + §3.1.
+//! - [`lock_user_account`] / [`unlock_user_account`] /
+//!   [`admin_revoke_sessions`] / [`LockDuration`] / [`LockOutcome`] /
+//!   [`UnlockOutcome`] / [`AdminRevokeOutcome`] — manual lock /
+//!   unlock / revoke admin actions per §3.2. Lock revokes every
+//!   session via `AdministrativeRevoke`; unlock does NOT touch
+//!   sessions; revoke-only is a sibling of lock without the
+//!   `locked_until` write. R2 commit #16 + §3.2.
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -785,6 +792,299 @@ pub(crate) async fn admin_set_temp_password(
     })
 }
 
+// ---- Lock / unlock / admin-revoke (R2 commit #16) --------------------------
+//
+// Three runtime fns wired to:
+//   POST /admin/users/:id/lock            → lock_user_account
+//   POST /admin/users/:id/unlock          → unlock_user_account
+//   POST /admin/users/:id/revoke-sessions → admin_revoke_sessions
+//
+// All revocation goes through `auth::invalidate_sessions(...)` per
+// Doctrine 22. Manual lock revokes every session
+// (`AdministrativeRevoke`); unlock does NOT touch sessions (the
+// lock-time revocation already cleared them); admin-revoke-sessions
+// is a sibling of lock that only revokes (no `locked_until` write).
+
+/// Lock-duration choice. Locked-decision presets per
+/// `DESIGN_R2_ORGANISATIONAL.md` §12 (15min / 1h / 24h / 7d /
+/// indefinite + freeform-minutes). The handler maps the form's
+/// radio + minutes input to one of these variants.
+///
+/// `Indefinite` is encoded as a far-future timestamp (year 9999)
+/// rather than NULL so the partial index
+/// `rustio_users_locked_until_idx` continues to find it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LockDuration {
+    FifteenMinutes,
+    OneHour,
+    TwentyFourHours,
+    SevenDays,
+    Indefinite,
+    /// Freeform minutes. Negative or zero collapses to a past
+    /// timestamp at the runtime — effectively a no-op (the
+    /// account is never locked); the handler validates `>= 1`
+    /// before constructing this variant.
+    Minutes(u32),
+}
+
+impl LockDuration {
+    /// Compute the absolute `locked_until` timestamp for this
+    /// duration. `Indefinite` returns a year-9999 instant per
+    /// the schema doctrine.
+    pub(crate) fn to_locked_until(self, now: DateTime<Utc>) -> DateTime<Utc> {
+        match self {
+            Self::FifteenMinutes => now + ChronoDuration::minutes(15),
+            Self::OneHour => now + ChronoDuration::hours(1),
+            Self::TwentyFourHours => now + ChronoDuration::hours(24),
+            Self::SevenDays => now + ChronoDuration::days(7),
+            Self::Indefinite => DateTime::parse_from_rfc3339("9999-12-31T23:59:59Z")
+                .expect("year-9999 sentinel parses")
+                .with_timezone(&Utc),
+            Self::Minutes(m) => now + ChronoDuration::minutes(i64::from(m)),
+        }
+    }
+}
+
+/// Outcome of [`lock_user_account`].
+#[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
+#[derive(Debug, Clone)]
+pub(crate) enum LockOutcome {
+    /// Lock applied. `until` is the absolute UTC instant the lock
+    /// expires (year 9999 for indefinite). `revoked_session_count`
+    /// is how many active sessions were revoked at lock time.
+    Locked {
+        target_user_id: i64,
+        until: DateTime<Utc>,
+        revoked_session_count: usize,
+    },
+    UnknownTarget,
+}
+
+/// Outcome of [`unlock_user_account`].
+#[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
+#[derive(Debug, Clone)]
+pub(crate) enum UnlockOutcome {
+    /// Lock cleared (or row was already unlocked — same UPDATE,
+    /// same audit row, same response shape).
+    Unlocked {
+        target_user_id: i64,
+    },
+    UnknownTarget,
+}
+
+/// Outcome of [`admin_revoke_sessions`].
+#[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
+#[derive(Debug, Clone)]
+pub(crate) enum AdminRevokeOutcome {
+    Revoked {
+        target_user_id: i64,
+        revoked_session_count: usize,
+    },
+    UnknownTarget,
+}
+
+/// Apply a manual lock to a target user. Sets `locked_until`,
+/// revokes every session via `invalidate_sessions(..,
+/// AdministrativeRevoke)`, emits per-revoked-session
+/// `SessionsRevokedByOther` rows, and the headline
+/// `AuditEvent::AccountLocked` row.
+///
+/// Doctrine 22: revocation goes through
+/// `auth::invalidate_sessions`. This fn never writes
+/// `revoked_at` directly.
+#[allow(dead_code)] // call site lands in R2 commit #16 handler
+pub(crate) async fn lock_user_account(
+    db: &Db,
+    request: &Request,
+    target_user_id: i64,
+    actor: AdminActor<'_>,
+    duration: LockDuration,
+    reason: &str,
+    correlation_id: Option<&str>,
+) -> Result<LockOutcome> {
+    if load_admin_reset_target(db, target_user_id).await?.is_none() {
+        return Ok(LockOutcome::UnknownTarget);
+    }
+
+    let until = duration.to_locked_until(Utc::now());
+    sqlx::query("UPDATE rustio_users SET locked_until = $1 WHERE id = $2")
+        .bind(until)
+        .bind(target_user_id)
+        .execute(db.pool())
+        .await?;
+
+    let outcome = invalidate_sessions(
+        db,
+        SessionTarget::User {
+            user_id: target_user_id,
+        },
+        SessionInvalidationReason::AdministrativeRevoke,
+    )
+    .await?;
+    let revoked_count = outcome.revoked_session_ids.len();
+
+    let ip = client_ip(request);
+
+    // Per-revoked-session audit rows.
+    for revoked_id in &outcome.revoked_session_ids {
+        let metadata = serde_json::json!({
+            "session_id": revoked_id,
+            "reason": reason,
+            "via": "manual",
+        });
+        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+            .with_event(AuditEvent::SessionsRevokedByOther)
+            .with_actor(actor.user_id);
+        entry.correlation_id = correlation_id;
+        entry.ip_address = ip.as_deref();
+        entry.metadata = Some(metadata);
+        entry.summary = format!("session {revoked_id} revoked by admin (manual lock)");
+        if let Err(e) = audit_record(db, entry).await {
+            log::error!(
+                target: "rustio_admin::recovery_admin::lock",
+                "audit::record (SessionsRevokedByOther) failed target_user_id={} \
+                 session_id={}: {}",
+                target_user_id, revoked_id, e,
+            );
+        }
+    }
+
+    // Headline AccountLocked row.
+    let metadata = serde_json::json!({
+        "actor_email_hash": actor_email_fingerprint(actor.email),
+        "reason": reason,
+        "until": until,
+        "via": "manual",
+    });
+    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+        .with_event(AuditEvent::AccountLocked)
+        .with_actor(actor.user_id);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = ip.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary = format!(
+        "manual account lock until {}; {revoked_count} session(s) revoked",
+        until.to_rfc3339()
+    );
+    audit_record(db, entry).await?;
+
+    Ok(LockOutcome::Locked {
+        target_user_id,
+        until,
+        revoked_session_count: revoked_count,
+    })
+}
+
+/// Clear a manual lock. Sets `locked_until = NULL` and zeroes the
+/// `failed_login_count` so the auto-throttle window resets. Does
+/// NOT touch sessions — the lock-time revocation already cleared
+/// them, and a fresh sign-in mints a new session anyway.
+///
+/// Idempotent on its UPDATE: re-unlocking an already-unlocked row
+/// is a no-op at the row level. The audit row still emits, which
+/// matters for forensic-trace completeness when an admin re-runs
+/// unlock after losing the response.
+#[allow(dead_code)] // call site lands in R2 commit #16 handler
+pub(crate) async fn unlock_user_account(
+    db: &Db,
+    request: &Request,
+    target_user_id: i64,
+    actor: AdminActor<'_>,
+    reason: &str,
+    correlation_id: Option<&str>,
+) -> Result<UnlockOutcome> {
+    if load_admin_reset_target(db, target_user_id).await?.is_none() {
+        return Ok(UnlockOutcome::UnknownTarget);
+    }
+
+    sqlx::query(
+        "UPDATE rustio_users SET locked_until = NULL, failed_login_count = 0 WHERE id = $1",
+    )
+    .bind(target_user_id)
+    .execute(db.pool())
+    .await?;
+
+    let metadata = serde_json::json!({
+        "actor_email_hash": actor_email_fingerprint(actor.email),
+        "reason": reason,
+        "via": "manual",
+    });
+    let ip = client_ip(request);
+    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+        .with_event(AuditEvent::AccountUnlocked)
+        .with_actor(actor.user_id);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = ip.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary = "manual account unlock; throttle counter cleared".to_string();
+    audit_record(db, entry).await?;
+
+    Ok(UnlockOutcome::Unlocked { target_user_id })
+}
+
+/// Revoke every active session for a target user. Sibling of
+/// [`lock_user_account`] but without the `locked_until` write —
+/// the user can still sign back in immediately on a fresh
+/// session. Useful when a security incident calls for "kick
+/// them out of every device" without rate-limiting future logins.
+///
+/// Doctrine 22: revocation goes through
+/// `auth::invalidate_sessions`. No `AccountLocked` audit row
+/// emits because no lock was applied; only the per-revoked-session
+/// `SessionsRevokedByOther` rows.
+#[allow(dead_code)] // call site lands in R2 commit #16 handler
+pub(crate) async fn admin_revoke_sessions(
+    db: &Db,
+    request: &Request,
+    target_user_id: i64,
+    actor: AdminActor<'_>,
+    reason: &str,
+    correlation_id: Option<&str>,
+) -> Result<AdminRevokeOutcome> {
+    if load_admin_reset_target(db, target_user_id).await?.is_none() {
+        return Ok(AdminRevokeOutcome::UnknownTarget);
+    }
+
+    let outcome = invalidate_sessions(
+        db,
+        SessionTarget::User {
+            user_id: target_user_id,
+        },
+        SessionInvalidationReason::AdministrativeRevoke,
+    )
+    .await?;
+    let revoked_count = outcome.revoked_session_ids.len();
+
+    let ip = client_ip(request);
+    for revoked_id in &outcome.revoked_session_ids {
+        let metadata = serde_json::json!({
+            "session_id": revoked_id,
+            "reason": reason,
+            "via": "manual",
+        });
+        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+            .with_event(AuditEvent::SessionsRevokedByOther)
+            .with_actor(actor.user_id);
+        entry.correlation_id = correlation_id;
+        entry.ip_address = ip.as_deref();
+        entry.metadata = Some(metadata);
+        entry.summary = format!("session {revoked_id} revoked by admin (manual revoke)");
+        if let Err(e) = audit_record(db, entry).await {
+            log::error!(
+                target: "rustio_admin::recovery_admin::revoke",
+                "audit::record (SessionsRevokedByOther) failed target_user_id={} \
+                 session_id={}: {}",
+                target_user_id, revoked_id, e,
+            );
+        }
+    }
+
+    Ok(AdminRevokeOutcome::Revoked {
+        target_user_id,
+        revoked_session_count: revoked_count,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -922,5 +1222,62 @@ mod tests {
         fn assert_send<T: Send>() {}
         assert_send::<AdminIssueOutcome>();
         assert_send::<AdminTempPwOutcome>();
+        assert_send::<LockOutcome>();
+        assert_send::<UnlockOutcome>();
+        assert_send::<AdminRevokeOutcome>();
+    }
+
+    // ---- LockDuration (R2 commit #16) -------------------------------------
+
+    #[test]
+    fn lock_duration_presets_are_relative_to_now() {
+        // Use a fixed `now` so the test is deterministic. Each
+        // preset shifts `now` by its labelled offset.
+        let now = DateTime::parse_from_rfc3339("2026-05-10T10:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        assert_eq!(
+            LockDuration::FifteenMinutes.to_locked_until(now),
+            now + ChronoDuration::minutes(15)
+        );
+        assert_eq!(
+            LockDuration::OneHour.to_locked_until(now),
+            now + ChronoDuration::hours(1)
+        );
+        assert_eq!(
+            LockDuration::TwentyFourHours.to_locked_until(now),
+            now + ChronoDuration::hours(24)
+        );
+        assert_eq!(
+            LockDuration::SevenDays.to_locked_until(now),
+            now + ChronoDuration::days(7)
+        );
+        assert_eq!(
+            LockDuration::Minutes(30).to_locked_until(now),
+            now + ChronoDuration::minutes(30)
+        );
+    }
+
+    #[test]
+    fn lock_duration_indefinite_is_year_9999() {
+        // Locked: indefinite encodes as a far-future timestamp,
+        // not NULL, so `rustio_users_locked_until_idx` continues
+        // to find it.
+        let now = Utc::now();
+        let until = LockDuration::Indefinite.to_locked_until(now);
+        assert_eq!(until.format("%Y").to_string(), "9999");
+        // Sanity: well after any plausible operational deadline.
+        assert!(until > now + ChronoDuration::days(365 * 100));
+    }
+
+    #[test]
+    fn lock_duration_minutes_zero_is_a_past_no_op() {
+        // `Minutes(0)` is documented as a no-op (the resulting
+        // `locked_until` lands at-or-before NOW). The handler
+        // validates `>= 1` before constructing this variant; the
+        // runtime contract is just that it doesn't panic.
+        let now = Utc::now();
+        let until = LockDuration::Minutes(0).to_locked_until(now);
+        assert_eq!(until, now);
     }
 }
