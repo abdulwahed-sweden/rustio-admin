@@ -1,0 +1,53 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-form-shell">
+
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/users">Users</a> ·
+    <a href="/admin/users/{{ target_user_id }}/edit">{{ target_email }}</a> ·
+    <span>{{ action_title }}</span>
+  </nav>
+  <h1>{{ action_title }} — {{ target_email }}</h1>
+</header>
+
+<p class="rio-meta">{{ action_description }}</p>
+
+{% if errors %}
+<div class="rio-flash rio-flash--error" role="alert">
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="{{ form_action }}" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+  <fieldset class="rio-fieldset">
+    <legend>Reason</legend>
+    <label class="rio-label" for="rio-reason">
+      Reason
+      <span class="rio-meta">(audited; minimum 8 characters)</span>
+    </label>
+    <textarea
+      id="rio-reason"
+      name="reason"
+      rows="3"
+      required
+      minlength="8"
+      class="rio-input"
+      autofocus
+    >{{ reason }}</textarea>
+    {% if "reason" in field_errors %}
+      <p class="rio-field-error">{{ field_errors["reason"][0] }}</p>
+    {% endif %}
+  </fieldset>
+
+  <div class="rio-form-actions">
+    <button type="submit" class="rio-button rio-button--primary">{{ submit_label }}</button>
+    <a href="/admin/users/{{ target_user_id }}/edit" class="rio-button rio-button--ghost">Cancel</a>
+  </div>
+</form>
+
+</div>
+{% endblock %}

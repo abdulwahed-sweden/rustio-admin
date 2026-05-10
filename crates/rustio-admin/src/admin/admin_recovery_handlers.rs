@@ -59,8 +59,9 @@ use sqlx::Row as SqlxRow;
 
 use crate::auth::guards::enforce_cross_rank_safe;
 use crate::auth::recovery_admin::{
-    admin_set_temp_password, check_session_elevated, issue_admin_reset_token, AdminActor,
-    AdminIssueOutcome, AdminTempPwOutcome,
+    admin_revoke_sessions, admin_set_temp_password, check_session_elevated,
+    issue_admin_reset_token, lock_user_account, unlock_user_account, AdminActor, AdminIssueOutcome,
+    AdminRevokeOutcome, AdminTempPwOutcome, LockDuration, LockOutcome, UnlockOutcome,
 };
 use crate::auth::{self, Identity, Role};
 use crate::error::{Error, Result};
@@ -880,6 +881,432 @@ pub(crate) async fn do_admin_reset_password(
     }
 }
 
+// ---- Lock / unlock / revoke (R2 commit #16) --------------------------------
+//
+// Three sibling action surfaces, all gated by Role::Administrator +
+// cross-rank-safe + re-auth (registered in commit #17). Each pairs
+// a GET that renders a confirmation form with a POST that performs
+// the action via the runtime fns from §3.2.
+//
+// Reason floor: 8 chars (§12 locked).
+
+#[derive(Serialize)]
+struct LockUserCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: String,
+    target_user_id: i64,
+    target_email: String,
+    errors: Vec<String>,
+    field_errors: HashMap<String, Vec<String>>,
+    /// Carries the previously-submitted reason on re-render.
+    reason: String,
+    /// Selected duration radio value (`"15min"`, `"1h"`, `"24h"`,
+    /// `"7d"`, `"indefinite"`, or `"freeform"`); defaults to `"1h"`
+    /// on first GET.
+    duration: String,
+    /// Freeform-minutes input value (preserved on re-render).
+    freeform_minutes: String,
+}
+
+#[derive(Serialize)]
+struct ConfirmActionCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: String,
+    target_user_id: i64,
+    target_email: String,
+    errors: Vec<String>,
+    field_errors: HashMap<String, Vec<String>>,
+    reason: String,
+    /// Title displayed at the top of the confirmation card.
+    action_title: &'static str,
+    /// One-sentence description shown above the reason field.
+    action_description: &'static str,
+    /// Submit-button label.
+    submit_label: &'static str,
+    /// Form action path (e.g. `/admin/users/42/unlock`).
+    form_action: String,
+}
+
+/// Pure helper: parse the lock-form's duration + freeform_minutes
+/// inputs into a [`LockDuration`]. Returns the typed value or a
+/// user-facing error message.
+fn parse_lock_duration(
+    duration: &str,
+    freeform_minutes: &str,
+) -> std::result::Result<LockDuration, String> {
+    match duration {
+        "15min" => Ok(LockDuration::FifteenMinutes),
+        "1h" => Ok(LockDuration::OneHour),
+        "24h" => Ok(LockDuration::TwentyFourHours),
+        "7d" => Ok(LockDuration::SevenDays),
+        "indefinite" => Ok(LockDuration::Indefinite),
+        "freeform" => match freeform_minutes.trim().parse::<u32>() {
+            Ok(m) if m >= 1 => Ok(LockDuration::Minutes(m)),
+            Ok(_) => Err("Freeform duration must be at least 1 minute.".to_string()),
+            Err(_) => Err("Enter a whole number of minutes.".to_string()),
+        },
+        _ => Err(format!("Unknown duration: {duration:?}.")),
+    }
+}
+
+/// `GET /admin/users/:id/lock` — render the lock confirmation form.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn show_lock_user(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: &Request,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let session_id = current_session_id_for(ctx, req).await?;
+    if !matches!(session_id, Some(id) if check_session_elevated(&ctx.db, id).await?) {
+        return Ok(reauth_redirect_for_path(&format!(
+            "/admin/users/{target_user_id}/lock"
+        )));
+    }
+
+    let view = LockUserCtx {
+        base: BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        page_title: format!("Lock account — {target_email}"),
+        target_user_id,
+        target_email,
+        errors: Vec::new(),
+        field_errors: HashMap::new(),
+        reason: String::new(),
+        duration: "1h".to_string(),
+        freeform_minutes: String::new(),
+    };
+    let body = ctx.templates.render("admin/lock_user.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/users/:id/lock` — apply the lock.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn do_lock_user(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: Request,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let session_id = current_session_id_for(ctx, &req).await?;
+    if !matches!(session_id, Some(id) if check_session_elevated(&ctx.db, id).await?) {
+        return Ok(reauth_redirect_for_path(&format!(
+            "/admin/users/{target_user_id}/lock"
+        )));
+    }
+
+    let form = req.form()?;
+    let duration_raw = form.get("duration").unwrap_or("1h").trim().to_string();
+    let freeform_minutes = form
+        .get("freeform_minutes")
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let reason = form.get("reason").unwrap_or("").trim().to_string();
+
+    let mut errors: Vec<String> = Vec::new();
+    let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+
+    if reason.chars().count() < 8 {
+        let msg = "Reason must be at least 8 characters.".to_string();
+        errors.push(msg.clone());
+        field_errors.entry("reason".into()).or_default().push(msg);
+    }
+
+    let parsed_duration = match parse_lock_duration(&duration_raw, &freeform_minutes) {
+        Ok(d) => Some(d),
+        Err(msg) => {
+            errors.push(msg.clone());
+            field_errors.entry("duration".into()).or_default().push(msg);
+            None
+        }
+    };
+
+    if !errors.is_empty() {
+        let view = LockUserCtx {
+            base: BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+            page_title: format!("Lock account — {target_email}"),
+            target_user_id,
+            target_email,
+            errors,
+            field_errors,
+            reason,
+            duration: duration_raw,
+            freeform_minutes,
+        };
+        let body = ctx.templates.render("admin/lock_user.html", &view)?;
+        return Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST));
+    }
+
+    let actor = AdminActor {
+        user_id: actor_identity.user_id,
+        email: &actor_identity.email,
+    };
+    let cid = correlation_id_from(&req);
+
+    let outcome = lock_user_account(
+        &ctx.db,
+        &req,
+        target_user_id,
+        actor,
+        parsed_duration.expect("validated above"),
+        &reason,
+        cid.as_deref(),
+    )
+    .await?;
+    match outcome {
+        LockOutcome::Locked { .. } => Ok(Response::redirect("/admin/users")),
+        LockOutcome::UnknownTarget => Err(Error::NotFound(format!("user #{target_user_id}"))),
+    }
+}
+
+/// `GET /admin/users/:id/unlock` — render the unlock confirmation form.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn show_unlock_user(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: &Request,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let session_id = current_session_id_for(ctx, req).await?;
+    if !matches!(session_id, Some(id) if check_session_elevated(&ctx.db, id).await?) {
+        return Ok(reauth_redirect_for_path(&format!(
+            "/admin/users/{target_user_id}/unlock"
+        )));
+    }
+
+    let view = ConfirmActionCtx {
+        base: BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        page_title: format!("Unlock account — {target_email}"),
+        target_user_id,
+        target_email,
+        errors: Vec::new(),
+        field_errors: HashMap::new(),
+        reason: String::new(),
+        action_title: "Unlock account",
+        action_description: "Clear the account lock and reset the failed-login counter. The user can sign in immediately.",
+        submit_label: "Unlock account",
+        form_action: format!("/admin/users/{target_user_id}/unlock"),
+    };
+    let body = ctx
+        .templates
+        .render("admin/confirm_admin_action.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/users/:id/unlock` — clear the lock.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn do_unlock_user(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: Request,
+) -> Result<Response> {
+    do_confirm_action(ctx, actor_identity, target_user_id, req, ActionKind::Unlock).await
+}
+
+/// `GET /admin/users/:id/revoke-sessions` — render the revoke confirmation form.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn show_admin_revoke_sessions(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: &Request,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let session_id = current_session_id_for(ctx, req).await?;
+    if !matches!(session_id, Some(id) if check_session_elevated(&ctx.db, id).await?) {
+        return Ok(reauth_redirect_for_path(&format!(
+            "/admin/users/{target_user_id}/revoke-sessions"
+        )));
+    }
+
+    let view = ConfirmActionCtx {
+        base: BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        page_title: format!("Revoke sessions — {target_email}"),
+        target_user_id,
+        target_email,
+        errors: Vec::new(),
+        field_errors: HashMap::new(),
+        reason: String::new(),
+        action_title: "Revoke all sessions",
+        action_description: "Sign the user out of every device immediately. No lock is applied; they can sign in again on a fresh session.",
+        submit_label: "Revoke all sessions",
+        form_action: format!("/admin/users/{target_user_id}/revoke-sessions"),
+    };
+    let body = ctx
+        .templates
+        .render("admin/confirm_admin_action.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/users/:id/revoke-sessions` — revoke all sessions.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn do_admin_revoke_sessions(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: Request,
+) -> Result<Response> {
+    do_confirm_action(ctx, actor_identity, target_user_id, req, ActionKind::Revoke).await
+}
+
+/// Discriminator for the shared confirm-action POST handler. Lock
+/// has its own POST (`do_lock_user`) because of the duration field.
+#[derive(Debug, Clone, Copy)]
+enum ActionKind {
+    Unlock,
+    Revoke,
+}
+
+async fn do_confirm_action(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    req: Request,
+    kind: ActionKind,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    let path_suffix = match kind {
+        ActionKind::Unlock => "unlock",
+        ActionKind::Revoke => "revoke-sessions",
+    };
+    let session_id = current_session_id_for(ctx, &req).await?;
+    if !matches!(session_id, Some(id) if check_session_elevated(&ctx.db, id).await?) {
+        return Ok(reauth_redirect_for_path(&format!(
+            "/admin/users/{target_user_id}/{path_suffix}"
+        )));
+    }
+
+    let form = req.form()?;
+    let reason = form.get("reason").unwrap_or("").trim().to_string();
+
+    if reason.chars().count() < 8 {
+        let (action_title, action_description, submit_label) = match kind {
+            ActionKind::Unlock => (
+                "Unlock account",
+                "Clear the account lock and reset the failed-login counter. The user can sign in immediately.",
+                "Unlock account",
+            ),
+            ActionKind::Revoke => (
+                "Revoke all sessions",
+                "Sign the user out of every device immediately. No lock is applied; they can sign in again on a fresh session.",
+                "Revoke all sessions",
+            ),
+        };
+        let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+        let msg = "Reason must be at least 8 characters.".to_string();
+        field_errors
+            .entry("reason".into())
+            .or_default()
+            .push(msg.clone());
+        let view = ConfirmActionCtx {
+            base: BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+            page_title: format!("{action_title} — {target_email}"),
+            target_user_id,
+            target_email,
+            errors: vec![msg],
+            field_errors,
+            reason,
+            action_title,
+            action_description,
+            submit_label,
+            form_action: format!("/admin/users/{target_user_id}/{path_suffix}"),
+        };
+        let body = ctx
+            .templates
+            .render("admin/confirm_admin_action.html", &view)?;
+        return Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST));
+    }
+
+    let actor = AdminActor {
+        user_id: actor_identity.user_id,
+        email: &actor_identity.email,
+    };
+    let cid = correlation_id_from(&req);
+
+    match kind {
+        ActionKind::Unlock => {
+            let outcome = unlock_user_account(
+                &ctx.db,
+                &req,
+                target_user_id,
+                actor,
+                &reason,
+                cid.as_deref(),
+            )
+            .await?;
+            match outcome {
+                UnlockOutcome::Unlocked { .. } => Ok(Response::redirect("/admin/users")),
+                UnlockOutcome::UnknownTarget => {
+                    Err(Error::NotFound(format!("user #{target_user_id}")))
+                }
+            }
+        }
+        ActionKind::Revoke => {
+            let outcome = admin_revoke_sessions(
+                &ctx.db,
+                &req,
+                target_user_id,
+                actor,
+                &reason,
+                cid.as_deref(),
+            )
+            .await?;
+            match outcome {
+                AdminRevokeOutcome::Revoked { .. } => Ok(Response::redirect("/admin/users")),
+                AdminRevokeOutcome::UnknownTarget => {
+                    Err(Error::NotFound(format!("user #{target_user_id}")))
+                }
+            }
+        }
+    }
+}
+
+/// Path-keyed sibling of [`reauth_redirect_for`]. Wraps an arbitrary
+/// `/admin/...` path into the re-auth bounce URL with proper
+/// percent-encoding.
+fn reauth_redirect_for_path(path: &str) -> Response {
+    Response::redirect(format!(
+        "/admin/reauth?return_to={}",
+        urlencoding::encode(path)
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -990,5 +1417,67 @@ mod tests {
             redirect_after_reauth(Some("/admin?next=1")),
             "/admin?next=1"
         );
+    }
+
+    // ---- parse_lock_duration (R2 commit #16) ------------------------------
+
+    #[test]
+    fn parse_lock_duration_accepts_locked_presets() {
+        assert!(matches!(
+            parse_lock_duration("15min", ""),
+            Ok(LockDuration::FifteenMinutes)
+        ));
+        assert!(matches!(
+            parse_lock_duration("1h", ""),
+            Ok(LockDuration::OneHour)
+        ));
+        assert!(matches!(
+            parse_lock_duration("24h", ""),
+            Ok(LockDuration::TwentyFourHours)
+        ));
+        assert!(matches!(
+            parse_lock_duration("7d", ""),
+            Ok(LockDuration::SevenDays)
+        ));
+        assert!(matches!(
+            parse_lock_duration("indefinite", ""),
+            Ok(LockDuration::Indefinite)
+        ));
+    }
+
+    #[test]
+    fn parse_lock_duration_freeform_accepts_positive_minutes() {
+        assert!(matches!(
+            parse_lock_duration("freeform", "30"),
+            Ok(LockDuration::Minutes(30))
+        ));
+        assert!(matches!(
+            parse_lock_duration("freeform", "  120  "),
+            Ok(LockDuration::Minutes(120))
+        ));
+    }
+
+    #[test]
+    fn parse_lock_duration_freeform_rejects_zero_negative_garbage() {
+        assert!(parse_lock_duration("freeform", "0").is_err());
+        assert!(parse_lock_duration("freeform", "").is_err());
+        assert!(parse_lock_duration("freeform", "abc").is_err());
+        assert!(parse_lock_duration("freeform", "-1").is_err());
+        assert!(parse_lock_duration("freeform", "1.5").is_err());
+    }
+
+    #[test]
+    fn parse_lock_duration_rejects_unknown_preset() {
+        assert!(parse_lock_duration("forever", "").is_err());
+        assert!(parse_lock_duration("", "").is_err());
+        assert!(parse_lock_duration("1H", "").is_err()); // case-sensitive
+    }
+
+    #[test]
+    fn parse_lock_duration_freeform_overflow_rejected() {
+        // u32::MAX + 1 doesn't parse as u32; the helper bubbles the
+        // error to a user-facing string.
+        let very_big = "4294967296"; // 2^32
+        assert!(parse_lock_duration("freeform", very_big).is_err());
     }
 }
