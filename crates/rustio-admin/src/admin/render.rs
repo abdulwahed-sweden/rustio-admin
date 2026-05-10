@@ -2354,6 +2354,71 @@ pub(crate) fn password_change_form_sections(min_length: usize) -> Vec<FormSectio
     }]
 }
 
+/// FormField list for the R2 forced-rotation interstitial
+/// (`/admin/must-change-password`). Two fields — `new_password1`
+/// and `new_password2` — and no `old_password`: the user has just
+/// authenticated with the temp password the admin issued seconds
+/// ago, and the design contract (`DESIGN_R2_ORGANISATIONAL.md`
+/// §3.4) intentionally skips collecting it again.
+///
+/// `min_length` is read from
+/// `Admin::active_password_policy().min_length()`, mirroring R1's
+/// [`password_change_form_sections`].
+pub(crate) fn must_change_password_form_sections(min_length: usize) -> Vec<FormSection> {
+    let new_password_hint = format!("At least {min_length} characters.");
+    vec![FormSection {
+        title: None,
+        fields: vec![
+            FormField {
+                name: "new_password1",
+                label: "New password".to_string(),
+                widget: "input",
+                input_type: "password",
+                value: String::new(),
+                hint: Some(new_password_hint),
+                placeholder: None,
+                required: true,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: Some("new-password"),
+                autofocus: true,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+            FormField {
+                name: "new_password2",
+                label: "Confirm".to_string(),
+                widget: "input",
+                input_type: "password",
+                value: String::new(),
+                hint: None,
+                placeholder: None,
+                required: true,
+                options: None,
+                multiple: false,
+                span: 2,
+                autocomplete: Some("new-password"),
+                autofocus: false,
+                disabled: false,
+                maxlength: None,
+                searchable: false,
+                has_more: false,
+                search_url: None,
+                errors: vec![],
+                target_model: None,
+                checked: false,
+            },
+        ],
+    }]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
