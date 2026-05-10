@@ -69,3 +69,22 @@ thiserror = "1"
 # utils
 urlencoding = "2"
 log = "0.4"
+
+# Integration-test harness. Optional so a regular
+# `cargo build` / `cargo test --workspace` (no feature) does NOT
+# pull the dep tree. Cargo doesn't permit optional dev-dependencies,
+# so these live in `[dependencies]` with `optional = true`; the
+# `integration-test` feature below activates them. The library
+# code itself never references testcontainers — only the
+# `tests/integration_*.rs` files (which are also gated on the
+# feature) do.
+testcontainers = { version = "0.23", optional = true }
+testcontainers-modules = { version = "0.11", optional = true, features = ["postgres"] }
+
+[features]
+# Enables the testcontainers Postgres integration suite under
+# `tests/integration_*.rs`. CI runs `cargo test --workspace
+# --features integration-test`; local `cargo test --workspace`
+# (no flag) skips them and keeps the unit-test gate fast.
+# See `DESIGN_R2_ORGANISATIONAL.md` §10.3.
+integration-test = ["dep:testcontainers", "dep:testcontainers-modules"]

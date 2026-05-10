@@ -114,6 +114,23 @@ impl Request {
     pub(crate) fn set_params(&mut self, params: HashMap<String, String>) {
         self.params = params;
     }
+
+    /// Test-only minimal-Request constructor. Doc-hidden, gated by
+    /// the `integration-test` feature so it does not appear on the
+    /// public API surface of a regular build. Used by
+    /// `crate::__integration::fake_request()` in the testcontainers
+    /// integration suite — see `DESIGN_R2_ORGANISATIONAL.md` §10.3.
+    #[doc(hidden)]
+    #[cfg(feature = "integration-test")]
+    pub fn __integration_test_fake(path: String, headers: HashMap<String, String>) -> Self {
+        Self::new(
+            hyper::Method::POST,
+            path,
+            String::new(),
+            headers,
+            bytes::Bytes::new(),
+        )
+    }
 }
 
 /// Parsed form body (application/x-www-form-urlencoded) or query string.

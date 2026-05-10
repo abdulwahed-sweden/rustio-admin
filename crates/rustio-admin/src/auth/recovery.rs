@@ -743,7 +743,7 @@ pub(crate) enum IssueOutcome {
 /// `MailerError`. Persisted on the token row's `mail_status` column
 /// and into the audit row's `metadata.email_send_status`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum MailerEmailStatus {
+pub enum MailerEmailStatus {
     Sent,
     Failed,
 }
