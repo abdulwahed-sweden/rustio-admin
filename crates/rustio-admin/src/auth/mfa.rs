@@ -91,10 +91,19 @@
 //!   stamps the new step. No audit row — TOTP success is
 //!   captured via the session-promotion `parent_session_id`
 //!   lineage per §8.3, not a separate event. R3 commit #7.
+//! - [`consume_backup_code`] / [`BackupConsumeOutcome`] — the
+//!   backup-code consume runtime (§4.4, D7). Argon2id-verifies
+//!   the candidate against every unused row for the user
+//!   (constant-time iteration), atomically marks the matching
+//!   row `used_at = NOW()`, emits
+//!   `AuditEvent::MfaCodeConsumed` with metadata
+//!   `{ code_id, remaining_codes, via }`. Single-use enforced
+//!   at the index level + a conditional UPDATE that races
+//!   safely. R3 commit #8.
 //!
-//! Subsequent commits will add: backup-code consume runtime
-//! (§4.4), disable / regeneration runtime functions (§9), and
-//! `MfaPolicy` routing into `login_guard` (§12.3).
+//! Subsequent commits will add: disable / regeneration
+//! runtime functions (§9), and `MfaPolicy` routing into
+//! `login_guard` (§12.3).
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -973,6 +982,204 @@ pub async fn verify_totp_for_user(
         .await?;
 
     Ok(VerifyOutcome::Verified { step_used: step })
+}
+
+// -----------------------------------------------------------------
+// Backup-code consume runtime (R3 commit #8)
+// -----------------------------------------------------------------
+
+/// Outcome of [`consume_backup_code`]. Lets the verify handler
+/// render the right page without embedding HTTP concerns in the
+/// runtime layer.
+///
+/// All variants collapse to a uniform user-facing response per
+/// `DESIGN_R3_MFA.md` §3.1 disclosure rules — the handler MUST
+/// NOT distinguish `Invalid` from `AlreadyUsed` from
+/// `NotEnrolled` in the rendered copy. The variant distinctions
+/// exist for forensic logging and internal debugging only.
+#[allow(dead_code)] // variants light up at the verify handler in a later commit
+pub enum BackupConsumeOutcome {
+    /// The candidate matched an unused backup code. The row has
+    /// been atomically marked `used_at = NOW()`; the audit row
+    /// has been emitted. The caller proceeds with trust
+    /// escalation (mint fresh `mfa_verified` session row, revoke
+    /// the pending row, swap the cookie).
+    Consumed { code_id: i64, remaining: u32 },
+    /// The candidate did not match any unused row, OR the input
+    /// failed normalisation, OR a race against a parallel
+    /// consume request lost. Uniform copy with `AlreadyUsed`
+    /// per the disclosure rule.
+    Invalid,
+    /// The user row exists but `mfa_enabled = FALSE`. Should
+    /// not happen if the verify handler checks state up-front,
+    /// but the runtime refuses anyway to keep the contract
+    /// honest.
+    NotEnrolled,
+    /// Reserved for the case where the SELECT widens beyond
+    /// `WHERE used_at IS NULL`. The current SELECT filters at
+    /// the index level so this variant is unreachable; it is
+    /// retained for forward-compatibility per
+    /// `DESIGN_R3_MFA.md` §9.2.
+    #[allow(dead_code)]
+    AlreadyUsed,
+}
+
+/// Consume a backup code as the second factor on the verify
+/// flow.
+///
+/// **Inputs.**
+///
+/// - `request` — for client-IP capture into the audit row.
+/// - `user_id` — the user being challenged.
+/// - `candidate_str` — the raw input the user typed. Hyphen
+///   and casing are normalised via
+///   [`normalise_backup_code`] before hash compare.
+/// - `via` — caller context (`"login"` or `"reauth"`)
+///   recorded into `metadata.via` per §8.2.
+/// - `correlation_id` — forensic-chain anchor.
+///
+/// **Steps.**
+///
+/// 1. Normalise the candidate. Empty after normalisation →
+///    `Invalid`.
+/// 2. SELECT `mfa_enabled` from `rustio_users`. Missing row →
+///    `Error::NotFound`. `mfa_enabled = FALSE` → `NotEnrolled`.
+/// 3. SELECT `id, code_hash` from `rustio_mfa_backup_codes`
+///    WHERE `user_id = ? AND used_at IS NULL`. The partial
+///    index makes this an index seek scoped to ≤
+///    `BACKUP_CODE_COUNT` rows.
+/// 4. **Constant-time iteration** over the rows. Argon2id
+///    verify each candidate; do NOT break on first match. The
+///    matched id is recorded once; subsequent matches (cannot
+///    happen given fresh-salt-per-row) are ignored. Iterating
+///    every row prevents a timing leak about the matching
+///    index.
+/// 5. No match → `Invalid`.
+/// 6. **Atomic single-use UPDATE.** `UPDATE … SET used_at =
+///    NOW() WHERE id = $1 AND used_at IS NULL`. If
+///    `rows_affected = 0`, another concurrent request consumed
+///    the same code first; treated as `Invalid` for uniform
+///    user-facing response (D7 protected at the SQL level).
+/// 7. Count remaining unused codes for the audit metadata +
+///    caller's render decision (the handler may flash a
+///    "regenerate" warning when `remaining ≤ 2`).
+/// 8. Emit `AuditEvent::MfaCodeConsumed` with metadata
+///    `{ code_id, remaining_codes, via }`.
+///
+/// **Doctrine 22.** This function does not write `revoked_at`.
+/// The trust escalation that follows on `Consumed` runs
+/// through `auth::sessions::invalidate_sessions` at the
+/// handler level — not here.
+///
+/// **Audit row emits inside the function.** Unlike
+/// [`verify_totp_for_user`] which is silent (TOTP success is
+/// captured via session-promotion lineage), backup-code
+/// consume is an out-of-band recovery event worth surfacing in
+/// the forensic chain.
+#[allow(dead_code)] // call site lands at the verify POST handler in a later commit
+pub async fn consume_backup_code(
+    db: &Db,
+    request: &Request,
+    user_id: i64,
+    candidate_str: &str,
+    via: &'static str,
+    correlation_id: Option<&str>,
+) -> Result<BackupConsumeOutcome> {
+    use sqlx::Row as _;
+
+    // 1. Normalise.
+    let candidate = normalise_backup_code(candidate_str);
+    if candidate.is_empty() {
+        return Ok(BackupConsumeOutcome::Invalid);
+    }
+
+    // 2. Verify enrolment.
+    let mfa_enabled: Option<bool> =
+        sqlx::query_scalar("SELECT mfa_enabled FROM rustio_users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db.pool())
+            .await?;
+    let mfa_enabled =
+        mfa_enabled.ok_or_else(|| Error::NotFound(format!("user {user_id} not found")))?;
+    if !mfa_enabled {
+        return Ok(BackupConsumeOutcome::NotEnrolled);
+    }
+
+    // 3. SELECT all unused candidates.
+    let rows = sqlx::query(
+        "SELECT id, code_hash FROM rustio_mfa_backup_codes \
+         WHERE user_id = $1 AND used_at IS NULL \
+         ORDER BY id",
+    )
+    .bind(user_id)
+    .fetch_all(db.pool())
+    .await?;
+
+    // 4. Constant-time iteration. Verify against every row even
+    //    after a match; record the first matched id only. Per
+    //    §4.4: do not break on first match — leaks timing about
+    //    candidate ordering otherwise.
+    let mut matched_id: Option<i64> = None;
+    for row in &rows {
+        let id: i64 = row.try_get("id")?;
+        let hash: String = row.try_get("code_hash")?;
+        if verify_backup_code(&candidate, &hash) && matched_id.is_none() {
+            matched_id = Some(id);
+        }
+    }
+
+    let Some(matched_id) = matched_id else {
+        return Ok(BackupConsumeOutcome::Invalid);
+    };
+
+    // 5. Atomic single-use UPDATE. The `AND used_at IS NULL`
+    //    clause guards against a parallel consume of the same
+    //    code: only one of two concurrent requests sees
+    //    rows_affected = 1; the loser collapses to Invalid for
+    //    uniform user-facing response.
+    let result = sqlx::query(
+        "UPDATE rustio_mfa_backup_codes \
+         SET used_at = NOW() \
+         WHERE id = $1 AND used_at IS NULL",
+    )
+    .bind(matched_id)
+    .execute(db.pool())
+    .await?;
+
+    if result.rows_affected() == 0 {
+        return Ok(BackupConsumeOutcome::Invalid);
+    }
+
+    // 6. Count remaining unused codes for the metadata.
+    let remaining: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM rustio_mfa_backup_codes \
+         WHERE user_id = $1 AND used_at IS NULL",
+    )
+    .bind(user_id)
+    .fetch_one(db.pool())
+    .await?;
+    let remaining = remaining.max(0) as u32;
+
+    // 7. Emit AuditEvent::MfaCodeConsumed.
+    let metadata = serde_json::json!({
+        "code_id": matched_id,
+        "remaining_codes": remaining,
+        "via": via,
+    });
+    let ip = client_ip(request);
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+        .with_event(AuditEvent::MfaCodeConsumed)
+        .with_actor(user_id);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = ip.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary = format!("backup code consumed via {via}; {remaining} remaining");
+    audit_record(db, entry).await?;
+
+    Ok(BackupConsumeOutcome::Consumed {
+        code_id: matched_id,
+        remaining,
+    })
 }
 
 /// Framework-wide MFA enforcement policy.

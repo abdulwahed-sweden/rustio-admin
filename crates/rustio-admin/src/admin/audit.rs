@@ -417,6 +417,16 @@ pub enum AuditEvent {
     MfaEnabled,
     MfaDisabled,
     MfaResetByOther,
+    /// A user consumed a backup code as the second factor on
+    /// the login or re-auth flow. Emitted by
+    /// `auth::mfa::consume_backup_code` (R3 commit #8).
+    /// `metadata.code_id` identifies which code was used;
+    /// `metadata.remaining_codes` tracks the unused-code count
+    /// post-consume so the user can be nudged toward
+    /// regeneration before exhaustion;
+    /// `metadata.via = "login" | "reauth"` distinguishes the
+    /// caller context.
+    MfaCodeConsumed,
     // ---- Session lifecycle (R0/R1+) ----
     SessionsRevokedSelf,
     SessionsRevokedByOther,
@@ -455,6 +465,7 @@ impl AuditEvent {
             Self::MfaEnabled => "mfa_enabled",
             Self::MfaDisabled => "mfa_disabled",
             Self::MfaResetByOther => "mfa_reset_by_other",
+            Self::MfaCodeConsumed => "mfa_code_consumed",
             Self::SessionsRevokedSelf => "sessions_revoked_self",
             Self::SessionsRevokedByOther => "sessions_revoked_by_other",
             Self::SessionLogout => "session_logout",
@@ -563,6 +574,7 @@ mod tests {
         AuditEvent::MfaEnabled,
         AuditEvent::MfaDisabled,
         AuditEvent::MfaResetByOther,
+        AuditEvent::MfaCodeConsumed,
         AuditEvent::SessionsRevokedSelf,
         AuditEvent::SessionsRevokedByOther,
         AuditEvent::SessionLogout,
@@ -648,6 +660,7 @@ mod tests {
         assert_eq!(AuditEvent::MfaEnabled.as_str(), "mfa_enabled");
         assert_eq!(AuditEvent::MfaDisabled.as_str(), "mfa_disabled");
         assert_eq!(AuditEvent::MfaResetByOther.as_str(), "mfa_reset_by_other");
+        assert_eq!(AuditEvent::MfaCodeConsumed.as_str(), "mfa_code_consumed");
         assert_eq!(
             AuditEvent::SessionsRevokedSelf.as_str(),
             "sessions_revoked_self"
