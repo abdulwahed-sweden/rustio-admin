@@ -193,6 +193,11 @@ impl<'a> Row<'a> {
             .try_get::<DateTime<Utc>, _>(col)
             .map_err(|e| Error::Internal(format!("{col}: {e}")))
     }
+    pub fn get_optional_datetime(&self, col: &str) -> Result<Option<DateTime<Utc>>> {
+        self.inner
+            .try_get::<Option<DateTime<Utc>>, _>(col)
+            .map_err(|e| Error::Internal(format!("{col}: {e}")))
+    }
     pub fn get_uuid(&self, col: &str) -> Result<Uuid> {
         self.inner
             .try_get::<Uuid, _>(col)
