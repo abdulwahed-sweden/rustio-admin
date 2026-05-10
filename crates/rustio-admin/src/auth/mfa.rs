@@ -59,11 +59,21 @@
 //!   is marked `#[allow(dead_code)]` until the enrolment +
 //!   verification runtime wires the call sites in R3 commits
 //!   #6 and #7. R3 commit #4.
+//! - [`current_step`] / [`generate_totp`] / [`verify_totp`] —
+//!   hand-rolled RFC 6238 TOTP (§9.4). HMAC-SHA1 (the
+//!   authenticator-app-default algorithm; `algorithm=SHA256`
+//!   variants exist but interop is best with SHA-1), 30-second
+//!   step interval, ±1 step skew tolerance (per Appendix B
+//!   locked decisions). 6-digit codes per industry standard.
+//!   `verify_totp` returns the step that matched on success so
+//!   the caller can stamp `mfa_last_used_step` for replay
+//!   protection (D4). Pinned by the canonical RFC 6238
+//!   Appendix B test vectors (truncated from 8-digit to 6-digit
+//!   per authenticator-app standard). R3 commit #5.
 //!
-//! Subsequent commits will add: TOTP step generator + verifier
-//! (RFC 6238, hand-rolled — §9.4), enrolment / verification /
-//! disable / regeneration runtime functions (§9), and `MfaPolicy`
-//! routing into `login_guard` (§12.3).
+//! Subsequent commits will add: enrolment / verification /
+//! disable / regeneration runtime functions (§9), and
+//! `MfaPolicy` routing into `login_guard` (§12.3).
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -98,11 +108,15 @@ use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, Salt
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use hmac::{Hmac, Mac};
 use rand::{Rng, RngCore};
+use sha1::Sha1;
 
 use crate::auth::Role;
 use crate::error::{Error, Result};
 use crate::orm::Db;
+
+type HmacSha1 = Hmac<Sha1>;
 
 /// AES-256-GCM key material for TOTP secret encryption (D1).
 ///
@@ -408,6 +422,117 @@ pub fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
     Argon2::default()
         .verify_password(plaintext.as_bytes(), &parsed)
         .is_ok()
+}
+
+// -----------------------------------------------------------------
+// TOTP — RFC 6238 (R3 commit #5)
+// -----------------------------------------------------------------
+//
+// Hand-rolled HMAC-SHA1-based TOTP per RFC 6238, with the
+// canonical 30-second step interval and 6-digit code format.
+// Pinned by the RFC 6238 Appendix B test vectors (truncated
+// from 8-digit to 6-digit). The framework's TOTP secret is the
+// 20-byte default; longer secrets are accepted but not
+// recommended (no security gain; reduces interop surface).
+//
+// Why hand-rolled rather than `totp-rs`: the framework's
+// dependency-conservative character (one stylesheet, narrow
+// surface). RFC 6238 is small enough to review at the source
+// level; the canonical test vectors give a strong correctness
+// signal. See DESIGN_R3_MFA.md §9.4 + Appendix B for the
+// trade-off discussion.
+
+/// TOTP step number for the given Unix time and step interval.
+///
+/// Pure function: `now_unix / step_seconds` (integer division).
+/// At the canonical 30-second interval, the step value
+/// increments every 30 seconds of wall-clock time. The
+/// `mfa_last_used_step` column persists the highest step value
+/// previously accepted by [`verify_totp`] for replay protection
+/// (D4).
+#[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) + #7 (verify_totp)
+pub fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
+    debug_assert!(step_seconds > 0, "step_seconds must be > 0");
+    now_unix / step_seconds
+}
+
+/// Generate a 6-digit TOTP code for the given secret + step
+/// per RFC 6238 (HMAC-SHA1 + dynamic truncation per RFC 4226
+/// §5.3).
+///
+/// Steps:
+///
+/// 1. Compute `hmac = HMAC-SHA1(secret, step.to_be_bytes())`.
+///    The 8-byte step value is encoded big-endian per RFC 4226.
+/// 2. Read `offset = hmac[19] & 0x0F`. The low nibble of the
+///    last HMAC byte selects a window into the 20-byte HMAC.
+/// 3. Read 4 bytes starting at `offset`, masking the high bit
+///    of the first byte (drops the sign bit per RFC 4226 §5.3).
+/// 4. Modulo `1_000_000` to yield a 6-digit value.
+///
+/// Returns the integer TOTP value in `[0, 999_999]`. Callers
+/// rendering for display should pad with leading zeros via
+/// `format!("{:06}", code)`.
+///
+/// **Infallible.** `Hmac::new_from_slice` accepts any key
+/// length per the HMAC construction; the framework never
+/// produces an invalid secret length internally.
+#[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) + #7 (verify_totp)
+pub fn generate_totp(secret: &[u8], step: u64) -> u32 {
+    // UFCS to disambiguate from `aes_gcm::aead::KeyInit` —
+    // both traits define a `new_from_slice` method.
+    let mut mac = <HmacSha1 as Mac>::new_from_slice(secret).expect("HMAC accepts any key length");
+    mac.update(&step.to_be_bytes());
+    let hash = mac.finalize().into_bytes();
+
+    // Dynamic truncation per RFC 4226 §5.3.
+    let offset = (hash[19] & 0x0F) as usize;
+    let bin_code = u32::from_be_bytes([
+        hash[offset] & 0x7F,
+        hash[offset + 1],
+        hash[offset + 2],
+        hash[offset + 3],
+    ]);
+
+    bin_code % 1_000_000
+}
+
+/// Verify a TOTP candidate within the configured step skew.
+///
+/// Tries the current step ± `skew_steps` against `candidate`.
+/// Returns `Some(step)` of the matching step on success so the
+/// caller can stamp `rustio_users.mfa_last_used_step` for D4
+/// replay protection; returns `None` if no step in the window
+/// matches.
+///
+/// **Replay protection runs at the call site, not here.** This
+/// function reports cryptographic match only. The verify
+/// runtime (R3 commit #7) reads `mfa_last_used_step` from the
+/// user row and rejects matches at or below the stored value
+/// before calling this function.
+///
+/// **Skew window** is symmetric: `[current - skew_steps,
+/// current + skew_steps]` inclusive. Default skew (per
+/// `RecoveryPolicy::mfa_skew_steps`) is 1, giving a 90-second
+/// total acceptance window at the canonical 30-second step.
+#[allow(dead_code)] // call site lands in R3 commit #7 (verify_totp runtime)
+pub fn verify_totp(
+    secret: &[u8],
+    candidate: u32,
+    now_unix: u64,
+    step_seconds: u64,
+    skew_steps: u32,
+) -> Option<u64> {
+    let current = current_step(now_unix, step_seconds);
+    let skew = i64::from(skew_steps);
+
+    for delta in -skew..=skew {
+        let step_to_try = (current as i64).saturating_add(delta).max(0) as u64;
+        if generate_totp(secret, step_to_try) == candidate {
+            return Some(step_to_try);
+        }
+    }
+    None
 }
 
 /// Framework-wide MFA enforcement policy.
@@ -802,5 +927,124 @@ mod tests {
         // But both still verify the original code.
         assert!(verify_backup_code("ABCDEFGH", &a));
         assert!(verify_backup_code("ABCDEFGH", &b));
+    }
+
+    // ---- TOTP RFC 6238 (R3 commit #5) ----------------------------
+
+    /// RFC 6238 Appendix B test secret (20 ASCII bytes).
+    const RFC6238_SECRET: &[u8] = b"12345678901234567890";
+
+    #[test]
+    fn current_step_at_canonical_30s_interval() {
+        // T=0 → step 0; T=29 → step 0; T=30 → step 1; T=59 → step 1;
+        // T=60 → step 2.
+        assert_eq!(current_step(0, 30), 0);
+        assert_eq!(current_step(29, 30), 0);
+        assert_eq!(current_step(30, 30), 1);
+        assert_eq!(current_step(59, 30), 1);
+        assert_eq!(current_step(60, 30), 2);
+    }
+
+    #[test]
+    fn rfc6238_appendix_b_test_vectors_truncated_to_6_digits() {
+        // The RFC 6238 Appendix B vectors are 8-digit codes.
+        // Authenticator apps render 6 digits by default, so the
+        // framework's generate_totp returns the 6-digit form
+        // (the last 6 digits of the 8-digit RFC value, since
+        // truncation is `bin_code % 10^digits`).
+        //
+        // Source: RFC 6238 Appendix B, "TOTP Algorithm: Test
+        // Vectors", SHA-1 column.
+        //
+        //  T (sec)        | 8-digit (RFC)  | 6-digit (this fn)
+        //  ---------------+----------------+------------------
+        //  59             | 94287082       | 287082
+        //  1111111109     | 07081804       |  81804
+        //  1111111111     | 14050471       |  50471
+        //  1234567890     | 89005924       |   5924
+        //  2000000000     | 69279037       | 279037
+        //  20000000000    | 65353130       | 353130
+        let cases: &[(u64, u32)] = &[
+            (59, 287_082),
+            (1_111_111_109, 81_804),
+            (1_111_111_111, 50_471),
+            (1_234_567_890, 5_924),
+            (2_000_000_000, 279_037),
+            (20_000_000_000, 353_130),
+        ];
+
+        for &(t, expected) in cases {
+            let step = current_step(t, 30);
+            let got = generate_totp(RFC6238_SECRET, step);
+            assert_eq!(got, expected, "RFC 6238 vector at T={t} mismatched");
+        }
+    }
+
+    #[test]
+    fn generate_totp_returns_six_digit_range() {
+        // Across a sample of steps, the result must fit in
+        // [0, 999_999] — the modulo guarantees this but a future
+        // refactor could lose the modulo silently.
+        for step in [0u64, 1, 100, 12_345, u64::MAX] {
+            let code = generate_totp(RFC6238_SECRET, step);
+            assert!(
+                code < 1_000_000,
+                "code out of range for step {step}: {code}"
+            );
+        }
+    }
+
+    #[test]
+    fn verify_accepts_current_step() {
+        let t = 1_111_111_111u64;
+        let step = current_step(t, 30);
+        let code = generate_totp(RFC6238_SECRET, step);
+        assert_eq!(verify_totp(RFC6238_SECRET, code, t, 30, 1), Some(step));
+    }
+
+    #[test]
+    fn verify_accepts_one_step_skew() {
+        // Generate at step S, verify at step S+1's wall-clock
+        // (T += step_seconds). With skew=1, the previous step
+        // is still accepted.
+        let t_gen = 1_111_111_111u64;
+        let step_gen = current_step(t_gen, 30);
+        let code = generate_totp(RFC6238_SECRET, step_gen);
+
+        let t_verify = t_gen + 30; // one step later
+        let result = verify_totp(RFC6238_SECRET, code, t_verify, 30, 1);
+        assert_eq!(result, Some(step_gen), "skew ±1 must accept previous step");
+    }
+
+    #[test]
+    fn verify_rejects_two_step_skew_when_window_is_one() {
+        // Generate at step S, verify at step S+2's wall-clock
+        // with skew=1. Falls outside the [S+1, S+3] acceptance
+        // window seen from T=S+2.
+        let t_gen = 1_111_111_111u64;
+        let step_gen = current_step(t_gen, 30);
+        let code = generate_totp(RFC6238_SECRET, step_gen);
+
+        let t_verify = t_gen + 60; // two steps later
+        let result = verify_totp(RFC6238_SECRET, code, t_verify, 30, 1);
+        assert_eq!(result, None, "skew=1 must reject two-step drift");
+    }
+
+    #[test]
+    fn totp_verify_rejects_wrong_code() {
+        let t = 1_111_111_111u64;
+        let result = verify_totp(RFC6238_SECRET, 999_999, t, 30, 1);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn verify_does_not_underflow_at_t_zero() {
+        // Skew window at T=0 would mathematically include step
+        // -1; the saturating_add().max(0) guard maps it to step
+        // 0, so the verify just retries step 0 instead of
+        // panicking on integer underflow.
+        let code = generate_totp(RFC6238_SECRET, 0);
+        let result = verify_totp(RFC6238_SECRET, code, 0, 30, 1);
+        assert_eq!(result, Some(0));
     }
 }
