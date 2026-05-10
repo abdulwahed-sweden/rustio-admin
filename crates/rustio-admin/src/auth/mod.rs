@@ -11,6 +11,7 @@
 //! `<app>.<action>_<model>` — e.g. `posts.change_post`.
 
 pub mod guards;
+pub(crate) mod mfa;
 mod permissions;
 pub(crate) mod recovery;
 pub(crate) mod recovery_admin;
@@ -72,6 +73,14 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     // tables; the runtime that reads these columns lands in later
     // R2 commits.
     recovery_admin::migrate_user_lockout_schema(db).await?;
+    // R3 (0.7.0) — TOTP MFA schema (4 additive columns on
+    // rustio_users + new rustio_mfa_backup_codes table + partial
+    // index). See DESIGN_R3_MFA.md §7 for the contract. Schema
+    // is additive and orthogonal to R1 / R2; the encryption
+    // helpers, TOTP RFC 6238 implementation, enrolment /
+    // verification / disable runtime, and login-flow integration
+    // land in later R3 commits.
+    mfa::migrate_user_mfa_schema(db).await?;
     // R2 (0.6.0) — surfaced by the testcontainers integration suite:
     // `rustio_admin_actions` was previously created lazily on first
     // dashboard hit (`handlers::ensure_audit_ready`), so any audit-
