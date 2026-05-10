@@ -70,10 +70,22 @@
 //!   protection (D4). Pinned by the canonical RFC 6238
 //!   Appendix B test vectors (truncated from 8-digit to 6-digit
 //!   per authenticator-app standard). R3 commit #5.
+//! - [`provision_secret`] / [`ProvisionedSecret`] /
+//!   [`confirm_enrolment`] / [`EnrolOutcome`] — the enrolment
+//!   runtime (§4.1, §9). `provision_secret` is pure: 20 random
+//!   bytes for RFC 6238 + base32 encoding for the QR / manual
+//!   entry display. `confirm_enrolment` is the DB-touching
+//!   path: verifies the user's first TOTP code, AES-GCM
+//!   encrypts the secret, stores the row, generates +
+//!   Argon2id-hashes 8 backup codes, INSERTs them, and emits
+//!   `AuditEvent::MfaEnabled`. The first MFA function that
+//!   touches `rustio_users.mfa_enabled` and writes
+//!   `rustio_mfa_backup_codes`. The HTTP handler that calls it
+//!   lands in a later commit. R3 commit #6.
 //!
-//! Subsequent commits will add: enrolment / verification /
-//! disable / regeneration runtime functions (§9), and
-//! `MfaPolicy` routing into `login_guard` (§12.3).
+//! Subsequent commits will add: verification (login second
+//! factor) / disable / regeneration runtime functions (§9),
+//! and `MfaPolicy` routing into `login_guard` (§12.3).
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -108,12 +120,16 @@ use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, Salt
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use chrono::Utc;
 use hmac::{Hmac, Mac};
 use rand::{Rng, RngCore};
 use sha1::Sha1;
 
+use crate::admin::audit::{record as audit_record, ActionType, AuditEvent, LogEntry};
+use crate::admin::builtin::client_ip;
 use crate::auth::Role;
 use crate::error::{Error, Result};
+use crate::http::Request;
 use crate::orm::Db;
 
 type HmacSha1 = Hmac<Sha1>;
@@ -533,6 +549,250 @@ pub fn verify_totp(
         }
     }
     None
+}
+
+// -----------------------------------------------------------------
+// Enrolment runtime (R3 commit #6)
+// -----------------------------------------------------------------
+
+/// A freshly-provisioned TOTP secret + its base32 encoding for
+/// QR / manual-entry display.
+///
+/// **Lifecycle.** The struct's two fields contain the same
+/// secret in two encodings; both are plaintext. The handler
+/// MUST hold this value for the duration of the GET → POST
+/// enrolment hand-off (typically via in-memory session-state
+/// or a short-lived encrypted form-token), then MUST discard
+/// it after [`confirm_enrolment`] runs. Plaintext lives only
+/// in process memory; the at-rest persistence contract (D1)
+/// is enforced inside `confirm_enrolment` via [`wrap_secret`].
+#[allow(dead_code)] // fields read by the enrolment GET handler in a later commit
+pub struct ProvisionedSecret {
+    /// 20 random bytes from the OS RNG. RFC 6238 recommends
+    /// HMAC-SHA1's block size (64 bytes) or output size
+    /// (20 bytes); 20 is the universal authenticator-app
+    /// minimum and matches every standard QR-provisioning URL
+    /// in the wild.
+    pub secret_bytes: Vec<u8>,
+    /// Base32 (RFC 4648) without padding — the form expected
+    /// by `otpauth://totp/...?secret=<this>` URLs and by
+    /// authenticator apps that accept manual entry.
+    pub base32: String,
+}
+
+/// Generate a fresh TOTP secret + its base32 encoding.
+///
+/// Pure (apart from the OS RNG read). Returns 20 raw bytes
+/// drawn from `rand::thread_rng().fill_bytes` plus the
+/// matching base32 string. Callers compose the `otpauth://`
+/// URL elsewhere — this function does not touch the project's
+/// issuer name or the user's email; those concerns live at the
+/// HTTP layer.
+#[allow(dead_code)] // call site lands in the enrolment GET handler
+pub fn provision_secret() -> ProvisionedSecret {
+    let mut bytes = vec![0u8; 20];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    let base32 = base32_encode_no_pad(&bytes);
+    ProvisionedSecret {
+        secret_bytes: bytes,
+        base32,
+    }
+}
+
+/// RFC 4648 base32 encoder (no padding). Hand-rolled rather
+/// than added as a dependency to match the framework's
+/// dependency-conservative character — base32 is ~30 lines and
+/// the alphabet is the persistence contract for the
+/// `otpauth://...?secret=...` URL format.
+///
+/// Pinned by the standard RFC 4648 §10 test vector
+/// `"foobar" -> "MZXW6YTBOI"`.
+fn base32_encode_no_pad(bytes: &[u8]) -> String {
+    const ALPHA: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    let mut out = String::with_capacity(bytes.len().div_ceil(5) * 8);
+    let mut buffer: u32 = 0;
+    let mut bits_in_buffer: u8 = 0;
+    for &byte in bytes {
+        buffer = (buffer << 8) | u32::from(byte);
+        bits_in_buffer += 8;
+        while bits_in_buffer >= 5 {
+            bits_in_buffer -= 5;
+            let idx = (buffer >> bits_in_buffer) as usize & 0x1F;
+            out.push(ALPHA[idx] as char);
+        }
+    }
+    if bits_in_buffer > 0 {
+        let idx = (buffer << (5 - bits_in_buffer)) as usize & 0x1F;
+        out.push(ALPHA[idx] as char);
+    }
+    out
+}
+
+/// Outcome of [`confirm_enrolment`]. Lets the caller render the
+/// right page without embedding HTTP concerns in the runtime
+/// layer.
+#[allow(dead_code)] // variants light up at the HTTP handler in a later commit
+pub enum EnrolOutcome {
+    /// The user's first TOTP code matched the just-provisioned
+    /// secret. The secret has been encrypted and persisted on
+    /// the user row; the 8 backup codes have been hashed and
+    /// inserted into `rustio_mfa_backup_codes`. The plaintext
+    /// backup codes ride in the variant for the one-time
+    /// success-page render (D2).
+    Enrolled { plain_backup_codes: Vec<String> },
+    /// The candidate code did not match the secret within the
+    /// configured skew window. No DB writes occurred; the
+    /// caller can re-render the verify form.
+    InvalidCode,
+    /// The user already has `mfa_enabled = TRUE`. Defensive
+    /// — should not happen if the enrolment handler checks
+    /// state up-front, but the runtime refuses anyway to keep
+    /// the contract honest.
+    AlreadyEnrolled,
+}
+
+/// Confirm a TOTP enrolment by verifying the user's first code
+/// against the provisioned secret, then persisting everything.
+///
+/// **Inputs.**
+///
+/// - `request` — for client-IP capture into the audit row.
+/// - `user_id` — the enrolling user (self-action; actor == target).
+/// - `secret_bytes` — the 20-byte TOTP secret returned by
+///   [`provision_secret`]. The handler holds this across the
+///   GET → POST round-trip and passes it back here.
+/// - `candidate_code` — the 6-digit TOTP code the user typed.
+/// - `step_seconds` — TOTP step interval (locked at 30s per
+///   Appendix B).
+/// - `skew_steps` — accepted skew window (locked at ±1 per
+///   Appendix B).
+/// - `key` — the AES-256-GCM key for at-rest encryption.
+/// - `key_id` — the active `RUSTIO_SECRET_KEY` version, stamped
+///   onto `mfa_secret_key_id` for staged-rotation decryption (D8).
+/// - `correlation_id` — forensic-chain anchor.
+///
+/// **Steps.**
+///
+/// 1. SELECT `mfa_enabled`. If TRUE → `AlreadyEnrolled` (no DB
+///    writes).
+/// 2. `verify_totp`. If no step matches → `InvalidCode` (no DB
+///    writes).
+/// 3. AES-256-GCM encrypt the secret via [`wrap_secret`].
+/// 4. UPDATE `rustio_users` setting `mfa_enabled = TRUE`,
+///    `mfa_secret_ciphertext`, `mfa_secret_key_id`, and
+///    `mfa_last_used_step` (the step that just verified, for D4
+///    replay protection).
+/// 5. [`generate_backup_codes`] (`BACKUP_CODE_COUNT`).
+/// 6. Hash each via [`hash_backup_code`] and INSERT into
+///    `rustio_mfa_backup_codes`.
+/// 7. Emit `AuditEvent::MfaEnabled` with metadata
+///    `{ "backup_codes_count", "key_id" }`.
+///
+/// Returns `EnrolOutcome::Enrolled { plain_backup_codes }`. The
+/// caller renders the codes ONCE on the success page, then
+/// drops the strings. After the response is sent, the only
+/// place the codes exist is the Argon2id hashes in the DB.
+///
+/// **Doctrine 22.** This function does not write `revoked_at`.
+/// The audit emission and DB updates do not pass through
+/// `invalidate_sessions`; enrolment does not invalidate
+/// existing sessions per `DESIGN_R3_MFA.md` §4.1.
+#[allow(dead_code)] // call site lands at the enrolment POST handler in a later commit
+#[allow(clippy::too_many_arguments)]
+pub async fn confirm_enrolment(
+    db: &Db,
+    request: &Request,
+    user_id: i64,
+    secret_bytes: &[u8],
+    candidate_code: u32,
+    step_seconds: u64,
+    skew_steps: u32,
+    key: &MfaKey,
+    key_id: u32,
+    correlation_id: Option<&str>,
+) -> Result<EnrolOutcome> {
+    // 1. Refuse if already enrolled.
+    let already: Option<bool> =
+        sqlx::query_scalar("SELECT mfa_enabled FROM rustio_users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db.pool())
+            .await?;
+    let Some(already) = already else {
+        return Err(Error::NotFound(format!("user {user_id} not found")));
+    };
+    if already {
+        return Ok(EnrolOutcome::AlreadyEnrolled);
+    }
+
+    // 2. Verify the candidate code against the freshly-provisioned
+    //    secret.
+    let now_unix = Utc::now().timestamp().max(0) as u64;
+    let step = match verify_totp(
+        secret_bytes,
+        candidate_code,
+        now_unix,
+        step_seconds,
+        skew_steps,
+    ) {
+        Some(step) => step,
+        None => return Ok(EnrolOutcome::InvalidCode),
+    };
+
+    // 3. Encrypt the secret for at-rest storage (D1).
+    let ciphertext = wrap_secret(secret_bytes, key);
+
+    // 4. Update the user row. Stamps mfa_last_used_step with the
+    //    step that just verified, so the very first verify_totp
+    //    after enrolment cannot replay this same code (D4).
+    sqlx::query(
+        "UPDATE rustio_users \
+         SET mfa_enabled = TRUE, \
+             mfa_secret_ciphertext = $1, \
+             mfa_secret_key_id = $2, \
+             mfa_last_used_step = $3 \
+         WHERE id = $4",
+    )
+    .bind(&ciphertext)
+    .bind(key_id as i32)
+    .bind(step as i64)
+    .bind(user_id)
+    .execute(db.pool())
+    .await?;
+
+    // 5. Generate the backup-code batch.
+    let plain_codes = generate_backup_codes(BACKUP_CODE_COUNT);
+
+    // 6. Hash + insert each. Normalisation runs at consume time
+    //    (the user types XXXX-XXXX with the hyphen); the hashes
+    //    persist the canonical form.
+    for code in &plain_codes {
+        let normalised = normalise_backup_code(code);
+        let hash = hash_backup_code(&normalised)?;
+        sqlx::query("INSERT INTO rustio_mfa_backup_codes (user_id, code_hash) VALUES ($1, $2)")
+            .bind(user_id)
+            .bind(&hash)
+            .execute(db.pool())
+            .await?;
+    }
+
+    // 7. Audit emit.
+    let metadata = serde_json::json!({
+        "backup_codes_count": BACKUP_CODE_COUNT,
+        "key_id": key_id,
+    });
+    let ip = client_ip(request);
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+        .with_event(AuditEvent::MfaEnabled)
+        .with_actor(user_id);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = ip.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary = "MFA enabled (TOTP + 8 backup codes)".to_string();
+    audit_record(db, entry).await?;
+
+    Ok(EnrolOutcome::Enrolled {
+        plain_backup_codes: plain_codes,
+    })
 }
 
 /// Framework-wide MFA enforcement policy.
@@ -1046,5 +1306,66 @@ mod tests {
         let code = generate_totp(RFC6238_SECRET, 0);
         let result = verify_totp(RFC6238_SECRET, code, 0, 30, 1);
         assert_eq!(result, Some(0));
+    }
+
+    // ---- enrolment runtime (R3 commit #6) ------------------------
+
+    #[test]
+    fn base32_rfc4648_test_vector_foobar() {
+        // RFC 4648 §10 standard test vector. Pins the encoder
+        // against the canonical reference; if the alphabet or
+        // bit-packing drifts, this test fails.
+        assert_eq!(base32_encode_no_pad(b"foobar"), "MZXW6YTBOI");
+    }
+
+    #[test]
+    fn base32_rfc4648_progressive_test_vectors() {
+        // Additional RFC 4648 §10 vectors covering 1, 2, 3, 4,
+        // 5 input bytes — exercises every path through the
+        // bit-packing loop's leftover-bits flush.
+        // (Outputs are the no-padding form; standard test
+        // vectors include `=` padding which we strip per the
+        // otpauth:// URL convention.)
+        assert_eq!(base32_encode_no_pad(b"f"), "MY");
+        assert_eq!(base32_encode_no_pad(b"fo"), "MZXQ");
+        assert_eq!(base32_encode_no_pad(b"foo"), "MZXW6");
+        assert_eq!(base32_encode_no_pad(b"foob"), "MZXW6YQ");
+        assert_eq!(base32_encode_no_pad(b"fooba"), "MZXW6YTB");
+    }
+
+    #[test]
+    fn provision_secret_returns_20_bytes() {
+        let secret = provision_secret();
+        assert_eq!(
+            secret.secret_bytes.len(),
+            20,
+            "RFC 6238 default + universal authenticator-app interop"
+        );
+    }
+
+    #[test]
+    fn provision_secret_base32_length_matches_secret() {
+        // 20 bytes × 8 bits = 160 bits / 5 bits per base32 char
+        // = 32 chars exactly (no padding needed).
+        let secret = provision_secret();
+        assert_eq!(secret.base32.len(), 32);
+        // Every char is in the base32 alphabet.
+        for c in secret.base32.chars() {
+            assert!(
+                c.is_ascii_uppercase() || ('2'..='7').contains(&c),
+                "non-base32 char in encoding: {c:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn provision_secret_each_call_yields_different_secret() {
+        // Birthday-bound for 20-byte secrets is astronomical;
+        // a collision in 16 calls indicates the RNG is broken.
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..16 {
+            let secret = provision_secret();
+            assert!(seen.insert(secret.secret_bytes), "RNG produced duplicate");
+        }
     }
 }
