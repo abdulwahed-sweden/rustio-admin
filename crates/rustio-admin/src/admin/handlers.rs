@@ -193,27 +193,105 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
     let email = form.required("email")?;
     let password = form.required("password")?;
 
-    match auth::login(&ctx.db, email, password).await {
-        Ok(token) => {
-            let cookie = format!(
-                "{}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=1209600",
-                auth::SESSION_COOKIE
-            );
-            Ok(Response::redirect("/admin").with_header("set-cookie", cookie))
-        }
-        Err(_) => {
-            let body = ctx.templates.render(
-                "admin/login.html",
-                &render::LoginCtx {
-                    base: BaseContext::new(None, csrf_token(&req), &ctx.admin),
-                    error: Some("Invalid email or password.".into()),
-                    sections: render::login_form_sections(),
-                    flash: None,
-                },
-            )?;
-            Ok(Response::html(body).with_status(hyper::StatusCode::UNAUTHORIZED))
-        }
+    // Per `DESIGN_R2_ORGANISATIONAL.md` §3.3 + §9.1: every failure
+    // mode (no such user, inactive account, currently locked, wrong
+    // password) returns the same uniform 401 — no enumeration leak.
+    // The locked branch must respond identically to the wrong-password
+    // branch so an attacker can't tell whether they hit the throttle.
+    let uniform_unauthorized = || -> Result<Response> {
+        let body = ctx.templates.render(
+            "admin/login.html",
+            &render::LoginCtx {
+                base: BaseContext::new(None, csrf_token(&req), &ctx.admin),
+                error: Some("Invalid email or password.".into()),
+                sections: render::login_form_sections(),
+                flash: None,
+            },
+        )?;
+        Ok(Response::html(body).with_status(hyper::StatusCode::UNAUTHORIZED))
+    };
+
+    // 1. Look up the user (don't verify password yet).
+    let user = match auth::find_user_by_email(&ctx.db, email).await? {
+        Some(u) => u,
+        None => return uniform_unauthorized(),
+    };
+
+    // 2. Inactive accounts are indistinguishable from wrong-password.
+    //    No throttle work — inactive is an admin-set flag, not a
+    //    failure-rate signal.
+    if !user.is_active {
+        return uniform_unauthorized();
     }
+
+    // 3. Lockout check FIRST (before password verify) so a locked
+    //    account doesn't pay Argon2 cost and so the response time is
+    //    uniform with the wrong-password branch.
+    use crate::auth::recovery_admin::{
+        check_account_lockout, record_failed_login, record_successful_login, LockState,
+        ThrottleOutcome,
+    };
+    if let LockState::Locked { .. } = check_account_lockout(&ctx.db, user.id).await? {
+        return uniform_unauthorized();
+    }
+
+    // 4. Verify password. On failure: bump the throttle counter; emit
+    //    AccountLocked audit if THIS failure tripped the threshold.
+    if !auth::verify_password(password, &user.password_hash) {
+        let throttle = ctx.admin.active_recovery_policy().login_throttle();
+        let outcome = record_failed_login(&ctx.db, user.id, throttle).await?;
+        if let ThrottleOutcome::JustLocked { count, until } = outcome {
+            // Auto-throttle: actor_user_id = None, LogEntry::user_id =
+            // affected user (closest reasonable subject per §5.2).
+            // Doctrine 22: AccountLocked auto does NOT revoke
+            // sessions — the lockout check at the next request handles
+            // refusal. See §13 locked-decision.
+            let ip = super::builtin::client_ip(&req);
+            let cid = super::builtin::correlation_id_from(&req);
+            let metadata = serde_json::json!({
+                "via": "auto_throttle",
+                "failed_count": count,
+                "until": until,
+                "reason": format!(
+                    "auto-throttle: {count} failed logins within {} minutes",
+                    throttle.window_minutes,
+                ),
+            });
+            let _ = audit::record(
+                &ctx.db,
+                audit::LogEntry {
+                    user_id: user.id,
+                    action_type: audit::ActionType::Update,
+                    model_name: "user",
+                    object_id: user.id,
+                    ip_address: ip.as_deref(),
+                    summary: format!(
+                        "auto-throttle locked user {} after {count} failed logins",
+                        user.email,
+                    ),
+                    correlation_id: cid.as_deref(),
+                    session_id: None,
+                    metadata: Some(metadata),
+                    actor_user_id: None,
+                    event: Some(audit::AuditEvent::AccountLocked),
+                },
+            )
+            .await;
+        }
+        return uniform_unauthorized();
+    }
+
+    // 5. Success — reset throttle counter, mint session, set cookie,
+    //    redirect. The forced-rotation gate (must_change_password)
+    //    runs at the next request inside `login_guard` (R2 commit
+    //    #13), so the cookie is set unconditionally here.
+    record_successful_login(&ctx.db, user.id).await?;
+    let token = auth::create_session(&ctx.db, user.id).await?;
+    let cookie = format!(
+        "{}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=1209600",
+        auth::SESSION_COOKIE
+    );
+    Ok(Response::redirect("/admin").with_header("set-cookie", cookie))
 }
 
 pub(crate) async fn do_logout(ctx: &AdminCtx, req: Request) -> Result<Response> {
