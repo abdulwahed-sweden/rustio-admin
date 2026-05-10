@@ -2,7 +2,7 @@
 
 pub(crate) mod admin_recovery_handlers;
 pub mod audit;
-mod builtin;
+pub(crate) mod builtin;
 pub mod filters;
 mod handlers;
 pub(crate) mod icons;
