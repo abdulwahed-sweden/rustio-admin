@@ -69,6 +69,28 @@ enum Guard {
     Redirect(Response),
 }
 
+/// Paths a user with `must_change_password = TRUE` is allowed to
+/// reach without first completing the forced rotation.
+/// Locked-decision per `DESIGN_R2_ORGANISATIONAL.md` §12.
+///
+/// Exact-path match (no prefix matching). Sub-paths of
+/// `/admin/account/sessions` (e.g. `/admin/account/sessions/revoke`)
+/// are intentionally NOT whitelisted — a user being forced to
+/// rotate may view their active sessions but must finish the
+/// rotation before revoking siblings.
+const MUST_CHANGE_WHITELIST: &[&str] = &[
+    "/admin/must-change-password",
+    "/admin/logout",
+    "/admin/account/sessions",
+];
+
+/// Whether `path` is on the must-change-password whitelist.
+/// Pulled out as a free fn so the rule is unit-testable without a
+/// `Request`. See [`MUST_CHANGE_WHITELIST`] for the contract.
+fn is_must_change_whitelisted_path(path: &str) -> bool {
+    MUST_CHANGE_WHITELIST.contains(&path)
+}
+
 async fn login_guard(ctx: &AdminCtx, req: &Request) -> Result<Guard> {
     let cookie = match req.header("cookie") {
         Some(c) => c,
@@ -85,6 +107,18 @@ async fn login_guard(ctx: &AdminCtx, req: &Request) -> Result<Guard> {
     if !ident.is_active {
         return Ok(Guard::Redirect(Response::redirect("/admin/login")));
     }
+
+    // R2 forced-rotation gate (`DESIGN_R2_ORGANISATIONAL.md` §3.4 +
+    // §9.2). When the flag is set, every authenticated request EXCEPT
+    // the whitelist redirects to `/admin/must-change-password`. The
+    // check sits BEFORE any role gate so even Administrators /
+    // Developers with the flag set are funnelled through.
+    if ident.must_change_password && !is_must_change_whitelisted_path(req.path()) {
+        return Ok(Guard::Redirect(Response::redirect(
+            "/admin/must-change-password",
+        )));
+    }
+
     Ok(Guard::Allow(ident))
 }
 
@@ -1068,5 +1102,66 @@ mod tests {
     fn strict_mailer_guard_passes_when_strict_mode_disabled() {
         let admin = super::super::types::Admin::new();
         assert!(strict_mailer_guard_check(&admin).is_ok());
+    }
+
+    // ---- must-change-password whitelist (R2 commit #13) --------------------
+
+    #[test]
+    fn whitelist_accepts_the_three_locked_paths() {
+        // Locked-decision per DESIGN_R2_ORGANISATIONAL.md §12.
+        assert!(super::is_must_change_whitelisted_path(
+            "/admin/must-change-password"
+        ));
+        assert!(super::is_must_change_whitelisted_path("/admin/logout"));
+        assert!(super::is_must_change_whitelisted_path(
+            "/admin/account/sessions"
+        ));
+    }
+
+    #[test]
+    fn whitelist_rejects_subpaths_of_account_sessions() {
+        // Sub-paths of /admin/account/sessions (revoke buttons) are
+        // intentionally NOT whitelisted — a user being forced to
+        // rotate may VIEW their sessions but must finish the
+        // rotation before revoking siblings.
+        assert!(!super::is_must_change_whitelisted_path(
+            "/admin/account/sessions/revoke"
+        ));
+        assert!(!super::is_must_change_whitelisted_path(
+            "/admin/account/sessions/revoke-others"
+        ));
+        assert!(!super::is_must_change_whitelisted_path(
+            "/admin/account/sessions/"
+        ));
+    }
+
+    #[test]
+    fn whitelist_rejects_other_admin_paths() {
+        for path in [
+            "/admin",
+            "/admin/",
+            "/admin/users",
+            "/admin/users/42",
+            "/admin/login",
+            "/admin/password_change",
+            "/admin/forgot-password",
+            "/admin/reauth",
+            "/admin/must-change-password/", // trailing slash → not exact
+        ] {
+            assert!(
+                !super::is_must_change_whitelisted_path(path),
+                "expected reject for {path:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn whitelist_rejects_paths_outside_admin_surface() {
+        for path in ["/", "/login", "/static/admin.css", "/api"] {
+            assert!(
+                !super::is_must_change_whitelisted_path(path),
+                "expected reject for {path:?}"
+            );
+        }
     }
 }
