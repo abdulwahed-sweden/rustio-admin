@@ -1,36 +1,61 @@
 # R2 — Organisational Recovery
 
-Companion to `DESIGN_SYSTEM.md`, `DESIGN_SESSIONS.md`,
-`DESIGN_AUDIT.md`, and `DESIGN_RECOVERY.md`. Codifies the R2
-contract — admin-driven recovery flows, login-throttle, re-auth
-wall, forced password rotation, and the multi-tenant readiness
-hook — that layers on top of R1's self-recovery primitives.
+R1 shipped self-service: the user is the actor and the target.
+R2 ships organisational recovery: an admin acts upon another
+user.
 
-> R1 (0.5.0) shipped self-service: the user is the actor and the
-> target. R2 (target 0.6.0) ships organisational recovery: an
-> admin acts upon another user. The substrate is unchanged —
-> `auth::invalidate_sessions` remains the single writer of
-> `revoked_at` (Doctrine 22), the audit chain still ties through
-> `correlation_id`, the `PasswordPolicy` is still the single
-> source of truth for length / complexity. R2 adds the actor /
-> target separation, an interstitial for forced rotation, and
-> the throttling / re-auth machinery that the rest of the
-> doctrine has been waiting for.
+The substrate is unchanged; the actor/target separation is the
+new contract.
 
-This is a contract. PR review compares against it.
+`auth::invalidate_sessions` remains the sole writer of
+`revoked_at` (Doctrine 22). The audit chain still ties through
+`correlation_id`. `PasswordPolicy` is still the single source
+of truth for length and complexity.
+
+Pull request review runs against this document, not only the
+diff.
+
+> **Doctrine inheritance**
+> R1 (0.5.0) shipped the self-service primitives. R2 (0.6.0)
+> layers six new doctrines (D1-D6 below) on top of the same
+> substrate. Centralised invalidation (Doctrine 22), audit
+> chain (Doctrine 8), and redaction (Doctrine 11) carry through
+> unchanged.
 
 ---
 
-## 0. Status
+## 1. Purpose
 
-**Phase:** R2 — organisational recovery.
-**Branch:** `feat/organisational-recovery` (cut from `main` at
-`d4f5182`, the 0.5.0 release tip).
-**Target:** `rustio-admin@0.6.0`.
-**Blocking:** R3 (TOTP MFA + backup codes), R4 (CLI emergency
-recovery).
+### 1.1 What this governs
 
-R1 (0.5.0) shipped the foundations this phase depends on:
+R2 governs organisational recovery initiated by authenticated
+administrators against target user accounts.
+
+- Admin-driven password reset (email mode + temp_pw mode).
+- Manual account lock and unlock.
+- Auto-throttle on failed login.
+- Re-auth wall for destructive admin actions.
+- Forced password rotation (`must_change_password`).
+- The multi-tenant readiness hook (`RecoveryPolicy::scope_for`).
+
+### 1.2 What this does not cover
+
+- TOTP MFA + backup codes → R3.
+- CLI emergency recovery → R4.
+- Multi-tenant scoping schema → separate phase.
+- API tokens / service accounts — re-uses the same invalidation
+  engine; recovery vocabulary may extend with a
+  `ServiceAccountKeyRotated` reason in a future phase.
+
+### 1.3 Closing principle
+
+R2 layers organisational recovery on top of R1's self-service
+substrate. The substrate is unchanged; the actor/target
+separation is the new contract.
+
+### 1.4 Foundations from R1
+
+R2 builds on the R1 foundations shipped in 0.5.0:
 
 - Centralised `auth::invalidate_sessions` with
   `SessionInvalidationReason::PasswordResetByOther` /
@@ -43,49 +68,96 @@ R1 (0.5.0) shipped the foundations this phase depends on:
 - `LogEntry::with_event(AuditEvent)` is the typed-event boundary;
   `record_session_revocations(... via: &'static str)` already
   carries a `via` parameter R2 extends.
-- `rustio_users.must_change_password` column added in R1 commit
-  #1; R2 reads + clears it.
+- `rustio_users.must_change_password` column added in R1; R2
+  reads + clears it.
 - `rustio_sessions.elevated_until` column added back in R0; R2
   is the first phase to read + write it.
 - `Admin::active_password_policy()` + `active_recovery_policy()`
   are stable; R2 reads both.
 
-R2 adds the layer above all of that.
 
 ---
 
-## 1. Doctrine recap (LOCKED — confirmed at R2 kickoff)
+## 2. Invariants
 
-The three R1-locked decisions carry through unchanged. Confirmed
-at kickoff per the roadmap's checklist:
+### 2.1 Doctrine inheritance
 
-| Decision | Status |
-|----------|--------|
-| Reset token TTL: **1 hour** | Unchanged. Admin-issued reset links use the same TTL — admin shares the link out-of-band; the target has the same 1-hour window to consume. |
-| Mailer failure: **log + uniform user response** | Unchanged. When an admin initiates a reset, a mailer failure still produces the same user-facing copy; `metadata.email_send_status = "failed"` lands on the audit row and the admin can retry. |
-| Default `MfaPolicy::Optional` | Unchanged. R3 owns MFA; R2 doesn't promote the floor. |
+R2 inherits R1's three locked decisions and adds six R2-specific
+doctrines on top of Doctrine 22's centralised-invalidation
+substrate.
 
-R2's locked additions:
+| Source | Decision | Implication for R2 |
+|--------|----------|---------------------|
+| R1 (0.5.0) | Reset token TTL: **1 hour** | Admin-issued reset links use the same TTL — admin shares the link out-of-band; the target has the same 1-hour window to consume |
+| R1 (0.5.0) | Mailer failure: **log + uniform user response** | When an admin initiates a reset, a mailer failure produces the same user-facing copy; `metadata.email_send_status = "failed"` lands on the audit row and the admin can retry |
+| R1 (0.5.0) | Default `MfaPolicy::Optional` | Unchanged. R3 owns MFA; R2 does not promote the floor |
+| **D1** | Actor / target separation | Every R2 audit row carries `metadata.actor_user_id` (the admin) DISTINCT from `object_id` (the affected user). The legacy `LogEntry::user_id` field continues to carry the actor for backwards compat with `/admin/history` |
+| **D2** | Reason-required for organisational actions | Admin-driven reset / lock / unlock / revoke require a non-empty `reason` (≥ 8 chars) text field on the form. The reason persists into `metadata.reason`. Defence against impulsive ops + supports compliance audit |
+| **D3** | Re-auth before sensitive actions | Admin-driven recovery routes refuse without a session whose `elevated_until > NOW()`. The re-auth flow (`/admin/reauth`) prompts password (and R3+ TOTP) and stamps the column. Window: 15 minutes |
+| **D4** | Auto-throttle is a soft lock | Locked-until accounts can be unlocked by an admin via the same `/admin/users/:id/unlock` route as manual locks; auto-throttle does NOT permanently disable an account |
+| **D5** | Forced rotation cannot be skipped | Once `must_change_password = TRUE`, the user MUST complete the must-change interstitial before any `/admin/*` route renders. The check sits in `login_guard` BEFORE `role_guard` |
+| **D6** | Self-revoke on consume of admin-issued reset | When the target consumes an admin-issued reset link, every session is still revoked — same as self-reset. The admin's intent ("I am forcing rotation") is honoured at the consume point, not at the issue point |
+| **D22** (unchanged) | Centralised invalidation | R2 calls `invalidate_sessions(SessionTarget::User, …PasswordResetByOther)` or `…AdministrativeRevoke`; the framework's only `revoked_at` writer remains `auth::sessions::invalidate_sessions` |
 
-| # | Doctrine | Implication for R2 |
-|---|----------|---------------------|
-| **D1** | Actor / target separation | Every R2 audit row carries `metadata.actor_user_id` (the admin) DISTINCT from `object_id` (the affected user). The legacy `LogEntry::user_id` field continues to carry the actor for backwards compat with /admin/history. |
-| **D2** | Reason-required for organisational actions | Admin-driven reset / lock / unlock / revoke require a non-empty `reason` (≥ 8 chars) text field on the form. The reason persists into `metadata.reason`. Defense against impulsive ops + supports compliance audit. |
-| **D3** | Re-auth before sensitive actions | Admin-driven recovery routes refuse without a session whose `elevated_until > NOW()`. Re-auth flow (`/admin/reauth`) prompts password (and R3+ TOTP) and stamps the column. Window: 15 minutes. |
-| **D4** | Auto-throttle is a soft lock | Locked-until accounts can be unlocked by an admin via the same `/admin/users/:id/unlock` route as manual locks; auto-throttle does NOT permanently disable an account. |
-| **D5** | Forced rotation cannot be skipped | Once `must_change_password = TRUE`, the user MUST complete the must-change interstitial before any /admin/* route renders for them. The check sits in `login_guard` BEFORE `role_guard`. |
-| **D6** | Self-revoke on consume of admin-issued reset | When the target consumes an admin-issued reset link, every session is still revoked — same as self-reset. The admin's intent ("I'm forcing rotation") is honoured at the consume point, not at the issue point. |
+### 2.2 What must never happen
 
-Doctrine 22 (centralised invalidation) is unchanged — R2 calls
-`invalidate_sessions(SessionTarget::User, …PasswordResetByOther)`
-or `…AdministrativeRevoke`; the framework's only `revoked_at`
-writer remains `auth::sessions::invalidate_sessions`.
+> **Doctrine 22.** Only `auth::sessions::invalidate_sessions` writes `revoked_at`.
+
+R2 inherits the substrate unchanged. Every revocation path —
+admin reset, manual lock, forced rotation, target consume — calls
+into it.
+
+
+> **Actor ≠ target.** Every R2 audit row carries `metadata.actor_user_id` distinct from `object_id`.
+
+The admin is the actor; the affected user is the target.
+Auto-throttle emits with `actor_user_id = NULL` — no human actor.
+
+
+> **Reason required.** Every organisational action carries a non-empty `reason` of at least 8 characters.
+
+Defence against impulsive operations. Persists into
+`metadata.reason` and is reviewable from the forensic chain.
+
+
+> **Destructive admin actions require re-auth.** Routes refuse without a session whose `elevated_until > NOW()`.
+
+The window is 15 minutes from a successful `/admin/reauth` POST.
+A stolen cookie cannot mutate authority without password
+re-entry.
+
+
+> **Auto-throttle is a soft lock.** A throttle never permanently disables an account.
+
+The `locked_until` timestamp decays; a manual unlock route
+reverses it earlier. Auto-throttle is a friction mechanism, not
+a discipline mechanism.
+
+
+> **Forced rotation cannot be skipped.** `must_change_password = TRUE` redirects every non-whitelisted route to `/admin/must-change-password`.
+
+The check sits in `login_guard` before `role_guard`. Even an
+Administrator with the flag set must complete the interstitial.
+
+
+> **Admin-issued reset still revokes on consume.** When the target consumes the admin-issued link, every session for that user is invalidated.
+
+The admin's intent ("I am forcing rotation") is honoured at the
+consume point, not at the issue point. The reset path is
+identical to self-reset from the user's side.
+
+
+> **Temp passwords are single-disclosure.** Rendered once on the admin's success page; never logged, never persisted in plaintext.
+
+Only the SHA-256 hash lands in the database. The audit row's
+`metadata` carries no plaintext.
+
 
 ---
 
-## 2. Threat model
+## 3. Threat model
 
-### 2.1 Adversaries
+### 3.1 Adversaries
 
 | Adversary | Capability | Mitigation |
 |-----------|------------|------------|
@@ -98,24 +170,24 @@ writer remains `auth::sessions::invalidate_sessions`.
 | **Auto-throttled user with valid password** | Submit correct password during the lock window | Same as above. The lock fires BEFORE password verification; correct credentials don't unlock. Manual unlock by admin is required. |
 | **Admin trying to bypass forced rotation** | Skip the must-change-password interstitial after admin reset | Cannot. The check sits in `login_guard` before any other admin route renders; only `/admin/must-change-password`, `/admin/logout`, and `/admin/account/sessions` (so the user can sign out / verify the lock) are reachable while the flag is set. |
 
-### 2.2 Disclosure rules (LOCKED)
+### 3.2 Disclosure rules (LOCKED)
 
-R2 inherits R1's disclosure rules (§2.3) for self-recovery
-flows. Admin-driven flows have a different disclosure stance:
+R2 inherits R1's disclosure rules for self-recovery flows.
+Admin-driven flows have a different disclosure stance:
 
 - The **admin actor** sees real errors (`mailer failed`, `target
-  not found`, `cannot reset administrators`, etc.) — they're
+  not found`, `cannot reset administrators`, etc.) — they are
   trusted operators acting on behalf of the org.
 - The **target user** still sees uniform copy — "your password
   was changed; sign in again" is identical whether the change
   was self-initiated or admin-initiated.
-- The /admin/users/:id form pages distinguish `locked_until` /
+- The `/admin/users/:id` form pages distinguish `locked_until` /
   `must_change_password` state explicitly to the admin (read +
   write); they do NOT render to the target user (the
-  `/admin/account/sessions` page does NOT show the `locked_until`
-  status — that's admin-only).
+  `/admin/account/sessions` page does NOT show the
+  `locked_until` status — that is admin-only).
 
-### 2.3 Out-of-scope (deferred)
+### 3.3 Out-of-scope (deferred)
 
 - **CAPTCHA on login.** Throttle alone should suffice; CAPTCHA
   is a project-supplied middleware if needed.
@@ -125,17 +197,24 @@ flows. Admin-driven flows have a different disclosure stance:
   optional `RecoveryPolicy::notify_target_on_admin_action(bool)`
   hook.
 - **Audit-log retention sweeper.** Operator-owned per
-  DESIGN_AUDIT.md §9.
+  `DESIGN_AUDIT.md`.
 - **Permission-based admin recovery delegation** ("Staff with
   `reset_password` permission can issue resets but not locks").
   Future fine-grained-permissions phase. R2 routes are gated by
   `Role::Administrator` baseline + cross-rank guard.
 
+
 ---
 
-## 3. R2 state machines
+## 4. Authority flows
 
-### 3.1 Admin-driven password reset
+R2 ships five authority flows. Each names the actor, the target,
+the guards that must pass, and the audit emission.
+
+### 4.1 Admin-driven password reset
+
+The admin issues a reset via email mode (mailer-delivered link)
+or temp_pw mode (single-disclosure temp password).
 
 ```
                                 ┌────────────┐
@@ -202,7 +281,10 @@ runs a working mailer. The framework's strict-mailer guard
 forces the operator to make the mailer choice; the temp-pw mode
 gives them a working path even when the mailer isn't wired.
 
-### 3.2 Account lock / unlock (manual)
+### 4.2 Account lock / unlock (manual)
+
+The admin locks an account for a specified duration with a
+reason. The unlock route reverses the lock.
 
 ```
    admin POST /users/:id/lock              admin POST /users/:id/unlock
@@ -238,7 +320,10 @@ gives them a working path even when the mailer isn't wired.
 "Indefinite" is encoded as a far-future timestamp (year 9999) —
 the column is never NULL while locked. NULL = unlocked.
 
-### 3.3 Auto-throttle on failed login
+### 4.3 Auto-throttle on failed login
+
+A user with five failed logins inside a ten-minute window is
+soft-locked for fifteen minutes.
 
 ```
                 ┌──────────────────┐
@@ -297,7 +382,11 @@ auto-throttled user with valid credentials simply waits 15
 minutes and signs in normally. Admin can manually unlock
 earlier via `/admin/users/:id/unlock`.
 
-### 3.4 Forced password rotation (`must_change_password`)
+### 4.4 Forced password rotation (`must_change_password`)
+
+A user whose `must_change_password` flag is `TRUE` is redirected
+to the interstitial on every admin route except the locked
+whitelist.
 
 ```
    user POST /admin/login (success)
@@ -347,7 +436,10 @@ Every other `/admin/*` route redirects to
 `login_guard` BEFORE `role_guard` — even Administrators with
 the flag set are forced through.
 
-### 3.5 Re-auth wall (`elevated_until`)
+### 4.5 Re-auth wall (`elevated_until`)
+
+Destructive admin routes require a session whose `elevated_until`
+is in the future. The re-auth flow stamps the column.
 
 ```
    admin clicks /admin/users/:id/reset-password
@@ -403,9 +495,86 @@ off" workarounds; longer windows soften the protection.
 relative path starting with `/admin/`. Defends against
 open-redirect through the `?return_to=` parameter.
 
+
 ---
 
-## 4. Schema deltas
+## 5. Guarantees
+
+The architectural promises R2 keeps regardless of caller
+behaviour.
+
+### 5.1 Single-writer invalidation
+
+> **Doctrine 22 carries through unchanged.**
+
+Every R2 revocation path passes
+`auth::sessions::invalidate_sessions` with `PasswordResetByOther`
+or `AdministrativeRevoke`.
+
+
+### 5.2 Actor/target audit separation
+
+> **`metadata.actor_user_id` is the admin; `object_id` is the affected user.**
+
+The two never collide on R2 paths. Auto-throttle emits with
+`actor_user_id = NULL`.
+
+
+### 5.3 Reason persistence
+
+> **Every organisational action persists a non-empty `reason` of at least 8 characters.**
+
+`metadata.reason` is reviewable from the forensic chain.
+
+
+### 5.4 Re-auth gating
+
+> **Destructive admin routes refuse without `elevated_until > NOW()`.**
+
+The window is 15 minutes from a successful `/admin/reauth` POST.
+PR review enforces the gate.
+
+
+### 5.5 Auto-throttle reversibility
+
+> **A throttle never permanently disables an account.**
+
+`locked_until` decays; manual unlock reverses it earlier.
+
+
+### 5.6 Forced-rotation enforcement
+
+> **`must_change_password = TRUE` gates every admin route except the locked whitelist.**
+
+Whitelist: `/admin/must-change-password`, `/admin/logout`,
+`/admin/account/sessions`. The check sits before `role_guard`.
+
+
+### 5.7 Single-disclosure temp password
+
+> **Temp passwords render once on the admin's success page.**
+
+Never logged, never persisted in plaintext, never re-shown. Only
+the SHA-256 hash lands in the database.
+
+
+---
+
+## 6. Implementation notes
+
+The sections below are the engineering reference for the
+contract above: schema deltas (§7), audit event plan (§8),
+module + types layout (§9), routes (§10), trait extensions
+(§11), existing-handler integration deltas (§12), and the test
+plan (§13).
+
+The doctrine-spec frame above is the contract. The sections
+below are the reference for implementing or reviewing it.
+
+
+---
+
+## 7. Schema deltas
 
 R2 adds columns on `rustio_users` for login throttle + manual
 lock state. No new tables. The `must_change_password` and
@@ -448,9 +617,10 @@ Called from `auth::init_tables` after the existing R1 migration.
 Idempotent. Rolling back to R1 is data-safe (the new columns
 become unreferenced; nothing hard-fails).
 
+
 ---
 
-## 5. Audit event plan
+## 8. Audit event plan
 
 R2 emits **4 already-declared** AuditEvent variants (their
 strings frozen in 0.5.0) and adds **1 new variant**:
@@ -467,7 +637,7 @@ The new variant is added with the same `#[non_exhaustive]`
 ergonomics — additive, no breaking match-arms for external
 consumers.
 
-### 5.1 `metadata` shapes
+### 8.1 `metadata` shapes
 
 For `PasswordResetByOther`:
 ```json
@@ -530,7 +700,7 @@ For `ForcedPasswordChangeCompleted`:
 }
 ```
 
-### 5.2 Actor / target separation
+### 8.2 Actor / target separation
 
 Doctrine D1: `metadata.actor_user_id` is the admin who initiated
 the action; `object_id` is the affected user. The legacy
@@ -545,7 +715,7 @@ Pinned by a new test
 `audit_event_admin_actions_carry_actor_metadata` on the R2
 emission paths.
 
-### 5.3 `correlation_id` chains
+### 8.3 `correlation_id` chains
 
 R2 chains:
 
@@ -574,11 +744,12 @@ R2 chains:
   `metadata.triggered_by_audit_id` links back to the prior
   `PasswordResetByOther` row that originally set the flag.
 
+
 ---
 
-## 6. Module + types layout
+## 9. Module + types layout
 
-### 6.1 New submodule
+### 9.1 New submodule
 
 `crates/rustio-admin/src/auth/recovery_admin.rs` — sibling to
 the R1 `recovery.rs`. Holds:
@@ -609,13 +780,12 @@ Invalid). Each variant carries enough typed information for the
 handler to decide page rendering without embedding HTTP
 concerns in the runtime layer.
 
-### 6.2 New handler module
+### 9.2 New handler module
 
 `crates/rustio-admin/src/admin/admin_recovery_handlers.rs` —
-wires the runtime functions to HTTP. 8-9 new handlers (see
-§7).
+wires the runtime functions to HTTP. 8-9 new handlers (see §10).
 
-### 6.3 New `RecoveryPolicy` methods
+### 9.3 New `RecoveryPolicy` methods
 
 ```rust
 pub trait RecoveryPolicy: Send + Sync {
@@ -653,7 +823,7 @@ pub struct LoginThrottle {
 impl Default for LoginThrottle { /* … */ }
 ```
 
-### 6.4 New `LogEntry` field (additive)
+### 9.4 New `LogEntry` field (additive)
 
 ```rust
 pub struct LogEntry<'a> {
@@ -674,9 +844,13 @@ LogEntry stays the typed boundary, JSON metadata stays the
 free-form persistence layer. Same pattern as R1's
 `LogEntry::with_event(...)` boundary (Option A).
 
+
 ---
 
-## 7. Routes table
+## 10. Routes
+
+R2 adds nine routes — five admin-recovery, two re-auth, two
+must-change-password.
 
 | Method | Path | Handler | Guard | Re-auth required |
 |--------|------|---------|-------|------------------|
@@ -693,7 +867,7 @@ free-form persistence layer. Same pattern as R1's
 All POST routes inherit the project's `csrf_protect` middleware
 (unchanged from R0 / R1).
 
-### 7.1 Modifications to existing routes
+### 10.1 Modifications to existing routes
 
 - **`POST /admin/login`** (existing R0 handler): integrates
   `check_account_lockout` BEFORE password verification; on
@@ -707,7 +881,7 @@ All POST routes inherit the project's `csrf_protect` middleware
   (`/admin/must-change-password`, `/admin/logout`,
   `/admin/account/sessions`), redirect.
 
-### 7.2 Registration order
+### 10.2 Registration order
 
 Recovery routes (R1) and admin-recovery routes (R2) must both
 be registered BEFORE the `/admin/:admin_name` model wildcards.
@@ -717,22 +891,23 @@ wildcards (where the `/admin/users/:id/edit` etc. already sit
 — putting the new ones nearby keeps the user-related cluster
 contiguous).
 
+
 ---
 
-## 8. Trait extensions
+## 11. Trait extensions
 
-### 8.1 `RecoveryPolicy` adds 3 methods
+### 11.1 `RecoveryPolicy` adds 3 methods
 
 All have provided defaults so existing impls don't break.
 
-- `fn login_throttle(&self) -> LoginThrottle` — see §3.3.
+- `fn login_throttle(&self) -> LoginThrottle` — see §4.3.
 - `fn reauth_window(&self) -> Duration` — default 15 minutes.
 - `fn scope_for(&self, identity: &Identity) -> SharedRecoveryPolicy`
   — default returns `self` (no per-tenant scoping). The
   signature requires `Arc<Self>` indirection; details land in
   commit #5-equivalent.
 
-### 8.2 New `LoginThrottle` struct
+### 11.2 New `LoginThrottle` struct
 
 ```rust
 #[derive(Debug, Clone, Copy)]
@@ -757,18 +932,19 @@ impl Default for LoginThrottle {
 
 `pub` on the framework's `auth` re-export surface.
 
-### 8.3 No new traits
+### 11.3 No new traits
 
 All R2 organisational behaviour fits in `RecoveryPolicy` +
 existing `PasswordPolicy`. No `LockoutPolicy` or
 `AdminRecoveryPolicy` trait needed — operators with custom
 behaviour subclass `RecoveryPolicy`.
 
+
 ---
 
-## 9. Existing-handler integration deltas
+## 12. Existing-handler integration deltas
 
-### 9.1 Login flow (`do_login` in `admin/handlers.rs`)
+### 12.1 Login flow (`do_login` in `admin/handlers.rs`)
 
 Pre-R2:
 
@@ -812,7 +988,7 @@ let token = auth::create_session(&ctx.db, user.id).await?;
 Failure path emits `AccountLocked` (auto-throttle) audit when
 the threshold trips.
 
-### 9.2 `login_guard` adds must-change-password check
+### 12.2 `login_guard` adds must-change-password check
 
 ```rust
 async fn login_guard(ctx: &AdminCtx, req: &Request) -> Result<Guard> {
@@ -843,7 +1019,7 @@ The `Identity` struct needs a new field
 + `identity_from_session`. Additive change, defaults to false
 for pre-R2 sessions issued before the feature lands.
 
-### 9.3 Admin-driven recovery handlers go through `enforce_cross_rank_safe`
+### 12.3 Admin-driven recovery handlers go through `enforce_cross_rank_safe`
 
 R0's authority guards (`enforce_cross_rank_safe`,
 `enforce_role_ceiling`, `enforce_no_orphan_role`) apply to R2's
@@ -851,11 +1027,12 @@ admin-driven routes verbatim. A Supervisor cannot reset an
 Administrator's password; an Administrator cannot lock the last
 Developer's account. Reuse, no new guard logic.
 
+
 ---
 
-## 10. Test plan
+## 13. Test plan
 
-### 10.1 Unit (pure)
+### 13.1 Unit (pure)
 
 - `LoginThrottle::DEFAULT` — locked 5 / 10 / 15.
 - `is_must_change_whitelisted_path("/admin")` — false; for the
@@ -866,13 +1043,13 @@ Developer's account. Reuse, no new guard logic.
   shape for the `metadata.actor_email_hash` field; same
   property test as R1's `redact_token`.
 
-### 10.2 Schema migration
+### 13.2 Schema migration
 
 - Boot fresh DB → migrations apply, columns + index appear.
 - Boot 0.5.0 DB → idempotent re-application, no errors.
 - Re-boot → no errors.
 
-### 10.3 DB integration (NEW — testcontainers)
+### 13.3 DB integration (testcontainers)
 
 R1's downstream-validation pass surfaced one bug
 (`check_reset_token_valid` SQL type mismatch) that no unit test
@@ -902,7 +1079,7 @@ behind a `--features integration-test` flag so CI runs them but
 `cargo test --workspace` (no flag) skips them — keeps the unit-
 test gate fast.
 
-### 10.4 End-to-end (downstream validation pass)
+### 13.4 End-to-end (downstream validation pass)
 
 Stockholm POS smoke test against the live DB before publish:
 
@@ -922,140 +1099,10 @@ Stockholm POS smoke test against the live DB before publish:
   → redirect to /admin/reauth → enter password → return to
   reset form.
 
----
-
-## 11. Implementation phases & atomic commit plan
-
-R1's discipline (small commits, one concern per commit, gates
-after each risky one) carries through. Estimated 17 commits.
-
-| # | Concern | Files |
-|---|---------|-------|
-| 1 | Schema: `failed_login_count`, `last_failed_login_at`, `locked_until` + partial index | `auth/recovery_admin.rs` (new), `auth/mod.rs` (init_tables wiring) |
-| 2 | Policy unification: CLI uses `DefaultPasswordPolicy` directly | `crates/rustio-admin-cli/src/user.rs` |
-| 3 | Policy unification: admin-create-user form's hint reads `min_length` from policy | `admin/render.rs::user_new_form_sections`, `admin/builtin.rs::do_new_user` (validate via policy) |
-| 4 | Policy unification: remove admin-edit form's password field per `DESIGN_RECOVERY.md` §14.4 | `admin/builtin.rs`, `admin/render.rs`, `assets/templates/admin/user_edit.html` |
-| 5 | `LoginThrottle` struct + `RecoveryPolicy::login_throttle` provided default; `RecoveryPolicy::reauth_window` provided default; `scope_for` extension hook | `auth/recovery.rs` |
-| 6 | New `AuditEvent::ForcedPasswordChangeCompleted` variant + drift-test update | `admin/audit.rs` |
-| 7 | `LogEntry::actor_user_id` field + `record()` writes it under `metadata.actor_user_id` | `admin/audit.rs` |
-| 8 | `Identity::must_change_password` field; `find_user_by_email` + `identity_from_session` populate it | `auth/users.rs`, `auth/sessions.rs` |
-| 9 | Login throttle runtime: `check_account_lockout`, `record_failed_login`, `record_successful_login`. Plus login flow integration in `admin/handlers.rs::do_login` | `auth/recovery_admin.rs`, `admin/handlers.rs` |
-| 10 | Re-auth wall runtime: `promote_session_elevated`, `check_session_elevated` | `auth/recovery_admin.rs`, `auth/sessions.rs` (the column already exists from R0) |
-| 11 | Re-auth handler + template: `GET/POST /admin/reauth`, return_to validation, locked copy | `admin/admin_recovery_handlers.rs` (new), `assets/templates/admin/reauth.html` (new) |
-| 12 | Forced-rotation handler + interstitial template: `GET/POST /admin/must-change-password` | `admin/admin_recovery_handlers.rs`, `assets/templates/admin/must_change_password.html` (new) |
-| 13 | `login_guard` integrates must-change-password redirect; whitelist constant | `admin/routes.rs` |
-| 14 | Admin reset runtime: `issue_admin_reset_token` (email mode), `admin_set_temp_password` (temp_pw mode) | `auth/recovery_admin.rs` |
-| 15 | Admin reset handler + form template (mode selector + reason) | `admin/admin_recovery_handlers.rs`, `assets/templates/admin/admin_reset_password.html` (new) |
-| 16 | Lock / unlock / revoke handlers + form templates | `admin/admin_recovery_handlers.rs`, three new templates |
-| 17 | Route registration (5 admin-recovery + 2 reauth + 2 must-change = 9 new routes), middleware ordering re-confirmed | `admin/routes.rs` |
-| (docs) | CHANGELOG entry under `[Unreleased]`, README pointer | `CHANGELOG.md`, `README.md` |
-| (chore) | Prepare 0.6.0 — version bump | `Cargo.toml`, `crates/rustio-admin-cli/Cargo.toml`, `templates/project/Cargo.toml.tmpl`, `README.md` install snippet |
-
-`cargo test --workspace` runs after #1 (schema), #5 (policy
-extensions), #8 (Identity field), #9 (login throttle integration),
-#11 (re-auth handler), #13 (login_guard wiring), #15 (admin
-reset), #17 (route registration). `cargo clippy --workspace
---all-targets -- -D warnings` runs at the same gates.
-
-After commit 17 the pre-publish gate runs in full per
-`working_style.md`:
-
-```
-cargo fmt --all
-cargo test --workspace
-cargo test --workspace --features integration-test  # NEW: testcontainers suite
-cargo clippy --workspace --all-targets -- -D warnings
-cargo publish --dry-run -p rustio-admin-macros
-cargo publish --dry-run -p rustio-admin
-```
-
-Then a downstream validation pass against the live Stockholm
-POS DB. Then — and only then — wait for explicit "publish 0.6.0"
-before `cargo publish`.
 
 ---
 
-## 12. Locked decisions
-
-| Decision | Value | Override |
-|----------|-------|----------|
-| Login throttle: max attempts | **5** | `LoginThrottle::max_attempts` |
-| Login throttle: window | **10 min** | `LoginThrottle::window_minutes` |
-| Login throttle: lock duration | **15 min** | `LoginThrottle::lock_minutes` |
-| Re-auth wall window | **15 min** | `RecoveryPolicy::reauth_window` |
-| Admin reset token TTL | **1 hour** (same as R1 self-reset) | `RecoveryPolicy::reset_token_ttl` (already from R1) |
-| Temp password length | **16 chars URL-safe-base64** | none (not project-tunable; doctrine — see below) |
-| Temp password rendering | **shown ONCE on the admin's success page; never logged, never persisted in plaintext** | none (doctrine D2) |
-| Reason field minimum | **8 chars** (matches R4 CLI `--reason`) | none |
-| `must_change_password` whitelisted paths | `/admin/must-change-password`, `/admin/logout`, `/admin/account/sessions` | none |
-| Auto-throttle revokes sessions | **NO** — locking only prevents future logins; existing sessions stay valid until `locked_until` is checked at the next request | doctrine D4 + §3.3 |
-| Manual lock revokes sessions | **YES** — admin's intent is "kick this user out NOW"; `invalidate_sessions(User, AdministrativeRevoke)` runs synchronously | doctrine D4 |
-| Default `MfaPolicy::Optional` | inherited from R1 | R3 |
-
----
-
-## 13. Open questions for kickoff (re-confirm before commit #1)
-
-The three R1-locked decisions were re-confirmed at kickoff
-(carry through unchanged). New R2-specific questions to confirm
-before commit #1 lands:
-
-1. **Re-auth window = 15 minutes?** Recommendation: yes. Long
-   enough for a chain of admin actions; short enough that a
-   walked-away workstation isn't permanent.
-2. **Auto-throttle threshold = 5 / 10min?** Recommendation:
-   yes. Industry-standard. Operators with stricter compliance
-   (banking, healthcare) override via
-   `LoginThrottle::with_max_attempts(3)`.
-3. **Auto-throttle does NOT revoke sessions?** Recommendation:
-   yes. The lock is "block future logins"; the existing
-   sessions stay live. Manual lock DOES revoke sessions
-   (admin's stronger intent).
-4. **Temp-password mode renders once on the admin's page?**
-   Recommendation: yes. NOT logged, NOT in audit metadata
-   (only fingerprint persists). Admin shares out-of-band.
-5. **`metadata.actor_email_hash` instead of `actor_email`?**
-   Recommendation: yes (8-char SHA-256 fingerprint per the R1
-   `redact_token` pattern). Auditing can pivot via the hash;
-   PII stays out of the audit table. Actor identity is
-   discoverable via `metadata.actor_user_id` joining on
-   `rustio_users.id`.
-6. **`/admin/users/:id/lock` form duration presets** —
-   `15min / 1h / 24h / 7d / indefinite`. Recommendation: yes.
-   All five plus a freeform "until <timestamp>" input.
-7. **Forced-rotation whitelist scope** — only the three paths
-   listed in §3.4? Recommendation: yes. Adding more paths
-   (e.g. `/admin/account/profile`) feels like scope creep;
-   forced rotation should be brief and uncontentious.
-
----
-
-## 14. What R2 does NOT do (deferred)
-
-- **TOTP MFA + backup codes** → R3.
-- **CLI emergency recovery** (`rustio user reset-password / unlock /
-  …`) → R4. R2's web-side admin recovery covers the operator's
-  steady state; R4 covers the "framework is down or the only
-  Administrator's password is lost" emergency path.
-- **Email notification to target** when an admin resets their
-  password. Considered, deferred (see §2.3).
-- **Reset-link IP / device pinning** — same residual leak as
-  R1; out of scope.
-- **CAPTCHA on login** — not in scope; project middleware can
-  layer.
-- **Multi-tenant schema migration** — R2 ships the
-  `RecoveryPolicy::scope_for` hook; the actual multi-tenant
-  schema work is a separate phase.
-- **Audit-log retention sweeper** — operator-owned per
-  `DESIGN_AUDIT.md` §9.
-- **Permission-based admin recovery delegation** ("Staff with
-  `reset_password` permission can issue resets"). R2 routes
-  gate on `Role::Administrator` baseline; finer-grained perms
-  is a future phase.
-
----
-
-## 15. Versioning
+## Appendix A. Versioning
 
 R2 ships as `rustio-admin@0.6.0`. Patch releases on the 0.6.x
 line are reserved for fixes that don't change semantics.
@@ -1075,12 +1122,34 @@ line are reserved for fixes that don't change semantics.
   treatment).
 - New routes (9): minor.
 
+
 ---
 
-## 16. PR review checklist (R2-specific additions)
+## Appendix B. Locked decisions
 
-Walked alongside the existing 8-item visual regression checklist
-+ token-disclosure section in `.github/pull_request_template.md`:
+| Decision | Value | Override |
+|----------|-------|----------|
+| Login throttle: max attempts | **5** | `LoginThrottle::max_attempts` |
+| Login throttle: window | **10 min** | `LoginThrottle::window_minutes` |
+| Login throttle: lock duration | **15 min** | `LoginThrottle::lock_minutes` |
+| Re-auth wall window | **15 min** | `RecoveryPolicy::reauth_window` |
+| Admin reset token TTL | **1 hour** (same as R1 self-reset) | `RecoveryPolicy::reset_token_ttl` (already from R1) |
+| Temp password length | **16 chars URL-safe-base64** | none (not project-tunable; doctrine — see below) |
+| Temp password rendering | **shown ONCE on the admin's success page; never logged, never persisted in plaintext** | none (doctrine D2) |
+| Reason field minimum | **8 chars** (matches R4 CLI `--reason`) | none |
+| `must_change_password` whitelisted paths | `/admin/must-change-password`, `/admin/logout`, `/admin/account/sessions` | none |
+| Auto-throttle revokes sessions | **NO** — locking only prevents future logins; existing sessions stay valid until `locked_until` is checked at the next request | doctrine D4 + §4.3 |
+| Manual lock revokes sessions | **YES** — admin's intent is "kick this user out NOW"; `invalidate_sessions(User, AdministrativeRevoke)` runs synchronously | doctrine D4 |
+| Default `MfaPolicy::Optional` | inherited from R1 | R3 |
+
+
+---
+
+## Appendix C. PR review checklist
+
+R2-specific additions, walked alongside the existing 8-item
+visual regression checklist + token-disclosure section in
+`.github/pull_request_template.md`:
 
 - [ ] Grep proof: `revoked_at\s*=` returns only
       `auth/sessions.rs::invalidate_sessions`.
@@ -1106,20 +1175,132 @@ Walked alongside the existing 8-item visual regression checklist
       /admin/must-change-password.
 - [ ] `cargo test --workspace` passes at every commit.
 - [ ] `cargo test --workspace --features integration-test`
-      passes (NEW — testcontainers Postgres suite).
+      passes (testcontainers Postgres suite).
 - [ ] CHANGELOG entry placed under `[Unreleased]`,
       sectioned by `Recovery / Sessions / Audit / Security /
       Behaviour change / Documentation / Internal`.
 - [ ] `DESIGN_R2_ORGANISATIONAL.md` entries updated if any
       locked decision was amended.
 
+
 ---
 
-## 17. What this document does NOT cover
+## Appendix D. Implementation history
 
-- TOTP MFA (R3) — separate doc on R3 kickoff.
-- CLI emergency recovery (R4) — separate doc on R4 kickoff.
-- Multi-tenant scoping schema — separate phase.
-- API tokens / service accounts — re-uses the same invalidation
-  engine; recovery vocabulary may extend with a
-  `ServiceAccountKeyRotated` reason in a future phase.
+R2 was built across 17 atomic commits and shipped as
+`rustio-admin@0.6.0`. The kickoff resolved seven open
+questions; all answers were "yes, recommendation accepted".
+The commit plan and Q&A are preserved here as design record.
+
+### D.1 Atomic commit plan
+
+R1's discipline (small commits, one concern per commit, gates
+after each risky one) carried through.
+
+| # | Concern | Files |
+|---|---------|-------|
+| 1 | Schema: `failed_login_count`, `last_failed_login_at`, `locked_until` + partial index | `auth/recovery_admin.rs` (new), `auth/mod.rs` (init_tables wiring) |
+| 2 | Policy unification: CLI uses `DefaultPasswordPolicy` directly | `crates/rustio-admin-cli/src/user.rs` |
+| 3 | Policy unification: admin-create-user form's hint reads `min_length` from policy | `admin/render.rs::user_new_form_sections`, `admin/builtin.rs::do_new_user` (validate via policy) |
+| 4 | Policy unification: remove admin-edit form's password field per `DESIGN_RECOVERY.md` | `admin/builtin.rs`, `admin/render.rs`, `assets/templates/admin/user_edit.html` |
+| 5 | `LoginThrottle` struct + `RecoveryPolicy::login_throttle` provided default; `RecoveryPolicy::reauth_window` provided default; `scope_for` extension hook | `auth/recovery.rs` |
+| 6 | New `AuditEvent::ForcedPasswordChangeCompleted` variant + drift-test update | `admin/audit.rs` |
+| 7 | `LogEntry::actor_user_id` field + `record()` writes it under `metadata.actor_user_id` | `admin/audit.rs` |
+| 8 | `Identity::must_change_password` field; `find_user_by_email` + `identity_from_session` populate it | `auth/users.rs`, `auth/sessions.rs` |
+| 9 | Login throttle runtime: `check_account_lockout`, `record_failed_login`, `record_successful_login`. Plus login flow integration in `admin/handlers.rs::do_login` | `auth/recovery_admin.rs`, `admin/handlers.rs` |
+| 10 | Re-auth wall runtime: `promote_session_elevated`, `check_session_elevated` | `auth/recovery_admin.rs`, `auth/sessions.rs` (the column already exists from R0) |
+| 11 | Re-auth handler + template: `GET/POST /admin/reauth`, return_to validation, locked copy | `admin/admin_recovery_handlers.rs` (new), `assets/templates/admin/reauth.html` (new) |
+| 12 | Forced-rotation handler + interstitial template: `GET/POST /admin/must-change-password` | `admin/admin_recovery_handlers.rs`, `assets/templates/admin/must_change_password.html` (new) |
+| 13 | `login_guard` integrates must-change-password redirect; whitelist constant | `admin/routes.rs` |
+| 14 | Admin reset runtime: `issue_admin_reset_token` (email mode), `admin_set_temp_password` (temp_pw mode) | `auth/recovery_admin.rs` |
+| 15 | Admin reset handler + form template (mode selector + reason) | `admin/admin_recovery_handlers.rs`, `assets/templates/admin/admin_reset_password.html` (new) |
+| 16 | Lock / unlock / revoke handlers + form templates | `admin/admin_recovery_handlers.rs`, three new templates |
+| 17 | Route registration (5 admin-recovery + 2 reauth + 2 must-change = 9 new routes), middleware ordering re-confirmed | `admin/routes.rs` |
+| (docs) | CHANGELOG entry under `[Unreleased]`, README pointer | `CHANGELOG.md`, `README.md` |
+| (chore) | Prepare 0.6.0 — version bump | `Cargo.toml`, `crates/rustio-admin-cli/Cargo.toml`, `templates/project/Cargo.toml.tmpl`, `README.md` install snippet |
+
+`cargo test --workspace` ran after #1 (schema), #5 (policy
+extensions), #8 (Identity field), #9 (login throttle integration),
+#11 (re-auth handler), #13 (login_guard wiring), #15 (admin
+reset), #17 (route registration). `cargo clippy --workspace
+--all-targets -- -D warnings` ran at the same gates.
+
+After commit 17 the pre-publish gate ran in full per
+`working_style.md`:
+
+```
+cargo fmt --all
+cargo test --workspace
+cargo test --workspace --features integration-test  # testcontainers suite
+cargo clippy --workspace --all-targets -- -D warnings
+cargo publish --dry-run -p rustio-admin-macros
+cargo publish --dry-run -p rustio-admin
+```
+
+A downstream validation pass against the live Stockholm POS DB
+followed. Then — and only then — explicit "publish 0.6.0"
+preceded `cargo publish`.
+
+### D.2 Kickoff resolutions
+
+The three R1-locked decisions were re-confirmed at kickoff
+(carry through unchanged). Seven new R2-specific questions were
+resolved before commit #1 landed:
+
+1. **Re-auth window = 15 minutes?** Resolved: yes. Long enough
+   for a chain of admin actions; short enough that a walked-away
+   workstation isn't permanent.
+2. **Auto-throttle threshold = 5 / 10min?** Resolved: yes.
+   Industry-standard. Operators with stricter compliance
+   (banking, healthcare) override via
+   `LoginThrottle::with_max_attempts(3)`.
+3. **Auto-throttle does NOT revoke sessions?** Resolved: yes.
+   The lock is "block future logins"; the existing sessions stay
+   live. Manual lock DOES revoke sessions (admin's stronger
+   intent).
+4. **Temp-password mode renders once on the admin's page?**
+   Resolved: yes. NOT logged, NOT in audit metadata (only
+   fingerprint persists). Admin shares out-of-band.
+5. **`metadata.actor_email_hash` instead of `actor_email`?**
+   Resolved: yes (8-char SHA-256 fingerprint per the R1
+   `redact_token` pattern). Auditing can pivot via the hash;
+   PII stays out of the audit table. Actor identity is
+   discoverable via `metadata.actor_user_id` joining on
+   `rustio_users.id`.
+6. **`/admin/users/:id/lock` form duration presets** —
+   `15min / 1h / 24h / 7d / indefinite`. Resolved: yes. All
+   five plus a freeform "until <timestamp>" input.
+7. **Forced-rotation whitelist scope** — only the three paths
+   listed in §4.4? Resolved: yes. Adding more paths (e.g.
+   `/admin/account/profile`) would have been scope creep;
+   forced rotation should be brief and uncontentious.
+
+
+---
+
+## Appendix E. Deferred work
+
+Items shaped by the R2 substrate; not yet implemented.
+
+- **TOTP MFA + backup codes** → R3.
+- **CLI emergency recovery** (`rustio user reset-password / unlock /
+  …`) → R4. R2's web-side admin recovery covers the operator's
+  steady state; R4 covers the "framework is down or the only
+  Administrator's password is lost" emergency path.
+- **Email notification to target** when an admin resets their
+  password. Considered, deferred (operators may prefer not to
+  surface admin actions to users by email). Future optional
+  `RecoveryPolicy::notify_target_on_admin_action(bool)` hook.
+- **Reset-link IP / device pinning** — same residual leak as
+  R1; out of scope.
+- **CAPTCHA on login** — not in scope; project middleware can
+  layer.
+- **Multi-tenant schema migration** — R2 ships the
+  `RecoveryPolicy::scope_for` hook; the actual multi-tenant
+  schema work is a separate phase.
+- **Audit-log retention sweeper** — operator-owned per
+  `DESIGN_AUDIT.md`.
+- **Permission-based admin recovery delegation** ("Staff with
+  `reset_password` permission can issue resets"). R2 routes
+  gate on `Role::Administrator` baseline; finer-grained perms
+  is a future phase.
