@@ -1338,7 +1338,7 @@ fn revoke_session_verdict(target_id: i64, current_session_id: Option<i64>) -> Re
 /// inside `invalidate_sessions`); refusing to redirect would leave
 /// the user staring at a 500 page wondering whether the action took
 /// effect. We log + continue.
-async fn record_session_revocations(
+pub(super) async fn record_session_revocations(
     ctx: &AdminCtx,
     identity: &crate::auth::Identity,
     revoked_ids: &[i64],

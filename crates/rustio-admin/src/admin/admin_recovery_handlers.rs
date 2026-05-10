@@ -52,14 +52,18 @@
 //! Failed validation collapses to `/admin` (the dashboard) — the
 //! safe default. Open-redirect through `?return_to=` is closed.
 
+use std::collections::HashMap;
+
 use serde::Serialize;
 
 use crate::auth::{self, Identity};
 use crate::error::Result;
 use crate::http::{Request, Response};
 
+use super::audit;
+use super::builtin::{client_ip, correlation_id_from};
 use super::handlers::{csrf_token, AdminCtx};
-use super::render::BaseContext;
+use super::render::{self, BaseContext, FormSection};
 
 // ---- Pure helpers (unit-testable without DB / Request) ---------------------
 
@@ -231,6 +235,270 @@ pub(crate) async fn do_reauth(
 
     // PRG: 303 See Other so a refresh on the destination is a GET.
     Ok(Response::redirect(return_to))
+}
+
+// ---- Forced password rotation (R2 commit #12) ------------------------------
+//
+// `must_change_password = TRUE` is set by the admin-driven password
+// reset (R2 commit #15) — typically alongside a temp password the
+// admin issued. The user signs in with that temp password, the
+// `login_guard` (R2 commit #13) sees the flag, and redirects every
+// non-whitelisted /admin/* request to `/admin/must-change-password`.
+// The interstitial below is the only writeable path while the flag
+// is set.
+
+#[derive(Serialize)]
+struct MustChangePasswordCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: &'static str,
+    sections: Vec<FormSection>,
+    /// Form-level error banner. Field-keyed errors live on the
+    /// individual `FormField` rows via `apply_field_errors`.
+    errors: Vec<String>,
+}
+
+/// `GET /admin/must-change-password` — render the rotation form.
+///
+/// The handler refuses (303 → /admin) when `must_change_password`
+/// is FALSE on the identity, so a curious authenticated user can't
+/// bypass the old-password requirement that the regular
+/// `/admin/password_change` flow enforces.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn show_must_change_password(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    if !identity.must_change_password {
+        return Ok(Response::redirect("/admin"));
+    }
+    let min_length = ctx.admin.active_password_policy().min_length();
+    let view = MustChangePasswordCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: "Set a new password",
+        sections: render::must_change_password_form_sections(min_length),
+        errors: Vec::new(),
+    };
+    let body = ctx
+        .templates
+        .render("admin/must_change_password.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/must-change-password` — apply the rotation.
+///
+/// On success:
+/// 1. `auth::set_password` writes the new hash + stamps
+///    `password_changed_at`.
+/// 2. `UPDATE rustio_users SET must_change_password = FALSE`.
+/// 3. `auth::invalidate_sessions(UserExceptCurrent, UserRequested)` —
+///    the current device stays signed in (Doctrine 22: the engine
+///    is the sole writer of `revoked_at`).
+/// 4. One `AuditEvent::SessionsRevokedSelf` row per revoked sibling
+///    session via `handlers::record_session_revocations`.
+/// 5. One `AuditEvent::ForcedPasswordChangeCompleted` row with
+///    metadata `{ triggered_by_audit_id?, invalidated_session_count }`.
+///    The chain `PasswordResetByOther → ForcedPasswordChangeCompleted
+///    → N × SessionsRevokedSelf` (`DESIGN_R2_ORGANISATIONAL.md` §5.3)
+///    is now complete.
+/// 6. PRG: 303 → /admin.
+///
+/// Validation failures re-render the form with field-keyed errors
+/// and HTTP 400; password is never echoed back into the form value.
+///
+/// Defensive checks:
+/// - empty / mismatched passwords → field-level errors;
+/// - `PasswordPolicy::validate(...)` rejection → field error on
+///   `new_password1` with the policy's user-safe message;
+/// - **rejecting reuse of the current password** — prevents the
+///   user "rotating" to the same temp password the admin issued
+///   (the temp value may have been logged or shared); forces a
+///   fresh secret the admin no longer knows.
+#[allow(dead_code)] // route registration lands in R2 commit #17
+pub(crate) async fn do_must_change_password(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    if !identity.must_change_password {
+        return Ok(Response::redirect("/admin"));
+    }
+    let form = req.form()?;
+    let new1 = form.get("new_password1").unwrap_or("").to_string();
+    let new2 = form.get("new_password2").unwrap_or("").to_string();
+
+    let mut errors: Vec<String> = Vec::new();
+    let mut field_errors: HashMap<String, Vec<String>> = HashMap::new();
+
+    if new1.is_empty() {
+        let msg = "Enter a new password.".to_string();
+        errors.push(msg.clone());
+        field_errors
+            .entry("new_password1".into())
+            .or_default()
+            .push(msg);
+    } else if new1 != new2 {
+        let msg = "Passwords do not match.".to_string();
+        errors.push(msg.clone());
+        field_errors
+            .entry("new_password2".into())
+            .or_default()
+            .push(msg);
+    } else if let Err(e) = ctx.admin.active_password_policy().validate(&new1) {
+        let msg = e.to_string();
+        errors.push(msg.clone());
+        field_errors
+            .entry("new_password1".into())
+            .or_default()
+            .push(msg);
+    }
+
+    // Reject reuse of the current password. Done after the cheap
+    // validations to avoid an unnecessary Argon2 verify on a
+    // mismatched / empty input.
+    let user = if errors.is_empty() {
+        match auth::find_user_by_email(&ctx.db, &identity.email).await? {
+            Some(u) => Some(u),
+            None => {
+                // The user disappeared between cookie load and POST —
+                // fail soft. Render the form with a generic banner so
+                // the next request goes through login_guard which will
+                // redirect to the login page.
+                let msg = "Could not load your account. Please sign in again.".to_string();
+                errors.push(msg);
+                None
+            }
+        }
+    } else {
+        None
+    };
+    if errors.is_empty() {
+        if let Some(u) = user.as_ref() {
+            if auth::verify_password(&new1, &u.password_hash) {
+                let msg = "New password must be different from your current password.".to_string();
+                errors.push(msg.clone());
+                field_errors
+                    .entry("new_password1".into())
+                    .or_default()
+                    .push(msg);
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        let min_length = ctx.admin.active_password_policy().min_length();
+        let mut sections = render::must_change_password_form_sections(min_length);
+        render::apply_field_errors(&mut sections, &field_errors);
+        let view = MustChangePasswordCtx {
+            base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+            page_title: "Set a new password",
+            sections,
+            errors,
+        };
+        let body = ctx
+            .templates
+            .render("admin/must_change_password.html", &view)?;
+        return Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST));
+    }
+
+    // Apply the rotation.
+    auth::set_password(&ctx.db, identity.user_id, &new1).await?;
+    sqlx::query("UPDATE rustio_users SET must_change_password = FALSE WHERE id = $1")
+        .bind(identity.user_id)
+        .execute(ctx.db.pool())
+        .await?;
+
+    // Resolve current session (to spare the current device) and
+    // invalidate every other session for this user. Doctrine 22:
+    // `invalidate_sessions` is the sole writer of `revoked_at`.
+    let cookie_token = req
+        .header("cookie")
+        .and_then(crate::auth::session_token_from_cookie);
+    let current_session_id = match &cookie_token {
+        Some(t) => crate::auth::current_session_id(&ctx.db, t).await?,
+        None => None,
+    };
+    let target = match current_session_id {
+        Some(sid) => crate::auth::SessionTarget::UserExceptCurrent {
+            user_id: identity.user_id,
+            current_session_id: sid,
+        },
+        None => crate::auth::SessionTarget::User {
+            user_id: identity.user_id,
+        },
+    };
+    let outcome = crate::auth::invalidate_sessions(
+        &ctx.db,
+        target,
+        crate::auth::SessionInvalidationReason::UserRequested,
+    )
+    .await?;
+    let revoked_count = outcome.revoked_session_ids.len();
+
+    // Per-revoked-session SessionsRevokedSelf audit rows. Same helper
+    // R1's do_password_change uses; via='must_change_password'
+    // distinguishes the source in the metadata.
+    super::handlers::record_session_revocations(
+        ctx,
+        &identity,
+        &outcome.revoked_session_ids,
+        &req,
+        "must_change_password",
+    )
+    .await;
+
+    // Pivot link to the originating PasswordResetByOther row, if
+    // any — populated when an admin reset (R2 commit #15) is what
+    // set the flag. Best-effort: a missing row simply omits the
+    // metadata key.
+    let triggered_by_audit_id: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM rustio_admin_actions \
+          WHERE action_type = 'password_reset_by_other' \
+            AND object_id = $1 \
+          ORDER BY id DESC LIMIT 1",
+    )
+    .bind(identity.user_id)
+    .fetch_optional(ctx.db.pool())
+    .await
+    .unwrap_or(None);
+
+    // Emit the typed ForcedPasswordChangeCompleted row. Self-action:
+    // actor = subject; LogEntry::user_id carries it (per §5.2 the
+    // typed `actor_user_id` is None for self-actions to keep the
+    // metadata footprint minimal).
+    let cid = correlation_id_from(&req);
+    let ip = client_ip(&req);
+    let metadata = match triggered_by_audit_id {
+        Some(id) => serde_json::json!({
+            "triggered_by_audit_id": id,
+            "invalidated_session_count": revoked_count,
+        }),
+        None => serde_json::json!({
+            "invalidated_session_count": revoked_count,
+        }),
+    };
+    let _ = audit::record(
+        &ctx.db,
+        audit::LogEntry {
+            user_id: identity.user_id,
+            action_type: audit::ActionType::Update,
+            model_name: "user",
+            object_id: identity.user_id,
+            ip_address: ip.as_deref(),
+            summary: format!(
+                "forced password rotation completed; {revoked_count} other session(s) revoked"
+            ),
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: Some(metadata),
+            actor_user_id: None,
+            event: Some(audit::AuditEvent::ForcedPasswordChangeCompleted),
+        },
+    )
+    .await;
+
+    Ok(Response::redirect("/admin"))
 }
 
 #[cfg(test)]
