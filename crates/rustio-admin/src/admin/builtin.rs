@@ -31,7 +31,7 @@ use super::types::Admin;
 /// then lands with a NULL `correlation_id` rather than a fabricated
 /// id. Projects should add `middleware::correlation_id` before
 /// `csrf_protect` to make this column always populated.
-fn correlation_id_from(req: &Request) -> Option<String> {
+pub(crate) fn correlation_id_from(req: &Request) -> Option<String> {
     req.ctx()
         .get::<crate::middleware::CorrelationId>()
         .map(|c| c.as_str().to_string())
@@ -41,7 +41,7 @@ fn correlation_id_from(req: &Request) -> Option<String> {
 /// emits. Used as the `ip_address` column on audit rows. Returns
 /// `None` when neither header is present so direct-LAN traffic still
 /// audits cleanly with a NULL ip_address.
-fn client_ip(req: &Request) -> Option<String> {
+pub(crate) fn client_ip(req: &Request) -> Option<String> {
     if let Some(xff) = req.header("x-forwarded-for") {
         // First entry is the original client; rest are proxy hops.
         return xff.split(',').next().map(|s| s.trim().to_string());
