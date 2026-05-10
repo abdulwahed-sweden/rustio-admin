@@ -6,7 +6,370 @@ adheres to [SemVer](https://semver.org/) once it leaves the alpha track.
 
 ## [Unreleased]
 
-No changes yet.
+R2 of the universal account-recovery architecture. Targets 0.6.0.
+Where R1 covered the user-initiated path (forgot / reset / change),
+R2 covers the **admin-initiated** path: an Administrator can reset
+another user's password (email or temp-password mode), lock /
+unlock an account, force a password rotation on next sign-in, and
+revoke every active session for a target without locking. R2 also
+introduces the auto-throttle on failed logins (5 failures / 10
+minutes → 15-minute soft lock, no session revocation) and the
+re-auth wall (15-minute elevated-session window) that gates every
+destructive admin action.
+
+> **Migrating from 0.5.x:** bump `rustio-admin = "0.6"` in your
+> project's `Cargo.toml` and `cargo update -p rustio-admin`. The
+> schema migration is additive (three new columns on `rustio_users`:
+> `failed_login_count`, `last_failed_login_at`, `locked_until`,
+> plus a partial index); existing users are unaffected because the
+> new counter defaults to 0 and the lockout column defaults to NULL.
+> No middleware changes required. All R2 routes register
+> automatically via `register_admin_routes`. Doctrine 22 holds —
+> `auth::sessions::invalidate_sessions` remains the sole writer of
+> `revoked_at`; a grep across the framework still returns three SET
+> arms (lines 398 / 413 / 426 in `auth/sessions.rs`).
+
+### Recovery (admin-initiated)
+
+- **Admin-driven password reset.** Two new routes —
+  `GET /admin/users/:id/reset-password` (form) and
+  `POST /admin/users/:id/reset-password` (apply). The form offers
+  two modes:
+  - **Email mode** issues an admin-initiated reset token (same
+    table / TTL / consume path as R1's self-reset; the admin's
+    audit row carries `actor_user_id` + `actor_email_hash` +
+    `reason` + `mode: "email"` + `email_send_status`). The target
+    receives the same `/admin/reset-password/<token>` link; their
+    consume revokes every session via R1's existing path.
+  - **Temp_pw mode** generates a 16-char URL-safe-base64 password,
+    calls `auth::set_password` directly (Argon2id hash; the
+    plaintext is the only out-of-band value), sets
+    `must_change_password = TRUE`, and revokes every session via
+    `SessionInvalidationReason::PasswordResetByOther`. The
+    plaintext renders ONCE on the admin's success page —
+    refreshing re-issues a fresh value and rotates the previous
+    one out. Never logged, never persisted in any other column.
+- **Manual lock / unlock.** Two new actions —
+  `POST /admin/users/:id/lock` and `POST /admin/users/:id/unlock`.
+  Lock takes a duration (15 min / 1 h / 24 h / 7 d / indefinite +
+  freeform-minutes); the column holds the absolute timestamp.
+  Indefinite encodes as a year-9999 sentinel so the partial index
+  on `locked_until` continues to find it. Lock revokes every
+  session via `SessionInvalidationReason::AdministrativeRevoke`;
+  unlock zeroes `failed_login_count` and clears the column but
+  does NOT touch sessions (the lock-time revocation already
+  cleared them). Both emit typed audit rows
+  (`AccountLocked` / `AccountUnlocked`) with `via: "manual"`.
+- **Admin revoke-sessions.** `POST /admin/users/:id/revoke-sessions`
+  — a sibling of lock that revokes every session without writing
+  `locked_until`. Useful when a security incident calls for "kick
+  them out everywhere" without rate-limiting future logins. Emits
+  one `SessionsRevokedByOther` row per revoked session with
+  `via: "manual"`.
+- **`AdminActor` boundary type.** `auth::recovery_admin::AdminActor`
+  bundles `user_id` + `email` for the runtime fns. The `email`
+  hashes into `metadata.actor_email_hash` (8-char SHA-256
+  fingerprint via `actor_email_fingerprint`); the plaintext NEVER
+  lands in audit metadata.
+
+### Auto-throttle (login-side)
+
+- **`LoginThrottle` policy + sliding-window enforcement.**
+  `RecoveryPolicy::login_throttle()` returns
+  `LoginThrottle { max_attempts: 5, window_minutes: 10,
+  lock_minutes: 15 }` by default. The login flow's new
+  `do_login` (in `admin/handlers.rs`) calls
+  `auth::recovery_admin::record_failed_login(...)` on wrong
+  password and `record_successful_login(...)` on success.
+  Failures are anchored on `last_failed_login_at` and reset to
+  1 when the previous failure is older than `window_minutes`.
+  When the threshold trips, a soft lock writes `locked_until =
+  NOW() + lock_minutes` and the login flow emits an
+  `AccountLocked` audit row with `via: "auto_throttle"` and
+  `actor_user_id: null`. Setting `max_attempts = 0` disables
+  the auto-throttle (counter still increments for visibility,
+  no lock applied).
+- **Uniform login response.** Every failure mode (no such user,
+  inactive account, currently locked, wrong password) collapses
+  to a single 401 with the same `"Invalid email or password."`
+  error. No enumeration leak. The pre-R2 distinction between
+  401 (wrong password) and 403 (inactive) is gone — `auth::login`
+  remains as a public API for downstream projects that prefer
+  the simpler shape, but the framework's own surface uses the
+  uniform path.
+- **Auto-throttle does NOT revoke sessions.** Locking simply
+  prevents future sign-ins. Existing sessions stay valid until
+  the next request, at which point the `locked_until` check at
+  login refuses. Doctrine D4 + §3.3 + §13 locked-decision.
+
+### Re-auth wall
+
+- **15-minute elevated-session window.** Every destructive admin
+  action (admin reset, lock, unlock, revoke-sessions) calls
+  `auth::recovery_admin::check_session_elevated(...)` BEFORE
+  rendering the form. If `elevated_until < NOW()` (or NULL),
+  the handler 303-bounces to
+  `/admin/reauth?return_to=<encoded path>`. The user re-enters
+  their password; on success `promote_session_elevated(..., 15min)`
+  writes the new `elevated_until` and `trust_level = 'elevated'`,
+  and the redirect bounces back to the original URL with the
+  promotion now in effect.
+- **Standalone wall, validated `return_to`.** `GET/POST
+  /admin/reauth` are gated `Role::User` (any authenticated user
+  can re-auth their own session). The `return_to` validator
+  accepts only `/admin*` paths and rejects empty / control bytes
+  / protocol-relative `//` / backslash / `..`. Failed validation
+  collapses to `/admin`. Failure to verify password renders a
+  uniform 401 with the same error wording across every failure
+  cause; no audit row, no session-state mutation.
+- **No session-validity touch.** Re-auth promotion writes
+  `elevated_until` + `trust_level` only. Doctrine 22 holds —
+  promotion is purely additive trust-band motion, never a
+  revocation.
+
+### Forced password rotation
+
+- **`must_change_password` interstitial.** A target whose
+  `must_change_password` flag is TRUE (set by the admin reset's
+  temp_pw mode) sees every authenticated `/admin/*` request
+  redirected to `/admin/must-change-password` until they
+  complete the rotation. The whitelist (locked per §12) carves
+  out three exceptions: the rotation form itself, `/admin/logout`,
+  and `/admin/account/sessions` (read-only). Sub-paths of
+  `/admin/account/sessions` (the revoke buttons) are NOT
+  whitelisted — a user being forced to rotate may VIEW their
+  sessions but must finish the rotation before revoking
+  siblings.
+- **Forced-rotation gate in `login_guard`.** The check sits
+  inside `login_guard` BEFORE any role gate, so even
+  Administrators / Developers with the flag set are funnelled
+  through. `role_guard` and `perm_guard` inherit the redirect
+  automatically since they call `login_guard` first.
+- **Rotation handler.** `POST /admin/must-change-password`
+  validates the new password against `PasswordPolicy::validate`,
+  rejects reuse of the current value (defensive — prevents the
+  user "rotating" to the same temp the admin issued), calls
+  `set_password`, clears the flag, revokes every other session
+  via `UserExceptCurrent`, and emits one
+  `AuditEvent::ForcedPasswordChangeCompleted` row with
+  `triggered_by_audit_id` (best-effort lookup of the most recent
+  prior `password_reset_by_other` row for the user) +
+  `invalidated_session_count`. The audit chain
+  `PasswordResetByOther → ForcedPasswordChangeCompleted →
+  N × SessionsRevokedSelf` is now complete (§5.3).
+
+### Audit
+
+- **`AuditEvent::ForcedPasswordChangeCompleted` (NEW).** Locked
+  string `"forced_password_change_completed"`. Stability contract:
+  the string is part of the public API from 0.6.0 forward;
+  renaming requires a major bump.
+- **Four pre-declared events light up.** `PasswordResetByOther`,
+  `AccountLocked`, `AccountUnlocked`, `SessionsRevokedByOther` —
+  variants existed in the enum since 0.5.0 but had no emitting
+  call sites until R2.
+- **`LogEntry::actor_user_id` field (NEW; `Option<i64>`).** The
+  acting principal when a row records one user performing an
+  action on another. Persisted under `metadata.actor_user_id`
+  (no schema change). The legacy `LogEntry::user_id` continues
+  to carry the actor for backwards compat with `/admin/history`'s
+  "who did what" view; `actor_user_id` is the typed mirror that
+  SIEM consumers can read without heuristics. Set via
+  `LogEntry::with_actor(id)` builder. The merge layer in
+  `audit::record(...)` inserts the key into the metadata JSON
+  object (creating one if needed); a non-object metadata is a
+  programming bug and falls back with a `log::warn!`.
+- **Unified §5.1 metadata schema.** Every R2 admin-action row
+  carries `actor_user_id`, `actor_email_hash` (8-char SHA-256
+  per §13 locked-decision), `reason`, and a `via` discriminator.
+  Mode-specific keys (`mode`, `email_send_status`,
+  `must_change_password_set`, `token_fingerprint`,
+  `invalidated_session_count`, `until`) populate per the
+  emission path. Plaintext NEVER in metadata — actor email is
+  hashed; reset tokens are stored as 8-char fingerprints.
+
+### Identity
+
+- **`Identity::must_change_password: bool` (NEW).** Mirrors the
+  `rustio_users.must_change_password` column added in R1's
+  recovery migration. Loaded by `find_user_by_email` and
+  `identity_from_session`; consumed by `login_guard` to drive
+  the forced-rotation redirect. Pre-R2 sessions issued before
+  the field was loaded resolve with `must_change_password = false`
+  (the column defaults FALSE for every row).
+- **`StoredUser::must_change_password: bool` (NEW).** Sibling
+  on the storage layer; populated by the same SELECT.
+
+### Re-auth runtime
+
+- **`promote_session_elevated(db, session_id, ttl)`.** UPDATE
+  on `rustio_sessions` writes
+  `elevated_until = NOW() + ttl, trust_level = 'elevated'`.
+  Idempotent — re-promoting extends the window. Skips revoked
+  rows (`AND revoked_at IS NULL`).
+- **`check_session_elevated(db, session_id) -> bool`.** True iff
+  the session row exists, is not revoked, and
+  `elevated_until > NOW()`. False for missing / revoked /
+  never-promoted / expired sessions. Cheap — single indexed
+  lookup.
+
+### Login-throttle runtime
+
+- **`LockState`** (`Unlocked` / `Locked { until }`) — output of
+  `check_account_lockout(db, user_id)`.
+- **`ThrottleOutcome`** (`Recorded { count }` /
+  `JustLocked { count, until }` / `Disabled { count }`) — output
+  of `record_failed_login(db, user_id, throttle)`. The variant
+  tells the caller whether to emit `AccountLocked`.
+
+### Schema
+
+- **`rustio_users.failed_login_count INT NOT NULL DEFAULT 0`** —
+  incremented by `record_failed_login`; reset by
+  `record_successful_login`.
+- **`rustio_users.last_failed_login_at TIMESTAMPTZ`** —
+  sliding-window anchor for the auto-throttle threshold.
+- **`rustio_users.locked_until TIMESTAMPTZ`** — when set and
+  `> NOW()`, the login flow refuses with the uniform 401.
+  Indefinite manual locks encode as a year-9999 timestamp.
+- **`rustio_users_locked_until_idx`** — partial index on
+  `(locked_until) WHERE locked_until IS NOT NULL`. Powers the
+  "list currently-locked accounts" admin view (§9 — incident
+  triage). Negligible storage at admin-tier scale.
+
+All migrations idempotent. No data backfill required — the
+counter defaults to 0 (correct neutral state because the
+threshold is anchored on a sliding window, not historical
+totals) and the lockout columns default to NULL (correct for
+"unlocked").
+
+### Behaviour changes
+
+- **`do_login` rewrite.** Pre-R2 returned three response shapes
+  (401 wrong creds, 403 inactive, no lockout). Post-R2 returns
+  a single uniform 401 across every failure mode. After 5 wrong
+  passwords within 10 minutes, a 15-minute soft lock applies.
+- **CLI `user create` floor: 8 → 10 chars.** The CLI now
+  delegates to `DefaultPasswordPolicy::new()` directly, the same
+  floor admin-create-user and self-recovery enforce. CLI
+  bootstrap flow stays uniform with the web surface.
+- **Admin Add-user form respects project policy override.**
+  Pre-R2 the form's hint + validation hardcoded 8 chars; post-R2
+  both read from `Admin::active_password_policy()`, so a project
+  with `min_length = 16` in their custom policy sees 16 in the
+  hint AND has 16 enforced server-side. Closes the last
+  hardcoded-floor drift in the framework.
+- **Admin-edit form: password field removed.** The legacy
+  `new_password` input on `/admin/users/:id/edit` is gone
+  (`DESIGN_RECOVERY.md` §14.4). Admin password resets now go
+  through the dedicated `/admin/users/:id/reset-password` route
+  with the correct doctrine-22 semantics (typed audit, must-change
+  flag, centralised invalidation). The pre-R2 path was a
+  doctrine-22 spirit-violation that mutated passwords without
+  invalidating sessions.
+
+### Routes
+
+Twelve new routes register through `register_admin_routes`:
+
+```
+GET  /admin/reauth                           → show_reauth
+POST /admin/reauth                           → do_reauth
+GET  /admin/must-change-password             → show_must_change_password
+POST /admin/must-change-password             → do_must_change_password
+GET  /admin/users/:id/reset-password         → show_admin_reset_password
+POST /admin/users/:id/reset-password         → do_admin_reset_password
+GET  /admin/users/:id/lock                   → show_lock_user
+POST /admin/users/:id/lock                   → do_lock_user
+GET  /admin/users/:id/unlock                 → show_unlock_user
+POST /admin/users/:id/unlock                 → do_unlock_user
+GET  /admin/users/:id/revoke-sessions        → show_admin_revoke_sessions
+POST /admin/users/:id/revoke-sessions        → do_admin_revoke_sessions
+```
+
+User-targeted routes gate `Role::Administrator`; the cross-rank
+guard + re-auth wall enforce inside the handlers (so a
+Supervisor's probe doesn't even reach the form). Reauth and
+must-change-password gate `Role::User` because any authenticated
+user can re-auth their own session or be forced to rotate.
+
+### Documentation
+
+- **[`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+  added.** The canonical R2 contract: threat model, five state
+  machines (admin reset, manual lock, auto-throttle, forced
+  rotation, re-auth wall), schema deltas, audit event plan
+  including unified §5.1 metadata, module + types layout, route
+  table, trait extensions, locked decisions (re-auth window,
+  throttle thresholds, temp-password length, lock-duration
+  presets, whitelist paths), and the 17-commit atomic
+  implementation plan.
+- **README architecture-doctrine table** updated with a row
+  pointing to `DESIGN_R2_ORGANISATIONAL.md`. The four pre-existing
+  contracts (`DESIGN_SYSTEM`, `DESIGN_SESSIONS`, `DESIGN_AUDIT`,
+  `DESIGN_RECOVERY`) carry through unchanged.
+
+### Internal
+
+- **`auth::recovery_admin` submodule (NEW).** Sibling of R1's
+  `auth::recovery`. Owns every R2 runtime fn: schema migration,
+  login-throttle runtime, re-auth wall runtime, admin-reset
+  runtime, lock/unlock/revoke runtime. `pub(crate)` surface
+  except the `LoginThrottle` struct (re-exported from
+  `auth::*` since R2 commit #5).
+- **`admin::admin_recovery_handlers` submodule (NEW).** All R2
+  HTTP handlers + the `validate_return_to` helper. Sibling of
+  R1's `admin::recovery_handlers`. Crate-private — handlers
+  reach the runtime via `crate::auth::recovery_admin::*`.
+- **`Row::get_optional_datetime` helper (NEW).** Sibling of
+  `get_optional_string` / `get_datetime`. Closes a gap the
+  downstream POS CLAUDE.md flagged. The R2 lockout column reads
+  use it; previously the framework had no idiomatic way to read
+  a nullable `TIMESTAMPTZ`.
+- **`admin::builtin` module promoted from `mod` to
+  `pub(crate) mod`.** The fns `client_ip` and
+  `correlation_id_from` were already `pub(crate)`; the module
+  itself was private, blocking sibling-crate access. Promoting
+  the module gives `auth::recovery_admin` access to the helpers
+  without sibling-helpers in two places. No new public API.
+- **`admin::handlers::record_session_revocations` promoted from
+  private to `pub(super)`.** Same helper R1's
+  `do_password_change` uses; the new
+  `do_must_change_password` calls it with
+  `via = "must_change_password"` to differentiate the metadata.
+- **`build_persisted_metadata` merge helper (in
+  `admin::audit`)**. Pure function the audit pipeline calls
+  before binding the metadata JSONB column. Inserts
+  `actor_user_id` into the metadata object when set; logs a
+  warn + falls back when metadata is a non-object.
+
+### Tests
+
+- **+58 unit tests** across the R2 commit chain (162 → 220).
+  All pure / DB-free: type-level invariants
+  (`Send + Sync + Copy` bounds), pure helpers
+  (`validate_return_to`, `parse_lock_duration`,
+  `actor_email_fingerprint`, `random_temp_password`,
+  `MUST_CHANGE_WHITELIST` membership, `LockDuration` time math),
+  and the `AuditEvent` drift tests pick up the new variant
+  automatically.
+- **Doctrine 22 grep** is part of every R2 commit's pre-commit
+  gate. Result is locked: 3 SET arms in
+  `auth::sessions::invalidate_sessions` (lines 398 / 413 / 426),
+  unchanged across the entire R2 chain.
+
+### Deferred
+
+- **Testcontainers Postgres integration suite.** Lands in a
+  separate commit before the 0.6.0 publish, gated behind
+  `--features integration-test`. Covers the SQL paths in
+  `record_failed_login`, `check_account_lockout`,
+  `promote_session_elevated`, `check_session_elevated`,
+  `lock_user_account`, `admin_set_temp_password`, and the
+  re-auth + forced-rotation handlers' DB-touching steps. The
+  R1 hotfix `d4f5182` (INT4-vs-INT8 column-type mismatch in
+  `check_reset_token_valid`) is the lesson driving this
+  addition (§10.3).
 
 ## [0.5.0] — 2026-05-09
 
