@@ -1,6 +1,9 @@
 # rustio-admin
 
-> **Django Admin, but for Rust.** A small, focused admin framework for Postgres-backed Rust apps. From a `struct` to a working CRUD admin in under 50 lines of project code.
+Postgres-first administrative framework for Rust applications.
+
+Built around explicit authority boundaries, typed audit trails,
+session lifecycle control, and doctrine-first design.
 
 [![crates.io](https://img.shields.io/crates/v/rustio-admin.svg?label=rustio-admin)](https://crates.io/crates/rustio-admin)
 [![crates.io](https://img.shields.io/crates/v/rustio-admin-cli.svg?label=rustio-admin-cli)](https://crates.io/crates/rustio-admin-cli)
@@ -8,56 +11,23 @@
 [![CI](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml)
 [![License](https://img.shields.io/crates/l/rustio-admin.svg)](./LICENSE)
 
-> 🔐 **v0.6.0** (2026-05-10) — R2 organisational recovery shipped. The admin-initiated counterpart to R1: an Administrator can reset another user's password (email-link mode reuses R1's token table; temp-password mode generates a 16-char URL-safe-base64 value rendered ONCE on the success page, sets `must_change_password = TRUE`, and revokes every session via `SessionInvalidationReason::PasswordResetByOther`), lock / unlock an account (15 min / 1 h / 24 h / 7 d / indefinite + freeform-minutes), revoke every session without locking, force a password rotation on the user's next sign-in. Auto-throttle on failed logins: 5 wrong passwords within 10 minutes triggers a 15-minute soft lock (no session revocation — locking only refuses future sign-ins). Re-auth wall: every destructive admin action requires a fresh password verify within a 15-minute elevated-session window. New `LoginThrottle` policy + `RecoveryPolicy::login_throttle()` / `reauth_window()` / `scope_for(...)` extensions, `LogEntry::actor_user_id` typed boundary (persisted under `metadata.actor_user_id`), `AuditEvent::ForcedPasswordChangeCompleted` variant. Twelve new routes register through `register_admin_routes`. New `DESIGN_R2_ORGANISATIONAL.md` is the canonical R2 contract. Doctrine 22 holds — `auth::sessions::invalidate_sessions` remains the sole writer of `revoked_at`. Downstream projects: bump to `rustio-admin = "0.6"`, then `cargo update -p rustio-admin`; schema migration is additive (3 new columns + partial index on `rustio_users`, no middleware changes required). [v0.6.0 changelog](./CHANGELOG.md#060--2026-05-10) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.6.0).
->
-> 🔐 **v0.5.0** (2026-05-09) — R1 self password recovery shipped. End-to-end forgot/reset flow: `/admin/forgot-password` issues a single-use email-link token (1-hour TTL, SHA-256 at rest, no plaintext persistence); `/admin/reset-password/<token>` atomically consumes and revokes every session. Active-session revoke buttons wired (single / others / all). Authenticated `/admin/password_change` now signs out other devices via `invalidate_sessions(UserExceptCurrent, …)`. New `PasswordPolicy` (default `min_len = 10`), `RecoveryPolicy` (TTL 1h, request 5/15min, consume 10/5min), and `Admin::mailer(...)` builder surfaces. `AuditEvent` enum promoted to `pub` with `#[non_exhaustive]`; new `PasswordChangedSelf` variant; `LogEntry::with_event(AuditEvent)` builder. Strict-mailer boot guard via `RecoveryPolicy::strict_mailer_required(true)` for production deployments. Reset-token sweeper integrated into the existing 10-min background tick (7-day forensic-retention window). New `DESIGN_RECOVERY.md` is the canonical R1 contract. Downstream projects: bump to `rustio-admin = "0.5"`, then `cargo update -p rustio-admin`; schema migration is additive (no middleware changes required). [v0.5.0 changelog](./CHANGELOG.md#050--2026-05-09) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.5.0).
->
-> 🔐 **v0.4.0** (2026-05-09) — session lifecycle + recovery foundations. Hashed-at-rest session tokens with a 14-day plaintext-fallback transition; centralized `invalidate_sessions` API as the single legitimate writer of `revoked_at` (logout is now a soft revoke); typed `SessionTrust` + `SessionInvalidationReason` + `SessionTarget` lifecycle vocabulary. New `email::Mailer` trait + `LogMailer` default + `framework_envelope`. `audit::redact` helpers (doctrine 11 — never log secrets). `correlation_id` middleware (UUID v7 stamped before CSRF so even rejected requests trace) + new `metadata` JSONB / `correlation_id` / `session_id` columns on the audit row. Read-only `/admin/account/sessions` page (revoke buttons land in 0.5.x). New `DESIGN_SESSIONS.md` + `DESIGN_AUDIT.md`. Downstream projects: bump to `rustio-admin = "0.4"`, install `middleware::correlation_id` BEFORE `csrf_protect`, then `cargo update -p rustio-admin`. [v0.4.0 changelog](./CHANGELOG.md#040--2026-05-09) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.4.0).
->
-> 🛡 **v0.3.0** (2026-05-08) — authority + design-system stabilization. Server-side authority guards (self-demote / cross-rank / role-ceiling) with last-Administrator + last-Developer protection. Audit rows on every user/group authority mutation. Foreign-key list cells now resolve to display labels with click-throughs. Group permissions render as a model × action matrix instead of a flat 60+ checkbox list. Canonical accent moved to teal-emerald (`#0F8C7E` light / `#3FAA9D` dark) — retired the previous terracotta. New `DESIGN_SYSTEM.md` + PR template gate token-level changes behind a visual regression checklist. Downstream projects: bump to `rustio-admin = "0.3"` and `cargo update -p rustio-admin`. [v0.3.0 changelog](./CHANGELOG.md#030--2026-05-08) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.3.0).
->
-> 🔧 **v0.2.1** (2026-05-07, CLI-only patch) — fixes the `rustio startproject` scaffold template, which was pinning new projects to `rustio-admin = "0.1"` and missing every 0.2.0 feature. Re-install the CLI with `cargo install rustio-admin-cli --force` to pick up the corrected template; existing projects are unaffected. [v0.2.1 changelog](./CHANGELOG.md#021--2026-05-07) · [release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.1).
->
-> ✨ **v0.2.0 released on 2026-05-07** — premium-chrome release. List view, form view, and Auth pages all share one design language; dark mode is now a calm graphite workspace rather than an OLED-black hacker terminal. New list-view toolbar (filters dropdown / sort dropdown / per-page picker / active-filter pills / numbered pagination / search glyph) ships with full URL state preservation across every widget. Per-row + master checkboxes drive the new bulk select; projects register custom bulk actions via `ModelAdmin::bulk_actions()` next to the built-in delete. Form pages cap at 880 px editorial width with a grouped action bar. Sticky sidebar at tablet+. **Breaking change:** `AdminTheme` is now an override-patch type (`Option<String>` fields) — `admin.css` is the single source of truth, so out of the box no inline `<style>` is emitted at all. See the [v0.2.0 changelog](./CHANGELOG.md#020--2026-05-07) including the *Migrating from 0.1.x* section, and the [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.0).
->
-> 🎨 **v0.1.1** (2026-05-07) — design-system pass. Self-hosted Geist + Geist Mono + Tajawal + Noto Naskh Arabic (SIL OFL-1.1, ~270 KB embedded), full typography token system, crimson `#A0341A` brand accent. [v0.1.1 changelog](./CHANGELOG.md#011--2026-05-07) · [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1).
->
-> 🚀 **v0.1.0** (2026-05-07) — first public release. Three crates landed together: [`rustio-admin`](https://crates.io/crates/rustio-admin) (the library), [`rustio-admin-macros`](https://crates.io/crates/rustio-admin-macros) (the `RustioAdmin` derive), and [`rustio-admin-cli`](https://crates.io/crates/rustio-admin-cli) (the `rustio` binary: `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`). [v0.1.0 changelog](./CHANGELOG.md#010--2026-05-07) · [release tag](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0).
+> **Latest release: v0.6.0** — admin-driven recovery, re-auth wall,
+> login throttling, forced password rotation.
+> See [`CHANGELOG.md`](./CHANGELOG.md) for migration notes and prior releases.
 
-## What you get
 
-- `#[derive(RustioAdmin)]` on a plain struct → list / create / edit / delete pages.
-- `impl ModelAdmin` for Django-style customisation (`list_display`, `list_filter`, `search_fields`, `ordering`, `list_per_page`).
-- DB-backed sessions, Argon2 passwords, 5-tier role hierarchy, per-model RBAC.
-- Hyper + sqlx + minijinja under the hood. **Postgres only.** No Tailwind, no PostCSS, no build step — one hand-written stylesheet.
-- Single binary deploy. Project templates and CSS are baked in via `include_str!`; project overrides drop into `templates/admin/`.
+## 30-second example
 
-## Install
-
-```toml
-[dependencies]
-rustio-admin = "0.6"
-tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
-chrono = { version = "0.4", features = ["serde"] }
-```
-
-The CLI ships separately:
-
-```sh
-cargo install rustio-admin-cli      # provides the `rustio` binary
-```
-
-## The 3-line idea
+An admin surface is one derive, one impl, one register call.
 
 ```rust
 #[derive(RustioAdmin)]
 pub struct Post { pub id: i64, pub title: String, /* … */ }
 
-impl Model     for Post { /* TABLE, COLUMNS, from_row, insert_values */ }
-impl ModelAdmin for Post {}                            // accept every default
+impl Model      for Post { /* TABLE, COLUMNS, from_row, insert_values */ }
+impl ModelAdmin for Post {}                  // accept every default
 
-// In your `main`:
-let admin = Admin::new().model::<Post>();
+let admin  = Admin::new().model::<Post>();
 let router = register_admin_routes(Router::new(), admin, db, templates);
 Server::new(router, addr).run().await?;
 ```
@@ -73,41 +43,182 @@ impl ModelAdmin for Post {
 }
 ```
 
-For a complete project skeleton see [`examples/minimal/`](./examples/minimal/) and the [`docs/getting-started.md`](./docs/getting-started.md) walkthrough.
 
-## Documentation
+## Why RustIO exists
 
-| | |
-|---|---|
-| [Getting started](./docs/getting-started.md)        | `cargo new` to a running admin in 10 minutes. |
-| [`ModelAdmin` reference](./docs/modeladmin.md)     | Every hook, every default, when to override. |
-| [Architecture](./docs/architecture.md)              | Module map, runtime, public API surface. |
-| [Strategic reset plan](./rustio-admin-strategic-reset-plan.md) | Why the framework exists, what's in/out of scope. |
-| [Changelog](./CHANGELOG.md)                         | Per-release summary. |
+Three observations shape the framework.
 
-## Architecture doctrine
+### CRUD is the surface
 
-Security-sensitive flows are documented before they are implemented.
-The framework's authority, session, audit, and recovery behaviour is
-governed by four canonical contract documents — PR review compares
-against them, and changes that drift from them require a corresponding
-doc update. Lifecycle invariants are intentional: revoke semantics are
-centralized, audit chains are correlation-aware, recovery responses
-are uniform on the outward surface.
+The weight of production administrative work sits underneath —
+authority transitions, session lifecycle, recovery, audit chains.
 
-| | |
-|---|---|
-| [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)     | Visual + token + branding contract. Color palette (teal-emerald `#0F8C7E` light / `#3FAA9D` dark), typography stack (Geist / Geist Mono / Tajawal / Noto Naskh Arabic), branch + merge expectations, versioning policy. |
-| [`DESIGN_SESSIONS.md`](./DESIGN_SESSIONS.md) | Session lifecycle state machine. `SessionTrust` ladder (Authenticated < Elevated < MfaVerified). The centralised invalidation contract — a grep for `revoked_at\s*=` across `crates/` returns only `auth::sessions::invalidate_sessions`. Token-rotation semantics on trust escalation. |
-| [`DESIGN_AUDIT.md`](./DESIGN_AUDIT.md)       | Audit row shape. The typed `AuditEvent` evolution path. Redaction helpers (never log secrets). Forensic chain semantics via per-request `correlation_id`. Required middleware ordering (`correlation_id` BEFORE `csrf_protect`). |
-| [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md) | Self-recovery contract (R1, ships in 0.5.0). Threat model. Recovery state machine. Token lifecycle (atomic single-use consume; no plaintext persistence). Uniform-response invariant on the outward surface. `PasswordPolicy` + `RecoveryPolicy` trait surface. Strict-mailer boot guard. Locked page copy. |
-| [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md) | Organisational-recovery contract (R2, ships in 0.6.0). Five state machines: admin-driven reset (email + temp-password modes), manual lock / unlock, auto-throttle on failed logins (5 fails / 10 min → 15-min soft lock; no session revocation), forced password rotation (`must_change_password`), and the re-auth wall (15-min elevated-session window). Unified audit metadata schema with `actor_user_id` + 8-char `actor_email_hash`. Locked decisions: throttle thresholds, temp-password length, lock-duration presets, whitelist paths, reason floor. |
+RustIO treats these as first-class concerns.
 
-The `.github/pull_request_template.md` walks the visual regression
-checklist and token-disclosure section before merging anything that
-touches authority, session, recovery, or visual surfaces.
+### Doctrine before implementation
+
+Authentication, recovery, session invalidation, and audit
+behaviour are governed by checked-in contract documents.
+
+Pull requests are reviewed against the doctrine, not only
+against the implementation diff.
+
+### Operational clarity over flexibility
+
+The framework targets one database, ships one stylesheet, and
+requires no build step.
+
+Authority, sessions, recovery, and audit receive the
+engineering attention. The rest stays intentionally simple.
+
+---
+
+The framework surface stays intentionally narrow so the
+security-sensitive paths remain reviewable.
+
+
+## Core principles
+
+The invariants the framework refuses to break.
+
+> **Doctrine 22**
+> Session invalidation has a single writer.
+
+> **Uniform outward responses**
+> Recovery and login surfaces collapse every failure mode
+> into a single response shape.
+
+> **Audit-by-default**
+> Every authority mutation emits a typed `AuditEvent`.
+
+> **No plaintext at rest**
+> Argon2id for passwords. SHA-256 for session and reset tokens.
+
+
+## What's in the box
+
+The surface is grouped into five concerns.
+
+### Admin surface
+
+- `#[derive(RustioAdmin)]` on a struct generates list, create,
+  edit, and delete pages.
+- `impl ModelAdmin` overrides defaults — `list_display`,
+  `list_filter`, `search_fields`, `ordering`, `list_per_page`.
+- Per-model RBAC over a five-tier role hierarchy.
+
+### Identity and sessions
+
+- DB-backed sessions with Argon2id passwords.
+- Hashed-at-rest session tokens.
+- Centralised invalidation through `auth::sessions::invalidate_sessions`.
+
+### Recovery
+
+- Self-service forgot and reset.
+- Admin-driven password reset, lock, unlock, and revoke.
+- Auto-throttle on failed logins.
+- Re-auth wall for destructive admin actions.
+
+### Audit and observability
+
+- Typed `AuditEvent` with stable string identifiers.
+- Per-request correlation IDs.
+- Redaction helpers for tokens and passwords.
+
+### Operational
+
+- Postgres-only. Hyper, sqlx, and minijinja under the hood.
+- Single binary deploy. No build step. One stylesheet.
+- Project templates and CSS embedded at compile time.
+
+---
+
+Most projects use a subset. The framework does not require
+adopting all of it.
+
+
+## Install
+
+The library and the CLI ship as separate crates.
+
+```toml
+[dependencies]
+rustio-admin = "0.6"
+tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
+chrono = { version = "0.4", features = ["serde"] }
+```
+
+```sh
+cargo install rustio-admin-cli      # provides the `rustio` binary
+```
+
+
+## Reading paths
+
+Where to start depends on the work.
+
+**New to the framework**
+→ 30-second example above
+→ [`docs/getting-started.md`](./docs/getting-started.md)
+→ [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)
+
+**Working on authentication or recovery**
+→ [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md)
+→ [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+
+**Auditing authority boundaries**
+→ [`DESIGN_AUDIT.md`](./DESIGN_AUDIT.md)
+→ [`DESIGN_SESSIONS.md`](./DESIGN_SESSIONS.md)
+
+**Building on the published crate**
+→ Install above
+→ [`docs/modeladmin.md`](./docs/modeladmin.md)
+→ [`examples/minimal/`](./examples/minimal/)
+
+**Understanding scope and design history**
+→ [`docs/architecture.md`](./docs/architecture.md)
+→ [`rustio-admin-strategic-reset-plan.md`](./rustio-admin-strategic-reset-plan.md)
+→ [`CHANGELOG.md`](./CHANGELOG.md)
+
+
+## Doctrine documents
+
+Security-sensitive behaviour is governed by explicit contract
+documents reviewed alongside the code.
+
+### [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)
+
+Visual, token, and branding contract.
+
+### [`DESIGN_SESSIONS.md`](./DESIGN_SESSIONS.md)
+
+Session lifecycle, trust escalation, and Doctrine 22 — the
+single-writer invariant on `revoked_at`.
+
+### [`DESIGN_AUDIT.md`](./DESIGN_AUDIT.md)
+
+Typed audit events, correlation-id chains, and the required
+middleware ordering.
+
+### [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md)
+
+Self-service password recovery (R1, ships in 0.5.0).
+
+### [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+
+Admin-driven recovery, auto-throttle, re-auth wall (R2,
+ships in 0.6.0).
+
+---
+
+Each document is the source of truth for its surface.
+
 
 ## Workspace layout
+
+Three crates ship together. The split keeps proc-macros and CLI
+compilation off the project's hot path.
 
 | Crate | Purpose |
 |---|---|
@@ -120,15 +231,18 @@ cargo build --workspace
 cargo test  --workspace
 ```
 
-## Status
-
-**v0.2.0 — released 2026-05-07.** Three releases shipped end-to-end against a local Postgres: [v0.1.0](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.0) (initial public release; phases 1–15 of the strategic-reset rollout), [v0.1.1](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.1.1) (design-system pass — self-hosted fonts, typography token system, crimson brand), and [v0.2.0](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.2.0) (premium chrome — list-view toolbar with filters / sort / per-page / pills / numbered pagination + URL state preservation, bulk select + project-defined bulk actions, form refresh, single-source-of-truth theme architecture, calm graphite dark mode). All three browser-walked against the [`examples/minimal`](./examples/minimal/) skeleton and a fresh `rustio startproject` + `rustio startapp` flow; the [`classrooms`](https://github.com/abdulwahed-sweden/classrooms) project consumes the published crate from crates.io. See the [strategic reset plan](./rustio-admin-strategic-reset-plan.md) for the design and the [changelog](./CHANGELOG.md) for the per-release feature inventory.
-
-Future work tracks under separate milestones — v0.3 candidates include richer filter widget kinds beyond `BoolYesNo` (date range, multi-select, foreign-key autocomplete), inline forms, dashboard widgets, and floating toast notifications. The schema-contract / drift-validator / AI-planner work that originally lived in this repo's predecessor stays explicitly out of scope and will, if it returns at all, ship as a separate `rustio-pro-*` family of crates.
 
 ## Non-goals
 
-`rustio-admin` is the admin layer and the auth/permissions/templates that surround it — nothing more. **Not** a full web framework. **Not** an ORM (the `Model` trait is a thin sqlx shim). **Not** a content management system. **Not** AI-augmented. **Not** multi-database (Postgres only, on purpose). **Not** schema-contract-driven (the schema-contract / drift-validator / AI-planner work belongs in a future Tier-2 crate, kept entirely out of this repo).
+RustIO is intentionally narrow in scope.
+
+- Not a general-purpose web framework.
+- Not an ORM. The `Model` trait is a thin sqlx shim.
+- Not a content management system.
+- Not AI-augmented.
+- Not multi-database. Postgres only, by design.
+- Not schema-contract-driven.
+
 
 ## License
 
