@@ -1,0 +1,42 @@
+{% extends "admin/_base.html" %}
+{% block sidebar %}{% endblock %}
+{% block content %}
+<div class="rio-login">
+  <h1 class="rio-login-title">Confirm your identity</h1>
+  <p class="rio-login-intro">
+    Re-enter your password to continue. This step protects sensitive admin actions.
+  </p>
+  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/admin/reauth" class="rio-form rio-form--login" autocomplete="off">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="return_to" value="{{ return_to }}">
+    <div class="rio-form-row">
+      <label class="rio-label" for="rio-reauth-email">Signed in as</label>
+      <input
+        type="email"
+        id="rio-reauth-email"
+        value="{{ email }}"
+        autocomplete="username"
+        readonly
+        class="rio-input"
+      >
+    </div>
+    <div class="rio-form-row">
+      <label class="rio-label" for="rio-reauth-password">Password</label>
+      <input
+        type="password"
+        id="rio-reauth-password"
+        name="password"
+        autocomplete="current-password"
+        autofocus
+        required
+        class="rio-input"
+      >
+    </div>
+    <button type="submit" class="rio-button rio-button--primary">Continue</button>
+  </form>
+  <p class="rio-login-footer">
+    <a href="/admin">Cancel</a>
+  </p>
+</div>
+{% endblock %}
