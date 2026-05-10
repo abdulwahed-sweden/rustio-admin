@@ -25,6 +25,9 @@
 //!   `AuditEvent::AccountLocked` row when the outcome is
 //!   `JustLocked`.
 //! - [`record_successful_login`] — zeroes the counter on success.
+//! - [`promote_session_elevated`] / [`check_session_elevated`] —
+//!   re-auth wall runtime over the existing `rustio_sessions
+//!   .elevated_until` column. R2 commit #10 + §3.5 + §11.
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -40,7 +43,7 @@
 //! invokes [`migrate_user_lockout_schema`] after R1's
 //! `recovery::migrate_user_recovery_schema`.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use sqlx::Row as _;
 
 use crate::auth::recovery::LoginThrottle;
@@ -265,6 +268,86 @@ pub(crate) async fn record_successful_login(db: &Db, user_id: i64) -> Result<()>
     .execute(db.pool())
     .await?;
     Ok(())
+}
+
+// ---- Re-auth wall runtime (R2 commit #10) ----------------------------------
+//
+// State lives entirely on the existing `rustio_sessions.elevated_until`
+// column added in R0 (see `auth::sessions::migrate_session_lifecycle`).
+// No schema change here — the column was scaffolded, this commit lands
+// the reader and writer.
+//
+// Doctrine 22 reminder: neither fn touches `revoked_at`. Promotion only
+// extends the elevation window; expiry is detected at read time
+// (`elevated_until > NOW()`). When a session needs to be revoked
+// (manual lock, password reset by other), that goes through
+// `auth::sessions::invalidate_sessions`, not these helpers.
+
+/// Promote a session into the *elevated* trust band, valid for `ttl`
+/// from now. The login flow's re-auth wall (handler in R2 commit #11)
+/// calls this after the actor re-verifies their password; the admin-
+/// recovery handlers in commits #15 / #16 read the resulting
+/// `elevated_until` via [`check_session_elevated`] before allowing a
+/// destructive mutation.
+///
+/// Idempotent: re-promoting an already-elevated session simply
+/// extends the window to a fresh `NOW() + ttl`. Promotion is a no-op
+/// for revoked sessions (`AND revoked_at IS NULL` in the WHERE
+/// clause); the caller's preceding identity / cookie checks should
+/// already have rejected those.
+///
+/// `ttl` is read from `RecoveryPolicy::reauth_window()` (default 15
+/// minutes per `DESIGN_R2_ORGANISATIONAL.md` §12). Negative or zero
+/// durations are written as-is — the resulting `elevated_until` lands
+/// at-or-before `NOW()`, so [`check_session_elevated`] returns
+/// `false` and every admin-recovery action will require a fresh
+/// re-auth. That's the documented escape hatch when a project sets
+/// `reauth_window = ChronoDuration::zero()`.
+#[allow(dead_code)] // call site lands in R2 commit #11 (re-auth handler)
+pub(crate) async fn promote_session_elevated(
+    db: &Db,
+    session_id: i64,
+    ttl: ChronoDuration,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE rustio_sessions \
+            SET elevated_until = NOW() + (INTERVAL '1 second' * $2::bigint), \
+                trust_level = 'elevated' \
+          WHERE session_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(session_id)
+    .bind(ttl.num_seconds())
+    .execute(db.pool())
+    .await?;
+    Ok(())
+}
+
+/// Whether the given session is currently elevated. Returns `true`
+/// iff the session row exists, is not revoked, and
+/// `elevated_until > NOW()`. Returns `false` for missing /
+/// revoked / never-promoted / already-expired sessions.
+///
+/// The admin-recovery handlers in R2 commits #15 / #16 call this
+/// before rendering the destructive action's form. On `false` the
+/// handler redirects to `/admin/reauth?return_to=<encoded>` (R2
+/// commit #11). The post-reauth handler then promotes the session
+/// and redirects back to the original URL, which now passes the
+/// check.
+#[allow(dead_code)] // call sites land in R2 commits #15 / #16 (admin recovery handlers)
+pub(crate) async fn check_session_elevated(db: &Db, session_id: i64) -> Result<bool> {
+    let row = sqlx::query(
+        "SELECT elevated_until FROM rustio_sessions \
+          WHERE session_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(session_id)
+    .fetch_optional(db.pool())
+    .await?;
+
+    let Some(row) = row else {
+        return Ok(false);
+    };
+    let elevated_until: Option<DateTime<Utc>> = row.try_get("elevated_until")?;
+    Ok(matches!(elevated_until, Some(t) if t > Utc::now()))
 }
 
 #[cfg(test)]

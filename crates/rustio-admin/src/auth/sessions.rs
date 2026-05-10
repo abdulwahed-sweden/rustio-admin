@@ -496,7 +496,7 @@ pub async fn list_active_for_user(db: &Db, user_id: i64) -> Result<Vec<Session>>
                 created_at: r.get_datetime("created_at")?,
                 last_seen: r.get_datetime("last_seen")?,
                 expires_at: r.get_datetime("expires_at")?,
-                elevated_until: None, // optional column; reader lands when re-auth wall ships
+                elevated_until: r.get_optional_datetime("elevated_until")?,
                 ip: r.get_optional_string("ip")?,
                 user_agent: r.get_optional_string("user_agent")?,
             })
