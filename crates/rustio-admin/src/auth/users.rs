@@ -36,6 +36,17 @@ pub struct Identity {
     /// field; this commit only loads it from the SQL paths so commits
     /// #9 / #13 can act on it.
     pub must_change_password: bool,
+    /// Mirrors the `rustio_users.mfa_enabled` column added in R3's
+    /// MFA migration (commit #1). When `TRUE`, the login flow
+    /// (commit #16) redirects to `/admin/mfa/verify` after
+    /// successful password verification, and R3's `login_guard`
+    /// extension (commit #18) restricts non-MFA-verified
+    /// sessions to a small whitelist
+    /// (`/admin/mfa/verify`, `/admin/logout`,
+    /// `/admin/account/sessions`). Pre-R3 sessions and users
+    /// who have not enrolled get `FALSE` and bypass the
+    /// challenge entirely — pre-R3 framework behaviour.
+    pub mfa_enabled: bool,
 }
 
 impl Identity {
@@ -64,6 +75,11 @@ pub struct StoredUser {
     /// `Identity`; when the flag is set the user is redirected
     /// immediately to `/admin/must-change-password` after sign-in.
     pub must_change_password: bool,
+    /// Mirrors `rustio_users.mfa_enabled`. R3's `do_login`
+    /// (commit #16) reads this to decide whether to redirect
+    /// the freshly-authenticated user to `/admin/mfa/verify`
+    /// before allowing access to `/admin`.
+    pub mfa_enabled: bool,
 }
 
 /// Read-only view of a user, used by the built-in admin profile page.
@@ -221,7 +237,7 @@ pub async fn create_user(db: &Db, email: &str, password: &str, role: Role) -> Re
 pub async fn find_user_by_email(db: &Db, email: &str) -> Result<Option<StoredUser>> {
     let row = sqlx::query(
         "SELECT id, email, password_hash, role, is_active, is_demo, demo_label, \
-                must_change_password \
+                must_change_password, mfa_enabled \
            FROM rustio_users \
           WHERE email = $1",
     )
@@ -240,6 +256,7 @@ pub async fn find_user_by_email(db: &Db, email: &str) -> Result<Option<StoredUse
                 is_demo: r.get_bool("is_demo")?,
                 demo_label: r.get_optional_string("demo_label")?,
                 must_change_password: r.get_bool("must_change_password")?,
+                mfa_enabled: r.get_bool("mfa_enabled")?,
             }))
         }
         None => Ok(None),

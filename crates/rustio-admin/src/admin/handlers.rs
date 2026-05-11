@@ -281,17 +281,40 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
         return uniform_unauthorized();
     }
 
-    // 5. Success — reset throttle counter, mint session, set cookie,
-    //    redirect. The forced-rotation gate (must_change_password)
-    //    runs at the next request inside `login_guard` (R2 commit
-    //    #13), so the cookie is set unconditionally here.
+    // 5. Success — reset throttle counter, mint session, set cookie.
+    //    The forced-rotation gate (must_change_password) runs at the
+    //    next request inside `login_guard` (R2 commit #13), so the
+    //    cookie is set unconditionally here.
     record_successful_login(&ctx.db, user.id).await?;
     let token = auth::create_session(&ctx.db, user.id).await?;
     let cookie = format!(
         "{}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=1209600",
         auth::SESSION_COOKIE
     );
-    Ok(Response::redirect("/admin").with_header("set-cookie", cookie))
+
+    // 6. R3 — MFA branch. If the user has MFA enrolled, redirect
+    //    to `/admin/mfa/verify` instead of `/admin`. The session
+    //    row is already minted with `trust_level = 'authenticated'`;
+    //    R3's `verify_totp_for_user` (commit #7) +
+    //    `promote_session_to_mfa_verified` (commit #11) rotate it
+    //    to `mfa_verified` once the second factor lands. The
+    //    `login_guard` extension in commit #18 enforces that
+    //    `mfa_enabled && trust_level != mfa_verified` sessions
+    //    can only reach a tiny whitelist
+    //    (`/admin/mfa/verify`, `/admin/logout`,
+    //    `/admin/account/sessions`).
+    //
+    //    Per `DESIGN_R3_MFA.md` §4.2, the framework does NOT add a
+    //    `pending_mfa` trust-level variant or a `metadata.awaiting_mfa`
+    //    column. The combination of `identity.mfa_enabled = TRUE`
+    //    AND `trust_level = 'authenticated'` IS the pending-MFA
+    //    signal; no extra schema needed.
+    let redirect_to = if user.mfa_enabled {
+        "/admin/mfa/verify"
+    } else {
+        "/admin"
+    };
+    Ok(Response::redirect(redirect_to).with_header("set-cookie", cookie))
 }
 
 pub(crate) async fn do_logout(ctx: &AdminCtx, req: Request) -> Result<Response> {
