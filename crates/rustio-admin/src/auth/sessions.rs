@@ -104,6 +104,13 @@ pub enum SessionInvalidationReason {
     MfaDisabledByOther,
     AuthorityEscalation,
     EmergencyRecovery,
+    /// A user's role was changed by another actor (R2 admin role
+    /// edit, or R4 CLI `rustio user promote`). The target's
+    /// existing sessions still authorise the pre-change tier;
+    /// revoking them forces a fresh login that picks up the new
+    /// authority. R4 commit #7 wires emission; see
+    /// `DESIGN_R4_EMERGENCY.md` §7.
+    RoleChangedByOther,
     /// Token rotation that accompanies a trust escalation
     /// (`Authenticated → Elevated`, etc.). The replacement session is
     /// minted as the parent's child; this revokes the old token.
@@ -127,6 +134,7 @@ impl SessionInvalidationReason {
             Self::MfaDisabledByOther => "mfa_disabled_by_other",
             Self::AuthorityEscalation => "authority_escalation",
             Self::EmergencyRecovery => "emergency_recovery",
+            Self::RoleChangedByOther => "role_changed_by_other",
             Self::TrustEscalation => "trust_escalation",
         }
     }

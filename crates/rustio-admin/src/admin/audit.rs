@@ -442,6 +442,28 @@ pub enum AuditEvent {
     SessionsRevokedByOther,
     SessionLogout,
     // ---- Layer-3 CLI (R4+) ----
+    /// Emergency-recovery operation initiated from the `rustio`
+    /// CLI binary. Subsumes every `rustio user <op>` emergency
+    /// subcommand — the specific operation lives in
+    /// `metadata.cli_operation` (`"reset_password" | "unlock" |
+    /// "disable_mfa" | "promote" | "emergency_access"`). The
+    /// OS-level actor identity lives in `metadata.os_actor`
+    /// (`<whoami>@<hostname>`).
+    ///
+    /// **CLI-only invariant (D12).** This variant must NOT be
+    /// emitted from any framework HTTP handler. The web surface
+    /// has its own audit variants (`PasswordResetByOther`,
+    /// `MfaResetByOther`, etc.); collapsing those into
+    /// `EmergencyRecovery` would lose the distinction between
+    /// "admin acted via the web" and "operator went around every
+    /// other tier via shell." A grep-based unit test (see
+    /// `audit::tests::emergency_recovery_is_cli_only`) enforces
+    /// this by walking `crates/rustio-admin/src/` and asserting
+    /// zero callsites; the variant is exercised only from
+    /// `crates/rustio-admin-cli/src/`.
+    ///
+    /// See `DESIGN_R4_EMERGENCY.md` §5 for the full metadata
+    /// schema and §10 doctrine D12.
     EmergencyRecovery,
 }
 
@@ -716,6 +738,92 @@ mod tests {
             );
         }
         assert_eq!(set.len(), action_type_strs.len() + ALL_AUDIT_EVENTS.len());
+    }
+
+    /// Doctrine D12 enforcement (`DESIGN_R4_EMERGENCY.md` §10).
+    ///
+    /// `AuditEvent::EmergencyRecovery` is the CLI-only audit
+    /// signal: any emission from a framework HTTP handler would
+    /// collapse the "operator went around every other tier via
+    /// shell" distinction into the regular web-driven audit
+    /// vocabulary. This test walks `crates/rustio-admin/src/`
+    /// (the framework crate) and asserts that no source file —
+    /// other than this file, where the variant is declared,
+    /// documented, mapped, and stability-tested — names
+    /// `AuditEvent::EmergencyRecovery` in CODE.
+    ///
+    /// The narrower `AuditEvent::EmergencyRecovery` qualified
+    /// form (not bare `EmergencyRecovery`) is checked
+    /// deliberately: `SessionInvalidationReason::EmergencyRecovery`
+    /// is a separate enum the framework legitimately uses when
+    /// CLI-driven session invalidations land via
+    /// `auth::sessions::invalidate_sessions`. Doctrine D12
+    /// scopes to the audit variant alone.
+    ///
+    /// Implementation: line-comment-stripped grep. A real
+    /// emission cannot hide inside a `//` comment.
+    #[test]
+    fn emergency_recovery_is_cli_only() {
+        let framework_src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let self_file = framework_src.join("admin/audit.rs");
+
+        let mut offenders: Vec<String> = Vec::new();
+        walk_rs_files_admin_audit(&framework_src, &mut |path: &std::path::Path| {
+            if path == self_file {
+                return;
+            }
+            let content = std::fs::read_to_string(path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            for (line_no, raw_line) in content.lines().enumerate() {
+                // Strip `//` line comments. Don't try to parse `/*
+                // ... */`; framework code uses `//` and `///`
+                // exclusively (verified by inspection).
+                let code = match raw_line.find("//") {
+                    Some(idx) => &raw_line[..idx],
+                    None => raw_line,
+                };
+                if code.contains("AuditEvent::EmergencyRecovery") {
+                    offenders.push(format!(
+                        "{}:{}: {}",
+                        path.display(),
+                        line_no + 1,
+                        raw_line.trim()
+                    ));
+                }
+            }
+        });
+        assert!(
+            offenders.is_empty(),
+            "framework crate must not reference `AuditEvent::EmergencyRecovery` \
+             in CODE (it is a CLI-only audit variant per \
+             `DESIGN_R4_EMERGENCY.md` §10 D12). Move the emission to \
+             crates/rustio-admin-cli/, or introduce a new AuditEvent variant \
+             for the web-side action:\n  {}",
+            offenders.join("\n  ")
+        );
+    }
+
+    /// std-only recursive walker dedicated to this test. Mirrors
+    /// the `walk_rs_files` helper used by
+    /// `templates::tests::every_handler_rendered_template_resolves`;
+    /// duplicated here so the audit test stays self-contained.
+    fn walk_rs_files_admin_audit(root: &std::path::Path, visit: &mut dyn FnMut(&std::path::Path)) {
+        let entries = match std::fs::read_dir(root) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_type = match entry.file_type() {
+                Ok(ft) => ft,
+                Err(_) => continue,
+            };
+            if file_type.is_dir() {
+                walk_rs_files_admin_audit(&path, visit);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                visit(&path);
+            }
+        }
     }
 
     // ---- LogEntry::with_event ----
