@@ -446,20 +446,87 @@ pub(crate) fn summarise_user_agent(ua: Option<&str>) -> String {
     }
 }
 
+/// Human label for the `Action` column on `/admin/history` and the
+/// per-object history pages. Covers every `AuditEvent::as_str()`
+/// string (`admin/audit.rs`'s `ActionType` + `AuditEvent` namespaces
+/// together — see `audit::tests::action_type_and_audit_event_vocabularies_dont_collide`).
+///
+/// `VISIBILITY_AUDIT.md` finding B3: pre-0.8.1 this function knew
+/// only `create / update / delete` and fell through to a generic
+/// "Action" label for every R1+ event. The history table rendered
+/// rows of identical green chips that hid which user action
+/// produced the row — exactly the audit-log readability regression
+/// the brief flagged.
 fn action_label(action_type: &str) -> &'static str {
     match action_type {
+        // Legacy `ActionType` namespace (generic CRUD on
+        // project-registered models).
         "create" => "Created",
         "update" => "Changed",
         "delete" => "Deleted",
+
+        // User / Group lifecycle (R0).
+        "user_created" => "User created",
+        "user_updated" => "User updated",
+        "user_deleted" => "User deleted",
+        "group_created" => "Group created",
+        "group_updated" => "Group updated",
+        "group_deleted" => "Group deleted",
+
+        // R1 self-recovery.
+        "password_changed_self" => "Password changed",
+        "password_reset_self_request" => "Reset link requested",
+        "password_reset_self_consume" => "Reset link consumed",
+
+        // R2 organisational recovery.
+        "password_reset_by_other" => "Password reset by admin",
+        "forced_password_change_completed" => "Forced password change",
+        "account_locked" => "Account locked",
+        "account_unlocked" => "Account unlocked",
+
+        // R3 TOTP MFA.
+        "mfa_enabled" => "MFA enabled",
+        "mfa_disabled" => "MFA disabled",
+        "mfa_reset_by_other" => "MFA reset by admin",
+        "mfa_code_consumed" => "Backup code used",
+        "backup_codes_regenerated" => "Backup codes regenerated",
+
+        // R0/R1 session lifecycle.
+        "sessions_revoked_self" => "Sessions revoked (self)",
+        "sessions_revoked_by_other" => "Sessions revoked by admin",
+        "session_logout" => "Logged out",
+
+        // R4 shell-tier emergency recovery (CLI-only emissions).
+        "emergency_recovery" => "Emergency recovery",
+
         _ => "Action",
     }
 }
 
 fn action_pill_class(action_type: &str) -> &'static str {
     match action_type {
-        "create" => "badge-success",
-        "update" => "badge-neutral",
-        "delete" => "badge-danger",
+        // Created / enabled (good news) → success green.
+        "create" | "user_created" | "group_created" | "account_unlocked" | "mfa_enabled" => {
+            "badge-success"
+        }
+
+        // Destructive or compromise-shaped events → danger red.
+        "delete"
+        | "user_deleted"
+        | "group_deleted"
+        | "account_locked"
+        | "mfa_disabled"
+        | "mfa_reset_by_other"
+        | "sessions_revoked_by_other" => "badge-danger",
+
+        // Admin-initiated mutations on a user → warning amber. Same
+        // visual weight as the "by other" R2 events; signals the
+        // row was driven by someone other than the subject.
+        "password_reset_by_other" | "forced_password_change_completed" | "emergency_recovery" => {
+            "badge-warning"
+        }
+
+        // Routine changes and self-driven events → neutral.
         _ => "badge-neutral",
     }
 }
@@ -2439,6 +2506,124 @@ pub(crate) fn must_change_password_form_sections(min_length: usize) -> Vec<FormS
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `VISIBILITY_AUDIT.md` finding B3 enforcement.
+    ///
+    /// Every `AuditEvent::as_str()` value MUST have a non-generic
+    /// label entry in [`action_label`]. Pre-0.8.1 the function knew
+    /// only `create / update / delete` and fell through to "Action"
+    /// for everything else, so the History page rendered identical
+    /// generic pills for every R1+ event.
+    ///
+    /// When a new `AuditEvent` variant ships, this test fails until
+    /// the new event-string is added to the `action_label` match.
+    /// Same drift-protection shape as the
+    /// `audit_event_existing_variants_have_stable_strings` test in
+    /// `admin/audit.rs`.
+    #[test]
+    fn action_label_covers_every_audit_event_string() {
+        // Canonical list of every audit-event string written into
+        // `rustio_admin_actions.action_type`. Mirrors the
+        // `ALL_AUDIT_EVENTS` array in `admin/audit.rs::tests` —
+        // duplicated here because the audit array lives under
+        // `#[cfg(test)]` in a different module.
+        let known_event_strings: &[&str] = &[
+            // Legacy CRUD namespace.
+            "create",
+            "update",
+            "delete",
+            // R0 user / group lifecycle.
+            "user_created",
+            "user_updated",
+            "user_deleted",
+            "group_created",
+            "group_updated",
+            "group_deleted",
+            // R1 self-recovery.
+            "password_changed_self",
+            "password_reset_self_request",
+            "password_reset_self_consume",
+            // R2 organisational recovery.
+            "password_reset_by_other",
+            "forced_password_change_completed",
+            "account_locked",
+            "account_unlocked",
+            // R3 TOTP MFA.
+            "mfa_enabled",
+            "mfa_disabled",
+            "mfa_reset_by_other",
+            "mfa_code_consumed",
+            "backup_codes_regenerated",
+            // R0/R1 session lifecycle.
+            "sessions_revoked_self",
+            "sessions_revoked_by_other",
+            "session_logout",
+            // R4 emergency recovery.
+            "emergency_recovery",
+        ];
+        let mut missing: Vec<&'static str> = Vec::new();
+        for &s in known_event_strings {
+            if action_label(s) == "Action" {
+                missing.push(s);
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "action_label falls through to the generic \"Action\" \
+             label for these event strings — add explicit match arms \
+             in `admin/render.rs::action_label` (and pick a pill class \
+             in `action_pill_class`): {missing:?}"
+        );
+    }
+
+    #[test]
+    fn action_pill_class_returns_known_classes() {
+        // Every pill class must be one the CSS knows about. New
+        // arms must use one of `badge-success / badge-neutral /
+        // badge-danger / badge-warning` — see
+        // `assets/static/admin.css` for the rio-pill-- definitions.
+        let known_strings: &[&str] = &[
+            "create",
+            "update",
+            "delete",
+            "user_created",
+            "user_updated",
+            "user_deleted",
+            "group_created",
+            "group_updated",
+            "group_deleted",
+            "password_changed_self",
+            "password_reset_self_request",
+            "password_reset_self_consume",
+            "password_reset_by_other",
+            "forced_password_change_completed",
+            "account_locked",
+            "account_unlocked",
+            "mfa_enabled",
+            "mfa_disabled",
+            "mfa_reset_by_other",
+            "mfa_code_consumed",
+            "backup_codes_regenerated",
+            "sessions_revoked_self",
+            "sessions_revoked_by_other",
+            "session_logout",
+            "emergency_recovery",
+        ];
+        let known_classes = [
+            "badge-success",
+            "badge-neutral",
+            "badge-danger",
+            "badge-warning",
+        ];
+        for &s in known_strings {
+            let class = action_pill_class(s);
+            assert!(
+                known_classes.contains(&class),
+                "action_pill_class({s:?}) returned {class:?} which is \
+                 not one of {known_classes:?}"
+            );
+        }
+    }
 
     #[test]
     fn ua_summary_macos_safari() {
