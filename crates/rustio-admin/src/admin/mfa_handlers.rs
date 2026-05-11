@@ -33,9 +33,11 @@
 use serde::Serialize;
 
 use crate::auth::mfa::{
-    consume_backup_code, promote_session_to_mfa_verified, verify_totp_for_user,
-    BackupConsumeOutcome, MfaKey, VerifyOutcome,
+    base32_decode_no_pad, build_otpauth_url, confirm_enrolment, consume_backup_code,
+    promote_session_to_mfa_verified, provision_secret, verify_totp_for_user, BackupConsumeOutcome,
+    EnrolOutcome, MfaKey, VerifyOutcome,
 };
+use crate::auth::recovery_admin::check_session_elevated;
 use crate::auth::{self, Identity};
 use crate::error::Result;
 use crate::http::{Request, Response};
@@ -248,4 +250,258 @@ pub(crate) async fn do_verify(
     );
 
     Ok(Response::redirect("/admin").with_header("set-cookie", cookie))
+}
+
+// ---- /admin/account/mfa/enroll (R3 commit #13) -----------------------------
+//
+// Two-step enrolment flow per DESIGN_R3_MFA.md §4.1:
+//
+//   GET  /admin/account/mfa/enroll → show_enroll
+//        - Re-auth gate (D5). If the session is not elevated,
+//          redirect to /admin/reauth?return_to=<this page>.
+//        - provision_secret() — 20 random bytes + base32 form.
+//        - Build otpauth:// URL via build_otpauth_url so the
+//          user's authenticator app can scan or import it.
+//        - Render the form: clickable otpauth URL + manual-entry
+//          base32 + hidden `secret_base32` form field + 6-digit
+//          code input.
+//
+//   POST /admin/account/mfa/enroll → do_enroll
+//        - Re-auth gate (D5) — same as GET.
+//        - Read hidden `secret_base32` + user-typed `code`.
+//        - base32_decode_no_pad the hidden secret.
+//          Decode failure → uniform "invalid code" + re-render
+//          GET form with a fresh secret (the user's window
+//          has invalidated).
+//        - confirm_enrolment — verifies, encrypts, persists,
+//          inserts hashed backup codes, emits MfaEnabled.
+//        - EnrolOutcome cases:
+//          * Enrolled { plain_backup_codes } → render the
+//            success page with the 8 codes shown ONCE.
+//          * InvalidCode → re-render GET with the SAME secret
+//            (so the user can retry without re-scanning).
+//          * AlreadyEnrolled → redirect to /admin/account/sessions
+//            (defensive; the GET form should have not rendered).
+//
+// **Hidden secret rationale.** The provisioned secret lives in
+// process memory at GET-time, but the framework has no
+// server-side per-user session-state map. Carrying the secret
+// as a hidden form field is safe because:
+//   (a) The user already saw the secret in the QR / manual
+//       display.
+//   (b) Tampering with the field makes the verify fail; nothing
+//       persists.
+//   (c) The secret only becomes load-bearing after persistence,
+//       which only happens on successful verify.
+// Future commits may move the secret into a dedicated
+// short-lived session-state row; commit #13 takes the simpler
+// hidden-field path.
+
+#[derive(Serialize)]
+#[allow(dead_code)] // call site at the enrolment GET route (R3 commit #19)
+struct MfaEnrollCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: &'static str,
+    /// The otpauth:// URI for the user's authenticator app.
+    otpauth_url: String,
+    /// The same secret in base32 form, for the manual-entry
+    /// fallback when the user can't scan the QR.
+    secret_base32: String,
+    /// Form-level error banner (empty on first GET; populated
+    /// when the POST returns InvalidCode and the GET re-renders
+    /// with the same secret).
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[allow(dead_code)] // call site at the enrolment success page (R3 commit #19)
+struct MfaEnrollCompleteCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: &'static str,
+    /// The 8 plaintext backup codes, rendered ONCE.
+    plain_backup_codes: Vec<String>,
+}
+
+/// `GET /admin/account/mfa/enroll` — render the enrolment form.
+///
+/// Re-auth gate per D5: if the current session's
+/// `elevated_until` is in the past (or never set), redirect to
+/// `/admin/reauth?return_to=/admin/account/mfa/enroll`. A
+/// stolen cookie cannot land on this page without password
+/// re-entry.
+#[allow(dead_code)] // call site lands at the enrolment GET route (R3 commit #19)
+pub(crate) async fn show_enroll(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    // Re-auth gate (D5). Same shape as the destructive admin
+    // routes in admin_recovery_handlers (R2 commit #15).
+    let cookie = req.header("cookie");
+    let token = cookie.and_then(auth::session_token_from_cookie);
+    let session_id = if let Some(t) = token {
+        auth::current_session_id(&ctx.db, &t).await?
+    } else {
+        None
+    };
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(Response::redirect(
+            "/admin/reauth?return_to=/admin/account/mfa/enroll",
+        ));
+    }
+
+    let provisioned = provision_secret();
+    let issuer = ctx.admin.branding().site_title.as_str();
+    let step_seconds = ctx.admin.active_recovery_policy().mfa_step_seconds();
+    let otpauth_url = build_otpauth_url(issuer, &identity.email, &provisioned.base32, step_seconds);
+
+    let view = MfaEnrollCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: "Set up two-factor authentication",
+        otpauth_url,
+        secret_base32: provisioned.base32,
+        error: None,
+    };
+    let body = ctx.templates.render("admin/mfa_enroll.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/account/mfa/enroll` — verify the user's first
+/// TOTP code and persist the enrolment.
+///
+/// Re-auth gate (D5) is enforced here too — a direct POST
+/// without GET-first must not bypass the wall.
+#[allow(dead_code)] // call site lands at the enrolment POST route (R3 commit #19)
+pub(crate) async fn do_enroll(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    // Re-auth gate. Same as show_enroll's check above.
+    let cookie = req.header("cookie");
+    let token = cookie.and_then(auth::session_token_from_cookie);
+    let session_id = if let Some(t) = token {
+        auth::current_session_id(&ctx.db, &t).await?
+    } else {
+        None
+    };
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(Response::redirect(
+            "/admin/reauth?return_to=/admin/account/mfa/enroll",
+        ));
+    }
+
+    let form = req.form()?;
+    let secret_base32 = form.get("secret_base32").unwrap_or("").to_string();
+    let code_str = form.get("code").unwrap_or("").trim().to_string();
+
+    // Re-render helper for the InvalidCode and decode-failure
+    // branches. The GET page's secret-loss UX is unavoidable
+    // if the hidden field round-trips a corrupted value;
+    // commit #13 chooses re-render-with-fresh-secret rather
+    // than carrying a tampered value forward.
+    let render_with_fresh_secret = |ctx: &AdminCtx, error: &str| -> Result<Response> {
+        let provisioned = provision_secret();
+        let issuer = ctx.admin.branding().site_title.as_str();
+        let step_seconds = ctx.admin.active_recovery_policy().mfa_step_seconds();
+        let otpauth_url =
+            build_otpauth_url(issuer, &identity.email, &provisioned.base32, step_seconds);
+        let view = MfaEnrollCtx {
+            base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+            page_title: "Set up two-factor authentication",
+            otpauth_url,
+            secret_base32: provisioned.base32,
+            error: Some(error.to_string()),
+        };
+        let body = ctx.templates.render("admin/mfa_enroll.html", &view)?;
+        Ok(Response::html(body).with_status(hyper::StatusCode::UNAUTHORIZED))
+    };
+
+    // Decode the hidden secret. Failure → uniform InvalidCode
+    // response with a fresh secret (the user's window is gone).
+    let Some(secret_bytes) = base32_decode_no_pad(&secret_base32) else {
+        return render_with_fresh_secret(ctx, "Could not verify your code.");
+    };
+    if secret_bytes.len() != 20 {
+        return render_with_fresh_secret(ctx, "Could not verify your code.");
+    }
+
+    // Parse the candidate as u32.
+    let candidate_code = match code_str.parse::<u32>() {
+        Ok(n) if n < 1_000_000 => n,
+        _ => return render_with_fresh_secret(ctx, "Could not verify your code."),
+    };
+
+    let policy = ctx.admin.active_recovery_policy();
+    let step_seconds = policy.mfa_step_seconds();
+    let skew_steps = policy.mfa_skew_steps();
+    let key = MfaKey::from_env()?;
+    let correlation_id = req.header("x-correlation-id");
+
+    // Call the runtime. The function checks already-enrolled,
+    // verifies the candidate, encrypts the secret, INSERTs the
+    // backup codes, and emits AuditEvent::MfaEnabled.
+    let outcome = confirm_enrolment(
+        &ctx.db,
+        &req,
+        identity.user_id,
+        &secret_bytes,
+        candidate_code,
+        step_seconds,
+        skew_steps,
+        &key,
+        1, // key_id = 1 until staged-rotation MfaSecretKeyResolver lands
+        correlation_id,
+    )
+    .await?;
+
+    match outcome {
+        EnrolOutcome::Enrolled { plain_backup_codes } => {
+            let view = MfaEnrollCompleteCtx {
+                base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+                page_title: "Two-factor authentication enabled",
+                plain_backup_codes,
+            };
+            let body = ctx
+                .templates
+                .render("admin/mfa_enroll_complete.html", &view)?;
+            Ok(Response::html(body))
+        }
+        EnrolOutcome::InvalidCode => {
+            // Re-render with the SAME secret so the user can
+            // retry without re-scanning the QR. The hidden
+            // field already carries the secret on the way back.
+            let view = MfaEnrollCtx {
+                base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+                page_title: "Set up two-factor authentication",
+                otpauth_url: build_otpauth_url(
+                    ctx.admin.branding().site_title.as_str(),
+                    &identity.email,
+                    &secret_base32,
+                    step_seconds,
+                ),
+                secret_base32,
+                error: Some("Could not verify your code.".to_string()),
+            };
+            let body = ctx.templates.render("admin/mfa_enroll.html", &view)?;
+            Ok(Response::html(body).with_status(hyper::StatusCode::UNAUTHORIZED))
+        }
+        EnrolOutcome::AlreadyEnrolled => {
+            // Defensive: the GET form should not have rendered
+            // for an already-enrolled user. If we land here, the
+            // safest move is to redirect to the account-sessions
+            // page where the user can see their MFA state.
+            Ok(Response::redirect("/admin/account/sessions"))
+        }
+    }
 }
