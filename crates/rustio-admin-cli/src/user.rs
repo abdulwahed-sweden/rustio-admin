@@ -18,7 +18,7 @@ use clap::{Subcommand, ValueEnum};
 use sqlx::Row as _;
 
 use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry};
-use rustio_admin::auth::emergency::{self as fw_emergency, ResetOutcome};
+use rustio_admin::auth::emergency::{self as fw_emergency, ResetOutcome, UnlockOutcome};
 use rustio_admin::auth::{DefaultPasswordPolicy, PasswordPolicy};
 use rustio_admin::{auth, Db, Role};
 
@@ -100,6 +100,24 @@ pub enum Action {
         #[arg(long)]
         yes: bool,
     },
+    /// EMERGENCY: clear an auto-throttle lock and zero out the
+    /// failed-login counter. Renders the locked banner and demands
+    /// `--reason "<text>"` (≥ 8 chars). Does NOT revoke sessions —
+    /// an unlock is not a session event. See
+    /// `DESIGN_R4_EMERGENCY.md` §3.2.
+    Unlock {
+        #[arg(long)]
+        email: String,
+        /// Why this emergency was needed. Lands verbatim in the
+        /// `EmergencyRecovery` audit row and the banner.
+        /// Must be ≥ 8 trimmed characters.
+        #[arg(long)]
+        reason: String,
+        /// Skip the interactive `yes` confirm prompt. The banner
+        /// still renders to stdout — D10 makes that irreducible.
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 pub async fn run(action: Action) -> Result<(), String> {
@@ -119,6 +137,7 @@ pub async fn run(action: Action) -> Result<(), String> {
             temp_password,
             yes,
         } => reset_password(db, email, reason, temp_password, yes).await,
+        Action::Unlock { email, reason, yes } => unlock(db, email, reason, yes).await,
     }
 }
 
@@ -259,30 +278,42 @@ fn prompt_new_password() -> Result<String, String> {
     Ok(pw1)
 }
 
-// ---- R4: rustio user reset-password --------------------------------------
+// ---- R4: shared preflight + audit-emission helpers -----------------------
 
-/// Length of the auto-generated temp password when `--temp-password`
-/// is not supplied. 20 alphanumeric chars from a 54-character
-/// ambiguity-stripped alphabet ≈ 115 bits of entropy — well above
-/// any plausible online attack envelope, and short enough for the
-/// target to type accurately on the next login.
+/// Length of the auto-generated temp password when
+/// `--temp-password` is not supplied. 20 alphanumeric chars from a
+/// 54-character ambiguity-stripped alphabet ≈ 115 bits of entropy —
+/// well above any plausible online attack envelope, and short
+/// enough for the target to type accurately on next login.
 const DEFAULT_TEMP_PASSWORD_LEN: usize = 20;
 
-async fn reset_password(
-    db: Db,
-    email: String,
-    reason_arg: String,
-    temp_password: Option<String>,
+/// Steps 1-5 of every emergency-recovery handler: validate the
+/// reason, resolve the target user, build the [`OperationContext`],
+/// render the banner (D10), and demand confirm. Returns the
+/// constructed context on success; returns the operator-facing
+/// error message on rejection.
+///
+/// Per-operation handlers call this, then add their own steps 6+
+/// (the framework call, audit emission, operator summary). The
+/// extraction is identical across all five R4 commands; future
+/// audits of the emergency surface walk this function rather than
+/// per-handler copies.
+async fn preflight(
+    db: &Db,
+    operation: &'static str,
+    email: &str,
+    reason_arg: &str,
     yes: bool,
-) -> Result<(), String> {
-    // Step 1 — validate the reason. Surfaces typos / empty / too-short
-    // BEFORE the DB roundtrip so the operator's first error is fast.
-    let reason = emergency_ui::validate_reason(&reason_arg)?;
+) -> Result<OperationContext, String> {
+    // Step 1 — validate the reason. Surfaces typos / empty /
+    // too-short BEFORE the DB roundtrip so the operator's first
+    // error is fast.
+    let reason = emergency_ui::validate_reason(reason_arg)?;
 
-    // Step 2 — resolve target. Loading the user here lets the banner
-    // echo the persisted email + id + role, so a misspelled --email
-    // surfaces before the operator confirms.
-    let target = auth::find_user_by_email(&db, &email)
+    // Step 2 — resolve target. Loading the user here lets the
+    // banner echo the persisted email + id + role, so a misspelled
+    // --email surfaces before the operator confirms.
+    let target = auth::find_user_by_email(db, email)
         .await
         .map_err(|e| format!("lookup target: {e}"))?
         .ok_or_else(|| format!("no user with email {email}"))?;
@@ -292,36 +323,120 @@ async fn reset_password(
     // banner render and the audit metadata so the two surfaces
     // agree.
     let ctx = OperationContext {
-        operation: "reset-password",
+        operation,
         target_email: target.email.clone(),
         target_user_id: target.id,
         target_role: target.role.to_string(),
-        reason: reason.clone(),
+        reason,
         os_actor: emergency_ui::os_actor(),
         when: emergency_ui::now(),
     };
 
-    // Step 4 — render the banner (D10 — irreducible). ANSI / colour
-    // is auto-detected: enabled only when stdout is a TTY and
-    // `NO_COLOR` is unset.
+    // Step 4 — render the banner (D10 — irreducible). ANSI /
+    // colour is auto-detected: enabled only when stdout is a TTY
+    // and `NO_COLOR` is unset.
     emergency_ui::print_banner(&ctx);
 
     // Step 5 — confirm (or honour --yes).
     match emergency_ui::require_confirm(yes) {
-        ConfirmOutcome::Confirmed => {}
+        ConfirmOutcome::Confirmed => Ok(ctx),
         ConfirmOutcome::Aborted => {
             println!("Aborted.");
-            return Err("user did not confirm".into());
+            Err("user did not confirm".into())
         }
         ConfirmOutcome::NeedsTtyOrYesFlag => {
-            return Err("Refusing to run without a TTY (or pass --yes for scripting)".to_string());
+            Err("Refusing to run without a TTY (or pass --yes for scripting)".to_string())
+        }
+    }
+}
+
+/// Write the `EmergencyRecovery` audit row for a completed
+/// operation. Returns the freshly-stamped correlation_id so the
+/// per-handler summary line can echo it for the operator's
+/// records.
+///
+/// `cli_op` is the audit slug (`"reset_password" | "unlock" |
+/// "disable_mfa" | "promote" | "emergency_access"`) — distinct
+/// from `ctx.operation` which is the kebab-case banner display
+/// slug.
+///
+/// `per_op_metadata` MUST be a JSON object. Its top-level keys
+/// are merged into the base metadata (cli_operation, reason,
+/// os_actor, cli_invocation). Per-op keys can shadow base keys —
+/// that's deliberate so a handler can override e.g. cli_invocation
+/// for an unusual call site if ever needed.
+///
+/// D12 anchor: this is the ONLY function in the codebase that
+/// emits `AuditEvent::EmergencyRecovery`. The cross-crate
+/// visibility test in
+/// `admin::audit::tests::emergency_recovery_is_cli_only` keeps it
+/// that way.
+async fn write_emergency_audit(
+    db: &Db,
+    ctx: &OperationContext,
+    cli_op: &str,
+    per_op_metadata: serde_json::Value,
+) -> Result<String, String> {
+    let correlation_id = fw_emergency::fresh_correlation_id();
+    let argv: Vec<String> = std::env::args().collect();
+
+    let mut metadata = serde_json::Map::new();
+    metadata.insert(
+        "cli_operation".into(),
+        serde_json::Value::String(cli_op.into()),
+    );
+    metadata.insert(
+        "reason".into(),
+        serde_json::Value::String(ctx.reason.clone()),
+    );
+    metadata.insert(
+        "os_actor".into(),
+        serde_json::Value::String(ctx.os_actor.clone()),
+    );
+    metadata.insert(
+        "cli_invocation".into(),
+        serde_json::Value::String(emergency_ui::redact_reason_in_argv(&argv)),
+    );
+    if let serde_json::Value::Object(extra) = per_op_metadata {
+        for (k, v) in extra {
+            metadata.insert(k, v);
         }
     }
 
-    // Step 6 — generate or accept the temp password. The CLI owns
-    // the plaintext; the framework only ever sees the value as an
-    // argument to `set_password` and stores the Argon2 hash. Avoid
-    // logging this anywhere.
+    let summary = build_summary(ctx.operation, &ctx.reason);
+    let entry = LogEntry {
+        user_id: ctx.target_user_id,
+        action_type: ActionType::Update,
+        model_name: "rustio_users",
+        object_id: ctx.target_user_id,
+        ip_address: None,
+        summary,
+        correlation_id: Some(&correlation_id),
+        session_id: None,
+        metadata: Some(serde_json::Value::Object(metadata)),
+        actor_user_id: None,
+        event: Some(AuditEvent::EmergencyRecovery),
+    };
+    record(db, entry)
+        .await
+        .map_err(|e| format!("audit record: {e}"))?;
+    Ok(correlation_id)
+}
+
+// ---- R4: rustio user reset-password --------------------------------------
+
+async fn reset_password(
+    db: Db,
+    email: String,
+    reason_arg: String,
+    temp_password: Option<String>,
+    yes: bool,
+) -> Result<(), String> {
+    let ctx = preflight(&db, "reset-password", &email, &reason_arg, yes).await?;
+
+    // Generate or accept the temp password. The CLI owns the
+    // plaintext; the framework only ever sees the value as an
+    // argument to `set_password` and stores the Argon2 hash.
     let temp_password = match temp_password {
         Some(p) => {
             // Even when operator-supplied, validate against the
@@ -336,8 +451,7 @@ async fn reset_password(
         None => fw_emergency::generate_temp_password(DEFAULT_TEMP_PASSWORD_LEN),
     };
 
-    // Step 7 — call the framework's atomic mutation.
-    let outcome = fw_emergency::reset_password(&db, target.id, &temp_password)
+    let outcome = fw_emergency::reset_password(&db, ctx.target_user_id, &temp_password)
         .await
         .map_err(|e| format!("reset_password: {e}"))?;
     let revoked = match outcome {
@@ -345,51 +459,31 @@ async fn reset_password(
             revoked_session_count,
         } => revoked_session_count,
         ResetOutcome::UnknownTarget => {
-            // Race: target existed at step 2, gone now. The audit
-            // row is intentionally NOT written — there was nothing
-            // to record.
+            // Race: target existed at preflight, gone now. The
+            // audit row is intentionally NOT written — there was
+            // nothing to record.
             return Err(format!(
                 "User vanished between lookup and reset; no rows changed (email={email})"
             ));
         }
     };
 
-    // Step 8 — write the audit row. D12 anchor: this is the ONLY
-    // place in the codebase that emits AuditEvent::EmergencyRecovery
-    // for the reset-password operation; the cross-crate test in
-    // `admin::audit::tests::emergency_recovery_is_cli_only` enforces
-    // the framework can't.
-    let correlation_id = fw_emergency::fresh_correlation_id();
-    let argv: Vec<String> = std::env::args().collect();
-    let metadata = serde_json::json!({
-        "cli_operation": "reset_password",
-        "reason": reason,
-        "os_actor": ctx.os_actor,
-        "cli_invocation": emergency_ui::redact_reason_in_argv(&argv),
-        "revoked_session_count": revoked,
-        "must_change_password_set": true,
-    });
-    let summary = build_summary("reset-password", &reason);
-    let entry = LogEntry {
-        user_id: target.id,
-        action_type: ActionType::Update,
-        model_name: "rustio_users",
-        object_id: target.id,
-        ip_address: None,
-        summary,
-        correlation_id: Some(&correlation_id),
-        session_id: None,
-        metadata: Some(metadata),
-        actor_user_id: None,
-        event: Some(AuditEvent::EmergencyRecovery),
-    };
-    record(&db, entry)
-        .await
-        .map_err(|e| format!("audit record: {e}"))?;
+    let correlation_id = write_emergency_audit(
+        &db,
+        &ctx,
+        "reset_password",
+        serde_json::json!({
+            "revoked_session_count": revoked,
+            "must_change_password_set": true,
+        }),
+    )
+    .await?;
 
-    // Step 9 — operator-facing summary + ONE-TIME password echo.
     println!();
-    println!("✓ Password reset for {email} (user_id={})", target.id);
+    println!(
+        "✓ Password reset for {email} (user_id={})",
+        ctx.target_user_id
+    );
     println!("  Sessions revoked: {revoked}");
     println!("  must_change_password set; user must rotate on next login.");
     println!();
@@ -397,6 +491,49 @@ async fn reset_password(
     println!();
     println!("      {temp_password}");
     println!();
+    println!("  Audit correlation: {correlation_id}");
+
+    Ok(())
+}
+
+// ---- R4: rustio user unlock ----------------------------------------------
+
+async fn unlock(db: Db, email: String, reason_arg: String, yes: bool) -> Result<(), String> {
+    let ctx = preflight(&db, "unlock", &email, &reason_arg, yes).await?;
+
+    let outcome = fw_emergency::unlock(&db, ctx.target_user_id)
+        .await
+        .map_err(|e| format!("unlock: {e}"))?;
+    let previously_locked = match outcome {
+        UnlockOutcome::Ok { previously_locked } => previously_locked,
+        UnlockOutcome::UnknownTarget => {
+            return Err(format!(
+                "User vanished between lookup and unlock; no rows changed (email={email})"
+            ));
+        }
+    };
+
+    let correlation_id = write_emergency_audit(
+        &db,
+        &ctx,
+        "unlock",
+        serde_json::json!({
+            "previously_locked": previously_locked,
+        }),
+    )
+    .await?;
+
+    println!();
+    println!(
+        "✓ Unlock applied to {email} (user_id={})",
+        ctx.target_user_id
+    );
+    if previously_locked {
+        println!("  Account was actively locked; locked_until + failed_login_count cleared.");
+    } else {
+        println!("  Note: account was not locked at run time; no functional change.");
+        println!("  (The audit row still landed — the action remains forensically visible.)");
+    }
     println!("  Audit correlation: {correlation_id}");
 
     Ok(())
