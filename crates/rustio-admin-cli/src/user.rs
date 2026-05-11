@@ -1,10 +1,28 @@
 //! `rustio user` — auth-table CRUD without the admin UI.
+//!
+//! ## R4 emergency-recovery surface
+//!
+//! In addition to the day-to-day CRUD (`create`, `list`, `role`,
+//! `delete`), this module exposes the emergency-tier subcommands
+//! from `DESIGN_R4_EMERGENCY.md` §3:
+//! `reset-password / unlock / disable-mfa / promote /
+//! emergency-access`. Each emergency command renders the locked
+//! confirmation banner (D10), reads `--reason "<text>"` (validated
+//! ≥ 8 chars), demands interactive `yes` confirm (unless `--yes`
+//! is set), calls into `rustio_admin::auth::emergency` for the
+//! atomic DB mutation, and writes a single
+//! `AuditEvent::EmergencyRecovery` row with the §5 metadata
+//! schema.
 
 use clap::{Subcommand, ValueEnum};
 use sqlx::Row as _;
 
+use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry};
+use rustio_admin::auth::emergency::{self as fw_emergency, ResetOutcome};
 use rustio_admin::auth::{DefaultPasswordPolicy, PasswordPolicy};
 use rustio_admin::{auth, Db, Role};
+
+use crate::emergency_ui::{self, ConfirmOutcome, OperationContext};
 
 /// CLI surface for `Role`. clap's derive needs `ValueEnum` and we
 /// deliberately keep the labels lowercase to match the SQL column.
@@ -58,6 +76,30 @@ pub enum Action {
         #[arg(long)]
         email: String,
     },
+    /// EMERGENCY: set a new password for a user, force password
+    /// rotation on next login, revoke every session. Prints the
+    /// temp password to stdout exactly once. Renders the locked
+    /// banner and demands `--reason "<text>"` (≥ 8 chars). See
+    /// `DESIGN_R4_EMERGENCY.md` §3.1.
+    ResetPassword {
+        #[arg(long)]
+        email: String,
+        /// Why this emergency was needed. Lands verbatim in the
+        /// `EmergencyRecovery` audit row and the banner.
+        /// Must be ≥ 8 trimmed characters.
+        #[arg(long)]
+        reason: String,
+        /// Use this password instead of a generated 20-char random
+        /// alphanumeric. Useful for scripted runs that pin the
+        /// value out-of-band. The user must still change it on
+        /// next login (`must_change_password = TRUE`).
+        #[arg(long)]
+        temp_password: Option<String>,
+        /// Skip the interactive `yes` confirm prompt. The banner
+        /// still renders to stdout — D10 makes that irreducible.
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 pub async fn run(action: Action) -> Result<(), String> {
@@ -71,6 +113,12 @@ pub async fn run(action: Action) -> Result<(), String> {
         Action::List => list(db).await,
         Action::Role { email, role } => set_role(db, email, role.into()).await,
         Action::Delete { email } => delete(db, email).await,
+        Action::ResetPassword {
+            email,
+            reason,
+            temp_password,
+            yes,
+        } => reset_password(db, email, reason, temp_password, yes).await,
     }
 }
 
@@ -209,4 +257,198 @@ fn prompt_new_password() -> Result<String, String> {
         return Err("Passwords don't match.".into());
     }
     Ok(pw1)
+}
+
+// ---- R4: rustio user reset-password --------------------------------------
+
+/// Length of the auto-generated temp password when `--temp-password`
+/// is not supplied. 20 alphanumeric chars from a 54-character
+/// ambiguity-stripped alphabet ≈ 115 bits of entropy — well above
+/// any plausible online attack envelope, and short enough for the
+/// target to type accurately on the next login.
+const DEFAULT_TEMP_PASSWORD_LEN: usize = 20;
+
+async fn reset_password(
+    db: Db,
+    email: String,
+    reason_arg: String,
+    temp_password: Option<String>,
+    yes: bool,
+) -> Result<(), String> {
+    // Step 1 — validate the reason. Surfaces typos / empty / too-short
+    // BEFORE the DB roundtrip so the operator's first error is fast.
+    let reason = emergency_ui::validate_reason(&reason_arg)?;
+
+    // Step 2 — resolve target. Loading the user here lets the banner
+    // echo the persisted email + id + role, so a misspelled --email
+    // surfaces before the operator confirms.
+    let target = auth::find_user_by_email(&db, &email)
+        .await
+        .map_err(|e| format!("lookup target: {e}"))?
+        .ok_or_else(|| format!("no user with email {email}"))?;
+
+    // Step 3 — build the banner context. `os_actor` + `now` are
+    // stamped exactly once, here, and then re-used in both the
+    // banner render and the audit metadata so the two surfaces
+    // agree.
+    let ctx = OperationContext {
+        operation: "reset-password",
+        target_email: target.email.clone(),
+        target_user_id: target.id,
+        target_role: target.role.to_string(),
+        reason: reason.clone(),
+        os_actor: emergency_ui::os_actor(),
+        when: emergency_ui::now(),
+    };
+
+    // Step 4 — render the banner (D10 — irreducible). ANSI / colour
+    // is auto-detected: enabled only when stdout is a TTY and
+    // `NO_COLOR` is unset.
+    emergency_ui::print_banner(&ctx);
+
+    // Step 5 — confirm (or honour --yes).
+    match emergency_ui::require_confirm(yes) {
+        ConfirmOutcome::Confirmed => {}
+        ConfirmOutcome::Aborted => {
+            println!("Aborted.");
+            return Err("user did not confirm".into());
+        }
+        ConfirmOutcome::NeedsTtyOrYesFlag => {
+            return Err("Refusing to run without a TTY (or pass --yes for scripting)".to_string());
+        }
+    }
+
+    // Step 6 — generate or accept the temp password. The CLI owns
+    // the plaintext; the framework only ever sees the value as an
+    // argument to `set_password` and stores the Argon2 hash. Avoid
+    // logging this anywhere.
+    let temp_password = match temp_password {
+        Some(p) => {
+            // Even when operator-supplied, validate against the
+            // password policy so an emergency reset can't bypass
+            // length / complexity floors.
+            let policy = DefaultPasswordPolicy::new();
+            policy
+                .validate(&p)
+                .map_err(|e| format!("--temp-password rejected by policy: {e}"))?;
+            p
+        }
+        None => fw_emergency::generate_temp_password(DEFAULT_TEMP_PASSWORD_LEN),
+    };
+
+    // Step 7 — call the framework's atomic mutation.
+    let outcome = fw_emergency::reset_password(&db, target.id, &temp_password)
+        .await
+        .map_err(|e| format!("reset_password: {e}"))?;
+    let revoked = match outcome {
+        ResetOutcome::Ok {
+            revoked_session_count,
+        } => revoked_session_count,
+        ResetOutcome::UnknownTarget => {
+            // Race: target existed at step 2, gone now. The audit
+            // row is intentionally NOT written — there was nothing
+            // to record.
+            return Err(format!(
+                "User vanished between lookup and reset; no rows changed (email={email})"
+            ));
+        }
+    };
+
+    // Step 8 — write the audit row. D12 anchor: this is the ONLY
+    // place in the codebase that emits AuditEvent::EmergencyRecovery
+    // for the reset-password operation; the cross-crate test in
+    // `admin::audit::tests::emergency_recovery_is_cli_only` enforces
+    // the framework can't.
+    let correlation_id = fw_emergency::fresh_correlation_id();
+    let argv: Vec<String> = std::env::args().collect();
+    let metadata = serde_json::json!({
+        "cli_operation": "reset_password",
+        "reason": reason,
+        "os_actor": ctx.os_actor,
+        "cli_invocation": emergency_ui::redact_reason_in_argv(&argv),
+        "revoked_session_count": revoked,
+        "must_change_password_set": true,
+    });
+    let summary = build_summary("reset-password", &reason);
+    let entry = LogEntry {
+        user_id: target.id,
+        action_type: ActionType::Update,
+        model_name: "rustio_users",
+        object_id: target.id,
+        ip_address: None,
+        summary,
+        correlation_id: Some(&correlation_id),
+        session_id: None,
+        metadata: Some(metadata),
+        actor_user_id: None,
+        event: Some(AuditEvent::EmergencyRecovery),
+    };
+    record(&db, entry)
+        .await
+        .map_err(|e| format!("audit record: {e}"))?;
+
+    // Step 9 — operator-facing summary + ONE-TIME password echo.
+    println!();
+    println!("✓ Password reset for {email} (user_id={})", target.id);
+    println!("  Sessions revoked: {revoked}");
+    println!("  must_change_password set; user must rotate on next login.");
+    println!();
+    println!("  Temporary password (shown once — record now):");
+    println!();
+    println!("      {temp_password}");
+    println!();
+    println!("  Audit correlation: {correlation_id}");
+
+    Ok(())
+}
+
+/// Truncate the reason to ≤ 200 chars for the audit row's
+/// `summary` column. The full reason is also in
+/// `metadata.reason`; the summary is the human-readable hook on
+/// `/admin/history`.
+fn build_summary(op: &str, reason: &str) -> String {
+    let mut preview = String::with_capacity(op.len() + 2 + 200);
+    preview.push_str(op);
+    preview.push_str(": ");
+    let limit = 200;
+    let total = reason.chars().count();
+    for c in reason.chars().take(limit) {
+        preview.push(c);
+    }
+    if total > limit {
+        preview.push('…');
+    }
+    preview
+}
+
+// ---- Tests ---------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::build_summary;
+
+    #[test]
+    fn summary_short_reason_pass_through() {
+        let s = build_summary("reset-password", "lost MFA device");
+        assert_eq!(s, "reset-password: lost MFA device");
+    }
+
+    #[test]
+    fn summary_truncates_at_200_chars_with_ellipsis() {
+        let long = "x".repeat(250);
+        let s = build_summary("reset-password", &long);
+        // "reset-password: " is 16 chars; then 200 x's; then …
+        assert!(s.ends_with('…'));
+        let body = s.trim_start_matches("reset-password: ");
+        let body = body.trim_end_matches('…');
+        assert_eq!(body.chars().count(), 200);
+    }
+
+    #[test]
+    fn summary_handles_unicode() {
+        // Composed character counts as one char, not its byte length.
+        let reason = "räddade en ångbåt".to_string();
+        let s = build_summary("reset-password", &reason);
+        assert_eq!(s, format!("reset-password: {reason}"));
+    }
 }

@@ -466,3 +466,36 @@ fn role_as_str(role: Role) -> &'static str {
 // `use` keeps the type name reachable in callers that match on it.
 #[allow(unused_imports)]
 use InvalidationOutcome as _;
+
+// ---- CLI-side helpers (called from rustio-admin-cli) --------------------
+
+/// Generate an alphanumeric temp password of `len` characters. The
+/// alphabet excludes visually ambiguous glyphs (`0`/`O`, `1`/`l`/`I`)
+/// so an operator reading the password aloud or writing it down by
+/// hand has fewer transcription errors. Used by
+/// `rustio user reset-password` when `--temp-password` is not
+/// supplied.
+///
+/// The generated value is NOT stored anywhere by this function —
+/// the caller passes it through [`reset_password`] which Argon2-
+/// hashes it for `rustio_users.password_hash` and then prints the
+/// plaintext exactly once.
+pub fn generate_temp_password(len: usize) -> String {
+    use rand::Rng;
+    // 54 chars: A-Z minus I, O, L; a-z minus i, l, o; 2-9 (no 0 or 1).
+    const ALPHABET: &[u8] =
+        b"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let mut rng = rand::thread_rng();
+    (0..len)
+        .map(|_| ALPHABET[rng.gen_range(0..ALPHABET.len())] as char)
+        .collect()
+}
+
+/// Produce a fresh hyphenated UUID v7 for use as the CLI-emitted
+/// audit row's `correlation_id`. Matches the format the framework's
+/// `correlation_id` middleware writes per request, so a future
+/// cross-table audit pivot can join framework rows and CLI rows on
+/// this column without per-source post-processing.
+pub fn fresh_correlation_id() -> String {
+    uuid::Uuid::now_v7().hyphenated().to_string()
+}
