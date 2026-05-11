@@ -22,6 +22,15 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 
 mod doctor;
+// Public API consumed by R4 commits #5-#8 (the `rustio user
+// reset-password / unlock / disable-mfa / promote / emergency-access`
+// subcommand handlers). The unit tests in this module already
+// exercise the pure-function half (reason validation, banner
+// rendering, response classification); the IO-shaped helpers
+// (`os_actor`, `print_banner`, `require_confirm`, `now`) wait for
+// their callers to land in the follow-up commits.
+#[allow(dead_code)]
+mod emergency_ui;
 mod group;
 mod migrate;
 mod perm;
