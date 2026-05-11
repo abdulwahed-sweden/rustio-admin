@@ -10,6 +10,7 @@
 //! the user's groups. The permission string is
 //! `<app>.<action>_<model>` — e.g. `posts.change_post`.
 
+pub mod emergency;
 pub mod guards;
 pub(crate) mod mfa;
 mod permissions;
