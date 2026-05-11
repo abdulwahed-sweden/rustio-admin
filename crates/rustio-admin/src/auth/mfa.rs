@@ -1725,6 +1725,47 @@ pub async fn promote_session_to_mfa_verified(
     Ok(token)
 }
 
+/// Variant of [`crate::auth::recovery_admin::promote_session_elevated`]
+/// for the MFA-enrolled re-auth path. UPDATEs `elevated_until +
+/// trust_level = 'mfa_verified'` in place (no token rotation).
+///
+/// The R2 `promote_session_elevated` unconditionally sets
+/// `trust_level = 'elevated'`; calling it on a session that
+/// was already `mfa_verified` (e.g. after the login-flow
+/// verify step in commit #12 promoted it) would DOWNGRADE the
+/// trust level. R3's re-auth path needs a sibling that
+/// preserves / promotes-to `mfa_verified` instead.
+///
+/// **In-place UPDATE rationale (Doctrine 17 trade-off).** The
+/// re-auth wall verifies BOTH factors before this UPDATE runs
+/// — a cookie thief without the password (and TOTP, when
+/// enrolled) cannot land here. Per DESIGN_R3_MFA.md §12.2,
+/// re-auth is allowed to UPDATE `trust_level` in place rather
+/// than rotate the token, because the user has already proved
+/// both factors live in the current request. Full trust
+/// escalation via token rotation lives in
+/// [`promote_session_to_mfa_verified`] for the login-flow
+/// verify path; the re-auth path stamps the same trust level
+/// via UPDATE without a new cookie.
+#[allow(dead_code)] // call site lands at /admin/reauth POST in R3 commit #17
+pub async fn promote_session_mfa_elevated(
+    db: &Db,
+    session_id: i64,
+    ttl: ChronoDuration,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE rustio_sessions \
+            SET elevated_until = NOW() + (INTERVAL '1 second' * $2::bigint), \
+                trust_level = 'mfa_verified' \
+          WHERE session_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(session_id)
+    .bind(ttl.num_seconds())
+    .execute(db.pool())
+    .await?;
+    Ok(())
+}
+
 /// Framework-wide MFA enforcement policy.
 ///
 /// Plain `Copy` enum (no trait object) — operators wire it onto

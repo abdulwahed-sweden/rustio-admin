@@ -140,6 +140,11 @@ struct ReauthCtx {
     /// failure mode that collapses to "could not verify"); never
     /// distinguishes which underlying check failed.
     error: Option<String>,
+    /// R3: whether to render the second-factor input. When TRUE,
+    /// the template adds a `code` field accepting a 6-digit TOTP
+    /// or `XXXX-XXXX` backup code. The POST handler verifies
+    /// both factors before stamping `trust_level = 'mfa_verified'`.
+    mfa_enabled: bool,
 }
 
 // ---- Handlers --------------------------------------------------------------
@@ -165,6 +170,7 @@ pub(crate) async fn show_reauth(
         email: identity.email.clone(),
         return_to,
         error: None,
+        mfa_enabled: identity.mfa_enabled,
     };
     let body = ctx.templates.render("admin/reauth.html", &view)?;
     Ok(Response::html(body))
@@ -190,13 +196,16 @@ pub(crate) async fn do_reauth(
 ) -> Result<Response> {
     let form = req.form()?;
     let password = form.get("password").unwrap_or("").to_string();
+    let code = form.get("code").unwrap_or("").trim().to_string();
     let raw_return_to = form.get("return_to").map(|s| s.to_string());
     let return_to = redirect_after_reauth(raw_return_to.as_deref());
 
     // Single uniform failure renderer used by every error branch
     // below. Same status, same wording, same CSRF refresh — no
-    // distinction between "user gone", "wrong password", or "no
-    // current session" reaches the client.
+    // distinction between "user gone", "wrong password", "wrong
+    // TOTP", "replay", or "no current session" reaches the client.
+    // Per DESIGN_R3_MFA.md §3.1, the disclosure rule applies to
+    // every re-auth failure mode.
     let uniform_failure = |ctx: &AdminCtx, return_to: &str| -> Result<Response> {
         let view = ReauthCtx {
             base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
@@ -204,6 +213,7 @@ pub(crate) async fn do_reauth(
             email: identity.email.clone(),
             return_to: return_to.to_string(),
             error: Some("Could not verify your password.".to_string()),
+            mfa_enabled: identity.mfa_enabled,
         };
         let body = ctx.templates.render("admin/reauth.html", &view)?;
         Ok(Response::html(body).with_status(hyper::StatusCode::UNAUTHORIZED))
@@ -219,6 +229,61 @@ pub(crate) async fn do_reauth(
     };
     if !auth::verify_password(&password, &user.password_hash) {
         return uniform_failure(ctx, &return_to);
+    }
+
+    // R3 — second-factor verification when MFA is enrolled. The
+    // re-auth wall demands BOTH factors for an MFA-enrolled user;
+    // a stolen cookie + a password (e.g. via phishing) cannot
+    // mutate authority without the second factor. Per
+    // DESIGN_R3_MFA.md §12.2.
+    //
+    // Order: try TOTP first, fall back to backup-code on
+    // VerifyOutcome::Invalid. Replay / NotEnrolled collapse to
+    // uniform failure WITHOUT the backup-code attempt — a
+    // replayed TOTP is a security signal we should not paper
+    // over with a backup-code retry.
+    if identity.mfa_enabled {
+        if code.is_empty() {
+            return uniform_failure(ctx, &return_to);
+        }
+        use crate::auth::mfa::{
+            consume_backup_code, verify_totp_for_user, BackupConsumeOutcome, MfaKey, VerifyOutcome,
+        };
+        let policy = ctx.admin.active_recovery_policy();
+        let step_seconds = policy.mfa_step_seconds();
+        let skew_steps = policy.mfa_skew_steps();
+        let key = MfaKey::from_env()?;
+        let correlation_id = req.header("x-correlation-id");
+
+        let totp_outcome =
+            verify_totp_for_user(&ctx.db, user.id, &code, step_seconds, skew_steps, &key).await?;
+        let totp_verified = matches!(totp_outcome, VerifyOutcome::Verified { .. });
+
+        let second_factor_ok = if totp_verified {
+            true
+        } else {
+            match totp_outcome {
+                VerifyOutcome::Invalid => {
+                    let backup_outcome = consume_backup_code(
+                        &ctx.db,
+                        &req,
+                        user.id,
+                        &code,
+                        "reauth",
+                        correlation_id,
+                    )
+                    .await?;
+                    matches!(backup_outcome, BackupConsumeOutcome::Consumed { .. })
+                }
+                VerifyOutcome::Replay { .. }
+                | VerifyOutcome::NotEnrolled
+                | VerifyOutcome::Verified { .. } => false,
+            }
+        };
+
+        if !second_factor_ok {
+            return uniform_failure(ctx, &return_to);
+        }
     }
 
     // Resolve the current session id via the cookie token. Failure
@@ -239,7 +304,16 @@ pub(crate) async fn do_reauth(
     };
 
     let ttl = ctx.admin.active_recovery_policy().reauth_window();
-    crate::auth::recovery_admin::promote_session_elevated(&ctx.db, session_id, ttl).await?;
+
+    // R3: pick the promote variant by the actor's mfa_enabled
+    // state. MFA-enrolled users land on mfa_verified (preserves
+    // any higher pre-existing trust); non-enrolled users land on
+    // the R2 'elevated' band.
+    if identity.mfa_enabled {
+        crate::auth::mfa::promote_session_mfa_elevated(&ctx.db, session_id, ttl).await?;
+    } else {
+        crate::auth::recovery_admin::promote_session_elevated(&ctx.db, session_id, ttl).await?;
+    }
 
     // PRG: 303 See Other so a refresh on the destination is a GET.
     Ok(Response::redirect(return_to))
