@@ -100,10 +100,19 @@
 //!   `{ code_id, remaining_codes, via }`. Single-use enforced
 //!   at the index level + a conditional UPDATE that races
 //!   safely. R3 commit #8.
+//! - [`disable_mfa`] / [`DisableOutcome`] — the self-disable
+//!   runtime (§4.3). Clears all four MFA columns on the user
+//!   row, deletes every backup-code row, calls
+//!   `auth::sessions::invalidate_sessions` with
+//!   `SessionInvalidationReason::MfaDisabled` (Doctrine 22's
+//!   sole writer of `revoked_at`), and emits
+//!   `AuditEvent::MfaDisabled`. The first R3 runtime that
+//!   goes through `invalidate_sessions` — the substrate
+//!   carries through unchanged. R3 commit #9.
 //!
-//! Subsequent commits will add: disable / regeneration
-//! runtime functions (§9), and `MfaPolicy` routing into
-//! `login_guard` (§12.3).
+//! Subsequent commits will add: backup-code regeneration
+//! runtime (§4.5), and `MfaPolicy` routing into `login_guard`
+//! (§12.3).
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -145,6 +154,7 @@ use sha1::Sha1;
 
 use crate::admin::audit::{record as audit_record, ActionType, AuditEvent, LogEntry};
 use crate::admin::builtin::client_ip;
+use crate::auth::sessions::{invalidate_sessions, SessionInvalidationReason, SessionTarget};
 use crate::auth::Role;
 use crate::error::{Error, Result};
 use crate::http::Request;
@@ -1180,6 +1190,165 @@ pub async fn consume_backup_code(
         code_id: matched_id,
         remaining,
     })
+}
+
+// -----------------------------------------------------------------
+// Disable MFA runtime (R3 commit #9)
+// -----------------------------------------------------------------
+
+/// Outcome of [`disable_mfa`]. Lets the disable handler render
+/// the right page without embedding HTTP concerns in the
+/// runtime layer.
+#[allow(dead_code)] // variants light up at the disable handler in a later commit
+pub enum DisableOutcome {
+    /// MFA disabled successfully. The user row's four MFA
+    /// columns are reset (`mfa_enabled = FALSE`, the secret +
+    /// key id + last-used step all NULL). The backup-code rows
+    /// are deleted. All sessions for the user are revoked with
+    /// `SessionInvalidationReason::MfaDisabled`. The
+    /// `MfaDisabled` audit row is emitted.
+    Disabled { sessions_revoked: usize },
+    /// The user row exists but `mfa_enabled = FALSE`. No
+    /// writes; defensive against accidental double-disable.
+    NotEnrolled,
+    /// Reserved for the case where the framework's active
+    /// `MfaPolicy` requires MFA for this user's role and the
+    /// runtime is called with policy enforcement enabled. The
+    /// current runtime does NOT consult the policy — the
+    /// handler is responsible for refusing self-disable under
+    /// `MfaPolicy::Required` BEFORE invoking this function. The
+    /// variant is retained per `DESIGN_R3_MFA.md` §9.2 for
+    /// forward-compat when a future commit pushes policy
+    /// enforcement into the runtime layer.
+    #[allow(dead_code)]
+    PolicyRequired,
+}
+
+/// Disable MFA for a user.
+///
+/// **Inputs.**
+///
+/// - `request` — for client-IP capture into the audit row.
+/// - `user_id` — the user disabling their own MFA (self-action).
+///   Admin-driven disable (`MfaDisabledByOther` reason) ships
+///   in R4 CLI emergency recovery per `DESIGN_R3_MFA.md` §1.2;
+///   this runtime handles the self-disable path only.
+/// - `correlation_id` — forensic-chain anchor.
+///
+/// **Steps.**
+///
+/// 1. SELECT `mfa_enabled`. Missing row → `Error::NotFound`.
+///    `mfa_enabled = FALSE` → `NotEnrolled` (no writes).
+/// 2. SELECT COUNT(*) of existing backup-code rows for the
+///    `previous_backup_codes_count` audit metadata.
+/// 3. UPDATE `rustio_users` clearing all four MFA columns
+///    atomically: `mfa_enabled = FALSE`, ciphertext / key_id /
+///    last_used_step → NULL.
+/// 4. DELETE all backup-code rows for the user. The user-row
+///    UPDATE alone would leave orphan rows that the
+///    `ON DELETE CASCADE` clause does not cover (the user row
+///    survives the disable; only the backup-code rows
+///    disappear).
+/// 5. `invalidate_sessions(SessionTarget::User { user_id },
+///    SessionInvalidationReason::MfaDisabled)` — Doctrine 22's
+///    sole writer of `revoked_at`. Every session for this user
+///    revokes; the current device included. After disable,
+///    the user signs back in with password only.
+/// 6. Emit `AuditEvent::MfaDisabled` with metadata
+///    `{ reason: "self_disabled", previous_backup_codes_count }`
+///    per §8.2.
+///
+/// **Doctrine 22.** This function delegates revocation to
+/// `auth::sessions::invalidate_sessions` — does NOT write
+/// `revoked_at` directly. The single-writer invariant
+/// survives. The grep proof remains intact.
+///
+/// **Audit emits AFTER invalidation succeeds.** Audit captures
+/// what actually happened; a partial success that fails
+/// invalidation never produces an audit row.
+#[allow(dead_code)] // call site lands at the disable POST handler in a later commit
+pub async fn disable_mfa(
+    db: &Db,
+    request: &Request,
+    user_id: i64,
+    correlation_id: Option<&str>,
+) -> Result<DisableOutcome> {
+    // 1. Confirm enrolment.
+    let mfa_enabled: Option<bool> =
+        sqlx::query_scalar("SELECT mfa_enabled FROM rustio_users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db.pool())
+            .await?;
+    let mfa_enabled =
+        mfa_enabled.ok_or_else(|| Error::NotFound(format!("user {user_id} not found")))?;
+    if !mfa_enabled {
+        return Ok(DisableOutcome::NotEnrolled);
+    }
+
+    // 2. Count existing backup-code rows for the audit row's
+    //    metadata.previous_backup_codes_count.
+    let previous_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM rustio_mfa_backup_codes WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(db.pool())
+            .await?;
+    let previous_count = previous_count.max(0) as u32;
+
+    // 3. Clear all four MFA columns on the user row in one
+    //    UPDATE. Atomicity is per-row at the SQL level — readers
+    //    of rustio_users will never observe a half-disabled
+    //    state (e.g. mfa_enabled = FALSE while
+    //    mfa_secret_ciphertext still contains ciphertext).
+    sqlx::query(
+        "UPDATE rustio_users \
+         SET mfa_enabled = FALSE, \
+             mfa_secret_ciphertext = NULL, \
+             mfa_secret_key_id = NULL, \
+             mfa_last_used_step = NULL \
+         WHERE id = $1",
+    )
+    .bind(user_id)
+    .execute(db.pool())
+    .await?;
+
+    // 4. Delete backup-code rows. The schema's ON DELETE
+    //    CASCADE handles user-row deletion; this DELETE handles
+    //    disable-without-user-deletion (the common case).
+    sqlx::query("DELETE FROM rustio_mfa_backup_codes WHERE user_id = $1")
+        .bind(user_id)
+        .execute(db.pool())
+        .await?;
+
+    // 5. Revoke every session via the centralised single writer
+    //    of revoked_at (Doctrine 22).
+    let invalidation = invalidate_sessions(
+        db,
+        SessionTarget::User { user_id },
+        SessionInvalidationReason::MfaDisabled,
+    )
+    .await?;
+    let sessions_revoked = invalidation.revoked_session_ids.len();
+
+    // 6. Audit emit AFTER all DB writes succeed (D8).
+    let metadata = serde_json::json!({
+        "reason": "self_disabled",
+        "previous_backup_codes_count": previous_count,
+        "sessions_revoked": sessions_revoked,
+    });
+    let ip = client_ip(request);
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+        .with_event(AuditEvent::MfaDisabled)
+        .with_actor(user_id);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = ip.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary = format!(
+        "MFA self-disabled; {previous_count} backup codes deleted; \
+         {sessions_revoked} sessions revoked"
+    );
+    audit_record(db, entry).await?;
+
+    Ok(DisableOutcome::Disabled { sessions_revoked })
 }
 
 /// Framework-wide MFA enforcement policy.
