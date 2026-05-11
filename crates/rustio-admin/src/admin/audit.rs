@@ -427,6 +427,16 @@ pub enum AuditEvent {
     /// `metadata.via = "login" | "reauth"` distinguishes the
     /// caller context.
     MfaCodeConsumed,
+    /// A user regenerated their backup-code batch. Emitted by
+    /// `auth::mfa::regenerate_backup_codes` (R3 commit #10).
+    /// The DELETE + INSERT runs in one transaction per D3 of
+    /// the design (atomic regeneration; the old batch is
+    /// unrecoverable from the moment the transaction commits).
+    /// `metadata.previous_codes_invalidated` records the
+    /// count of rows the DELETE removed (used + unused
+    /// combined); `metadata.new_codes_count` is locked at 8
+    /// per Appendix B.
+    BackupCodesRegenerated,
     // ---- Session lifecycle (R0/R1+) ----
     SessionsRevokedSelf,
     SessionsRevokedByOther,
@@ -466,6 +476,7 @@ impl AuditEvent {
             Self::MfaDisabled => "mfa_disabled",
             Self::MfaResetByOther => "mfa_reset_by_other",
             Self::MfaCodeConsumed => "mfa_code_consumed",
+            Self::BackupCodesRegenerated => "backup_codes_regenerated",
             Self::SessionsRevokedSelf => "sessions_revoked_self",
             Self::SessionsRevokedByOther => "sessions_revoked_by_other",
             Self::SessionLogout => "session_logout",
@@ -575,6 +586,7 @@ mod tests {
         AuditEvent::MfaDisabled,
         AuditEvent::MfaResetByOther,
         AuditEvent::MfaCodeConsumed,
+        AuditEvent::BackupCodesRegenerated,
         AuditEvent::SessionsRevokedSelf,
         AuditEvent::SessionsRevokedByOther,
         AuditEvent::SessionLogout,
@@ -661,6 +673,10 @@ mod tests {
         assert_eq!(AuditEvent::MfaDisabled.as_str(), "mfa_disabled");
         assert_eq!(AuditEvent::MfaResetByOther.as_str(), "mfa_reset_by_other");
         assert_eq!(AuditEvent::MfaCodeConsumed.as_str(), "mfa_code_consumed");
+        assert_eq!(
+            AuditEvent::BackupCodesRegenerated.as_str(),
+            "backup_codes_regenerated"
+        );
         assert_eq!(
             AuditEvent::SessionsRevokedSelf.as_str(),
             "sessions_revoked_self"
