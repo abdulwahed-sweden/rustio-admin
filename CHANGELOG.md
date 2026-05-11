@@ -20,9 +20,329 @@ leaves the alpha track.
 | **0.1.0** | 2026-05-07 | Initial public release.                                                           |
 
 
-## [Unreleased]
+## [Unreleased] — targeting 0.7.0
 
-No changes yet.
+R3 of the universal account-recovery architecture. TOTP
+multi-factor authentication plus single-use backup codes.
+Adds the second-factor login flow, self-service enrolment,
+backup-code generation + regeneration, self-disable, and the
+trust-escalation token rotation that ties the verified
+session back to the R0 session model.
+
+> **Migration from 0.6.x**
+>
+> Bump `rustio-admin = "0.7"` and run `cargo update -p rustio-admin`.
+>
+> Schema is additive: four new columns on `rustio_users`
+> (`mfa_enabled`, `mfa_secret_ciphertext`, `mfa_secret_key_id`,
+> `mfa_last_used_step`) plus a new `rustio_mfa_backup_codes`
+> table with a per-user partial index on
+> `(user_id) WHERE used_at IS NULL`. Existing users are
+> unaffected — `mfa_enabled` defaults to `FALSE`; pre-R3 users
+> bypass the MFA gates entirely.
+>
+> **New env var requirement.** `RUSTIO_SECRET_KEY` (32 bytes,
+> URL-safe-base64 encoded, no padding) must be set when any
+> user has MFA enabled or when the operator opts into
+> `MfaPolicy::Required` / `RequiredForRoles`. Used as the
+> AES-256-GCM key for TOTP-secret encryption at rest. A
+> deployment with `MfaPolicy::Disabled` (or `Optional` with
+> zero enrolments) does not need the env var.
+>
+> No middleware changes — `correlation_id` BEFORE
+> `csrf_protect` (set in 0.4.0) is still the only ordering
+> constraint. Eight new routes register through
+> `register_admin_routes`.
+>
+> Doctrine 22 holds. `auth::sessions::invalidate_sessions`
+> remains the sole writer of `revoked_at` — four hits in the
+> grep proof, all inside `auth/sessions.rs::invalidate_sessions`.
+> Trust escalation on the MFA-verify path goes through
+> `promote_session_to_mfa_verified`, which delegates revocation
+> to the centralised invalidator with reason
+> `TrustEscalation`.
+
+### Highlights
+
+- **TOTP enrolment.** `GET/POST /admin/account/mfa/enroll` —
+  provisions a 20-byte secret, builds an `otpauth://totp/...`
+  URL (Google Authenticator Key URI format), renders the
+  manual setup key in base32, verifies the user's first
+  6-digit code, AES-256-GCM-encrypts and persists. Re-auth
+  gated.
+- **Login second-factor verify.** `GET/POST /admin/mfa/verify`
+  — accepts a 6-digit TOTP code or an `XXXX-XXXX` backup
+  code. TOTP tried first; backup-code fallback on
+  `VerifyOutcome::Invalid` only (replay attempts collapse to
+  uniform failure without consuming a code). Successful
+  verify rotates the session to `trust_level = 'mfa_verified'`
+  via `promote_session_to_mfa_verified` (D17 token rotation:
+  mint new row, revoke parent via `invalidate_sessions`).
+- **8 backup codes per user**, `XXXX-XXXX` shape from a
+  31-character ambiguity-stripped alphabet (no `0/O/1/I/L`).
+  Argon2id-hashed at rest with low-memory params
+  (`m = 16 MiB`, `t = 2`, `p = 1`). Single-use enforced at
+  three layers: SELECT filters `used_at IS NULL`, atomic
+  conditional UPDATE on consume, partial index on the
+  unused predicate.
+- **Backup-code regeneration.** `POST /admin/account/mfa/regenerate-codes`
+  — atomic transaction: `SELECT … FOR UPDATE` on the user
+  row serialises concurrent regenerates, DELETE wipes the
+  old batch, INSERT lands the new 8. The old batch is
+  unrecoverable from the moment the commit lands (D3).
+- **Self-disable.** `POST /admin/account/mfa/disable` —
+  clears the four MFA columns, deletes the backup-code rows,
+  calls `invalidate_sessions(User, MfaDisabled)`. The user
+  is signed out of every device; the next sign-in is
+  password-only.
+- **Re-auth wall demands both factors.** `/admin/reauth`
+  requires password AND TOTP (or backup code) when the
+  actor has MFA enrolled. Stamps
+  `trust_level = 'mfa_verified'` + `elevated_until` in place;
+  non-MFA-enrolled users still see the R2 password-only flow
+  unchanged.
+- **`MfaPolicy::Required` forward-only enforcement.**
+  Operators opt in via `Admin::require_mfa(MfaPolicy::Required)`.
+  Existing sessions remain valid; existing users without MFA
+  are redirected to `/admin/account/mfa/enroll` at the next
+  request, restricted to a tiny whitelist (`/admin/account/mfa/enroll`,
+  `/admin/logout`, `/admin/account/sessions`) until they
+  enrol. Mirrors R2's `must_change_password` interstitial
+  shape exactly.
+- **Pending-MFA-verify gate.** MFA-enrolled users whose
+  current session is still `trust_level = 'authenticated'`
+  (post-login, pre-verify window) are restricted to
+  `/admin/mfa/verify` + `/admin/logout` +
+  `/admin/account/sessions`. Same whitelist shape as the
+  enrolment gate.
+
+### Public API
+
+- `auth::MfaPolicy` enum: `Disabled` / `Optional` (default) /
+  `Required` / `RequiredForRoles(&'static [Role])`. Plain
+  `Copy` value — no `Arc` indirection.
+- `Admin::require_mfa(MfaPolicy) -> Self` builder +
+  `Admin::active_mfa_policy(&self) -> MfaPolicy` accessor.
+- `auth::MfaKey` newtype around `[u8; 32]`. Constructors
+  `MfaKey::from_env()` (reads `RUSTIO_SECRET_KEY`) and
+  `MfaKey::from_bytes(bytes: [u8; 32])`.
+- `auth::mfa` runtime fns (`pub` for the testcontainers
+  re-export pattern; module is `pub(crate)`):
+  - `provision_secret()` → `ProvisionedSecret { secret_bytes,
+    base32 }`.
+  - `confirm_enrolment(db, request, user_id, secret_bytes,
+    candidate_code, step_seconds, skew_steps, key, key_id,
+    correlation_id)` → `EnrolOutcome::{Enrolled, InvalidCode,
+    AlreadyEnrolled}`.
+  - `verify_totp_for_user(db, user_id, candidate_str,
+    step_seconds, skew_steps, key)` → `VerifyOutcome::{Verified,
+    Replay, Invalid, NotEnrolled}`.
+  - `consume_backup_code(db, request, user_id, candidate_str,
+    via, correlation_id)` → `BackupConsumeOutcome::{Consumed,
+    Invalid, NotEnrolled, AlreadyUsed}`.
+  - `disable_mfa(db, request, user_id, correlation_id)` →
+    `DisableOutcome::{Disabled, NotEnrolled, PolicyRequired}`.
+  - `regenerate_backup_codes(db, request, user_id,
+    correlation_id)` → `RegenOutcome::{Regenerated,
+    NotEnrolled}`.
+  - `promote_session_to_mfa_verified(db, current_session_id,
+    user_id)` → fresh plaintext token (D17 rotation).
+  - `promote_session_mfa_elevated(db, session_id, ttl)` →
+    in-place UPDATE for the re-auth path.
+  - Plus pure helpers: `wrap_secret`, `unwrap_secret`,
+    `generate_backup_codes`, `hash_backup_code`,
+    `verify_backup_code`, `normalise_backup_code`,
+    `current_step`, `generate_totp`, `verify_totp`,
+    `build_otpauth_url`, `base32_decode_no_pad`.
+- `auth::mfa::BACKUP_CODE_COUNT = 8`,
+  `BACKUP_CODE_LEN = 8` constants.
+- `RecoveryPolicy::mfa_step_seconds() -> u64` (default 30)
+  and `mfa_skew_steps() -> u32` (default 1). Both
+  provided-defaults; existing `RecoveryPolicy` impls compile
+  unchanged.
+- `Identity::mfa_enabled: bool` — mirrors
+  `rustio_users.mfa_enabled`.
+- `Identity::trust_level: SessionTrust` — current session's
+  trust band (`Authenticated` / `Elevated` / `MfaVerified`).
+- `StoredUser::mfa_enabled: bool` parallel field.
+- `AuditEvent::MfaCodeConsumed` — `"mfa_code_consumed"`.
+  `AuditEvent::BackupCodesRegenerated` —
+  `"backup_codes_regenerated"`. Both `#[non_exhaustive]`
+  additive.
+- 8 new routes registered through `register_admin_routes` —
+  `/admin/mfa/verify` (both methods) plus the three
+  `/admin/account/mfa/*` route pairs.
+
+See [`DESIGN_R3_MFA.md`](./DESIGN_R3_MFA.md) for the state
+machines, audit-metadata schemas, threat model, and locked
+decisions (TOTP step interval, skew tolerance, backup-code
+count and shape, Argon2id parameters, encryption algorithm).
+
+### Behaviour changes
+
+- **`do_login` MFA branch.** After successful password
+  verification + throttle reset + session mint, the handler
+  inspects `user.mfa_enabled`. `TRUE` → 303 to
+  `/admin/mfa/verify` instead of `/admin`. `FALSE` → 303 to
+  `/admin` as before. The session row is minted with
+  `trust_level = 'authenticated'` in both cases; only the
+  verify-flow handler promotes to `'mfa_verified'`.
+- **`/admin/reauth` requires both factors when actor has MFA
+  enrolled.** The form renders the second-factor input
+  conditionally. POST verifies both factors (TOTP first,
+  backup-code fallback on `Invalid`); on success the new
+  `promote_session_mfa_elevated` runtime stamps
+  `trust_level = 'mfa_verified'` + `elevated_until`. Users
+  without MFA see the R2 password-only flow unchanged.
+- **`login_guard` two new redirects.** Forward-only per D6:
+  - `MfaPolicy::Required` / `RequiredForRoles` + user not
+    enrolled → 303 to `/admin/account/mfa/enroll` for every
+    non-whitelisted request.
+  - `user.mfa_enabled = TRUE` + session
+    `trust_level != MfaVerified` → 303 to `/admin/mfa/verify`
+    for every non-whitelisted request.
+  Both gates layer below the R2 `must_change_password`
+  interstitial; combined, the order is rotate → enrol →
+  verify.
+- **Trust escalation rotates the session token on
+  `/admin/mfa/verify`.** Successful TOTP or backup-code
+  verification mints a fresh row with
+  `trust_level = 'mfa_verified'` and
+  `parent_session_id = <current>`, then revokes the parent
+  via `invalidate_sessions(Single, TrustEscalation)`. The
+  cookie is swapped in the response. Doctrine 17 honoured.
+
+### Schema
+
+Additive, idempotent, runs at boot:
+
+- `rustio_users.mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE`.
+- `rustio_users.mfa_secret_ciphertext BYTEA` (nullable;
+  AES-256-GCM `nonce || ciphertext || tag`).
+- `rustio_users.mfa_secret_key_id INT` (nullable; key
+  version for staged rotation).
+- `rustio_users.mfa_last_used_step BIGINT` (nullable;
+  monotonic replay-protection marker).
+- New table `rustio_mfa_backup_codes (id BIGSERIAL,
+  user_id BIGINT REFERENCES rustio_users(id) ON DELETE
+  CASCADE, code_hash TEXT, created_at TIMESTAMPTZ,
+  used_at TIMESTAMPTZ)`.
+- Partial index `rustio_mfa_backup_codes_user_unused_idx
+  ON (user_id) WHERE used_at IS NULL`.
+
+No data backfill required. Rolling back to 0.6.0 is
+data-safe: the new columns become unreferenced; the new
+table is unused.
+
+### Documentation
+
+- [`DESIGN_R3_MFA.md`](./DESIGN_R3_MFA.md) added — the
+  canonical R3 contract under the doctrine-spec template.
+  1300+ lines covering invariants, threat model, authority
+  flows, guarantees, schema, audit emission, module layout,
+  routes, trait extensions, integration deltas, test plan,
+  versioning, locked decisions, and the deferred-work
+  appendix.
+- `recovery_admin.rs` module-level docs note the R3
+  trust-escalation token-rotation primitive
+  (`promote_session_to_mfa_verified`) as the heavier sibling
+  of the R2 in-place elevated promotion.
+
+#### Internal
+
+- New `auth::mfa` submodule — every MFA runtime fn (and
+  every pure helper: TOTP RFC 6238 implementation, base32
+  encoder + decoder, otpauth URL builder, AES-256-GCM
+  wrappers, Argon2id wrappers).
+- New `admin::mfa_handlers` submodule — eight HTTP handlers
+  for the four user-facing routes.
+- `admin::admin_recovery_handlers::do_reauth` extended for
+  the two-factor branch; `ReauthCtx` gains a `mfa_enabled`
+  field so the template renders the second-factor input
+  conditionally.
+- Six new dependencies in `crates/rustio-admin/Cargo.toml`:
+  `aes-gcm = "0.10"` (default-features = false, features =
+  `["aes", "alloc"]`), `hmac = "0.12"`, `sha1 = "0.10"`.
+  The other RustCrypto family members (`argon2`, `sha2`)
+  were already pulled.
+- `urlencoding` (already pulled for query-string handling)
+  is now used for the otpauth URL's issuer + account
+  segments.
+
+#### Tests
+
+- +29 unit tests across the R3 commit chain (228 → 257).
+  Pure / DB-free:
+  - **RFC 6238 Appendix B test vectors** for TOTP-SHA1
+    (truncated from 8-digit to 6-digit). Pins the
+    hand-rolled implementation against the canonical
+    reference.
+  - **RFC 4648 §10 base32 progressive vectors**
+    (`f`, `fo`, `foo`, `foob`, `fooba`, `foobar`) — the
+    encoder + decoder round-trip on the standard reference.
+  - AES-256-GCM wrap/unwrap round-trip, tamper detection,
+    wrong-key rejection, truncated-input rejection,
+    fresh-nonce-per-call invariant.
+  - Argon2id backup-code round-trip, fresh-salt-per-call
+    invariant, params pinning (`m=16384,t=2,p=1`), invalid
+    PHC string rejection.
+  - Backup-code alphabet size + ambiguity-free invariant,
+    `XXXX-XXXX` shape pin, within-batch uniqueness over 64
+    samples, normalisation idempotence + paste-shape
+    tolerance.
+  - TOTP skew window boundaries, replay rejection,
+    underflow guard at `T = 0`.
+  - `MfaPolicy::default() == Optional`, `MfaPolicy` Copy
+    semantics.
+  - `RecoveryPolicy::mfa_step_seconds() == 30`,
+    `mfa_skew_steps() == 1` — locked decisions per
+    Appendix B.
+  - `build_otpauth_url` Google Authenticator Key URI
+    format compliance.
+- The `AuditEvent` drift tests pick up the two new variants
+  (`MfaCodeConsumed`, `BackupCodesRegenerated`)
+  automatically.
+- Doctrine 22 grep proof unchanged across the entire R3
+  chain — three SET arms in
+  `auth::sessions::invalidate_sessions`, plus one docstring.
+
+#### Deferred
+
+- testcontainers Postgres integration suite extension for
+  the MFA runtime functions end-to-end against an ephemeral
+  Postgres. Will exercise:
+  `provision_secret` + `confirm_enrolment` round-trip;
+  `verify_totp_for_user` accept-current + reject-replay;
+  `consume_backup_code` atomic single-use + race resolution;
+  `disable_mfa` column-clearing + backup-code-deletion +
+  session revocation; `regenerate_backup_codes` atomic
+  transaction; `promote_session_to_mfa_verified` row mint +
+  parent revoke. Lands as a follow-up to keep this commit
+  set focused on the framework code itself.
+- Stockholm POS downstream validation pass against the live
+  DB (per `DESIGN_R3_MFA.md` §13.4) — exercises the full
+  user-visible flow: enrol → sign out → sign in → verify →
+  destructive admin → re-auth with both factors → regenerate
+  → disable → password-only sign-in.
+- Boot guard tying `RUSTIO_SECRET_KEY` presence to
+  `MfaPolicy != Disabled`. Today, `MfaKey::from_env()`
+  returns `Error::Internal` on miss; the handler-level
+  surface is the framework's generic 500. A startup-time
+  check ships as a follow-up so the failure surfaces at
+  boot, not at first MFA-verify request.
+- `MfaSecretKeyResolver` trait + staged-rotation playbook
+  in a future `DESIGN_SECRETS.md`. The current runtime
+  passes `key_id = 1` unconditionally; the column is
+  reserved for the rotation hook.
+- QR-code rendering in `/admin/account/mfa/enroll`. The
+  current template surfaces the `otpauth://` URL as a
+  clickable link (mobile authenticator apps consume it
+  directly) plus the base32 manual setup key. Adding an
+  SVG QR renderer (e.g. the `qrcode` crate) is a UX
+  enhancement, not load-bearing for the contract.
+- Admin-driven MFA disable (`MfaDisabledByOther`) — declared
+  as an `AuditEvent` variant in 0.5.0 but wires up in R4
+  CLI emergency recovery, not in R3 web routes.
 
 
 ## [0.6.0] — 2026-05-10
