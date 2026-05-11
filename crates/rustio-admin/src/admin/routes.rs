@@ -91,6 +91,65 @@ fn is_must_change_whitelisted_path(path: &str) -> bool {
     MUST_CHANGE_WHITELIST.contains(&path)
 }
 
+/// Paths reachable when `MfaPolicy::Required` is active and the
+/// user has not yet enrolled (R3 commit #18). Forward-only
+/// enforcement per `DESIGN_R3_MFA.md` D6: existing sessions
+/// continue to work, but every non-whitelisted request from a
+/// not-yet-enrolled user redirects to the enrolment form.
+/// Mirrors [`MUST_CHANGE_WHITELIST`]'s shape so the two
+/// interstitial flows compose identically when both gates fire.
+///
+/// Exact-path match. Sub-paths of `/admin/account/sessions`
+/// (e.g. `/admin/account/sessions/revoke`) are NOT whitelisted
+/// — a user being forced to enrol may view their active
+/// sessions but must finish enrolment before revoking siblings.
+const MFA_ENROLL_WHITELIST: &[&str] = &[
+    "/admin/account/mfa/enroll",
+    "/admin/logout",
+    "/admin/account/sessions",
+];
+
+fn is_mfa_enroll_whitelisted_path(path: &str) -> bool {
+    MFA_ENROLL_WHITELIST.contains(&path)
+}
+
+/// Paths reachable when the user has MFA enrolled but the
+/// current session has not yet been promoted to `mfa_verified`
+/// (the post-password, pre-MFA-verify window from R3 commit
+/// #16's `do_login`). The user can complete the second-factor
+/// verify, log out, or inspect their active sessions — nothing
+/// else.
+///
+/// Exact-path match. See [`MFA_ENROLL_WHITELIST`] for the
+/// rationale around the sessions page.
+const MFA_VERIFY_WHITELIST: &[&str] = &[
+    "/admin/mfa/verify",
+    "/admin/logout",
+    "/admin/account/sessions",
+];
+
+fn is_mfa_verify_whitelisted_path(path: &str) -> bool {
+    MFA_VERIFY_WHITELIST.contains(&path)
+}
+
+/// Whether the active `MfaPolicy` requires MFA for a given
+/// role. Pulled out as a free fn so the rule is unit-testable
+/// without an `Admin` context.
+///
+/// `MfaPolicy::Disabled` / `Optional` → never required.
+/// `MfaPolicy::Required` → required for every role.
+/// `MfaPolicy::RequiredForRoles(roles)` → required iff the
+///   user's role appears in the slice. An empty slice reads
+///   as "no role requires MFA" — equivalent to `Optional`.
+fn mfa_required_for_role(policy: crate::auth::MfaPolicy, role: Role) -> bool {
+    use crate::auth::MfaPolicy;
+    match policy {
+        MfaPolicy::Disabled | MfaPolicy::Optional => false,
+        MfaPolicy::Required => true,
+        MfaPolicy::RequiredForRoles(roles) => roles.contains(&role),
+    }
+}
+
 async fn login_guard(ctx: &AdminCtx, req: &Request) -> Result<Guard> {
     let cookie = match req.header("cookie") {
         Some(c) => c,
@@ -117,6 +176,39 @@ async fn login_guard(ctx: &AdminCtx, req: &Request) -> Result<Guard> {
         return Ok(Guard::Redirect(Response::redirect(
             "/admin/must-change-password",
         )));
+    }
+
+    // R3 MFA-required gate — forward-only per D6
+    // (`DESIGN_R3_MFA.md` §12.3). When the active MfaPolicy
+    // requires MFA for this user's role AND they have not
+    // enrolled, every non-whitelisted request redirects to the
+    // enrolment form. Existing sessions continue to work; the
+    // redirect kicks in at the NEXT request, not at the moment
+    // the policy flips. This matches R2's must-change-password
+    // shape — see MFA_ENROLL_WHITELIST for the reachable paths.
+    let policy = ctx.admin.active_mfa_policy();
+    if mfa_required_for_role(policy, ident.role)
+        && !ident.mfa_enabled
+        && !is_mfa_enroll_whitelisted_path(req.path())
+    {
+        return Ok(Guard::Redirect(Response::redirect(
+            "/admin/account/mfa/enroll",
+        )));
+    }
+
+    // R3 pending-MFA-verify gate (`DESIGN_R3_MFA.md` §4.2 +
+    // §12.3). When the user has MFA enrolled but the current
+    // session has not yet been promoted to mfa_verified (the
+    // post-password, pre-MFA-verify window from commit #16's
+    // do_login), restrict access to the MFA verify whitelist.
+    // The verify POST handler rotates the session via
+    // promote_session_to_mfa_verified once both factors land.
+    use crate::auth::SessionTrust;
+    if ident.mfa_enabled
+        && ident.trust_level != SessionTrust::MfaVerified
+        && !is_mfa_verify_whitelisted_path(req.path())
+    {
+        return Ok(Guard::Redirect(Response::redirect("/admin/mfa/verify")));
     }
 
     Ok(Guard::Allow(ident))
@@ -1181,6 +1273,7 @@ mod tests {
             demo_label: None,
             must_change_password: false,
             mfa_enabled: false,
+            trust_level: crate::auth::SessionTrust::Authenticated,
         }
     }
 

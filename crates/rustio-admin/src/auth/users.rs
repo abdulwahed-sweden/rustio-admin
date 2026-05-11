@@ -47,6 +47,18 @@ pub struct Identity {
     /// who have not enrolled get `FALSE` and bypass the
     /// challenge entirely — pre-R3 framework behaviour.
     pub mfa_enabled: bool,
+    /// The active session's trust level
+    /// (`authenticated` / `elevated` / `mfa_verified`). R3's
+    /// `login_guard` (commit #18) reads this together with
+    /// `mfa_enabled` to gate the pending-MFA state: an
+    /// MFA-enrolled user whose current session has
+    /// `trust_level != mfa_verified` (i.e. just signed in,
+    /// hasn't yet completed `/admin/mfa/verify`) is restricted
+    /// to a tiny whitelist until they finish the second-factor
+    /// challenge. Pre-R3 sessions default to
+    /// `SessionTrust::Authenticated` from the schema's column
+    /// default — no migration data change.
+    pub trust_level: crate::auth::SessionTrust,
 }
 
 impl Identity {
