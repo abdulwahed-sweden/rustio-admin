@@ -315,6 +315,28 @@ fn perm_for(ctx: &AdminCtx, admin_name: &str, action: &str) -> Result<String> {
 /// `LogMailer` — this is the documented escape hatch for projects
 /// that want to silence the guard during a migration window
 /// without yet wiring a real transport.
+/// Best-effort identity resolution for the chrome of an admin
+/// error page. Mirrors what `auth::routes::login_guard` does on
+/// the success path, but is non-fatal: any failure returns `None`
+/// and the error page falls back to the unauthenticated chrome
+/// (just like the original behaviour).
+///
+/// `VISIBILITY_AUDIT.md` A2: without this lookup, every 4xx/5xx
+/// page rendered as if the operator were logged out, so the
+/// operator lost their sidebar + top-bar account links the
+/// moment they hit an erroring route — a navigational dead-end.
+async fn resolve_identity_for_error_page(db: &Db, cookie_header: &str) -> Option<Identity> {
+    let token = auth::session_token_from_cookie(cookie_header)?;
+    let identity = auth::identity_from_session(db, token.as_str())
+        .await
+        .ok()
+        .flatten()?;
+    if !identity.is_active {
+        return None;
+    }
+    Some(identity)
+}
+
 fn strict_mailer_guard_check(admin: &Admin) -> std::result::Result<(), String> {
     if admin.active_recovery_policy().strict_mailer_required() && !admin.has_custom_mailer() {
         Err(
@@ -374,23 +396,49 @@ pub fn register_admin_routes(
     // body. `Error::Forbidden` (handled by `role_guard` via
     // `admin/forbidden.html`) and login-required redirects come
     // through as `Ok` responses and bypass this branch.
+    //
+    // The middleware also resolves the operator's identity from the
+    // session cookie BEFORE handing off, so the error page renders
+    // with the same chrome (sidebar, top-bar actor, "Log out") the
+    // operator was using when they hit the failing route. Without
+    // this lookup the 404 page rendered as if the operator were
+    // unauthenticated — a navigational dead-end documented as
+    // `VISIBILITY_AUDIT.md` finding A2.
     let err_admin = ctx.admin.clone();
     let err_templates = ctx.templates.clone();
+    let err_db = ctx.db.clone();
     let router = router.middleware(move |req, next| {
         let admin = err_admin.clone();
         let templates = err_templates.clone();
+        let db = err_db.clone();
         Box::pin(async move {
             let is_admin_path = req.path().starts_with("/admin");
+            // Capture the cookie header BEFORE moving `req` into
+            // `next.run` so the error branch can re-resolve the
+            // operator's identity. The auth middleware sits inside
+            // this one; the request is consumed by `next.run` before
+            // we get to the `Err` branch.
+            let cookie_header = if is_admin_path {
+                req.header("cookie").map(|s| s.to_string())
+            } else {
+                None
+            };
             let result = next.run(req).await;
             match result {
                 Ok(resp) => Ok(resp),
-                Err(err) if is_admin_path => Ok(render::render_admin_error_response(
-                    &admin,
-                    &templates,
-                    None,
-                    err.status(),
-                    err.client_message().to_string(),
-                )),
+                Err(err) if is_admin_path => {
+                    let identity = match cookie_header.as_deref() {
+                        Some(cookie) => resolve_identity_for_error_page(&db, cookie).await,
+                        None => None,
+                    };
+                    Ok(render::render_admin_error_response(
+                        &admin,
+                        &templates,
+                        identity.as_ref(),
+                        err.status(),
+                        err.client_message().to_string(),
+                    ))
+                }
                 Err(err) => Err(err),
             }
         })
