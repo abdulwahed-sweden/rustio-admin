@@ -121,3 +121,104 @@ rustio user role --email <e> administrator # promote
 rustio group create --name editors         # create a group
 rustio perm grant-group --group editors --perm posts.add_post
 ```
+
+## Multi-factor authentication (R3)
+
+The framework ships TOTP-based MFA. Each user enrols at
+`/admin/account/mfa/enroll` from their account menu:
+
+1. The page renders an `otpauth://totp/...` QR code + a manual
+   setup key (base32) — paste into any RFC 6238-compatible
+   authenticator (Google Authenticator, 1Password, Bitwarden).
+2. The user enters their first 6-digit code to confirm.
+3. The framework AES-256-GCM-encrypts the secret with
+   `RUSTIO_SECRET_KEY` (from `.env`) and stores it in
+   `rustio_users.mfa_secret_ciphertext`. The plaintext never
+   reaches stable storage.
+4. 8 single-use backup codes print exactly once — record them
+   out-of-band.
+
+To make MFA mandatory for new users, add this line to the admin
+chain in `src/main.rs`:
+
+```rust
+let admin = Admin::new()
+    .require_mfa(rustio_admin::auth::MfaPolicy::Required)
+    .model::<Post>();
+```
+
+Other policies: `Optional` (default), `RequiredForRoles(&[Role::Administrator])`,
+`Disabled`.
+
+`RUSTIO_SECRET_KEY` MUST be set whenever a user has MFA enabled.
+See `.env.example` for the generation command.
+
+## Emergency recovery (R4 CLI)
+
+When every in-band recovery path is closed — the user forgot
+their password AND lost their TOTP device AND there's no other
+admin to drive an R2 reset — the operator with shell access to
+the database runs:
+
+```sh
+# Set a new password + force rotation on next login. Revokes
+# every active session.
+rustio user reset-password \
+  --email alice@{{name}}.local \
+  --reason "Lost MFA device + locked out; no other admins available"
+
+# Clear an auto-throttle lock.
+rustio user unlock --email alice@{{name}}.local --reason "..."
+
+# Drop MFA on a user (they re-enrol on next login if policy
+# is Required).
+rustio user disable-mfa --email alice@{{name}}.local --reason "..."
+
+# Change a user's role. Refuses to demote the sole admin.
+rustio user promote --email alice@{{name}}.local \
+  --to-role administrator --reason "..."
+
+# Issue a single-use password-reset URL (no email needed).
+# Hand the URL to the target out-of-band.
+rustio user emergency-access --email alice@{{name}}.local \
+  --reason "..." --ttl-minutes 30
+```
+
+Every command renders a red ANSI confirmation banner before
+mutating. Each writes one `rustio_admin_actions` row with
+`action_type = "emergency_recovery"` so the audit trail shows
+the operator went around every other tier. Pass `--yes` to skip
+the prompt in scripts.
+
+## Adding a custom route
+
+`register_admin_routes` mounts the framework's admin surface.
+Routes you want OUTSIDE that surface go directly on the
+`Router` — mount them BEFORE `register_admin_routes` so the
+framework's `/admin/*` wildcards never shadow them. Routes
+share the same middleware chain (CSRF, correlation_id) as the
+admin pages.
+
+```rust
+let db_for_inbox = db.clone();
+let router = router.get("/inbox", move |req| {
+    let db = db_for_inbox.clone();
+    async move {
+        // Your handler. Read DB via `db.pool()`. Read the CSRF
+        // token off `req.ctx().get::<CsrfGuard>()`. Build a
+        // response via `Response::html(...)` or `::text(...)`.
+        Ok(rustio_admin::Response::text("project-specific page"))
+    }
+});
+
+// Then mount the admin surface after your custom routes.
+let router = register_admin_routes(router, admin, db, templates);
+```
+
+Want the custom route to require login? Either invoke the
+framework's session lookup (`auth::session_token_from_cookie` +
+`auth::identity_from_session`) at the top of your handler, or
+write a small project-side helper like lursystem's
+`auth_helper::require_role`. The framework's `login_guard` and
+`role_guard` are currently `pub(crate)`; the public API will
+expose them when the `pub guards` module lands.
