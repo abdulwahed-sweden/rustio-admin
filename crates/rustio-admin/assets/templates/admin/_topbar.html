@@ -9,6 +9,21 @@
     <button type="button" class="rio-theme-toggle" data-rio-theme-toggle aria-label="Toggle theme">System</button>
     {% if identity %}
       <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
+      {# Two-factor self-service surface. Pre-0.8.1 the R3 MFA
+       # enrol / regenerate / disable pages were reachable only by
+       # typing the URL — every navigational surface was missing
+       # (`VISIBILITY_AUDIT.md` finding B1). The link below is
+       # unconditional: enrolled users see "Two-factor" and land
+       # on a chooser between regenerate / disable; un-enrolled
+       # users land on the enrol QR-code flow. The framework
+       # routes already exist; this link is the chrome that makes
+       # them discoverable. #}
+      {% if identity.mfa_enabled %}
+        <a href="/admin/account/mfa/regenerate-codes" class="rio-topbar-link">Two-factor</a>
+      {% else %}
+        <a href="/admin/account/mfa/enroll" class="rio-topbar-link">Enable MFA</a>
+      {% endif %}
+      <a href="/admin/account/sessions" class="rio-topbar-link">Sessions</a>
       <a href="/admin/password_change" class="rio-topbar-link">Change password</a>
       <form method="post" action="/admin/logout" class="rio-topbar-logout">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
