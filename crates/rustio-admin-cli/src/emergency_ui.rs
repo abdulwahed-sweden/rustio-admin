@@ -256,6 +256,39 @@ pub fn classify_response(line: &str) -> ConfirmOutcome {
     }
 }
 
+// ---- argv redaction ------------------------------------------------------
+
+/// Redact the `--reason` value from `argv`-style input. The
+/// reason text lives in `metadata.reason` of the audit row as a
+/// dedicated typed field; echoing it again inside
+/// `metadata.cli_invocation` would double-store the same string
+/// and risks leaking through logging surfaces that summarise the
+/// argv shape. The dedicated metadata field is the authoritative
+/// copy.
+///
+/// Handles both space-separated (`--reason TEXT`) and
+/// equals-form (`--reason=TEXT`). Unrecognised flags pass
+/// through verbatim.
+pub fn redact_reason_in_argv(args: &[String]) -> String {
+    let mut out: Vec<String> = Vec::with_capacity(args.len());
+    let mut i = 0;
+    while i < args.len() {
+        let a = &args[i];
+        if a == "--reason" && i + 1 < args.len() {
+            out.push("--reason".to_string());
+            out.push("<redacted>".to_string());
+            i += 2;
+        } else if a.starts_with("--reason=") {
+            out.push("--reason=<redacted>".to_string());
+            i += 1;
+        } else {
+            out.push(a.clone());
+            i += 1;
+        }
+    }
+    out.join(" ")
+}
+
 // ---- Tests ---------------------------------------------------------------
 
 #[cfg(test)]
@@ -418,5 +451,71 @@ mod tests {
         // No prompt drawn; no stdin read; banner is the caller's
         // responsibility per D10.
         assert_eq!(require_confirm(true), ConfirmOutcome::Confirmed);
+    }
+
+    // ---- redact_reason_in_argv ----
+
+    #[test]
+    fn redact_space_form() {
+        let argv: Vec<String> = [
+            "rustio",
+            "user",
+            "reset-password",
+            "--email",
+            "alice@example.com",
+            "--reason",
+            "lost MFA device, no other admins",
+            "--yes",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        let out = redact_reason_in_argv(&argv);
+        assert!(out.contains("--reason <redacted>"));
+        assert!(!out.contains("lost MFA"));
+        // Other args preserved
+        assert!(out.contains("--email alice@example.com"));
+        assert!(out.contains("--yes"));
+    }
+
+    #[test]
+    fn redact_equals_form() {
+        let argv: Vec<String> = [
+            "rustio",
+            "user",
+            "reset-password",
+            "--reason=lost MFA device",
+            "--email=alice@example.com",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        let out = redact_reason_in_argv(&argv);
+        assert!(out.contains("--reason=<redacted>"));
+        assert!(!out.contains("lost MFA"));
+        assert!(out.contains("--email=alice@example.com"));
+    }
+
+    #[test]
+    fn redact_no_reason_passes_through() {
+        let argv: Vec<String> = ["rustio", "user", "list"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let out = redact_reason_in_argv(&argv);
+        assert_eq!(out, "rustio user list");
+    }
+
+    #[test]
+    fn redact_lone_reason_flag_at_end_passes_through() {
+        // Pathological: --reason at end of argv with no value.
+        // Clap would have rejected this; the redactor must not panic
+        // or eat a value that doesn't exist.
+        let argv: Vec<String> = ["rustio", "--reason"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let out = redact_reason_in_argv(&argv);
+        assert_eq!(out, "rustio --reason");
     }
 }

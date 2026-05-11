@@ -1893,6 +1893,7 @@ dependencies = [
  "log",
  "rpassword",
  "rustio-admin",
+ "serde_json",
  "sqlx",
  "tokio",
 ]
