@@ -24,7 +24,227 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-No changes yet.
+> Targets 0.8.0 — R4 of the universal account-recovery
+> architecture.
+
+R4 — CLI emergency recovery. The shell-access tier that opens
+when every in-band recovery path is closed: a founder who
+forgot her password AND lost her TOTP device AND is the only
+Administrator on the deployment cannot recover via R1
+(no working password), R2 (no admin to act for her), or R3
+(no MFA factor). She still has shell access to the machine
+running the framework. The CLI is the last-mile recovery
+surface that uses that shell access deliberately, audibly,
+auditably.
+
+The spec lives in `DESIGN_R4_EMERGENCY.md`. Pull-request
+review runs against that doc, not only the diff.
+
+> **Migration from 0.7.x**
+>
+> Bump `rustio-admin = "0.8"` and run `cargo update -p rustio-admin`.
+>
+> **No schema migration.** R4 reuses the R0-R3 columns and the
+> R1 `rustio_password_reset_tokens` table. Zero new tables, zero
+> new columns.
+>
+> **No HTTP route changes.** R4 is a CLI-only surface;
+> `register_admin_routes` is unchanged. Projects that boot via
+> the framework's HTTP layer carry forward unmodified.
+>
+> **No middleware changes.** The R0-locked
+> `correlation_id` → `csrf_protect` order still holds.
+>
+> **One new `SessionInvalidationReason` variant:**
+> `RoleChangedByOther` (string `"role_changed_by_other"`).
+> Emitted by `rustio user promote` when revoking the target's
+> sessions to force a fresh login under the new tier. Reuses
+> the existing `rustio_sessions.revoked_reason` TEXT column.
+>
+> **`AuditEvent::EmergencyRecovery` lights up.** The variant
+> has existed since R0/R1 as a reserved slot; R4 promotes it
+> to a documented, contract-bearing variant emitted by exactly
+> five callsites in `rustio-admin-cli`. The framework crate
+> must NOT emit it — the
+> `admin::audit::tests::emergency_recovery_is_cli_only` unit
+> test fails the default `cargo test --workspace` gate on any
+> such regression.
+>
+> **Doctrine 22 holds.** `auth::sessions::invalidate_sessions`
+> remains the sole writer of `revoked_at`. R4's framework-side
+> primitives call through the centralised invalidator for every
+> session-revoke. Doctrines 1-18 + D1-D8 (R3) all unchanged.
+>
+> R4 adds four new doctrines (D9-D12) governing CLI-actor
+> identity, confirmation discipline, atomicity per command, and
+> CLI-only emission scope. See `DESIGN_R4_EMERGENCY.md` §10.
+
+### Highlights
+
+- **Five `rustio user <op>` subcommands.** All share the same
+  envelope: `--email <e> --reason "<text>"` (≥ 8 chars) plus
+  per-op flags. Each renders a red-ANSI confirmation banner
+  (target / reason / OS-actor / time / "audited and
+  irreversible") and demands interactive `yes` confirm
+  (or `--yes` for scripting; banner still prints).
+
+  - `rustio user reset-password [--temp-password <p>] --reason
+    "<r>" [--yes]` — Argon2-hashes the new password (CLI-
+    generated 20-char ambiguity-stripped alphanumeric if
+    `--temp-password` not supplied), sets
+    `must_change_password = TRUE`, revokes every session for
+    the user. Plaintext temp password prints to stdout exactly
+    once.
+  - `rustio user unlock --reason "<r>" [--yes]` — clears
+    `locked_until` + `failed_login_count`. Does NOT revoke
+    sessions (an unlock is not a session event).
+  - `rustio user disable-mfa --reason "<r>" [--yes]` —
+    clears the four MFA columns, deletes every backup-code
+    row, revokes the user's sessions. If `MfaPolicy::Required`
+    is set, the user is redirected to re-enrolment on next
+    login.
+  - `rustio user promote --to-role <r> --reason "<r>" [--yes]` —
+    changes the role; revokes the target's sessions so the
+    new tier takes effect on next login. Refuses to demote
+    the sole active Administrator (returns
+    `SoleAdministratorDemoteRefused`; the deployment is never
+    left with zero administrators, even via CLI).
+  - `rustio user emergency-access [--ttl-minutes <n>] --reason
+    "<r>" [--yes]` — issues a single-use password-reset URL
+    bypassing the email mailer. URL prints to stdout exactly
+    once; operator hands to target out-of-band. Reuses R1's
+    `rustio_password_reset_tokens` table; the consume path is
+    R1's existing `/admin/reset-password/<token>` handler. TTL
+    defaults to 15 min, clamped to `[1, 60]`.
+
+- **Audit-row emission lives in the CLI crate** (D12). Every
+  emergency command writes one `AuditEvent::EmergencyRecovery`
+  row through a shared `write_emergency_audit` helper.
+  `metadata.cli_operation` distinguishes the variant (`"reset_password"
+  | "unlock" | "disable_mfa" | "promote" | "emergency_access"`).
+  `metadata.os_actor` is `<whoami>@<hostname>`.
+  `metadata.cli_invocation` carries argv with `--reason VALUE`
+  redacted (the full reason lives in `metadata.reason` as a
+  typed field; double-storing would risk leakage through
+  logging surfaces). The argv-redaction helper has 4 unit
+  tests covering space-form, equals-form, no-flag, and the
+  lone-`--reason`-at-argv-end pathological case.
+
+- **Confirmation banner is irreducible** (D10). 64-char box,
+  red ANSI header, locked field order
+  (Operation / Target / Reason / Operator / Time). Long values
+  (e.g. a reason longer than ~47 chars) extend the box's right
+  wall — no truncation. Truncating would defeat the banner's
+  forensic purpose. ANSI is auto-detected: enabled only when
+  stdout is a TTY and `NO_COLOR` is unset.
+
+- **TTY-and-yes-flag gate.** If stdin is not a TTY and
+  `--yes` is absent, every emergency command exits with status
+  2 + a clear message ("Refusing to run without a TTY (or
+  pass --yes for scripting)"). Prevents accidental piping from
+  running an emergency op unnoticed.
+
+- **D11 — atomicity per command.** Every framework primitive
+  that mutates more than one row runs the mutations inside one
+  sqlx transaction. Session revocation runs after commit
+  because `invalidate_sessions` is doctrine-22's single writer
+  of `revoked_at` and owns its own atomic statement; the
+  transaction boundary keeps the mutation isolated from the
+  session sweep.
+
+- **Audit pivot via correlation_id.** Every CLI-emitted audit
+  row stamps a fresh UUID v7 hyphenated correlation_id matching
+  the format the framework's HTTP middleware writes per
+  request, so a future cross-table audit pivot can join
+  framework rows and CLI rows on the column without per-source
+  post-processing.
+
+- **`emergency-access` URL format hardened.** Reuses R1's
+  exact token + hash format via `auth::sessions::random_token()`
+  + `hash_token_for_storage()` — the CLI-issued URL round-
+  trips through R1's existing `/admin/reset-password/<token>`
+  consume path identically to a self-service R1 reset URL. The
+  load-bearing
+  `emergency_access_token_hash_matches_r1_consume_format`
+  integration test (testcontainers, runs against a live
+  ephemeral Postgres) catches any drift before publish.
+
+- **13-scenario testcontainers integration suite** at
+  `crates/rustio-admin/tests/integration_emergency.rs`, gated
+  by the existing `integration-test` Cargo feature. Mirrors
+  the R2 and R3 suites' shape. Runs in ~41 s on a warm Docker
+  daemon. Run with `cargo test --workspace --features
+  integration-test`.
+
+### Doctrines
+
+R4 layers four new doctrines onto the existing 22 + D1-D8.
+See `DESIGN_R4_EMERGENCY.md` §10 for the full text.
+
+- **D9.** CLI-actor identity is OS-level. `metadata.os_actor`
+  is `<whoami>@<hostname>`. No synthetic system-user invention;
+  the audit row's target is the user being acted on, and the
+  CLI operator is in metadata.
+- **D10.** Confirmation banner is irreducible. Every R4
+  command prints the banner. `--yes` skips the prompt, not
+  the banner. No flag suppresses the banner.
+- **D11.** R4 operations are atomic per command. One
+  command = one audit row = one transaction (where DB
+  operations span multiple statements). A partial failure
+  rolls back the mutation. Half-applied state is the worst
+  possible outcome for emergency recovery.
+- **D12.** `EmergencyRecovery` is CLI-only by code-walk. The
+  framework crate must not emit `AuditEvent::EmergencyRecovery`.
+  The `admin::audit::tests::emergency_recovery_is_cli_only`
+  unit test fails the default test gate on any such
+  regression. A future web handler that needs an
+  emergency-shaped operation must introduce a new audit
+  variant rather than reusing this one.
+
+### Behaviour parity surfaced during the cycle
+
+Commit #8's first live-DB smoke caught a token-hash format
+drift: the CLI emitted SHA-256(token) as lowercase hex while
+R1's `hash_token_for_storage` produced URL-safe-base64-no-pad.
+The URL printed; the consume path 404'd; the user saw "This
+link is no longer valid." Fix bundled with commit #8 (single-
+line call-through to R1's helper), regression locked in
+commit #9's integration suite.
+
+Worth noting for future phases: this bug was invisible to
+unit tests because the issue side and the lookup side both
+produced *some* string — they just didn't match. The cross-
+check is the live DB. A unit-test gate over the framework's
+behaviour would have to know about the contract on both sides
+to catch it.
+
+### What R4 does NOT ship
+
+- No daemon mode / REPL — every command is one-shot.
+- No `--dry-run` flag — the banner + interactive confirm IS
+  the dry-run.
+- No bulk operations — every command takes exactly one
+  `--email`. A bulk requirement is a script around the CLI.
+- No undo of emergency operations. Reversal is a fresh
+  emergency operation, audited as such.
+- No granular permission delegation — possession of
+  `DATABASE_URL` is the authority floor. The host's OS-level
+  access controls are the gate; R4 does not re-implement
+  them.
+
+### Closing principle
+
+R4 makes the last-mile shell-access recovery path
+**indistinguishable in the audit log from any other recovery
+operation, but distinguishable in event type**. The auditor
+sees `EmergencyRecovery` rows and knows the operator went
+around every other tier. That visibility — not the difficulty
+of running the command — is the regulatory artefact.
+
+R4 closes the recovery-roadmap loop opened in R0. After R4
+the framework supports four tiers — self (R1), peer-admin
+(R2), two-factor (R3), shell (R4) — and refuses to silently
+lose the audit chain at any tier transition.
 
 
 ## [0.7.1] — 2026-05-11
