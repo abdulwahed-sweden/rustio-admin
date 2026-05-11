@@ -17,7 +17,14 @@ mod permissions;
 pub(crate) mod recovery;
 pub(crate) mod recovery_admin;
 mod role;
-mod sessions;
+// `sessions` is `pub(crate)` so the `__integration` test door at
+// `crate::__integration` can re-export individual `pub(crate)`
+// helpers (specifically `hash_token_for_storage`, used by the R4
+// emergency-access integration suite to verify token-hash format
+// parity with R1's consume path). Public re-exports still flow
+// through `pub use sessions::{...}` below — this visibility bump
+// does not change the external API surface.
+pub(crate) mod sessions;
 mod users;
 
 pub use mfa::MfaPolicy;

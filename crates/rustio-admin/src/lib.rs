@@ -81,6 +81,20 @@ pub mod __integration {
         verify_totp_for_user, BackupConsumeOutcome, DisableOutcome, EnrolOutcome, MfaKey,
         ProvisionedSecret, RegenOutcome, VerifyOutcome, BACKUP_CODE_COUNT,
     };
+    /// R4 emergency-recovery test-only helper — forwards to the
+    /// `pub(crate)` `auth::sessions::hash_token_for_storage` so
+    /// the integration suite can verify that an
+    /// `emergency_access`-issued URL stores its token in the
+    /// exact same format R1's consume path will look up later.
+    /// Catches the hex-vs-base64 drift surfaced during commit #8
+    /// (which the unit-test gate could not have seen — only a
+    /// live-DB or testcontainers run can). Wrapped rather than
+    /// `pub use`'d because the inner helper is `pub(crate)` and
+    /// cannot be re-exported under a stricter visibility.
+    /// See `DESIGN_R4_EMERGENCY.md` §9.2.
+    pub fn hash_token_for_storage(token: &str) -> String {
+        crate::auth::sessions::hash_token_for_storage(token)
+    }
 
     /// Construct a minimal [`crate::http::Request`] for integration
     /// tests. POST to `/test`, no headers, no body, no params.
