@@ -70,6 +70,17 @@ pub mod __integration {
         unlock_user_account, AdminActor, AdminIssueOutcome, AdminRevokeOutcome, AdminTempPwOutcome,
         LockDuration, LockOutcome, LockState, ThrottleOutcome, UnlockOutcome,
     };
+    // R3 MFA — runtime fns + outcomes + key type + pure helpers the
+    // integration suite needs to drive enrolment / verify /
+    // consume / disable / regenerate flows. The `auth::mfa` module
+    // is `pub(crate)`, so this is the only door under the
+    // `integration-test` feature. See `DESIGN_R3_MFA.md` §13.3.
+    pub use crate::auth::mfa::{
+        confirm_enrolment, consume_backup_code, current_step, disable_mfa, generate_totp,
+        promote_session_to_mfa_verified, provision_secret, regenerate_backup_codes,
+        verify_totp_for_user, BackupConsumeOutcome, DisableOutcome, EnrolOutcome, MfaKey,
+        ProvisionedSecret, RegenOutcome, VerifyOutcome, BACKUP_CODE_COUNT,
+    };
 
     /// Construct a minimal [`crate::http::Request`] for integration
     /// tests. POST to `/test`, no headers, no body, no params.
