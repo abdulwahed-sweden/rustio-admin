@@ -671,3 +671,159 @@ pub(crate) async fn do_regenerate(
         }
     }
 }
+
+// ---- /admin/account/mfa/disable (R3 commit #15) ----------------------------
+//
+// Two-step disable flow per DESIGN_R3_MFA.md §4.3:
+//
+//   GET  /admin/account/mfa/disable → show_disable
+//        - Re-auth gate (D5). If not elevated, redirect to
+//          /admin/reauth?return_to=<this page>.
+//        - Render the confirmation page explaining that disable
+//          revokes every session for this user (current device
+//          included).
+//
+//   POST /admin/account/mfa/disable → do_disable
+//        - Re-auth gate (D5).
+//        - Call disable_mfa (commit #9). The runtime clears
+//          the MFA columns, deletes the backup-code rows,
+//          and runs invalidate_sessions(User, MfaDisabled)
+//          via Doctrine 22's single writer.
+//        - On Disabled: clear the session cookie and redirect
+//          to /admin/login. The user signs back in with
+//          password only.
+//        - On NotEnrolled: 303 to /admin/account/sessions
+//          (defensive — should not happen if the GET form
+//          guards it correctly).
+//        - PolicyRequired is currently unreachable from the
+//          runtime; if it ever surfaces (when policy
+//          enforcement moves into the runtime layer), the
+//          handler renders a "your administrator requires MFA"
+//          forbidden page. For commit #15 that branch returns
+//          a generic 403 without a custom template; future
+//          commits can ship a dedicated copy.
+
+use crate::auth::mfa::{disable_mfa, DisableOutcome};
+
+#[derive(Serialize)]
+#[allow(dead_code)] // call site at the disable GET route (R3 commit #19)
+struct MfaDisableCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: &'static str,
+    /// Form-level error banner (empty on first render).
+    error: Option<String>,
+}
+
+/// `GET /admin/account/mfa/disable` — render the confirmation
+/// form.
+///
+/// Re-auth gate (D5) per the same shape as `show_enroll` and
+/// `show_regenerate`.
+#[allow(dead_code)] // call site lands at the disable GET route (R3 commit #19)
+pub(crate) async fn show_disable(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let cookie = req.header("cookie");
+    let token = cookie.and_then(auth::session_token_from_cookie);
+    let session_id = if let Some(t) = token {
+        auth::current_session_id(&ctx.db, &t).await?
+    } else {
+        None
+    };
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(Response::redirect(
+            "/admin/reauth?return_to=/admin/account/mfa/disable",
+        ));
+    }
+
+    let view = MfaDisableCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: "Disable two-factor authentication",
+        error: None,
+    };
+    let body = ctx.templates.render("admin/mfa_disable.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/account/mfa/disable` — disable MFA and sign
+/// the user out of every device.
+///
+/// Re-auth gate (D5) is enforced here too — a direct POST
+/// without an elevated session must not bypass the wall.
+///
+/// **Doctrine 22 routed through.** `disable_mfa` calls
+/// `auth::sessions::invalidate_sessions(User, MfaDisabled)`
+/// — the framework's only writer of `revoked_at`. The
+/// handler then clears the session cookie (the runtime
+/// revoked the row; the cookie is a stale reference that
+/// should not survive the response) and redirects to
+/// `/admin/login`.
+#[allow(dead_code)] // call site lands at the disable POST route (R3 commit #19)
+pub(crate) async fn do_disable(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    // Re-auth gate. Same as show_disable's check above.
+    let cookie = req.header("cookie");
+    let token = cookie.and_then(auth::session_token_from_cookie);
+    let session_id = if let Some(t) = token {
+        auth::current_session_id(&ctx.db, &t).await?
+    } else {
+        None
+    };
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(Response::redirect(
+            "/admin/reauth?return_to=/admin/account/mfa/disable",
+        ));
+    }
+
+    let correlation_id = req.header("x-correlation-id");
+    let outcome = disable_mfa(&ctx.db, &req, identity.user_id, correlation_id).await?;
+
+    match outcome {
+        DisableOutcome::Disabled {
+            sessions_revoked: _,
+        } => {
+            // The current session was revoked along with every
+            // other session for this user. Clear the cookie
+            // before redirecting — leaving it set would carry
+            // a stale token forward that no longer matches
+            // any live row. Same pattern as the existing
+            // do_logout handler in admin/handlers.rs.
+            let clear = format!(
+                "{}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0",
+                auth::SESSION_COOKIE
+            );
+            Ok(Response::redirect("/admin/login?mfa_disabled=1").with_header("set-cookie", clear))
+        }
+        DisableOutcome::NotEnrolled => {
+            // Defensive: the GET form should not have rendered
+            // for a not-enrolled user. If we land here, redirect
+            // to the account-sessions page where the user can
+            // see their MFA state.
+            Ok(Response::redirect("/admin/account/sessions"))
+        }
+        DisableOutcome::PolicyRequired => {
+            // Reserved branch (the current runtime never
+            // returns this). When MfaPolicy enforcement moves
+            // into the runtime, surface a generic 403 here.
+            // A dedicated template lands in a future commit.
+            Ok(
+                Response::html("Forbidden: your administrator requires MFA.")
+                    .with_status(hyper::StatusCode::FORBIDDEN),
+            )
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-login">
+  <h1 class="rio-login-title">Disable two-factor authentication</h1>
+  <p class="rio-login-intro">
+    Disabling will <strong>sign you out of every device</strong>,
+    including this one. The next sign-in only requires your
+    password.
+  </p>
+  <p class="rio-login-intro">
+    Your TOTP secret and any unused backup codes are permanently
+    deleted. To re-enable, you would set up a new authenticator
+    from scratch.
+  </p>
+
+  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/admin/account/mfa/disable" class="rio-form rio-form--login">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--danger">
+      Disable and sign out everywhere
+    </button>
+  </form>
+
+  <p class="rio-login-footer">
+    <a href="/admin">Cancel</a>
+  </p>
+</div>
+{% endblock %}
