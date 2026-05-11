@@ -32,8 +32,48 @@ impl Model for {{Singular}} {
     }
 }
 
-// Empty `impl ModelAdmin` opts the model into `Admin::model::<…>()`
-// with every framework default. Override hooks (list_display,
-// list_filter, search_fields, ordering, …) to customise the list
-// page — see https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/modeladmin.md
-impl ModelAdmin for {{Singular}} {}
+// The `ModelAdmin` impl below customises the admin list / form
+// surface for `{{Singular}}`. Every method has a sensible default;
+// these starter overrides exist so the generated project's first
+// list page already feels production-shaped (searchable, filterable,
+// sortable). Remove anything you don't need.
+impl ModelAdmin for {{Singular}} {
+    /// Columns shown in the list-page table. Order matters.
+    /// Defaults to `&["id"]` when not overridden.
+    fn list_display() -> &'static [&'static str] {
+        &["id", "name", "created_at"]
+    }
+
+    /// Columns whose `=` value is filterable via `?filter_<col>=<v>`
+    /// chips above the list page. Strings, enums, and small-cardinality
+    /// columns make the most sense here.
+    fn list_filter() -> &'static [&'static str] {
+        // Example: filter the list by a status enum.
+        // &["status"]
+        &[]
+    }
+
+    /// Columns that the list-page `?q=...` search box matches with
+    /// `ILIKE`. Text + email columns are the usual candidates.
+    fn search_fields() -> &'static [&'static str] {
+        &["name"]
+    }
+
+    /// Default sort order. Prefix with `-` for descending.
+    fn ordering() -> &'static [&'static str] {
+        &["-created_at"]
+    }
+
+    // Rows per list page before pagination kicks in. Default is 50.
+    //
+    //   fn list_per_page() -> usize { 50 }
+
+    // Bulk-action surface. Each returned `BulkAction` becomes a
+    // button in the list-page "Actions" dropdown; the framework
+    // wires the two-step confirm flow at
+    // `POST /admin/{{table}}/bulk/<slug>`.
+    //
+    //   fn bulk_actions() -> &'static [BulkAction] {
+    //       &[BulkAction { slug: "archive", label: "Archive selected" }]
+    //   }
+}
