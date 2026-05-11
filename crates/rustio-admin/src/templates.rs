@@ -412,6 +412,67 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         "admin/reset_password.html",
         include_str!("../assets/templates/admin/reset_password.html"),
     ),
+    // Organisational recovery (R2)
+    //
+    // These pages are rendered by `admin/admin_recovery_handlers.rs`
+    // — the admin-driven reset / lock / re-auth / forced-rotation
+    // surface. They were inadvertently omitted from this list when
+    // R2 shipped in 0.6.0; the disk files were committed but never
+    // hooked into the embedded set. Without them every
+    // `/admin/reauth`, `/admin/users/:id/reset-password`,
+    // `/admin/users/:id/lock`, and forced-password-change request
+    // returns the framework's generic 500 page. The
+    // `every_handler_rendered_template_resolves` test in this file
+    // is the regression gate that catches this shape of omission.
+    (
+        "admin/reauth.html",
+        include_str!("../assets/templates/admin/reauth.html"),
+    ),
+    (
+        "admin/admin_reset_password.html",
+        include_str!("../assets/templates/admin/admin_reset_password.html"),
+    ),
+    (
+        "admin/lock_user.html",
+        include_str!("../assets/templates/admin/lock_user.html"),
+    ),
+    (
+        "admin/confirm_admin_action.html",
+        include_str!("../assets/templates/admin/confirm_admin_action.html"),
+    ),
+    (
+        "admin/must_change_password.html",
+        include_str!("../assets/templates/admin/must_change_password.html"),
+    ),
+    // TOTP MFA (R3)
+    //
+    // Rendered by `admin/mfa_handlers.rs` (enrol / verify /
+    // regenerate / disable). Same shape of omission as the R2 set
+    // above; same regression-gate test covers them.
+    (
+        "admin/mfa_enroll.html",
+        include_str!("../assets/templates/admin/mfa_enroll.html"),
+    ),
+    (
+        "admin/mfa_enroll_complete.html",
+        include_str!("../assets/templates/admin/mfa_enroll_complete.html"),
+    ),
+    (
+        "admin/mfa_verify.html",
+        include_str!("../assets/templates/admin/mfa_verify.html"),
+    ),
+    (
+        "admin/mfa_disable.html",
+        include_str!("../assets/templates/admin/mfa_disable.html"),
+    ),
+    (
+        "admin/mfa_regenerate.html",
+        include_str!("../assets/templates/admin/mfa_regenerate.html"),
+    ),
+    (
+        "admin/mfa_regenerate_complete.html",
+        include_str!("../assets/templates/admin/mfa_regenerate_complete.html"),
+    ),
 ];
 
 #[cfg(test)]
