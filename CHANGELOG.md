@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.8.1** | 2026-05-11 | Visibility recovery pass — model_name slug canonicalisation, error-page chrome, history-label expansion, scaffold middleware + secret-key + README, top-bar MFA, doctor surface, `#[rustio(display_name)]`. |
 | **0.8.0** | 2026-05-11 | R4 — CLI emergency recovery: `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`. |
 | **0.7.1** | 2026-05-11 | Embed every R2 + R3 page template (fix 500 on /admin/reauth and every MFA flow).  |
 | **0.7.0** | 2026-05-11 | TOTP multi-factor authentication + single-use backup codes.                       |
@@ -26,6 +27,139 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.8.1] — 2026-05-11
+
+Visibility recovery pass. No new features, no rewrites — a
+focused recovery of already-built framework capabilities that
+were hidden, disconnected, or bypassed in the generated-project
+surface. Driven by an audit (`VISIBILITY_AUDIT.md`); the audit's
+10 findings reduced to 9 implemented commits, 1 (B2 — sidebar
+Auth-block unification) deliberately deferred as too
+architecture-y for a recovery pass.
+
+The user-visible payoff: a fresh `rustio startproject foo`
+project now feels coherent. The History page links resolve.
+Error pages keep the chrome. MFA + Sessions surface from the
+top-bar. `rustio doctor` answers seven questions instead of
+three. `startapp` teaches the operator what `ModelAdmin` does.
+The audit log shows real event names instead of opaque pills.
+
+### Migration from 0.8.0
+
+Bump `rustio-admin = "0.8.1"` and run
+`cargo update -p rustio-admin`. The framework's boot-time
+`admin::audit::ensure_table` gains an idempotent
+`UPDATE rustio_admin_actions SET model_name = 'users' WHERE
+model_name IN ('User', 'user', 'rustio_users')` migration (plus
+the matching one for groups). Rows from 0.7.x and 0.8.0 that
+had drifted `model_name` values are rewritten on next boot;
+subsequent boots are a no-op.
+
+No schema columns added or removed. No HTTP routes added or
+removed. No middleware order changes (the scaffold's template
+gains `correlation_id`; lursystem-style production projects
+already wire it).
+
+### Fixed
+
+- **F1 — audit-row `model_name` canonicalised to admin slug.**
+  Pre-0.8.1 the framework + CLI wrote four different
+  conventions (`"User"`, `"user"`, `"Group"`, `"rustio_users"`)
+  to `rustio_admin_actions.model_name`. The History page
+  renders this column as a URL slug; three of four 404'd. All
+  emission sites now write the canonical slug (`"users"` /
+  `"groups"`). The user-visible 404 in
+  `VISIBILITY_AUDIT.md` screenshot 1
+  (`/admin/rustio_users/2/edit` → "no admin model: rustio_users")
+  is the closing demonstration.
+- **A2 — error page keeps the operator's chrome.** The outer
+  error-render middleware now resolves the operator's identity
+  from the session cookie before rendering the 4xx/5xx page,
+  and `ErrorCtx` gains the `entries` field needed by the
+  sidebar `{% include %}`. Pre-0.8.1 the 404 page was a
+  chromeless dead-end with no sidebar, no actor chip, no
+  log-out link.
+- **B3 — `/admin/history` Action column shows real event names.**
+  `action_label` covered only `create/update/delete` and fell
+  through to a generic "Action" pill for every R1+ event
+  (password resets, MFA, emergency recovery). Now covers all
+  25 known `AuditEvent::as_str()` strings with human labels +
+  semantic pill classes (success / danger / warning / neutral).
+
+### Added — generated-project surface
+
+- **F4 — scaffold middleware chain gains `correlation_id`.**
+  Pre-0.8.1 scaffolded projects shipped a 3-middleware chain;
+  the R0-canonical chain is 4 (`logger →
+  correlation_id → security_headers → csrf_protect`).
+  Scaffolded projects without `correlation_id` wrote NULL into
+  the audit column, breaking the cross-request pivot.
+- **F5 — scaffold `.env.example` gains `RUSTIO_SECRET_KEY=`.**
+  With generation command, scope, and rotation warning.
+  Pre-0.8.1 a fresh project's first MFA enrol 500'd at the
+  AES-GCM init guard.
+- **F6 — `rustio startapp` emits meaningful `ModelAdmin`.**
+  `list_display` / `list_filter` / `search_fields` /
+  `ordering` shown with starter values + per-method docstrings
+  + commented-out `list_per_page` / `bulk_actions` stubs.
+  Operators discover the framework's strengths from the first
+  generated model.
+- **D3/D4 — scaffold `README.md` covers MFA + R4 + custom
+  routes.** 100+ lines added: how to enable MFA via
+  `Admin::require_mfa`, the five `rustio user <op>` emergency
+  commands with worked examples, and the
+  mount-before-`register_admin_routes` pattern for project
+  routes.
+
+### Added — top-bar discoverability
+
+- **B1 — MFA + Sessions self-service links surfaced.** The
+  top-bar account area now shows "Enable MFA" (un-enrolled),
+  "Two-factor" (enrolled), and "Sessions" links. Pre-0.8.1
+  the R3 enrol / regenerate / disable pages were reachable
+  only by typing the URL.
+
+### Added — doctor diagnostic
+
+- **E3 — `rustio doctor` reports four more checks.**
+  RUSTIO_SECRET_KEY presence + length, R3 MFA enrolment count,
+  R4 emergency-recovery audit row count, audit-slug drift (the
+  regression gate paired with F1). Hard failures still exit
+  non-zero; new checks are informational.
+
+### Added — macro polish
+
+- **F3 — `#[rustio(admin_name = ..., display_name = ...)]`
+  struct attributes.** Project-side override for the macro's
+  auto-derived labels. `CaseAction` can now register as
+  "Case events" without renaming the struct. Both keys
+  optional; unknown keys produce a compile error.
+
+### Regression gates added
+
+- `admin::audit::tests::model_name_uses_admin_slug_not_struct_name` —
+  scans every framework `.rs` for legacy `model_name` literals
+  in audit-emission contexts; fails if any reappear.
+- `admin::render::tests::action_label_covers_every_audit_event_string` —
+  asserts no event string falls through to the generic "Action"
+  label.
+- `admin::render::tests::action_pill_class_returns_known_classes` —
+  asserts every pill class is one the CSS defines.
+
+### Deliberately deferred
+
+- **B2 — sidebar Auth-block unification.** The audit flagged
+  the parallel "Models" loop + hardcoded "Users / Groups /
+  History" block as a structural smell. The hardcoded block
+  works correctly today; restructuring it is more risk than
+  reward for a recovery pass. Future work, lower priority.
+
+### Test count
+
+  Before: 259 framework + 27 CLI = 286
+  After:  262 framework + 27 CLI = 289 (+3)
 
 
 ## [0.8.0] — 2026-05-11
