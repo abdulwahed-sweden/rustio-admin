@@ -1,0 +1,32 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-login">
+  <h1 class="rio-login-title">Two-factor authentication enabled</h1>
+
+  <div class="rio-flash rio-flash--success" role="status">
+    Save these backup codes somewhere safe. Each one can be used
+    exactly once if you lose access to your authenticator app.
+    They will not be shown again.
+  </div>
+
+  <p class="rio-login-intro">
+    <strong>Backup codes</strong>
+  </p>
+
+  <ul class="rio-backup-codes">
+    {% for code in plain_backup_codes %}
+      <li><code class="rio-code-block">{{ code }}</code></li>
+    {% endfor %}
+  </ul>
+
+  <p class="rio-login-intro">
+    If you run out of codes you can generate a new batch from your
+    account settings. Generating a new batch invalidates every code
+    above.
+  </p>
+
+  <p class="rio-login-footer">
+    <a href="/admin" class="rio-button rio-button--primary">Continue to dashboard</a>
+  </p>
+</div>
+{% endblock %}

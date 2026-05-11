@@ -660,6 +660,43 @@ pub fn provision_secret() -> ProvisionedSecret {
     }
 }
 
+/// Build an `otpauth://totp/<issuer>:<account>?...` URL per
+/// the de-facto-standard Google Authenticator Key URI format.
+///
+/// Authenticator apps consume this URL (typically via a QR
+/// code) to provision the secret + verify-side params in one
+/// step. The framework emits the URL; the enrolment template
+/// renders it as a clickable link and a manual-entry fallback.
+///
+/// Format:
+///
+/// ```text
+/// otpauth://totp/<issuer>:<account>?secret=<base32>
+///                                 &issuer=<issuer>
+///                                 &algorithm=SHA1
+///                                 &digits=6
+///                                 &period=<step_seconds>
+/// ```
+///
+/// Both `<issuer>` (in the path) and the `&issuer=` query
+/// param are populated — older authenticator apps parse one
+/// but not the other; including both is the broadest-compat
+/// move per Google's own spec.
+#[allow(dead_code)] // call site lands at the enrolment GET handler (R3 commit #13)
+pub fn build_otpauth_url(
+    issuer: &str,
+    account: &str,
+    base32_secret: &str,
+    step_seconds: u64,
+) -> String {
+    let issuer_enc = urlencoding::encode(issuer);
+    let account_enc = urlencoding::encode(account);
+    format!(
+        "otpauth://totp/{issuer_enc}:{account_enc}?secret={base32_secret}\
+         &issuer={issuer_enc}&algorithm=SHA1&digits=6&period={step_seconds}"
+    )
+}
+
 /// RFC 4648 base32 encoder (no padding). Hand-rolled rather
 /// than added as a dependency to match the framework's
 /// dependency-conservative character — base32 is ~30 lines and
@@ -687,6 +724,54 @@ fn base32_encode_no_pad(bytes: &[u8]) -> String {
         out.push(ALPHA[idx] as char);
     }
     out
+}
+
+/// RFC 4648 base32 decoder (no padding), used to recover the
+/// TOTP secret from the enrolment form's hidden `secret_base32`
+/// field. Inverse of [`base32_encode_no_pad`].
+///
+/// Accepts:
+/// - The 32-character base32 alphabet (A-Z, 2-7), case
+///   insensitive.
+/// - Whitespace, hyphens, and `=` padding chars are silently
+///   stripped before decode (matches what users typically paste
+///   from authenticator apps).
+///
+/// Returns `None` if any non-alphabet character survives the
+/// strip — including the four ambiguity-rejected base32 letters
+/// (0, 1, 8, 9). The handler maps `None` to a uniform "invalid
+/// code" outcome.
+///
+/// Pinned by round-trip tests:
+/// `decode(encode(input)) == input` for arbitrary input.
+#[allow(dead_code)] // call site lands at the enrolment POST handler (R3 commit #13)
+pub fn base32_decode_no_pad(input: &str) -> Option<Vec<u8>> {
+    let mut buffer: u32 = 0;
+    let mut bits_in_buffer: u8 = 0;
+    let mut out = Vec::with_capacity(input.len() * 5 / 8 + 1);
+    for c in input.chars() {
+        // Tolerate hyphens / spaces / `=` padding so paste-able
+        // strings work without further normalisation at the
+        // call site.
+        if c.is_ascii_whitespace() || c == '-' || c == '=' {
+            continue;
+        }
+        let value: u32 = match c.to_ascii_uppercase() {
+            'A'..='Z' => (c.to_ascii_uppercase() as u32) - ('A' as u32),
+            '2'..='7' => (c as u32) - ('2' as u32) + 26,
+            _ => return None,
+        };
+        buffer = (buffer << 5) | value;
+        bits_in_buffer += 5;
+        if bits_in_buffer >= 8 {
+            bits_in_buffer -= 8;
+            out.push(((buffer >> bits_in_buffer) & 0xFF) as u8);
+        }
+    }
+    // Leftover < 5 bits are zero-padding from the encoder's
+    // tail flush. Accept them silently; rejecting non-zero
+    // leftover bits is over-strict for the otpauth use case.
+    Some(out)
 }
 
 /// Outcome of [`confirm_enrolment`]. Lets the caller render the
@@ -2212,5 +2297,83 @@ mod tests {
             let secret = provision_secret();
             assert!(seen.insert(secret.secret_bytes), "RNG produced duplicate");
         }
+    }
+
+    // ---- enrolment URL + base32 decode (R3 commit #13) ----------
+
+    #[test]
+    fn build_otpauth_url_matches_google_authenticator_format() {
+        // Standard otpauth:// URI per Google Authenticator's
+        // Key URI Format spec. Issuer + account must appear
+        // both in the path AND in the &issuer= query param;
+        // the algorithm / digits / period are explicit so
+        // apps that don't read defaults still get the right
+        // values.
+        let url = build_otpauth_url("Acme Corp", "alice@example.com", "MZXW6YTBOI", 30);
+        assert!(
+            url.starts_with("otpauth://totp/Acme%20Corp:alice%40example.com?"),
+            "wrong path encoding: {url}"
+        );
+        assert!(url.contains("secret=MZXW6YTBOI"), "secret missing: {url}");
+        assert!(
+            url.contains("issuer=Acme%20Corp"),
+            "issuer query missing: {url}"
+        );
+        assert!(url.contains("algorithm=SHA1"), "algorithm missing: {url}");
+        assert!(url.contains("digits=6"), "digits missing: {url}");
+        assert!(url.contains("period=30"), "period missing: {url}");
+    }
+
+    #[test]
+    fn base32_decode_rfc4648_round_trips_progressive_vectors() {
+        // Inverse of the base32_rfc4648_progressive_test_vectors
+        // test from commit #6. The pair of tests pins the
+        // encoder + decoder against each other AND against the
+        // RFC 4648 spec.
+        let cases: &[(&str, &[u8])] = &[
+            ("MY", b"f"),
+            ("MZXQ", b"fo"),
+            ("MZXW6", b"foo"),
+            ("MZXW6YQ", b"foob"),
+            ("MZXW6YTB", b"fooba"),
+            ("MZXW6YTBOI", b"foobar"),
+        ];
+        for &(encoded, expected) in cases {
+            let decoded =
+                base32_decode_no_pad(encoded).unwrap_or_else(|| panic!("decode failed: {encoded}"));
+            assert_eq!(decoded.as_slice(), expected, "round-trip {encoded}");
+        }
+    }
+
+    #[test]
+    fn base32_decode_tolerates_hyphens_spaces_padding_and_lowercase() {
+        // Users paste secrets in different shapes; the decoder
+        // collapses them all to the canonical bytes.
+        for variant in [
+            "MZXW6YTBOI",
+            "mzxw6ytboi",
+            "MZXW 6YTB OI",
+            "MZXW-6YTB-OI",
+            "MZXW6YTBOI==",
+        ] {
+            assert_eq!(
+                base32_decode_no_pad(variant).expect("decode should succeed"),
+                b"foobar",
+                "variant: {variant:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn base32_decode_rejects_non_alphabet_chars() {
+        // The four ambiguity-rejected base32 letters (0, 1,
+        // 8, 9) and other non-alphabet chars must return None
+        // — not silently coerce. The handler maps None to a
+        // uniform invalid-code response.
+        assert!(base32_decode_no_pad("ABC0DEF").is_none());
+        assert!(base32_decode_no_pad("ABC1DEF").is_none());
+        assert!(base32_decode_no_pad("ABC8DEF").is_none());
+        assert!(base32_decode_no_pad("ABC9DEF").is_none());
+        assert!(base32_decode_no_pad("hello!").is_none());
     }
 }
