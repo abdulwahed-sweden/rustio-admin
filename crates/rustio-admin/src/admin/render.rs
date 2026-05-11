@@ -1826,6 +1826,12 @@ pub(crate) struct ErrorCtx {
     pub status: u16,
     pub heading: String,
     pub message: String,
+    /// Project-model entries for the sidebar. Required to keep the
+    /// chrome navigable on 4xx/5xx pages (`VISIBILITY_AUDIT.md` A2):
+    /// previously the error page rendered without a sidebar because
+    /// `entries` was absent, so the operator hit a navigational
+    /// dead-end the moment they bounced off a 404.
+    pub entries: Vec<SidebarEntry>,
 }
 
 pub(crate) fn admin_error_heading(status: u16) -> &'static str {
@@ -1849,12 +1855,23 @@ pub(crate) fn render_admin_error_response(
     message: String,
 ) -> crate::http::Response {
     let heading = admin_error_heading(status).to_string();
+    // Sidebar entries for the chrome. `core=true` entries (User /
+    // Group) are excluded from the dynamic Models loop the way
+    // every other page does it — they live in the hardcoded Auth
+    // block of `_sidebar.html`.
+    let sidebar_entries: Vec<SidebarEntry> = admin
+        .entries()
+        .iter()
+        .filter(|e| !e.core)
+        .map(SidebarEntry::from)
+        .collect();
     let view = ErrorCtx {
         base: BaseContext::new(identity, String::new(), admin),
         page_title: format!("{status} {heading}"),
         status,
         heading: heading.clone(),
         message,
+        entries: sidebar_entries,
     };
     let html_status =
         hyper::StatusCode::from_u16(status).unwrap_or(hyper::StatusCode::INTERNAL_SERVER_ERROR);
