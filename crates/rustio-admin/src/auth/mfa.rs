@@ -109,10 +109,22 @@
 //!   `AuditEvent::MfaDisabled`. The first R3 runtime that
 //!   goes through `invalidate_sessions` — the substrate
 //!   carries through unchanged. R3 commit #9.
+//! - [`regenerate_backup_codes`] / [`RegenOutcome`] — the
+//!   regenerate runtime (§4.5, D3). Atomic transaction:
+//!   `SELECT … FOR UPDATE` on the user row to serialise
+//!   concurrent regenerates, DELETE every existing
+//!   backup-code row, INSERT 8 fresh hashed rows, then commit.
+//!   Emits the new `AuditEvent::BackupCodesRegenerated`
+//!   variant with metadata
+//!   `{ previous_codes_invalidated, new_codes_count }`.
+//!   D3 enforced at the SQL level — the old batch is
+//!   unrecoverable from the moment the transaction commits.
+//!   R3 commit #10. The final runtime function before the
+//!   HTTP-handler commits begin.
 //!
-//! Subsequent commits will add: backup-code regeneration
-//! runtime (§4.5), and `MfaPolicy` routing into `login_guard`
-//! (§12.3).
+//! Subsequent commits will add the HTTP handlers, route
+//! registration, and `MfaPolicy` routing into `login_guard`
+//! (§10, §12.3).
 //!
 //! ## Doctrine 22 reminder
 //!
@@ -1349,6 +1361,177 @@ pub async fn disable_mfa(
     audit_record(db, entry).await?;
 
     Ok(DisableOutcome::Disabled { sessions_revoked })
+}
+
+// -----------------------------------------------------------------
+// Backup-code regenerate runtime (R3 commit #10)
+// -----------------------------------------------------------------
+
+/// Outcome of [`regenerate_backup_codes`]. Lets the regenerate
+/// handler render the right page without embedding HTTP
+/// concerns in the runtime layer.
+#[allow(dead_code)] // variants light up at the regenerate handler in a later commit
+pub enum RegenOutcome {
+    /// A fresh batch of `BACKUP_CODE_COUNT` codes was generated
+    /// inside an atomic transaction (D3). The old batch — all
+    /// rows for this user — was deleted in the same transaction
+    /// and is unrecoverable from the moment the commit landed.
+    /// `previous_codes_invalidated` is the count of rows the
+    /// DELETE removed (used + unused combined).
+    /// `plain_backup_codes` carries the freshly-generated
+    /// plaintext for the one-time success-page render (D2);
+    /// the caller MUST drop them after the response.
+    Regenerated {
+        plain_backup_codes: Vec<String>,
+        previous_codes_invalidated: u32,
+    },
+    /// The user row exists but `mfa_enabled = FALSE`. No
+    /// writes; regenerating codes for a non-enrolled user is
+    /// a no-op refused by the runtime.
+    NotEnrolled,
+}
+
+/// Regenerate the backup-code batch for a user atomically.
+///
+/// **Inputs.**
+///
+/// - `request` — for client-IP capture into the audit row.
+/// - `user_id` — the user regenerating their own batch
+///   (self-action; re-auth gating is the handler's concern).
+/// - `correlation_id` — forensic-chain anchor.
+///
+/// **Steps.**
+///
+/// 1. Generate `BACKUP_CODE_COUNT` plaintext codes via
+///    [`generate_backup_codes`] and hash each via
+///    [`hash_backup_code`] (Argon2id, low-memory params). The
+///    Argon2id hashing is slow; runs OUTSIDE the transaction
+///    so the row lock is held only for the brief DELETE +
+///    INSERT window.
+/// 2. BEGIN TRANSACTION.
+/// 3. `SELECT mfa_enabled FROM rustio_users WHERE id = $1 FOR UPDATE`.
+///    The `FOR UPDATE` row lock serialises concurrent regenerate
+///    calls for the same user — without it, two simultaneous
+///    requests would each DELETE then INSERT, leaving 16
+///    active codes (the union of both batches). Missing row →
+///    `Error::NotFound` (rolled back). `mfa_enabled = FALSE` →
+///    `NotEnrolled` (rolled back; no writes).
+/// 4. `SELECT COUNT(*)` of existing rows for
+///    `metadata.previous_codes_invalidated`. Includes used +
+///    unused since the DELETE removes both.
+/// 5. `DELETE FROM rustio_mfa_backup_codes WHERE user_id = ?`.
+///    Wipes the old batch.
+/// 6. INSERT each freshly-hashed code.
+/// 7. COMMIT.
+/// 8. Emit `AuditEvent::BackupCodesRegenerated` with metadata
+///    `{ previous_codes_invalidated, new_codes_count }` per §8.2.
+/// 9. Return `Regenerated { plain_backup_codes,
+///    previous_codes_invalidated }`. The caller renders the
+///    plaintext codes ONCE on the success page, then drops
+///    them.
+///
+/// **Doctrine 22.** This function does not write `revoked_at`.
+/// Regeneration does not invalidate sessions per §4.5 — the
+/// user's existing mfa_verified sessions remain valid; only
+/// the backup-code rows are replaced.
+///
+/// **D3 atomicity proof.** The DELETE + INSERTs run inside a
+/// single sqlx transaction. From the moment `tx.commit()`
+/// returns, the only backup codes for this user are the new
+/// 8; the old batch's hashes are gone from the database. A
+/// crash between DELETE and COMMIT rolls back via Postgres's
+/// MVCC — both states (old batch intact / new batch active)
+/// are observable; no in-between is.
+#[allow(dead_code)] // call site lands at the regenerate POST handler in a later commit
+pub async fn regenerate_backup_codes(
+    db: &Db,
+    request: &Request,
+    user_id: i64,
+    correlation_id: Option<&str>,
+) -> Result<RegenOutcome> {
+    // 1. Generate + hash OUTSIDE the transaction. Argon2id
+    //    hashing is the slowest step; holding a row lock
+    //    across it would pessimistically block other reads of
+    //    rustio_users for this user.
+    let plain_codes = generate_backup_codes(BACKUP_CODE_COUNT);
+    let hashes: Vec<String> = plain_codes
+        .iter()
+        .map(|c| {
+            let normalised = normalise_backup_code(c);
+            hash_backup_code(&normalised)
+        })
+        .collect::<Result<Vec<String>>>()?;
+
+    // 2-7. Atomic transaction.
+    let mut tx = db.pool().begin().await?;
+
+    // 3. SELECT … FOR UPDATE — serialises concurrent regenerates.
+    let mfa_enabled: Option<bool> =
+        sqlx::query_scalar("SELECT mfa_enabled FROM rustio_users WHERE id = $1 FOR UPDATE")
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let mfa_enabled =
+        mfa_enabled.ok_or_else(|| Error::NotFound(format!("user {user_id} not found")))?;
+    if !mfa_enabled {
+        // tx auto-rollbacks on drop.
+        return Ok(RegenOutcome::NotEnrolled);
+    }
+
+    // 4. Count the about-to-be-invalidated rows for the audit
+    //    metadata. SELECT runs against the same snapshot as
+    //    the DELETE below since we are inside the same tx.
+    let previous_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM rustio_mfa_backup_codes WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&mut *tx)
+            .await?;
+    let previous_count = previous_count.max(0) as u32;
+
+    // 5. Wipe the old batch.
+    sqlx::query("DELETE FROM rustio_mfa_backup_codes WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // 6. Insert the new hashes. One round-trip per row keeps the
+    //    code simple at the cost of N inserts; BACKUP_CODE_COUNT
+    //    is 8, so the overhead is negligible (well under the
+    //    Argon2id hashing cost we already paid above).
+    for hash in &hashes {
+        sqlx::query("INSERT INTO rustio_mfa_backup_codes (user_id, code_hash) VALUES ($1, $2)")
+            .bind(user_id)
+            .bind(hash)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    // 7. Commit. D3 atomicity guaranteed from here forward.
+    tx.commit().await?;
+
+    // 8. Audit emit AFTER commit succeeds (D8).
+    let metadata = serde_json::json!({
+        "previous_codes_invalidated": previous_count,
+        "new_codes_count": BACKUP_CODE_COUNT,
+    });
+    let ip = client_ip(request);
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+        .with_event(AuditEvent::BackupCodesRegenerated)
+        .with_actor(user_id);
+    entry.correlation_id = correlation_id;
+    entry.ip_address = ip.as_deref();
+    entry.metadata = Some(metadata);
+    entry.summary = format!(
+        "backup codes regenerated; {previous_count} previous invalidated; \
+         {} new codes issued",
+        BACKUP_CODE_COUNT
+    );
+    audit_record(db, entry).await?;
+
+    Ok(RegenOutcome::Regenerated {
+        plain_backup_codes: plain_codes,
+        previous_codes_invalidated: previous_count,
+    })
 }
 
 /// Framework-wide MFA enforcement policy.
