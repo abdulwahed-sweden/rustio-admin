@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.8.0** | 2026-05-11 | R4 — CLI emergency recovery: `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`. |
 | **0.7.1** | 2026-05-11 | Embed every R2 + R3 page template (fix 500 on /admin/reauth and every MFA flow).  |
 | **0.7.0** | 2026-05-11 | TOTP multi-factor authentication + single-use backup codes.                       |
 | **0.6.0** | 2026-05-10 | Admin-driven recovery, re-auth wall, login throttling, forced password rotation.  |
@@ -24,8 +25,10 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-> Targets 0.8.0 — R4 of the universal account-recovery
-> architecture.
+No changes yet.
+
+
+## [0.8.0] — 2026-05-11
 
 R4 — CLI emergency recovery. The shell-access tier that opens
 when every in-band recovery path is closed: a founder who
