@@ -505,3 +505,169 @@ pub(crate) async fn do_enroll(
         }
     }
 }
+
+// ---- /admin/account/mfa/regenerate-codes (R3 commit #14) -------------------
+//
+// Two-step regenerate flow per DESIGN_R3_MFA.md §4.5:
+//
+//   GET  /admin/account/mfa/regenerate-codes → show_regenerate
+//        - Re-auth gate (D5). If not elevated, redirect to
+//          /admin/reauth?return_to=<this page>.
+//        - Render the confirmation page explaining that the
+//          current batch becomes unrecoverable (D3 atomicity).
+//
+//   POST /admin/account/mfa/regenerate-codes → do_regenerate
+//        - Re-auth gate (D5).
+//        - Call regenerate_backup_codes (commit #10). The
+//          runtime runs the DELETE + INSERT batch inside a
+//          single transaction; the old codes are unrecoverable
+//          from the moment that commit lands.
+//        - RegenOutcome cases:
+//          * Regenerated { plain_backup_codes,
+//                          previous_codes_invalidated }
+//            → render the success page with the 8 new codes
+//              shown ONCE.
+//          * NotEnrolled → 303 redirect to
+//            /admin/account/sessions. Defensive — a regenerate
+//            attempt on a not-enrolled account collapses to
+//            the same outcome as visiting the wrong URL.
+//
+// **Future re-auth tightening.** When `/admin/reauth` gains
+// the both-factors-when-enrolled enforcement (separate commit),
+// the elevated_until window that gates this route will already
+// have been earned by a TOTP-plus-password re-auth. The
+// regenerate handler does not need to know — it just checks
+// elevated_until > NOW() — but the substrate guarantees the
+// elevation came from both factors when MFA is enrolled.
+
+use crate::auth::mfa::{regenerate_backup_codes, RegenOutcome};
+
+#[derive(Serialize)]
+#[allow(dead_code)] // call site at the regenerate GET route (R3 commit #19)
+struct MfaRegenerateCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: &'static str,
+    /// Form-level error banner (empty on first render;
+    /// populated only on transient errors that re-render the
+    /// confirm page — none today).
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[allow(dead_code)] // call site at the regenerate success page (R3 commit #19)
+struct MfaRegenerateCompleteCtx {
+    #[serde(flatten)]
+    base: BaseContext,
+    page_title: &'static str,
+    /// The 8 plaintext backup codes, rendered ONCE.
+    plain_backup_codes: Vec<String>,
+    /// How many old rows the DELETE removed (used + unused
+    /// combined). Surfaced to the user so they can confirm the
+    /// regenerate landed on the expected batch size.
+    previous_codes_invalidated: u32,
+}
+
+/// `GET /admin/account/mfa/regenerate-codes` — render the
+/// confirmation form.
+///
+/// Re-auth gate (D5) per the same shape as `show_enroll`. A
+/// stolen cookie cannot reach this page without password
+/// re-entry; a stolen cookie on an MFA-enrolled user cannot
+/// reach it without the TOTP step once the `/admin/reauth`
+/// extension lands.
+#[allow(dead_code)] // call site lands at the regenerate GET route (R3 commit #19)
+pub(crate) async fn show_regenerate(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    // Re-auth gate. Same shape as the destructive admin routes
+    // in admin_recovery_handlers (R2 commit #15).
+    let cookie = req.header("cookie");
+    let token = cookie.and_then(auth::session_token_from_cookie);
+    let session_id = if let Some(t) = token {
+        auth::current_session_id(&ctx.db, &t).await?
+    } else {
+        None
+    };
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(Response::redirect(
+            "/admin/reauth?return_to=/admin/account/mfa/regenerate-codes",
+        ));
+    }
+
+    let view = MfaRegenerateCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        page_title: "Generate new backup codes",
+        error: None,
+    };
+    let body = ctx.templates.render("admin/mfa_regenerate.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// `POST /admin/account/mfa/regenerate-codes` — atomically
+/// replace the user's backup-code batch.
+///
+/// Re-auth gate (D5) is enforced here too — a direct POST
+/// without an elevated session must not bypass the wall.
+///
+/// **Doctrine 22 untouched.** The regenerate runtime does not
+/// write `revoked_at` — D3 transaction wraps the DELETE +
+/// INSERTs; existing sessions are unaffected (§4.5).
+#[allow(dead_code)] // call site lands at the regenerate POST route (R3 commit #19)
+pub(crate) async fn do_regenerate(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    // Re-auth gate. Same as show_regenerate's check above.
+    let cookie = req.header("cookie");
+    let token = cookie.and_then(auth::session_token_from_cookie);
+    let session_id = if let Some(t) = token {
+        auth::current_session_id(&ctx.db, &t).await?
+    } else {
+        None
+    };
+    let elevated = match session_id {
+        Some(id) => check_session_elevated(&ctx.db, id).await?,
+        None => false,
+    };
+    if !elevated {
+        return Ok(Response::redirect(
+            "/admin/reauth?return_to=/admin/account/mfa/regenerate-codes",
+        ));
+    }
+
+    let correlation_id = req.header("x-correlation-id");
+    let outcome = regenerate_backup_codes(&ctx.db, &req, identity.user_id, correlation_id).await?;
+
+    match outcome {
+        RegenOutcome::Regenerated {
+            plain_backup_codes,
+            previous_codes_invalidated,
+        } => {
+            let view = MfaRegenerateCompleteCtx {
+                base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+                page_title: "New backup codes generated",
+                plain_backup_codes,
+                previous_codes_invalidated,
+            };
+            let body = ctx
+                .templates
+                .render("admin/mfa_regenerate_complete.html", &view)?;
+            Ok(Response::html(body))
+        }
+        RegenOutcome::NotEnrolled => {
+            // Defensive: a regenerate attempt on a not-enrolled
+            // user collapses to the same outcome as visiting
+            // the wrong URL — redirect to the account-sessions
+            // page where the user can see their MFA state.
+            Ok(Response::redirect("/admin/account/sessions"))
+        }
+    }
+}

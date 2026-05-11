@@ -1,0 +1,28 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<div class="rio-login">
+  <h1 class="rio-login-title">Generate new backup codes</h1>
+  <p class="rio-login-intro">
+    Generating a new batch <strong>invalidates every existing
+    backup code</strong>. Use this if you have lost your saved
+    codes or suspect they have been seen by someone else.
+  </p>
+  <p class="rio-login-intro">
+    Your authenticator app remains paired — only the backup
+    codes change.
+  </p>
+
+  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/admin/account/mfa/regenerate-codes" class="rio-form rio-form--login">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--primary">
+      Generate new codes
+    </button>
+  </form>
+
+  <p class="rio-login-footer">
+    <a href="/admin">Cancel</a>
+  </p>
+</div>
+{% endblock %}
