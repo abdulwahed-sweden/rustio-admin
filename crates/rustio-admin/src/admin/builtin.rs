@@ -362,7 +362,7 @@ pub(crate) async fn do_user_edit(
         LogEntry {
             user_id: identity.user_id,
             action_type: ActionType::Update,
-            model_name: "User",
+            model_name: "users",
             object_id: user_id,
             ip_address: ip.as_deref(),
             summary,
@@ -981,7 +981,7 @@ pub(crate) async fn do_user_delete(
         LogEntry {
             user_id: identity.user_id,
             action_type: ActionType::Delete,
-            model_name: "User",
+            model_name: "users",
             object_id: user_id,
             ip_address: ip.as_deref(),
             summary: format!("deleted user {} ({})", target_email, target_role.as_str()),
@@ -1313,7 +1313,7 @@ pub(crate) async fn do_group_edit(
         LogEntry {
             user_id: identity.user_id,
             action_type: ActionType::Update,
-            model_name: "Group",
+            model_name: "groups",
             object_id: group_id,
             ip_address: ip.as_deref(),
             summary,
@@ -1430,7 +1430,7 @@ pub(crate) async fn do_group_delete(
         LogEntry {
             user_id: identity.user_id,
             action_type: ActionType::Delete,
-            model_name: "Group",
+            model_name: "groups",
             object_id: group_id,
             ip_address: ip.as_deref(),
             summary: format!(
@@ -1597,7 +1597,7 @@ pub(crate) async fn do_new_user(
             LogEntry {
                 user_id: identity.user_id,
                 action_type: ActionType::Create,
-                model_name: "User",
+                model_name: "users",
                 object_id: new_id,
                 ip_address: ip.as_deref(),
                 summary: format!("created user {} as {}", email, role.as_str()),
@@ -1731,7 +1731,7 @@ pub(crate) async fn do_new_group(
                     LogEntry {
                         user_id: identity.user_id,
                         action_type: ActionType::Create,
-                        model_name: "Group",
+                        model_name: "groups",
                         object_id: new_id,
                         ip_address: ip.as_deref(),
                         summary: format!("created group {name}"),

@@ -262,7 +262,7 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
                 audit::LogEntry {
                     user_id: user.id,
                     action_type: audit::ActionType::Update,
-                    model_name: "user",
+                    model_name: "users",
                     object_id: user.id,
                     ip_address: ip.as_deref(),
                     summary: format!(
@@ -1154,7 +1154,7 @@ pub(crate) async fn do_password_change(
     let metadata = serde_json::json!({
         "invalidated_session_count": revoked_session_count,
     });
-    let mut entry = audit::LogEntry::new(user.id, audit::ActionType::Update, "user", user.id)
+    let mut entry = audit::LogEntry::new(user.id, audit::ActionType::Update, "users", user.id)
         .with_event(audit::AuditEvent::PasswordChangedSelf);
     entry.correlation_id = cid_owned.as_deref();
     entry.ip_address = ip_owned.as_deref();

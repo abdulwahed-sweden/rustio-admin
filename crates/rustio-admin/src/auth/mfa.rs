@@ -927,7 +927,7 @@ pub async fn confirm_enrolment(
         "key_id": key_id,
     });
     let ip = client_ip(request);
-    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "users", user_id)
         .with_event(AuditEvent::MfaEnabled)
         .with_actor(user_id);
     entry.correlation_id = correlation_id;
@@ -1295,7 +1295,7 @@ pub async fn consume_backup_code(
         "via": via,
     });
     let ip = client_ip(request);
-    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "users", user_id)
         .with_event(AuditEvent::MfaCodeConsumed)
         .with_actor(user_id);
     entry.correlation_id = correlation_id;
@@ -1454,7 +1454,7 @@ pub async fn disable_mfa(
         "sessions_revoked": sessions_revoked,
     });
     let ip = client_ip(request);
-    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "users", user_id)
         .with_event(AuditEvent::MfaDisabled)
         .with_actor(user_id);
     entry.correlation_id = correlation_id;
@@ -1621,7 +1621,7 @@ pub async fn regenerate_backup_codes(
         "new_codes_count": BACKUP_CODE_COUNT,
     });
     let ip = client_ip(request);
-    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "users", user_id)
         .with_event(AuditEvent::BackupCodesRegenerated)
         .with_actor(user_id);
     entry.correlation_id = correlation_id;

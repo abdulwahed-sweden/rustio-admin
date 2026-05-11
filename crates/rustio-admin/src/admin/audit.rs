@@ -75,6 +75,39 @@ pub async fn ensure_table(db: &Db) -> Result<()> {
     .execute(db.pool())
     .await?;
 
+    // 0.8.1 — model_name slug canonicalisation backfill.
+    //
+    // Audit rows from 0.7.x and earlier wrote `model_name` in several
+    // inconsistent conventions: `"User"` (struct name), `"user"`
+    // (lowercase struct), or, on 0.8.0 from the CLI's R4 emergency
+    // commands, `"rustio_users"` (SQL table name). The History page
+    // renders this column as a URL slug, so any non-slug value
+    // produced a `/admin/User/:id` style link that 404'd against the
+    // dispatcher's `admin.find("User")` lookup (the canonical slug
+    // is `"users"`).
+    //
+    // 0.8.1 makes every framework + CLI emission write the admin slug
+    // (`"users"` / `"groups"`) directly. This backfill rewrites the
+    // legacy rows in place so the History page links work
+    // retroactively. Idempotent — once rows are migrated, subsequent
+    // boot calls find no rows to update.
+    //
+    // See `VISIBILITY_AUDIT.md` finding F1.
+    sqlx::query(
+        "UPDATE rustio_admin_actions \
+            SET model_name = 'users' \
+          WHERE model_name IN ('User', 'user', 'rustio_users')",
+    )
+    .execute(db.pool())
+    .await?;
+    sqlx::query(
+        "UPDATE rustio_admin_actions \
+            SET model_name = 'groups' \
+          WHERE model_name IN ('Group', 'group', 'rustio_groups')",
+    )
+    .execute(db.pool())
+    .await?;
+
     Ok(())
 }
 
@@ -211,7 +244,7 @@ impl<'a> LogEntry<'a> {
     /// the canonical R2 admin-action shape, e.g.
     ///
     /// ```ignore
-    /// LogEntry::new(target_id, ActionType::Update, "user", target_id)
+    /// LogEntry::new(target_id, ActionType::Update, "users", target_id)
     ///     .with_event(AuditEvent::PasswordResetByOther)
     ///     .with_actor(admin_identity.user_id)
     /// ```
@@ -232,7 +265,7 @@ impl<'a> LogEntry<'a> {
     /// to [`Self::new`] and chain `.with_event(...)`.
     ///
     /// ```ignore
-    /// let entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    /// let entry = LogEntry::new(user_id, ActionType::Update, "users", user_id)
     ///     .with_event(AuditEvent::PasswordChangedSelf);
     /// ```
     ///
@@ -803,6 +836,95 @@ mod tests {
         );
     }
 
+    /// `VISIBILITY_AUDIT.md` finding F1 enforcement.
+    ///
+    /// `rustio_admin_actions.model_name` MUST be the admin slug
+    /// (the value the dispatcher's `admin.find(model_name)` looks
+    /// up), so the History page's link `<a href="/admin/{model_name}/{id}">`
+    /// resolves to a real admin entry. Pre-0.8.1, callsites
+    /// drifted into four conventions: `"User"` (struct name),
+    /// `"user"` (lowercase struct), `"rustio_users"` (SQL table
+    /// name from the R4 CLI), and the correct `"users"` (admin
+    /// slug). Three of the four 404'd.
+    ///
+    /// This test walks every `.rs` file in `crates/rustio-admin/src/`
+    /// looking for `model_name: "<legacy>"` and `LogEntry::new(_, _, "<legacy>", _)`
+    /// patterns. Doc comments and tests in this file (`admin/audit.rs`)
+    /// are skipped because the file is the contract surface where
+    /// the legacy strings are documented as failure cases.
+    ///
+    /// If this test fails with a new offender, the fix is one of:
+    ///   - change the literal to the admin slug (`"users"` /
+    ///     `"groups"` / your project's `M::ADMIN_NAME`);
+    ///   - if the model is a project-registered model not built into
+    ///     the framework, use the value of `M::ADMIN_NAME` from the
+    ///     `RustioAdmin` derive directly.
+    #[test]
+    fn model_name_uses_admin_slug_not_struct_name() {
+        let framework_src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let self_file = framework_src.join("admin/audit.rs");
+
+        // Patterns that previously appeared in code and resolve to
+        // 404 against the dispatcher. The negative list intentionally
+        // excludes `"users"` and `"groups"` — those ARE the
+        // canonical admin slugs.
+        let legacy_patterns: &[&str] = &[
+            r#""User""#,
+            r#""user""#,
+            r#""Group""#,
+            r#""group""#,
+            r#""rustio_users""#,
+            r#""rustio_groups""#,
+        ];
+
+        let mut offenders: Vec<String> = Vec::new();
+        walk_rs_files_admin_audit(&framework_src, &mut |path: &std::path::Path| {
+            if path == self_file {
+                return;
+            }
+            let content = std::fs::read_to_string(path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            for (line_no, raw_line) in content.lines().enumerate() {
+                // Strip `//` line comments.
+                let code = match raw_line.find("//") {
+                    Some(idx) => &raw_line[..idx],
+                    None => raw_line,
+                };
+                // Only flag lines that ALSO look like audit-emission
+                // contexts. Bare `"user"` strings in role.rs etc. are
+                // legitimate (Role::User stringification, not audit
+                // model_name) — those callsites do NOT contain
+                // either `LogEntry` or `model_name:`.
+                let looks_like_audit_emission = code.contains("LogEntry")
+                    || code.contains("model_name:")
+                    || code.contains("model_name ==")
+                    || code.contains("model_name =");
+                if !looks_like_audit_emission {
+                    continue;
+                }
+                for pat in legacy_patterns {
+                    if code.contains(pat) {
+                        offenders.push(format!(
+                            "{}:{}: {}",
+                            path.display(),
+                            line_no + 1,
+                            raw_line.trim()
+                        ));
+                        break;
+                    }
+                }
+            }
+        });
+        assert!(
+            offenders.is_empty(),
+            "audit row emissions must write the admin slug (not struct \
+             name / SQL table name) as `model_name`. The History page \
+             renders this column as a URL slug; non-slug values 404. \
+             See `VISIBILITY_AUDIT.md` F1.\n  {}",
+            offenders.join("\n  ")
+        );
+    }
+
     /// std-only recursive walker dedicated to this test. Mirrors
     /// the `walk_rs_files` helper used by
     /// `templates::tests::every_handler_rendered_template_resolves`;
@@ -831,20 +953,20 @@ mod tests {
     #[test]
     fn log_entry_with_event_overrides_action_type_persistence() {
         // Without with_event(), the legacy ActionType wins.
-        let entry = LogEntry::new(1, ActionType::Update, "user", 1);
+        let entry = LogEntry::new(1, ActionType::Update, "users", 1);
         assert_eq!(entry.resolved_action_type(), "update");
 
         // with_event() promotes to the richer AuditEvent string.
-        let entry = LogEntry::new(1, ActionType::Update, "user", 1)
+        let entry = LogEntry::new(1, ActionType::Update, "users", 1)
             .with_event(AuditEvent::PasswordChangedSelf);
         assert_eq!(entry.resolved_action_type(), "password_changed_self");
 
         // Different events resolve to their canonical string.
-        let entry = LogEntry::new(1, ActionType::Update, "user", 1)
+        let entry = LogEntry::new(1, ActionType::Update, "users", 1)
             .with_event(AuditEvent::PasswordResetSelfRequest);
         assert_eq!(entry.resolved_action_type(), "password_reset_self_request");
 
-        let entry = LogEntry::new(1, ActionType::Update, "user", 1)
+        let entry = LogEntry::new(1, ActionType::Update, "users", 1)
             .with_event(AuditEvent::PasswordResetSelfConsume);
         assert_eq!(entry.resolved_action_type(), "password_reset_self_consume");
     }
@@ -861,7 +983,7 @@ mod tests {
 
     #[test]
     fn log_entry_with_actor_sets_field() {
-        let entry = LogEntry::new(1, ActionType::Update, "user", 1).with_actor(7);
+        let entry = LogEntry::new(1, ActionType::Update, "users", 1).with_actor(7);
         assert_eq!(entry.actor_user_id, Some(7));
     }
 
@@ -869,7 +991,7 @@ mod tests {
     fn log_entry_default_actor_user_id_is_none() {
         // R0/R1 emissions leave actor_user_id None — only R2 admin
         // actions opt in via .with_actor(...).
-        let entry = LogEntry::new(1, ActionType::Update, "user", 1);
+        let entry = LogEntry::new(1, ActionType::Update, "users", 1);
         assert!(entry.actor_user_id.is_none());
     }
 
