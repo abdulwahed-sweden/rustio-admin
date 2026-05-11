@@ -126,6 +126,7 @@ mod tests {
             demo_label: None,
             must_change_password: false,
             mfa_enabled: false,
+            trust_level: crate::auth::SessionTrust::Authenticated,
         }
     }
 

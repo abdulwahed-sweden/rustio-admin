@@ -532,7 +532,8 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
     let row = sqlx::query(
         "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
                 u.must_change_password, u.mfa_enabled, \
-                s.expires_at, s.token_hash IS NOT NULL AS hashed \
+                s.expires_at, s.trust_level, \
+                s.token_hash IS NOT NULL AS hashed \
            FROM rustio_sessions s \
            JOIN rustio_users u ON u.id = s.user_id \
           WHERE s.token_hash = $1 AND s.revoked_at IS NULL",
@@ -554,7 +555,7 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
             sqlx::query(
                 "SELECT u.id, u.email, u.role, u.is_active, u.is_demo, u.demo_label, \
                     u.must_change_password, u.mfa_enabled, \
-                    s.expires_at, FALSE AS hashed \
+                    s.expires_at, s.trust_level, FALSE AS hashed \
                FROM rustio_sessions s \
                JOIN rustio_users u ON u.id = s.user_id \
               WHERE s.token = $1 AND s.token_hash IS NULL AND s.revoked_at IS NULL",
@@ -607,6 +608,7 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
         demo_label: r.get_optional_string("demo_label")?,
         must_change_password: r.get_bool("must_change_password")?,
         mfa_enabled: r.get_bool("mfa_enabled")?,
+        trust_level: SessionTrust::parse(&r.get_string("trust_level")?),
     }))
 }
 
