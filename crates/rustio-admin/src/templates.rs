@@ -537,4 +537,111 @@ mod tests {
             }
         }
     }
+
+    /// Regression gate for the 0.7.0 → 0.7.1 fix.
+    ///
+    /// Scans every `.rs` file under `src/admin/` for string
+    /// literals of the shape `"admin/<name>.html"` and asserts each
+    /// one resolves via `Templates::new(None)?`. If a handler is
+    /// added that renders a new template and the author forgets to
+    /// extend `EMBEDDED_TEMPLATES`, this test fails before the
+    /// release ships rather than after the first user clicks the
+    /// new page.
+    ///
+    /// The 0.6.0 R2 + 0.7.0 R3 cycles both shipped with this
+    /// shape of bug — the disk template files were committed, the
+    /// handlers rendered them, the bug was invisible to unit tests
+    /// (no integration test boots a real HTTP stack against the
+    /// affected routes), and the regression surfaced only when the
+    /// flagship downstream walked the surface against a live DB.
+    /// This test makes the discipline mechanical.
+    #[test]
+    fn every_handler_rendered_template_resolves() {
+        let admin_src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/admin");
+        let mut names: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        // Bare-literal scan — the framework only uses
+        // `"admin/<...>.html"` strings as template names, so
+        // finding every literal of that shape catches the entire
+        // surface without needing AST parsing or a regex
+        // dependency.
+        walk_rs_files(&admin_src, &mut |path: &std::path::Path| {
+            let content = std::fs::read_to_string(path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            extract_template_names(&content, &mut names);
+        });
+        assert!(
+            !names.is_empty(),
+            "no template names found — scan regression?"
+        );
+
+        let t = Templates::new(None).unwrap();
+        let mut missing: Vec<String> = Vec::new();
+        for name in &names {
+            let result = t.render(name, &Empty {});
+            if let Err(e) = result {
+                let msg = e.to_string();
+                // `not found` is minijinja's "template not in
+                // loader" error. Other errors (strict-undefined,
+                // type mismatches) are tolerated — the test cares
+                // only about loader resolution, not full render
+                // success against an empty context.
+                if msg.contains("not found") {
+                    missing.push(format!("{name}: {msg}"));
+                }
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "templates referenced by handlers but not in EMBEDDED_TEMPLATES:\n  {}",
+            missing.join("\n  ")
+        );
+    }
+
+    /// Pull every `"admin/<...>.html"` literal out of `content` and
+    /// stuff it into `out`. Bare-string scan; tolerates string
+    /// literals that span multiple lines because the closing
+    /// `.html"` must appear before the next double-quote.
+    fn extract_template_names(content: &str, out: &mut std::collections::BTreeSet<String>) {
+        let needle = "\"admin/";
+        let mut cursor = 0;
+        while let Some(idx) = content[cursor..].find(needle) {
+            let start = cursor + idx + 1; // past the opening quote
+            let after = &content[start..];
+            // The literal ends at the next `"`. If `.html` does
+            // not appear before that quote, this isn't a template
+            // reference (it could be e.g. a Permission action_name
+            // that happens to start with `admin/`).
+            if let Some(end_rel) = after.find('"') {
+                let literal = &after[..end_rel];
+                if literal.ends_with(".html") {
+                    out.insert(literal.to_string());
+                }
+                cursor = start + end_rel + 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    /// Recursively walk every `.rs` file under `root`, calling
+    /// `visit` for each. Std-only — no `walkdir` dep needed for a
+    /// single test.
+    fn walk_rs_files(root: &std::path::Path, visit: &mut dyn FnMut(&std::path::Path)) {
+        let entries = match std::fs::read_dir(root) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_type = match entry.file_type() {
+                Ok(ft) => ft,
+                Err(_) => continue,
+            };
+            if file_type.is_dir() {
+                walk_rs_files(&path, visit);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                visit(&path);
+            }
+        }
+    }
 }
