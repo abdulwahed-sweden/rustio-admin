@@ -47,15 +47,12 @@ use super::render::BaseContext;
 
 // ---- /admin/mfa/verify (R3 commit #12) -------------------------------------
 //
-// The handlers and template context below are dead-code at this
-// commit. R3 commit #19 wires the GET/POST routes; once mapped,
-// both functions become live and the #[allow(dead_code)]
-// attributes can be removed. Same pattern as recovery_admin
-// runtime fns that landed before R2 commit #17's route
-// registration.
+// The verify GET/POST routes were registered in R3 commit #19;
+// the handlers below are live as of that commit. The dead-code
+// allow that gated this block until routing landed has been
+// removed.
 
 #[derive(Serialize)]
-#[allow(dead_code)] // call sites land at the verify route in R3 commit #19
 struct MfaVerifyCtx {
     #[serde(flatten)]
     base: BaseContext,
@@ -78,7 +75,6 @@ struct MfaVerifyCtx {
 /// `XXXX-XXXX` backup code in the same input field. The POST
 /// handler distinguishes based on which verifier accepts the
 /// input.
-#[allow(dead_code)] // call site lands at the verify GET route in R3 commit #19
 pub(crate) async fn show_verify(
     ctx: &AdminCtx,
     identity: Identity,
@@ -132,7 +128,6 @@ pub(crate) async fn show_verify(
 /// row's `mfa_last_used_step` only), and `consume_backup_code`
 /// (UPDATE on the backup-code row's `used_at` + audit emit).
 /// None write `revoked_at` directly.
-#[allow(dead_code)] // call site lands at the verify POST route in R3 commit #19
 pub(crate) async fn do_verify(
     ctx: &AdminCtx,
     identity: Identity,
@@ -298,7 +293,6 @@ pub(crate) async fn do_verify(
 // hidden-field path.
 
 #[derive(Serialize)]
-#[allow(dead_code)] // call site at the enrolment GET route (R3 commit #19)
 struct MfaEnrollCtx {
     #[serde(flatten)]
     base: BaseContext,
@@ -315,7 +309,6 @@ struct MfaEnrollCtx {
 }
 
 #[derive(Serialize)]
-#[allow(dead_code)] // call site at the enrolment success page (R3 commit #19)
 struct MfaEnrollCompleteCtx {
     #[serde(flatten)]
     base: BaseContext,
@@ -331,7 +324,6 @@ struct MfaEnrollCompleteCtx {
 /// `/admin/reauth?return_to=/admin/account/mfa/enroll`. A
 /// stolen cookie cannot land on this page without password
 /// re-entry.
-#[allow(dead_code)] // call site lands at the enrolment GET route (R3 commit #19)
 pub(crate) async fn show_enroll(
     ctx: &AdminCtx,
     identity: Identity,
@@ -377,7 +369,6 @@ pub(crate) async fn show_enroll(
 ///
 /// Re-auth gate (D5) is enforced here too — a direct POST
 /// without GET-first must not bypass the wall.
-#[allow(dead_code)] // call site lands at the enrolment POST route (R3 commit #19)
 pub(crate) async fn do_enroll(
     ctx: &AdminCtx,
     identity: Identity,
@@ -543,7 +534,6 @@ pub(crate) async fn do_enroll(
 use crate::auth::mfa::{regenerate_backup_codes, RegenOutcome};
 
 #[derive(Serialize)]
-#[allow(dead_code)] // call site at the regenerate GET route (R3 commit #19)
 struct MfaRegenerateCtx {
     #[serde(flatten)]
     base: BaseContext,
@@ -555,7 +545,6 @@ struct MfaRegenerateCtx {
 }
 
 #[derive(Serialize)]
-#[allow(dead_code)] // call site at the regenerate success page (R3 commit #19)
 struct MfaRegenerateCompleteCtx {
     #[serde(flatten)]
     base: BaseContext,
@@ -576,7 +565,6 @@ struct MfaRegenerateCompleteCtx {
 /// re-entry; a stolen cookie on an MFA-enrolled user cannot
 /// reach it without the TOTP step once the `/admin/reauth`
 /// extension lands.
-#[allow(dead_code)] // call site lands at the regenerate GET route (R3 commit #19)
 pub(crate) async fn show_regenerate(
     ctx: &AdminCtx,
     identity: Identity,
@@ -619,7 +607,6 @@ pub(crate) async fn show_regenerate(
 /// **Doctrine 22 untouched.** The regenerate runtime does not
 /// write `revoked_at` — D3 transaction wraps the DELETE +
 /// INSERTs; existing sessions are unaffected (§4.5).
-#[allow(dead_code)] // call site lands at the regenerate POST route (R3 commit #19)
 pub(crate) async fn do_regenerate(
     ctx: &AdminCtx,
     identity: Identity,
@@ -706,7 +693,6 @@ pub(crate) async fn do_regenerate(
 use crate::auth::mfa::{disable_mfa, DisableOutcome};
 
 #[derive(Serialize)]
-#[allow(dead_code)] // call site at the disable GET route (R3 commit #19)
 struct MfaDisableCtx {
     #[serde(flatten)]
     base: BaseContext,
@@ -720,7 +706,6 @@ struct MfaDisableCtx {
 ///
 /// Re-auth gate (D5) per the same shape as `show_enroll` and
 /// `show_regenerate`.
-#[allow(dead_code)] // call site lands at the disable GET route (R3 commit #19)
 pub(crate) async fn show_disable(
     ctx: &AdminCtx,
     identity: Identity,
@@ -765,7 +750,6 @@ pub(crate) async fn show_disable(
 /// revoked the row; the cookie is a stale reference that
 /// should not survive the response) and redirects to
 /// `/admin/login`.
-#[allow(dead_code)] // call site lands at the disable POST route (R3 commit #19)
 pub(crate) async fn do_disable(
     ctx: &AdminCtx,
     identity: Identity,

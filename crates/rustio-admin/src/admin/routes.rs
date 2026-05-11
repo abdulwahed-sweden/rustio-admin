@@ -705,6 +705,114 @@ pub fn register_admin_routes(
         }
     });
 
+    // === R3 MFA surface (R3 commits #12-#15) ================================
+    //
+    // Eight routes:
+    //   /admin/mfa/verify                        — login second factor (#12)
+    //   /admin/account/mfa/enroll                — provision + confirm (#13)
+    //   /admin/account/mfa/regenerate-codes      — atomic batch swap   (#14)
+    //   /admin/account/mfa/disable               — self-disable        (#15)
+    //
+    // All gated by `Role::User` — every authenticated user can manage
+    // their own MFA. The /admin/mfa/verify path is on
+    // `MFA_VERIFY_WHITELIST`; the enrol path is on
+    // `MFA_ENROLL_WHITELIST` — so `login_guard` does NOT redirect
+    // away from these routes even when the user is in the pending-
+    // verify or required-enrol state. Otherwise the interstitial
+    // pages would be unreachable.
+
+    // --- /admin/mfa/verify (R3 commit #12) ---
+    let c = ctx.clone();
+    let router = router.get("/admin/mfa/verify", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::show_verify(&c, ident, &req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/mfa/verify", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::do_verify(&c, ident, req).await,
+            }
+        }
+    });
+
+    // --- /admin/account/mfa/enroll (R3 commit #13) ---
+    let c = ctx.clone();
+    let router = router.get("/admin/account/mfa/enroll", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::show_enroll(&c, ident, &req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/account/mfa/enroll", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::do_enroll(&c, ident, req).await,
+            }
+        }
+    });
+
+    // --- /admin/account/mfa/regenerate-codes (R3 commit #14) ---
+    let c = ctx.clone();
+    let router = router.get("/admin/account/mfa/regenerate-codes", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::show_regenerate(&c, ident, &req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/account/mfa/regenerate-codes", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::do_regenerate(&c, ident, req).await,
+            }
+        }
+    });
+
+    // --- /admin/account/mfa/disable (R3 commit #15) ---
+    let c = ctx.clone();
+    let router = router.get("/admin/account/mfa/disable", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::show_disable(&c, ident, &req).await,
+            }
+        }
+    });
+
+    let c = ctx.clone();
+    let router = router.post("/admin/account/mfa/disable", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::User).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => super::mfa_handlers::do_disable(&c, ident, req).await,
+            }
+        }
+    });
+
     // --- Built-in users admin (admin-only) ---
     let c = ctx.clone();
     let ac = auth_ctx.clone();
