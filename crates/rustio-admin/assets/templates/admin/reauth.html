@@ -4,7 +4,11 @@
 <div class="rio-login">
   <h1 class="rio-login-title">Confirm your identity</h1>
   <p class="rio-login-intro">
-    Re-enter your password to continue. This step protects sensitive admin actions.
+    {% if mfa_enabled %}
+      Re-enter your password and a two-factor code to continue. This step protects sensitive admin actions.
+    {% else %}
+      Re-enter your password to continue. This step protects sensitive admin actions.
+    {% endif %}
   </p>
   {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
   <form method="post" action="/admin/reauth" class="rio-form rio-form--login" autocomplete="off">
@@ -33,6 +37,22 @@
         class="rio-input"
       >
     </div>
+    {% if mfa_enabled %}
+    <div class="rio-form-row">
+      <label class="rio-label" for="rio-reauth-code">Two-factor code</label>
+      <input
+        type="text"
+        id="rio-reauth-code"
+        name="code"
+        inputmode="text"
+        autocomplete="one-time-code"
+        autocapitalize="characters"
+        required
+        placeholder="123456 or XXXX-XXXX"
+        class="rio-input"
+      >
+    </div>
+    {% endif %}
     <button type="submit" class="rio-button rio-button--primary">Continue</button>
   </form>
   <p class="rio-login-footer">
