@@ -119,8 +119,18 @@
 //!   `{ previous_codes_invalidated, new_codes_count }`.
 //!   D3 enforced at the SQL level — the old batch is
 //!   unrecoverable from the moment the transaction commits.
-//!   R3 commit #10. The final runtime function before the
-//!   HTTP-handler commits begin.
+//!   R3 commit #10.
+//! - [`promote_session_to_mfa_verified`] — the trust-escalation
+//!   primitive (`DESIGN_SESSIONS.md` §11, Doctrine 17). Mints
+//!   a fresh `mfa_verified` session row with
+//!   `parent_session_id` pointing at the caller's current
+//!   row, then revokes the parent via
+//!   `auth::sessions::invalidate_sessions` with
+//!   `SessionInvalidationReason::TrustEscalation`. Returns the
+//!   new plaintext token for the caller (handler) to set as
+//!   the cookie. Used by the verify POST handler (later
+//!   commit) after `verify_totp_for_user` or
+//!   `consume_backup_code` returns success. R3 commit #11.
 //!
 //! Subsequent commits will add the HTTP handlers, route
 //! registration, and `MfaPolicy` routing into `login_guard`
@@ -159,18 +169,29 @@ use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, Salt
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
-use chrono::Utc;
+use chrono::{Duration as ChronoDuration, Utc};
 use hmac::{Hmac, Mac};
 use rand::{Rng, RngCore};
 use sha1::Sha1;
 
 use crate::admin::audit::{record as audit_record, ActionType, AuditEvent, LogEntry};
 use crate::admin::builtin::client_ip;
-use crate::auth::sessions::{invalidate_sessions, SessionInvalidationReason, SessionTarget};
+use crate::auth::sessions::{
+    hash_token_for_storage, invalidate_sessions, random_token, SessionInvalidationReason,
+    SessionTarget,
+};
 use crate::auth::Role;
 use crate::error::{Error, Result};
 use crate::http::Request;
 use crate::orm::Db;
+
+/// Session lifetime for trust-escalated `mfa_verified` rows,
+/// matching the framework's `SESSION_LENGTH_DAYS` constant in
+/// `auth::sessions`. Kept local here so this module does not
+/// reach across to `pub(crate)` consts; if the canonical
+/// constant ever moves out of `pub(crate)` scope it should be
+/// imported in place of this local copy.
+const MFA_VERIFIED_SESSION_DAYS: i64 = 14;
 
 type HmacSha1 = Hmac<Sha1>;
 
@@ -1532,6 +1553,91 @@ pub async fn regenerate_backup_codes(
         plain_backup_codes: plain_codes,
         previous_codes_invalidated: previous_count,
     })
+}
+
+// -----------------------------------------------------------------
+// Trust-escalation primitive (R3 commit #11)
+// -----------------------------------------------------------------
+
+/// Promote a session from `authenticated` to `mfa_verified` via
+/// token rotation per `DESIGN_SESSIONS.md` §11 + Doctrine 17.
+///
+/// Called by the verify POST handler after either
+/// [`verify_totp_for_user`] or [`consume_backup_code`] returns
+/// success. The function:
+///
+/// 1. Mints a fresh session row with:
+///    - new random `token` + `token_hash`,
+///    - `trust_level = 'mfa_verified'`,
+///    - `parent_session_id = current_session_id` (the row that
+///      was just MFA-verified — establishes the audit lineage),
+///    - `user_id` unchanged,
+///    - `expires_at = NOW() + 14 days`.
+/// 2. Revokes the parent row via
+///    `auth::sessions::invalidate_sessions` with
+///    `SessionInvalidationReason::TrustEscalation`. Doctrine 22:
+///    no direct `revoked_at` write here; the centralised
+///    invalidator owns that.
+/// 3. Returns the new plaintext token. The caller (handler)
+///    sets it as the framework's session cookie, replacing the
+///    pre-MFA token.
+///
+/// **Ordering rationale.** The new row is INSERTed before the
+/// parent is revoked. A crash between the two operations leaves
+/// the user with two active session rows (old + new) rather
+/// than zero — the more recoverable failure mode. The next
+/// request authenticates against either row; an over-permissive
+/// transient state is preferable to a locked-out user. Future
+/// commits may wrap the two writes in a single transaction
+/// when [`invalidate_sessions`] gains a transaction-aware
+/// variant.
+///
+/// **Doctrine 22.** This function inserts a new row (additive)
+/// and delegates revocation to `invalidate_sessions`. No direct
+/// `revoked_at` write. The grep proof remains intact.
+///
+/// **Doctrine 17.** Trust transitions rotate the token —
+/// always. A `Copy`-trust upgrade in place (UPDATE the same
+/// row's `trust_level`) would let a network-captured pre-MFA
+/// token ride into the elevated state; the rotation forbids
+/// that.
+#[allow(dead_code)] // call site lands at the verify POST handler in a later commit
+pub async fn promote_session_to_mfa_verified(
+    db: &Db,
+    current_session_id: i64,
+    user_id: i64,
+) -> Result<String> {
+    let token = random_token();
+    let token_hash = hash_token_for_storage(&token);
+    let expires = Utc::now() + ChronoDuration::days(MFA_VERIFIED_SESSION_DAYS);
+
+    // 1. Mint the new mfa_verified row with parent_session_id
+    //    set. `token` (legacy) + `token_hash` both populated
+    //    to match `auth::sessions::create_session` shape.
+    sqlx::query(
+        "INSERT INTO rustio_sessions \
+         (token, token_hash, user_id, expires_at, trust_level, parent_session_id) \
+         VALUES ($1, $2, $3, $4, 'mfa_verified', $5)",
+    )
+    .bind(&token)
+    .bind(&token_hash)
+    .bind(user_id)
+    .bind(expires)
+    .bind(current_session_id)
+    .execute(db.pool())
+    .await?;
+
+    // 2. Revoke the parent via the centralised single writer.
+    invalidate_sessions(
+        db,
+        SessionTarget::Single {
+            session_id: current_session_id,
+        },
+        SessionInvalidationReason::TrustEscalation,
+    )
+    .await?;
+
+    Ok(token)
 }
 
 /// Framework-wide MFA enforcement policy.
