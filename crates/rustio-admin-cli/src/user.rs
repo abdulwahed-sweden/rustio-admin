@@ -19,7 +19,8 @@ use sqlx::Row as _;
 
 use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry};
 use rustio_admin::auth::emergency::{
-    self as fw_emergency, DisableMfaOutcome, PromoteOutcome, ResetOutcome, UnlockOutcome,
+    self as fw_emergency, DisableMfaOutcome, EmergencyAccessOutcome, PromoteOutcome, ResetOutcome,
+    UnlockOutcome,
 };
 use rustio_admin::auth::{DefaultPasswordPolicy, PasswordPolicy};
 use rustio_admin::{auth, Db, Role};
@@ -166,6 +167,31 @@ pub enum Action {
         #[arg(long)]
         yes: bool,
     },
+    /// EMERGENCY: issue a single-use password-reset URL bypassing
+    /// the email mailer. The URL plaintext prints to stdout once —
+    /// hand it to the target out-of-band. Renders the locked banner
+    /// and demands `--reason "<text>"` (≥ 8 chars). Refuses inactive
+    /// targets (issuing a URL to a deactivated account has no
+    /// recovery semantic). See `DESIGN_R4_EMERGENCY.md` §3.5.
+    EmergencyAccess {
+        #[arg(long)]
+        email: String,
+        /// Why this emergency was needed. Lands verbatim in the
+        /// `EmergencyRecovery` audit row and the banner.
+        /// Must be ≥ 8 trimmed characters.
+        #[arg(long)]
+        reason: String,
+        /// URL validity in minutes. Default 15; clamped to
+        /// `[1, 60]` inside the framework. Beyond 60 use
+        /// `reset-password` instead — wider TTLs widen the URL
+        /// interception window for diminishing operational benefit.
+        #[arg(long = "ttl-minutes", default_value_t = 15)]
+        ttl_minutes: i64,
+        /// Skip the interactive `yes` confirm prompt. The banner
+        /// still renders to stdout — D10 makes that irreducible.
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 pub async fn run(action: Action) -> Result<(), String> {
@@ -193,6 +219,12 @@ pub async fn run(action: Action) -> Result<(), String> {
             reason,
             yes,
         } => promote(db, email, to_role.into(), reason, yes).await,
+        Action::EmergencyAccess {
+            email,
+            reason,
+            ttl_minutes,
+            yes,
+        } => emergency_access(db, email, reason, ttl_minutes, yes).await,
     }
 }
 
@@ -727,6 +759,84 @@ async fn promote(
             Ok(())
         }
     }
+}
+
+// ---- R4: rustio user emergency-access ------------------------------------
+
+async fn emergency_access(
+    db: Db,
+    email: String,
+    reason_arg: String,
+    ttl_minutes: i64,
+    yes: bool,
+) -> Result<(), String> {
+    let ctx = preflight(&db, "emergency-access", &email, &reason_arg, yes).await?;
+
+    let outcome = fw_emergency::emergency_access(&db, ctx.target_user_id, ttl_minutes)
+        .await
+        .map_err(|e| format!("emergency_access: {e}"))?;
+
+    let (token_id, url_path, expires_at, effective_ttl) = match outcome {
+        EmergencyAccessOutcome::Ok {
+            token_id,
+            url_path,
+            expires_at,
+        } => (token_id, url_path, expires_at, ttl_minutes.clamp(1, 60)),
+        EmergencyAccessOutcome::UnknownTarget => {
+            return Err(format!(
+                "User vanished between lookup and emergency_access; no token issued (email={email})"
+            ));
+        }
+        EmergencyAccessOutcome::InactiveTarget => {
+            return Err(format!(
+                "Refused: {email} is deactivated. Emergency-access only issues URLs to active \
+                 accounts (a URL into a deactivated account has no recovery semantic). \
+                 Reactivate the user first via `rustio user role` or update `is_active` \
+                 directly, then re-run."
+            ));
+        }
+    };
+
+    // The audit row carries `token_id` (linkable to
+    // `rustio_password_reset_tokens.id`) and `expires_at`, but
+    // NEVER the URL plaintext — the URL embeds the single-use
+    // token. Persisting it in audit metadata would defeat the
+    // single-use property by giving an audit-log reader a
+    // working credential.
+    let correlation_id = write_emergency_audit(
+        &db,
+        &ctx,
+        "emergency_access",
+        serde_json::json!({
+            "token_id": token_id,
+            "ttl_minutes": effective_ttl,
+            "expires_at": expires_at.to_rfc3339(),
+        }),
+    )
+    .await?;
+
+    println!();
+    println!(
+        "✓ Emergency-access URL issued for {email} (user_id={})",
+        ctx.target_user_id
+    );
+    println!("  Token id: {token_id}");
+    println!(
+        "  Expires:  {} (in {effective_ttl} minute(s))",
+        expires_at.to_rfc3339()
+    );
+    println!();
+    println!("  URL (shown once — hand to target out-of-band):");
+    println!();
+    println!("      <BASE_URL>{url_path}");
+    println!();
+    println!("  Prefix <BASE_URL> with your deployment's admin URL");
+    println!("  (e.g., https://admin.example.com → full URL would be");
+    println!("  https://admin.example.com{url_path}).");
+    println!("  Single-use: consuming the token writes consumed_at=NOW().");
+    println!("  Audit correlation: {correlation_id}");
+
+    Ok(())
 }
 
 /// Truncate the reason to ≤ 200 chars for the audit row's

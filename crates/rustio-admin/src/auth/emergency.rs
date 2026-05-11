@@ -402,16 +402,16 @@ pub async fn emergency_access(
     let ttl = ttl_minutes.clamp(1, 60);
     let expires_at = chrono::Utc::now() + chrono::Duration::minutes(ttl);
 
-    // Generate 32 random bytes → URL-safe-base64-no-pad. Matches
-    // R1's `issue_reset_token` token format.
-    use base64::Engine;
-    use rand::RngCore;
-    let mut bytes = [0u8; 32];
-    rand::rngs::OsRng.fill_bytes(&mut bytes);
-    let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
-
-    use sha2::{Digest, Sha256};
-    let token_hash = format!("{:x}", Sha256::digest(token.as_bytes()));
+    // Reuse R1's exact token + hash format. Hand-rolling either
+    // here would risk a format drift that bricks the URL on the
+    // consume path — see commit #8 smoke where a hex-encoded hash
+    // missed the base64-encoded R1 lookup and the framework
+    // rendered "This link is no longer valid". Calling these
+    // crate-internal helpers ensures the emergency-access URL
+    // round-trips through the same machinery as a self-service
+    // R1 reset URL.
+    let token = crate::auth::sessions::random_token();
+    let token_hash = crate::auth::sessions::hash_token_for_storage(&token);
 
     let token_id: i64 = sqlx::query_scalar(
         "INSERT INTO rustio_password_reset_tokens \
@@ -483,8 +483,7 @@ use InvalidationOutcome as _;
 pub fn generate_temp_password(len: usize) -> String {
     use rand::Rng;
     // 54 chars: A-Z minus I, O, L; a-z minus i, l, o; 2-9 (no 0 or 1).
-    const ALPHABET: &[u8] =
-        b"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    const ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     let mut rng = rand::thread_rng();
     (0..len)
         .map(|_| ALPHABET[rng.gen_range(0..ALPHABET.len())] as char)
