@@ -1,8 +1,8 @@
 [package]
 name = "rustio-admin-cli"
 # Tracks the workspace minor. Bundled template pins new projects to
-# `rustio-admin = "0.6"`.
-version = "0.6.0"
+# `rustio-admin = "0.7"`.
+version = "0.7.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

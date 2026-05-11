@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.7.0** | 2026-05-11 | TOTP multi-factor authentication + single-use backup codes.                       |
 | **0.6.0** | 2026-05-10 | Admin-driven recovery, re-auth wall, login throttling, forced password rotation.  |
 | **0.5.0** | 2026-05-09 | Self-service password recovery, active-session controls.                          |
 | **0.4.0** | 2026-05-09 | Session lifecycle, centralised invalidation, audit foundations.                   |
@@ -20,7 +21,12 @@ leaves the alpha track.
 | **0.1.0** | 2026-05-07 | Initial public release.                                                           |
 
 
-## [Unreleased] — targeting 0.7.0
+## [Unreleased]
+
+No changes yet.
+
+
+## [0.7.0] — 2026-05-11
 
 R3 of the universal account-recovery architecture. TOTP
 multi-factor authentication plus single-use backup codes.
