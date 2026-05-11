@@ -30,6 +30,11 @@ pub(crate) struct IdentityCtx {
     pub email: String,
     pub is_admin: bool,
     pub is_developer: bool,
+    /// Mirrors `Identity::mfa_enabled`. Surfaced into the topbar
+    /// template so the chrome can pick between "Enable MFA" (un-
+    /// enrolled) and "Two-factor" (already enrolled) links —
+    /// `VISIBILITY_AUDIT.md` B1.
+    pub mfa_enabled: bool,
 }
 
 impl From<&Identity> for IdentityCtx {
@@ -38,6 +43,7 @@ impl From<&Identity> for IdentityCtx {
             email: i.email.clone(),
             is_admin: i.is_admin(),
             is_developer: i.is_active && i.role.includes(crate::auth::Role::Developer),
+            mfa_enabled: i.mfa_enabled,
         }
     }
 }
