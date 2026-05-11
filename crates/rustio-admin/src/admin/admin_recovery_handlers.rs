@@ -563,7 +563,7 @@ pub(crate) async fn do_must_change_password(
         audit::LogEntry {
             user_id: identity.user_id,
             action_type: audit::ActionType::Update,
-            model_name: "user",
+            model_name: "users",
             object_id: identity.user_id,
             ip_address: ip.as_deref(),
             summary: format!(

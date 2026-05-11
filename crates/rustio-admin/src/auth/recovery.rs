@@ -1001,7 +1001,7 @@ pub(crate) async fn issue_reset_token(
         "requested_user_agent": user_agent_owned,
         "expires_at": expires_at.to_rfc3339(),
     });
-    let mut entry = LogEntry::new(user.id, ActionType::Update, "user", user.id)
+    let mut entry = LogEntry::new(user.id, ActionType::Update, "users", user.id)
         .with_event(AuditEvent::PasswordResetSelfRequest);
     entry.correlation_id = correlation_id;
     entry.ip_address = Some(&ip);
@@ -1129,7 +1129,7 @@ pub(crate) async fn consume_reset_token(
         "ip": ip,
         "user_agent": user_agent_owned,
     });
-    let mut entry = LogEntry::new(user_id, ActionType::Update, "user", user_id)
+    let mut entry = LogEntry::new(user_id, ActionType::Update, "users", user_id)
         .with_event(AuditEvent::PasswordResetSelfConsume);
     entry.correlation_id = correlation_id;
     entry.ip_address = Some(&ip);

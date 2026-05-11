@@ -665,7 +665,7 @@ pub async fn issue_admin_reset_token(
         "must_change_password_set": false,
         "token_fingerprint": redact_token(&token),
     });
-    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
         .with_event(AuditEvent::PasswordResetByOther)
         .with_actor(actor.user_id);
     entry.correlation_id = correlation_id;
@@ -756,7 +756,7 @@ pub async fn admin_set_temp_password(
             "reason": reason,
             "via": "admin_password_reset",
         });
-        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
             .with_event(AuditEvent::SessionsRevokedByOther)
             .with_actor(actor.user_id);
         entry.correlation_id = correlation_id;
@@ -781,7 +781,7 @@ pub async fn admin_set_temp_password(
         "must_change_password_set": true,
         "invalidated_session_count": revoked_count,
     });
-    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
         .with_event(AuditEvent::PasswordResetByOther)
         .with_actor(actor.user_id);
     entry.correlation_id = correlation_id;
@@ -937,7 +937,7 @@ pub async fn lock_user_account(
             "reason": reason,
             "via": "manual",
         });
-        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
             .with_event(AuditEvent::SessionsRevokedByOther)
             .with_actor(actor.user_id);
         entry.correlation_id = correlation_id;
@@ -961,7 +961,7 @@ pub async fn lock_user_account(
         "until": until,
         "via": "manual",
     });
-    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
         .with_event(AuditEvent::AccountLocked)
         .with_actor(actor.user_id);
     entry.correlation_id = correlation_id;
@@ -1014,7 +1014,7 @@ pub async fn unlock_user_account(
         "via": "manual",
     });
     let ip = client_ip(request);
-    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+    let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
         .with_event(AuditEvent::AccountUnlocked)
         .with_actor(actor.user_id);
     entry.correlation_id = correlation_id;
@@ -1065,7 +1065,7 @@ pub async fn admin_revoke_sessions(
             "reason": reason,
             "via": "manual",
         });
-        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "user", target_user_id)
+        let mut entry = LogEntry::new(target_user_id, ActionType::Update, "users", target_user_id)
             .with_event(AuditEvent::SessionsRevokedByOther)
             .with_actor(actor.user_id);
         entry.correlation_id = correlation_id;

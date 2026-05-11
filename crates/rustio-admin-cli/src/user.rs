@@ -494,7 +494,11 @@ async fn write_emergency_audit(
     let entry = LogEntry {
         user_id: ctx.target_user_id,
         action_type: ActionType::Update,
-        model_name: "rustio_users",
+        // The admin slug for the built-in User admin is `"users"` —
+        // matches the dispatcher's `admin.find("users")` lookup so
+        // the History page can render a working `/admin/users/:id`
+        // link to this row. See `VISIBILITY_AUDIT.md` finding F1.
+        model_name: "users",
         object_id: ctx.target_user_id,
         ip_address: None,
         summary,
