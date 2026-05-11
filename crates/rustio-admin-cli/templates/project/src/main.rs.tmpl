@@ -37,8 +37,20 @@ async fn main() -> Result<()> {
     let template_dir = std::env::var("RUSTIO_TEMPLATE_DIR").ok().map(Into::into);
     let templates = Templates::new(template_dir)?;
 
+    // Middleware order is locked by DESIGN_AUDIT.md §11:
+    //
+    //   logger → correlation_id → security_headers → csrf_protect
+    //
+    // `correlation_id` MUST sit between logger and csrf_protect so
+    // every audit row written under one HTTP request shares one
+    // UUID v7 in `rustio_admin_actions.correlation_id`. The
+    // built-in `/admin/history` page surfaces this column as a
+    // pivot; downstream audit-log views (your project's, if you
+    // add one) can join framework + project rows on the same
+    // column without per-source post-processing.
     let router = Router::new()
         .middleware(middleware::logger)
+        .middleware(middleware::correlation_id)
         .middleware(middleware::security_headers)
         .middleware(middleware::csrf_protect)
         .get("/", |_req| async {
