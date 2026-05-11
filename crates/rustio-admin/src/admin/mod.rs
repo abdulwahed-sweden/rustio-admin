@@ -6,6 +6,7 @@ pub(crate) mod builtin;
 pub mod filters;
 mod handlers;
 pub(crate) mod icons;
+pub(crate) mod mfa_handlers;
 pub mod modeladmin;
 mod ops;
 pub(crate) mod recovery_handlers;
