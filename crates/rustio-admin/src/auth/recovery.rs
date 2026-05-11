@@ -469,6 +469,37 @@ pub trait RecoveryPolicy: Send + Sync {
         ChronoDuration::minutes(15)
     }
 
+    /// TOTP step interval in seconds. Locked at 30 per
+    /// `DESIGN_R3_MFA.md` Appendix B — RFC 6238 industry
+    /// standard for interop with every common authenticator app
+    /// (Google Authenticator, Authy, 1Password, Bitwarden,
+    /// Aegis, Raivo, etc.). Returning a different value would
+    /// break the QR provisioning URL's implicit period; the
+    /// design treats this as a major-version concern.
+    ///
+    /// The runtime consults this via
+    /// `auth::mfa::verify_totp_for_user` and
+    /// `auth::mfa::confirm_enrolment` (R3 commits #6, #7).
+    fn mfa_step_seconds(&self) -> u64 {
+        30
+    }
+
+    /// TOTP step skew tolerance, in steps. Locked at 1 per
+    /// `DESIGN_R3_MFA.md` Appendix B — gives a 90-second total
+    /// acceptance window at the canonical 30-second step
+    /// (`current ± 1` ≡ `[current - 1, current + 1]`). The
+    /// design treats wider skew as a security regression:
+    /// 2-step skew would accept a code generated 60 seconds
+    /// ago, which extends the network-replay window without
+    /// improving UX for users with reasonable clock drift.
+    ///
+    /// The runtime consults this via
+    /// `auth::mfa::verify_totp_for_user` and
+    /// `auth::mfa::confirm_enrolment` (R3 commits #6, #7).
+    fn mfa_skew_steps(&self) -> u32 {
+        1
+    }
+
     /// Multi-tenant readiness hook. Returns `Some(scoped_policy)` to
     /// scope rate-limits / TTLs / lockout windows per tenant when an
     /// authenticated identity is in scope; returns `None` to mean
@@ -1430,6 +1461,25 @@ mod tests {
         // Locked-decision per DESIGN_R2_ORGANISATIONAL.md §12.
         let p = DefaultRecoveryPolicy::new();
         assert_eq!(p.reauth_window(), ChronoDuration::minutes(15));
+    }
+
+    // ---- R3 trait extensions -----------------------------------------------
+
+    #[test]
+    fn default_recovery_policy_mfa_step_seconds_is_thirty() {
+        // Locked per DESIGN_R3_MFA.md Appendix B — RFC 6238
+        // industry standard for authenticator-app interop.
+        let p = DefaultRecoveryPolicy::new();
+        assert_eq!(p.mfa_step_seconds(), 30);
+    }
+
+    #[test]
+    fn default_recovery_policy_mfa_skew_steps_is_one() {
+        // Locked per DESIGN_R3_MFA.md Appendix B — 90-second
+        // total acceptance window at the canonical 30-second
+        // step. Wider skew = network-replay regression.
+        let p = DefaultRecoveryPolicy::new();
+        assert_eq!(p.mfa_skew_steps(), 1);
     }
 
     #[test]
