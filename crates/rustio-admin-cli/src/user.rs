@@ -18,7 +18,9 @@ use clap::{Subcommand, ValueEnum};
 use sqlx::Row as _;
 
 use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry};
-use rustio_admin::auth::emergency::{self as fw_emergency, ResetOutcome, UnlockOutcome};
+use rustio_admin::auth::emergency::{
+    self as fw_emergency, DisableMfaOutcome, PromoteOutcome, ResetOutcome, UnlockOutcome,
+};
 use rustio_admin::auth::{DefaultPasswordPolicy, PasswordPolicy};
 use rustio_admin::{auth, Db, Role};
 
@@ -118,6 +120,52 @@ pub enum Action {
         #[arg(long)]
         yes: bool,
     },
+    /// EMERGENCY: clear MFA on a user — drop the TOTP secret + key
+    /// id + replay-step + every backup code, then revoke every
+    /// session for the user. Renders the locked banner and demands
+    /// `--reason "<text>"` (≥ 8 chars). See
+    /// `DESIGN_R4_EMERGENCY.md` §3.3.
+    ///
+    /// If the deployment's `MfaPolicy` is `Required`, the target
+    /// user will be redirected to MFA enrolment on next login —
+    /// the disable clears the state but does not exempt them from
+    /// the policy. The summary line warns the operator.
+    DisableMfa {
+        #[arg(long)]
+        email: String,
+        /// Why this emergency was needed. Lands verbatim in the
+        /// `EmergencyRecovery` audit row and the banner.
+        /// Must be ≥ 8 trimmed characters.
+        #[arg(long)]
+        reason: String,
+        /// Skip the interactive `yes` confirm prompt. The banner
+        /// still renders to stdout — D10 makes that irreducible.
+        #[arg(long)]
+        yes: bool,
+    },
+    /// EMERGENCY: change a user's role. Refuses to demote the sole
+    /// active Administrator. Revokes the target's sessions so the
+    /// new tier takes effect on the next login. Renders the locked
+    /// banner and demands `--reason "<text>"` (≥ 8 chars). See
+    /// `DESIGN_R4_EMERGENCY.md` §3.4.
+    Promote {
+        #[arg(long)]
+        email: String,
+        /// The new role. Persisted verbatim in
+        /// `rustio_users.role`. Must be one of the five framework
+        /// roles.
+        #[arg(long = "to-role", value_enum)]
+        to_role: CliRole,
+        /// Why this emergency was needed. Lands verbatim in the
+        /// `EmergencyRecovery` audit row and the banner.
+        /// Must be ≥ 8 trimmed characters.
+        #[arg(long)]
+        reason: String,
+        /// Skip the interactive `yes` confirm prompt. The banner
+        /// still renders to stdout — D10 makes that irreducible.
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 pub async fn run(action: Action) -> Result<(), String> {
@@ -138,6 +186,13 @@ pub async fn run(action: Action) -> Result<(), String> {
             yes,
         } => reset_password(db, email, reason, temp_password, yes).await,
         Action::Unlock { email, reason, yes } => unlock(db, email, reason, yes).await,
+        Action::DisableMfa { email, reason, yes } => disable_mfa(db, email, reason, yes).await,
+        Action::Promote {
+            email,
+            to_role,
+            reason,
+            yes,
+        } => promote(db, email, to_role.into(), reason, yes).await,
     }
 }
 
@@ -537,6 +592,141 @@ async fn unlock(db: Db, email: String, reason_arg: String, yes: bool) -> Result<
     println!("  Audit correlation: {correlation_id}");
 
     Ok(())
+}
+
+// ---- R4: rustio user disable-mfa -----------------------------------------
+
+async fn disable_mfa(db: Db, email: String, reason_arg: String, yes: bool) -> Result<(), String> {
+    let ctx = preflight(&db, "disable-mfa", &email, &reason_arg, yes).await?;
+
+    let outcome = fw_emergency::disable_mfa(&db, ctx.target_user_id)
+        .await
+        .map_err(|e| format!("disable_mfa: {e}"))?;
+    let (was_enabled, deleted_backup_codes, revoked) = match outcome {
+        DisableMfaOutcome::Ok {
+            was_enabled,
+            deleted_backup_codes,
+            revoked_session_count,
+        } => (was_enabled, deleted_backup_codes, revoked_session_count),
+        DisableMfaOutcome::UnknownTarget => {
+            return Err(format!(
+                "User vanished between lookup and disable_mfa; no rows changed (email={email})"
+            ));
+        }
+    };
+
+    let correlation_id = write_emergency_audit(
+        &db,
+        &ctx,
+        "disable_mfa",
+        serde_json::json!({
+            "was_enabled": was_enabled,
+            "deleted_backup_codes": deleted_backup_codes,
+            "revoked_session_count": revoked,
+        }),
+    )
+    .await?;
+
+    println!();
+    println!("✓ MFA disabled on {email} (user_id={})", ctx.target_user_id);
+    if was_enabled {
+        println!(
+            "  MFA secret cleared. {deleted_backup_codes} backup code(s) deleted. {revoked} session(s) revoked."
+        );
+    } else {
+        println!("  Note: MFA was not enabled at run time; no functional change.");
+        println!("  (The audit row still landed — the action remains forensically visible.)");
+    }
+    println!();
+    println!("  If the deployment's MfaPolicy is `Required` (or `RequiredForRoles`),");
+    println!("  the user will be redirected to MFA enrolment on their next login.");
+    println!("  Audit correlation: {correlation_id}");
+
+    Ok(())
+}
+
+// ---- R4: rustio user promote ---------------------------------------------
+
+async fn promote(
+    db: Db,
+    email: String,
+    new_role: Role,
+    reason_arg: String,
+    yes: bool,
+) -> Result<(), String> {
+    let ctx = preflight(&db, "promote", &email, &reason_arg, yes).await?;
+
+    let outcome = fw_emergency::promote(&db, ctx.target_user_id, new_role)
+        .await
+        .map_err(|e| format!("promote: {e}"))?;
+
+    match outcome {
+        PromoteOutcome::UnknownTarget => Err(format!(
+            "User vanished between lookup and promote; no rows changed (email={email})"
+        )),
+        PromoteOutcome::SoleAdministratorDemoteRefused => {
+            // Refused inside the framework. No audit row is
+            // written — refusing isn't a state change.
+            Err(format!(
+                "Refused: {email} is the sole active administrator; demoting them would leave \
+                 the deployment with zero administrators. Promote another user to administrator \
+                 first, then re-run."
+            ))
+        }
+        PromoteOutcome::NoChange { current_role } => {
+            // The target already carries `new_role`. The framework
+            // skipped the UPDATE; we still write an audit row so
+            // the forensic log shows the operator ran the command.
+            let correlation_id = write_emergency_audit(
+                &db,
+                &ctx,
+                "promote",
+                serde_json::json!({
+                    "previous_role": current_role.to_string(),
+                    "new_role": new_role.to_string(),
+                    "no_change": true,
+                }),
+            )
+            .await?;
+
+            println!();
+            println!(
+                "✓ Promote applied to {email} (user_id={})",
+                ctx.target_user_id
+            );
+            println!("  Note: user already carried role={current_role}; no functional change.");
+            println!("  (The audit row still landed — the action remains forensically visible.)");
+            println!("  Audit correlation: {correlation_id}");
+            Ok(())
+        }
+        PromoteOutcome::Ok {
+            previous_role,
+            new_role,
+            revoked_session_count,
+        } => {
+            let correlation_id = write_emergency_audit(
+                &db,
+                &ctx,
+                "promote",
+                serde_json::json!({
+                    "previous_role": previous_role.to_string(),
+                    "new_role": new_role.to_string(),
+                    "revoked_session_count": revoked_session_count,
+                }),
+            )
+            .await?;
+
+            println!();
+            println!(
+                "✓ Promoted {email} (user_id={}) {previous_role} → {new_role}",
+                ctx.target_user_id
+            );
+            println!("  Sessions revoked: {revoked_session_count}");
+            println!("  The user must re-authenticate to pick up the new tier.");
+            println!("  Audit correlation: {correlation_id}");
+            Ok(())
+        }
+    }
 }
 
 /// Truncate the reason to ≤ 200 chars for the audit row's
