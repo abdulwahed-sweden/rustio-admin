@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.7.1** | 2026-05-11 | Embed every R2 + R3 page template (fix 500 on /admin/reauth and every MFA flow).  |
 | **0.7.0** | 2026-05-11 | TOTP multi-factor authentication + single-use backup codes.                       |
 | **0.6.0** | 2026-05-10 | Admin-driven recovery, re-auth wall, login throttling, forced password rotation.  |
 | **0.5.0** | 2026-05-09 | Self-service password recovery, active-session controls.                          |
@@ -24,6 +25,53 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.7.1] — 2026-05-11
+
+Patch release. Restores the R2 (admin-driven recovery) and R3
+(TOTP MFA) page templates to the embedded set. The disk files
+shipped in 0.6.0 and 0.7.0 respectively, but the corresponding
+`include_str!` entries in `src/templates.rs` were never added —
+so default-deployed binaries returned HTTP 500 with the
+framework's generic error page on every R2 / R3 handler that
+called `templates.render("admin/<name>.html", …)`.
+
+Surfaced by the lursystem v1 (flagship downstream) live-DB
+shakedown: Phase 4 (reporter-identity unmask) and every
+Phase 3c terminal status transition bounced to
+`/admin/reauth` and 500'd because the template was unresolvable
+under `Templates::new(None)`.
+
+### Fixed
+
+- `EMBEDDED_TEMPLATES` now includes the ten missing entries:
+  `admin/reauth.html`, `admin/admin_reset_password.html`,
+  `admin/lock_user.html`, `admin/confirm_admin_action.html`,
+  `admin/must_change_password.html`, `admin/mfa_enroll.html`,
+  `admin/mfa_enroll_complete.html`, `admin/mfa_verify.html`,
+  `admin/mfa_disable.html`, `admin/mfa_regenerate.html`,
+  `admin/mfa_regenerate_complete.html`. Every R2 / R3 handler
+  that previously 500'd in a default deploy now renders.
+
+### Added
+
+- `every_handler_rendered_template_resolves` unit test under
+  `templates::tests`. Walks `src/admin/`, pulls every
+  `"admin/<name>.html"` string literal out of every `.rs` file,
+  and asserts each one resolves via `Templates::new(None)?`. A
+  handler author who adds a new `.render(...)` call but
+  forgets the `EMBEDDED_TEMPLATES` entry will fail this test
+  before the release ships rather than after the first user
+  clicks the affected page. Std-only — no new dependency.
+
+### Migration from 0.7.0
+
+Bump `rustio-admin = "0.7.1"` and `cargo update -p rustio-admin`.
+No schema changes. No middleware changes. No env-var changes.
+Projects that worked around the gap by copying the templates
+into a project-level `templates/` directory can safely remove
+the workaround.
 
 
 ## [0.7.0] — 2026-05-11

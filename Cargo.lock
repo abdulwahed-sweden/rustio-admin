@@ -1379,7 +1379,7 @@ dependencies = [
 
 [[package]]
 name = "minimal-example"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "chrono",
  "rustio-admin",
@@ -1850,7 +1850,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1884,7 +1884,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-cli"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "chrono",
  "clap",
@@ -1899,7 +1899,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-macros"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "proc-macro2",
  "quote",
