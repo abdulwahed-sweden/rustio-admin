@@ -27,8 +27,22 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
     let struct_name = &input.ident;
     let fields = struct_fields(&input)?;
 
-    let admin_name = plural_snake(&struct_name.to_string());
-    let display_name = humanise(&plural_snake(&struct_name.to_string()));
+    // Struct-level overrides from `#[rustio(...)]` on the struct.
+    // Project-side knobs that escape the macro's auto-deriving from
+    // the struct name. `VISIBILITY_AUDIT.md` F3: pre-0.8.1 there was
+    // no way to override `DISPLAY_NAME` short of renaming the struct,
+    // so projects with `CaseAction` got "Case actions", `Disclosure`
+    // got "Disclosures", etc. — bearable but not polishable.
+    let struct_overrides = parse_struct_attr(&input.attrs)?;
+
+    let admin_name = match struct_overrides.admin_name {
+        Some(ref s) => s.clone(),
+        None => plural_snake(&struct_name.to_string()),
+    };
+    let display_name = match struct_overrides.display_name {
+        Some(ref s) => s.clone(),
+        None => humanise(&plural_snake(&struct_name.to_string())),
+    };
     let singular = struct_name.to_string();
 
     let mut field_metas = Vec::new();
@@ -389,6 +403,67 @@ fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
         }
     };
     Ok(kind)
+}
+
+/// Project-side struct-level overrides parsed from
+/// `#[rustio(...)]` on the deriving struct. Adds a polish escape
+/// hatch for the otherwise-correct auto-derived defaults — see
+/// `VISIBILITY_AUDIT.md` F3.
+///
+/// Example:
+///
+/// ```ignore
+/// #[derive(RustioAdmin)]
+/// #[rustio(
+///     admin_name = "case-actions",
+///     display_name = "Case events"
+/// )]
+/// pub struct CaseAction { … }
+/// ```
+///
+/// Both fields are optional. Unknown keys produce a compile error
+/// pointing at the attribute span.
+#[derive(Default)]
+struct StructOverrides {
+    admin_name: Option<String>,
+    display_name: Option<String>,
+}
+
+fn parse_struct_attr(attrs: &[syn::Attribute]) -> syn::Result<StructOverrides> {
+    let mut out = StructOverrides::default();
+    for attr in attrs {
+        if !attr.path().is_ident("rustio") {
+            continue;
+        }
+        attr.parse_nested_meta(|m| {
+            if m.path.is_ident("admin_name") {
+                let value = m.value()?;
+                let lit: Lit = value.parse()?;
+                if let Lit::Str(s) = lit {
+                    out.admin_name = Some(s.value());
+                }
+                Ok(())
+            } else if m.path.is_ident("display_name") {
+                let value = m.value()?;
+                let lit: Lit = value.parse()?;
+                if let Lit::Str(s) = lit {
+                    out.display_name = Some(s.value());
+                }
+                Ok(())
+            } else {
+                // Field-level keys (e.g. `belongs_to`, `display`)
+                // legitimately appear on `#[rustio(...)]` placed on
+                // FIELDS, not the struct. When the same `rustio`
+                // attribute is on the struct, those keys are
+                // surprising. Reject so a misplaced field attribute
+                // doesn't silently fail.
+                Err(m.error(
+                    "unknown rustio struct attribute; expected `admin_name` or `display_name`",
+                ))
+            }
+        })?;
+    }
+    Ok(out)
 }
 
 fn parse_relation_attr(
