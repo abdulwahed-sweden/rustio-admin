@@ -125,6 +125,7 @@ mod tests {
             is_demo: false,
             demo_label: None,
             must_change_password: false,
+            mfa_enabled: false,
         }
     }
 
