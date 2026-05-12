@@ -1389,15 +1389,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "minimal-example"
-version = "0.9.0"
-dependencies = [
- "chrono",
- "rustio-admin",
- "tokio",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
