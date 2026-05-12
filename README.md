@@ -164,6 +164,18 @@ cargo install rustio-admin-cli      # provides the `rustio` binary
 ```
 
 
+## Documentation
+
+Full documentation index: [`docs/README.md`](./docs/README.md).
+
+| Path                                       | Contents                                                       |
+|--------------------------------------------|----------------------------------------------------------------|
+| [`docs/`](./docs/)                         | Guides, doctrine, architecture overview.                       |
+| [`docs/design/`](./docs/design/)           | Long-form design contracts — one file per security-sensitive subsystem. |
+| [`docs/public-api.md`](./docs/public-api.md) | Enumerated public API surface (generated; descriptive, not normative). |
+| [`docs/archive/`](./docs/archive/)         | Historical and superseded planning material.                   |
+
+
 ## Reading paths
 
 Where to start depends on the work.
@@ -171,15 +183,15 @@ Where to start depends on the work.
 **New to the framework**
 → 30-second example above
 → [`docs/getting-started.md`](./docs/getting-started.md)
-→ [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)
+→ [`DESIGN_SYSTEM.md`](./docs/design/DESIGN_SYSTEM.md)
 
 **Working on authentication or recovery**
-→ [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md)
-→ [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+→ [`DESIGN_RECOVERY.md`](./docs/design/DESIGN_RECOVERY.md)
+→ [`DESIGN_R2_ORGANISATIONAL.md`](./docs/design/DESIGN_R2_ORGANISATIONAL.md)
 
 **Auditing authority boundaries**
-→ [`DESIGN_AUDIT.md`](./DESIGN_AUDIT.md)
-→ [`DESIGN_SESSIONS.md`](./DESIGN_SESSIONS.md)
+→ [`DESIGN_AUDIT.md`](./docs/design/DESIGN_AUDIT.md)
+→ [`DESIGN_SESSIONS.md`](./docs/design/DESIGN_SESSIONS.md)
 
 **Building on the published crate**
 → Install above
@@ -188,7 +200,7 @@ Where to start depends on the work.
 
 **Understanding scope and design history**
 → [`docs/architecture.md`](./docs/architecture.md)
-→ [`rustio-admin-strategic-reset-plan.md`](./rustio-admin-strategic-reset-plan.md)
+→ [`rustio-admin-strategic-reset-plan.md`](./docs/archive/rustio-admin-strategic-reset-plan.md)
 → [`CHANGELOG.md`](./CHANGELOG.md)
 
 
@@ -197,25 +209,25 @@ Where to start depends on the work.
 Security-sensitive behaviour is governed by explicit contract
 documents reviewed alongside the code.
 
-### [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)
+### [`DESIGN_SYSTEM.md`](./docs/design/DESIGN_SYSTEM.md)
 
 Visual, token, and branding contract.
 
-### [`DESIGN_SESSIONS.md`](./DESIGN_SESSIONS.md)
+### [`DESIGN_SESSIONS.md`](./docs/design/DESIGN_SESSIONS.md)
 
 Session lifecycle, trust escalation, and Doctrine 22 — the
 single-writer invariant on `revoked_at`.
 
-### [`DESIGN_AUDIT.md`](./DESIGN_AUDIT.md)
+### [`DESIGN_AUDIT.md`](./docs/design/DESIGN_AUDIT.md)
 
 Typed audit events, correlation-id chains, and the required
 middleware ordering.
 
-### [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md)
+### [`DESIGN_RECOVERY.md`](./docs/design/DESIGN_RECOVERY.md)
 
 Self-service password recovery (R1, ships in 0.5.0).
 
-### [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+### [`DESIGN_R2_ORGANISATIONAL.md`](./docs/design/DESIGN_R2_ORGANISATIONAL.md)
 
 Admin-driven recovery, auto-throttle, re-auth wall (R2,
 ships in 0.6.0).
