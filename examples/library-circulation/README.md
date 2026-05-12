@@ -72,7 +72,7 @@ footer comment.
 
 ## File layout
 
-```
+```text
 examples/library-circulation/
 ├── Cargo.toml
 ├── README.md                ← this file
