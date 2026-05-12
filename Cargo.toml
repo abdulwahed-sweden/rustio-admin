@@ -4,7 +4,6 @@ members = [
     "crates/rustio-admin",
     "crates/rustio-admin-macros",
     "crates/rustio-admin-cli",
-    "examples/minimal",
     "examples/library-circulation",
 ]
 

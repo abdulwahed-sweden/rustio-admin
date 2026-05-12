@@ -196,7 +196,7 @@ Where to start depends on the work.
 **Building on the published crate**
 → Install above
 → [`docs/modeladmin.md`](./docs/modeladmin.md)
-→ [`examples/minimal/`](./examples/minimal/)
+→ [`examples/library-circulation/`](./examples/library-circulation/)
 
 **Understanding scope and design history**
 → [`docs/architecture.md`](./docs/architecture.md)
