@@ -97,6 +97,7 @@ pub(crate) fn hex_to_rgb_triplet(hex: &str) -> String {
 }
 
 impl BaseContext {
+    // internal:
     pub fn new(identity: Option<&Identity>, csrf_token: String, admin: &Admin) -> Self {
         let b = admin.branding();
         let (is_demo_session, demo_label) = match identity {

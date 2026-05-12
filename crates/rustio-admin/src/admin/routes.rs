@@ -446,6 +446,7 @@ fn strict_mailer_guard_check(admin: &Admin) -> std::result::Result<(), String> {
     }
 }
 
+// public:
 pub fn register_admin_routes(
     router: Router,
     admin: Admin,
