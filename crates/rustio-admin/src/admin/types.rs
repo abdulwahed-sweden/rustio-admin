@@ -29,6 +29,7 @@ pub(crate) type UpdateResult<'a> =
 // User profile extension API
 // ---------------------------------------------------------------------------
 
+// public:
 /// One labeled section rendered in the project-extension area of the
 /// built-in user profile page (admin/user_view.html — `{% block
 /// project_user_fields %}`). A project's extension closure returns
@@ -40,6 +41,7 @@ pub struct UserProfileSection {
     pub rows: Vec<UserProfileRow>,
 }
 
+// public:
 /// One key-value row inside a [`UserProfileSection`]. Both fields are
 /// `String` so projects can format whatever shape they need. Rendered
 /// escaped — pass plain text; for arbitrary HTML, projects override
@@ -59,6 +61,7 @@ pub(crate) type UserProfileExtensionFn =
 pub(crate) type UserProfileExtensionFuture =
     Pin<Box<dyn Future<Output = Result<Vec<UserProfileSection>>> + Send + 'static>>;
 
+// public:
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum FieldType {
@@ -73,6 +76,7 @@ pub enum FieldType {
 }
 
 impl FieldType {
+    // public:
     pub fn widget(&self) -> &'static str {
         match self {
             FieldType::Bool => "checkbox",
@@ -82,6 +86,7 @@ impl FieldType {
         }
     }
 
+    // public:
     pub fn nullable(&self) -> bool {
         matches!(
             self,
@@ -90,6 +95,7 @@ impl FieldType {
     }
 }
 
+// public:
 #[derive(Debug, Clone)]
 pub struct AdminField {
     pub name: &'static str,
@@ -104,6 +110,7 @@ pub struct AdminField {
     pub choices: Option<&'static [&'static str]>,
 }
 
+// public:
 #[derive(Debug, Clone)]
 pub struct AdminRelation {
     pub target_model: &'static str,
@@ -116,6 +123,7 @@ pub struct AdminRelation {
     pub multi: bool,
 }
 
+// public:
 /// What the `#[derive(RustioAdmin)]` macro produces for each struct.
 pub trait AdminModel: Send + Sync + 'static {
     const ADMIN_NAME: &'static str;
@@ -140,6 +148,7 @@ pub trait AdminModel: Send + Sync + 'static {
     fn values_to_update(&self) -> Vec<(&'static str, Value)>;
 }
 
+// public:
 /// Runtime metadata about one admin-registered model. Captures both
 /// the [`AdminModel`] static surface and the [`super::ModelAdmin`]
 /// customisation values at registration time, so handlers read every
@@ -177,6 +186,7 @@ pub struct AdminEntry {
     pub(crate) ops: Arc<dyn AdminOps>,
 }
 
+// public:
 /// Per-request options for [`AdminOps::list`]. Empty / `None` fields
 /// mean "framework default": no ordering override falls back to
 /// `id DESC` inside the runtime, no filters skips the WHERE clause,
@@ -205,6 +215,7 @@ pub struct ListOpts {
     pub offset: Option<i64>,
 }
 
+// public:
 /// Result of [`AdminOps::list`]: the requested page plus the total
 /// row count under the same WHERE clause (so handlers can render
 /// pagination footers without a separate query).
@@ -275,6 +286,7 @@ pub(crate) trait AdminOps: Send + Sync {
     }
 }
 
+// public:
 /// A row as shown on the list page.
 #[derive(Debug)]
 pub struct ListRow {
@@ -291,6 +303,7 @@ pub struct ListRow {
     pub cell_links: Vec<Option<CellLink>>,
 }
 
+// public:
 /// One resolved foreign-key cell. The renderer turns this into
 /// `<a href="/admin/{admin_name}/{id}/edit">…</a>` around the cell's
 /// display label.
@@ -302,6 +315,7 @@ pub struct CellLink {
     pub id: i64,
 }
 
+// public:
 /// The raw field values used to pre-fill the edit form.
 #[derive(Debug)]
 pub struct EditRow {
@@ -310,6 +324,7 @@ pub struct EditRow {
     pub values: Vec<(String, String)>,
 }
 
+// public:
 /// Per-project admin branding. Defaults are RustIO-flavoured;
 /// projects override via [`Admin::site_branding`].
 #[derive(Clone, Debug)]
@@ -335,6 +350,7 @@ impl Default for SiteBranding {
     }
 }
 
+// public:
 /// Project-level override patch for the admin chrome palette.
 ///
 /// `admin.css` is the single source of truth for the framework's design
@@ -365,11 +381,13 @@ pub struct AdminTheme {
 }
 
 impl AdminTheme {
+    // public:
     /// New empty patch — no overrides emitted, `admin.css` wins.
     pub fn new() -> Self {
         Self::default()
     }
 
+    // internal:
     /// `true` when at least one field is set. Used by the renderer to
     /// decide whether to emit the inline `<style>` block at all.
     pub fn has_overrides(&self) -> bool {
@@ -381,36 +399,42 @@ impl AdminTheme {
             || self.border.is_some()
     }
 
+    // public:
     /// Override `--rio-accent`. Hex form, `#` optional.
     pub fn accent(mut self, color: impl Into<String>) -> Self {
         self.accent = Some(normalise_hex(color));
         self
     }
 
+    // public:
     /// Override `--rio-bg` (page canvas).
     pub fn bg(mut self, color: impl Into<String>) -> Self {
         self.bg = Some(normalise_hex(color));
         self
     }
 
+    // public:
     /// Override `--rio-surface` (cards, topbar, sidebar, table body).
     pub fn surface(mut self, color: impl Into<String>) -> Self {
         self.surface = Some(normalise_hex(color));
         self
     }
 
+    // public:
     /// Override `--rio-text` (body text colour).
     pub fn text(mut self, color: impl Into<String>) -> Self {
         self.text = Some(normalise_hex(color));
         self
     }
 
+    // public:
     /// Override `--rio-text-muted` (secondary text, breadcrumb links).
     pub fn text_muted(mut self, color: impl Into<String>) -> Self {
         self.text_muted = Some(normalise_hex(color));
         self
     }
 
+    // public:
     /// Override `--rio-border` (default divider, card outline).
     pub fn border(mut self, color: impl Into<String>) -> Self {
         self.border = Some(normalise_hex(color));
@@ -418,6 +442,7 @@ impl AdminTheme {
     }
 }
 
+// public:
 /// Builder for the admin. Register models with `.model::<M>()`, then
 /// hand it to the router via `register_admin_routes`.
 pub struct Admin {
@@ -478,6 +503,7 @@ impl Default for Admin {
 }
 
 impl Admin {
+    // public:
     /// Constructs a new `Admin` with the framework's core entries
     /// pre-seeded. The only core entry is `User`; project models are
     /// added on top via [`Self::model`]. The outbound mailer
@@ -499,17 +525,20 @@ impl Admin {
         }
     }
 
+    // public:
     /// Override the default RustIO branding.
     pub fn site_branding(mut self, branding: SiteBranding) -> Self {
         self.site_branding = branding;
         self
     }
 
+    // public:
     /// Read-only access to the active branding.
     pub fn branding(&self) -> &SiteBranding {
         &self.site_branding
     }
 
+    // public:
     /// Set the admin chrome's accent colour. Hex form, with or without
     /// the leading `#` (`"#1e6ba8"` and `"1e6ba8"` both work). Replaces
     /// any prior accent override; other [`AdminTheme`] fields are
@@ -519,6 +548,7 @@ impl Admin {
         self
     }
 
+    // public:
     /// Replace the entire admin chrome palette patch in one call. See
     /// [`AdminTheme`] for the field-by-field contract.
     pub fn theme(mut self, theme: AdminTheme) -> Self {
@@ -526,17 +556,20 @@ impl Admin {
         self
     }
 
+    // public:
     /// Read-only access to the configured accent colour, if any. `None`
     /// means *“no override — admin.css owns it”*.
     pub fn accent(&self) -> Option<&str> {
         self.theme.accent.as_deref()
     }
 
+    // public:
     /// Read-only access to the active theme override patch.
     pub fn active_theme(&self) -> &AdminTheme {
         &self.theme
     }
 
+    // public:
     /// Replace the outbound mailer. Closes the
     /// documented-but-unimplemented gap from 0.4.0 where the doc
     /// comments described this method while the `Admin` struct had
@@ -562,6 +595,7 @@ impl Admin {
         self
     }
 
+    // public:
     /// Read-only access to the registered mailer. Returns a borrow
     /// of the `Arc` so handlers can `.clone()` it cheaply when they
     /// need to move the handle into an async future. Always returns
@@ -571,6 +605,7 @@ impl Admin {
         &self.mailer
     }
 
+    // public:
     /// Whether the project explicitly called [`Self::mailer`] to
     /// register a mailer. Returns `false` for `Admin::new()` (the
     /// framework's `LogMailer` default is in place); flips to `true`
@@ -587,6 +622,7 @@ impl Admin {
         self.mailer_overridden
     }
 
+    // public:
     /// Replace the active password policy. R1 ships with the
     /// length-only [`DefaultPasswordPolicy`] (`min_len = 10`);
     /// production deployments commonly override to 12+, and
@@ -608,6 +644,7 @@ impl Admin {
         self
     }
 
+    // public:
     /// Read-only access to the registered password policy. Returns
     /// a borrow of the `Arc` so handlers can `.clone()` it cheaply
     /// when needed. Always returns a live policy — `Admin::new()`
@@ -616,6 +653,7 @@ impl Admin {
         &self.password_policy
     }
 
+    // public:
     /// Replace the active recovery policy. R1 ships with
     /// [`DefaultRecoveryPolicy`] (TTL 1h, request 5/15min, consume
     /// 10/5min, strict-mailer guard off); production deployments
@@ -640,6 +678,7 @@ impl Admin {
         self
     }
 
+    // public:
     /// Read-only access to the registered recovery policy. Returns
     /// a borrow of the `Arc`. Always live — `Admin::new()` seeds
     /// [`DefaultRecoveryPolicy`] so this never returns `None`.
@@ -647,6 +686,7 @@ impl Admin {
         &self.recovery_policy
     }
 
+    // public:
     /// Replace the active MFA enforcement policy. R3 ships with
     /// [`MfaPolicy::Optional`] as the default — pre-R3 framework
     /// behaviour, no opt-in required. Production deployments that
@@ -684,6 +724,7 @@ impl Admin {
         self
     }
 
+    // public:
     /// Read-only access to the active MFA policy. Returns by
     /// value — the policy is `Copy`. Always live — `Admin::new()`
     /// seeds [`MfaPolicy::default`] (`Optional`) so this never
@@ -692,6 +733,7 @@ impl Admin {
         self.mfa_policy
     }
 
+    // public:
     pub fn model<M>(mut self) -> Self
     where
         M: super::ModelAdmin + crate::orm::Model,
@@ -717,10 +759,12 @@ impl Admin {
         self
     }
 
+    // public:
     pub fn entries(&self) -> &[AdminEntry] {
         &self.entries
     }
 
+    // public:
     /// Register a project-specific extension that contributes extra
     /// sections to the built-in user profile page. The closure is
     /// invoked on every render of `GET /admin/users/:id` (Overview tab);
@@ -749,10 +793,12 @@ impl Admin {
         self.user_profile_ext.as_ref()
     }
 
+    // public:
     pub fn find(&self, admin_name: &str) -> Option<&AdminEntry> {
         self.entries.iter().find(|e| e.admin_name == admin_name)
     }
 
+    // public:
     /// Register the canonical (add/change/delete/view) permissions for
     /// every model. Call during startup after `init_tables`.
     pub async fn seed_permissions(&self, db: &crate::orm::Db) -> crate::error::Result<()> {
