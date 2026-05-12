@@ -37,6 +37,7 @@ pub(crate) const CREATE_TIMESTAMP_INDEX_SQL: &str =
     "CREATE INDEX IF NOT EXISTS rustio_admin_actions_timestamp_idx \
      ON rustio_admin_actions(timestamp DESC)";
 
+// public:
 /// Ensure the `rustio_admin_actions` table and its indexes exist.
 /// Idempotent. Depends on `rustio_users` existing first.
 ///
@@ -111,6 +112,7 @@ pub async fn ensure_table(db: &Db) -> Result<()> {
     Ok(())
 }
 
+// public:
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActionType {
     Create,
@@ -119,6 +121,7 @@ pub enum ActionType {
 }
 
 impl ActionType {
+    // public:
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Create => "create",
@@ -127,6 +130,7 @@ impl ActionType {
         }
     }
 
+    // public:
     pub fn parse(s: &str) -> Option<Self> {
         match s {
             "create" => Some(Self::Create),
@@ -136,6 +140,7 @@ impl ActionType {
         }
     }
 
+    // public:
     pub fn label(self) -> &'static str {
         match self {
             Self::Create => "Created",
@@ -144,6 +149,7 @@ impl ActionType {
         }
     }
 
+    // public:
     pub fn pill_class(self) -> &'static str {
         match self {
             Self::Create => "badge-success",
@@ -153,6 +159,7 @@ impl ActionType {
     }
 }
 
+// public:
 #[derive(Debug, Clone)]
 pub struct AdminAction {
     pub id: i64,
@@ -166,6 +173,7 @@ pub struct AdminAction {
     pub summary: String,
 }
 
+// public:
 pub struct LogEntry<'a> {
     pub user_id: i64,
     pub action_type: ActionType,
@@ -219,6 +227,7 @@ pub struct LogEntry<'a> {
 }
 
 impl<'a> LogEntry<'a> {
+    // public:
     /// Builder helper for the common case (every field that R0
     /// added defaults to `None`). Existing call sites can migrate
     /// incrementally.
@@ -238,6 +247,7 @@ impl<'a> LogEntry<'a> {
         }
     }
 
+    // public:
     /// Mark this entry as an admin acting on another user. The id
     /// is persisted under `metadata.actor_user_id` by [`record`],
     /// not as a separate column. Pair with `.with_event(...)` for
@@ -258,6 +268,7 @@ impl<'a> LogEntry<'a> {
         self
     }
 
+    // public:
     /// Promote this entry's persisted `action_type` string from the
     /// legacy [`ActionType`] (create/update/delete) trio to the
     /// richer typed [`AuditEvent`]. The `action_type` field becomes
@@ -337,6 +348,7 @@ fn build_persisted_metadata(
     }
 }
 
+// public:
 /// Write one row to the action log. Validates required fields before
 /// touching the DB so a broken audit pipeline becomes visible.
 pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
@@ -378,6 +390,7 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     Ok(())
 }
 
+// public:
 /// Typed representation of every audit `action_type` the framework
 /// emits for authority + identity + recovery actions.
 ///
@@ -501,6 +514,7 @@ pub enum AuditEvent {
 }
 
 impl AuditEvent {
+    // public:
     /// Stable lowercase identifier persisted as
     /// `rustio_admin_actions.action_type`.
     ///
@@ -540,6 +554,7 @@ impl AuditEvent {
     }
 }
 
+// public:
 /// Fetch the most recent `limit` admin actions, newest first.
 pub async fn recent(
     db: &Db,
@@ -584,6 +599,7 @@ pub async fn recent(
     rows.iter().map(row_to_action).collect()
 }
 
+// public:
 /// All actions for one `(model, object_id)`, newest first.
 pub async fn for_object(db: &Db, model_name: &str, object_id: i64) -> Result<Vec<AdminAction>> {
     let rows = sqlx::query(
