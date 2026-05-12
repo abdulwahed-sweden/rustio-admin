@@ -41,6 +41,7 @@
 
 use super::AdminModel;
 
+// public:
 /// One named group of fields on the change form. The framework's
 /// default heuristic in [`super::render::form_ctx`] groups by name
 /// (Default / System / Advanced); a project that wants explicit
@@ -52,6 +53,7 @@ pub struct Fieldset {
     pub fields: &'static [&'static str],
 }
 
+// public:
 /// Django-style customisation surface for a registered admin model.
 ///
 /// Every type that implements [`AdminModel`] gets a default impl via
@@ -119,6 +121,7 @@ pub trait ModelAdmin: AdminModel {
     }
 }
 
+// public:
 /// One project-defined bulk action declared by
 /// [`ModelAdmin::bulk_actions`]. Static metadata only — see
 /// `AdminOps::execute_bulk_action` for the runtime dispatcher.
@@ -143,6 +146,7 @@ pub struct BulkAction {
     pub confirm: bool,
 }
 
+// public:
 /// One column to sort by, with direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDir {
@@ -151,6 +155,7 @@ pub enum SortDir {
 }
 
 impl SortDir {
+    // public:
     /// Stable SQL fragment.
     pub fn sql(self) -> &'static str {
         match self {
@@ -160,6 +165,7 @@ impl SortDir {
     }
 }
 
+// public:
 /// Parse one `ordering()` slice entry. `"-foo"` → (`"foo"`, Desc);
 /// `"foo"` → (`"foo"`, Asc).
 pub fn parse_order_spec(spec: &str) -> (String, SortDir) {

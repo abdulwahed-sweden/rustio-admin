@@ -22,12 +22,14 @@ use std::collections::HashMap;
 
 use super::types::AdminEntry;
 
+// public:
 /// Soft cap on the number of rows a relation filter will expose as a
 /// `<select>` dropdown. Above this threshold the admin renders a
 /// numeric-id input instead. 500 was chosen to fit comfortably in
 /// one HTTP round-trip.
 pub const RELATION_FILTER_DROPDOWN_CAP: usize = 500;
 
+// public:
 /// One forward (`BelongsTo`) relation resolved against the current
 /// admin registration.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +50,7 @@ pub struct ResolvedRelation {
     pub target_display_field: Option<String>,
 }
 
+// public:
 /// One reverse (`HasMany`) relation — an incoming edge pointing at a
 /// given target model. Produced by inverting every stored `BelongsTo`
 /// at registry-build time.
@@ -67,6 +70,7 @@ pub struct InverseRelation {
     pub target_model: String,
 }
 
+// public:
 /// Why a [`RelationRegistry`] declaration was rejected.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,6 +119,7 @@ impl std::fmt::Display for RegistryError {
 
 impl std::error::Error for RegistryError {}
 
+// public:
 /// Relation lookup tables for one snapshot of the admin registration.
 #[derive(Debug, Clone, Default)]
 pub struct RelationRegistry {
@@ -125,11 +130,13 @@ pub struct RelationRegistry {
 }
 
 impl RelationRegistry {
+    // public:
     /// Empty registry. Every lookup returns `None`.
     pub fn empty() -> Self {
         Self::default()
     }
 
+    // public:
     /// Build the registry from the current admin entries. Silent on
     /// unknown targets / display fields — call [`validate`](Self::validate)
     /// after if you want those surfaced as errors.
@@ -211,11 +218,13 @@ impl RelationRegistry {
         }
     }
 
+    // public:
     /// The `ResolvedRelation` for `(model, field)`, if any.
     pub fn belongs_to(&self, model: &str, field: &str) -> Option<&ResolvedRelation> {
         self.belongs_to.get(&(model.to_string(), field.to_string()))
     }
 
+    // public:
     /// Every forward relation owned by a source model.
     pub fn belongs_to_of(&self, model: &str) -> &[ResolvedRelation] {
         self.belongs_to_of
@@ -224,6 +233,7 @@ impl RelationRegistry {
             .unwrap_or(&[])
     }
 
+    // public:
     /// Every incoming edge into `model`. Used by the inverse-panel
     /// renderer and the delete guard.
     pub fn has_many(&self, model: &str) -> &[InverseRelation] {
@@ -233,11 +243,13 @@ impl RelationRegistry {
             .unwrap_or(&[])
     }
 
+    // public:
     /// `true` if the registry knows no relations at all.
     pub fn is_empty(&self) -> bool {
         self.belongs_to.is_empty()
     }
 
+    // public:
     /// Walk every stored relation and report declarations that
     /// reference models or columns not present in the current admin.
     pub fn validate(&self, entries: &[AdminEntry]) -> Vec<RegistryError> {
@@ -274,6 +286,7 @@ impl RelationRegistry {
         errors
     }
 
+    // public:
     /// A forward iterator over every ResolvedRelation in the registry,
     /// in deterministic order.
     pub fn iter_belongs_to(&self) -> impl Iterator<Item = &ResolvedRelation> {
