@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.8.2** | 2026-05-12 | Admin stylesheet split into a Primer/Carbon-style multi-file source tree + `DESIGN_DOCTRINE.md`. Pure refactor — bundle byte-stream and visual output preserved; one HTTP request, baked into the binary. |
 | **0.8.1** | 2026-05-11 | Visibility recovery pass — model_name slug canonicalisation, error-page chrome, history-label expansion, scaffold middleware + secret-key + README, top-bar MFA, doctor surface, `#[rustio(display_name)]`. |
 | **0.8.0** | 2026-05-11 | R4 — CLI emergency recovery: `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`. |
 | **0.7.1** | 2026-05-11 | Embed every R2 + R3 page template (fix 500 on /admin/reauth and every MFA flow).  |
@@ -27,6 +28,81 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.8.2] — 2026-05-12
+
+Pure refactor of the admin stylesheet source layout. The 2089-line
+single-file `admin.css` is split into a Primer / IBM Carbon-style
+multi-file architecture under `assets/static/admin/` (tokens →
+themes → base → layout → components → pages → responsive → print,
+32 fragments + the contributor-facing `admin.css` `@import`
+manifest). A new top-level `DESIGN_DOCTRINE.md` extracts the
+visual philosophy — token rules, typography system, surface
+hierarchy, spacing scale, dark-mode philosophy, operational UI
+principles, source layout, contributor workflow.
+
+**Zero visual change.** Every class name, custom-property name,
+selector, declaration, comment, and rationale block from the
+original file is preserved. Verified by sorting the
+comment-stripped rule streams of the original and the bundled
+fragments and diffing — zero deletions; the only additions are
+the 4 extra `:root` blocks introduced by splitting the original
+token block across 5 token files.
+
+### Migration from 0.8.1
+
+Bump `rustio-admin = "0.8.2"` and run
+`cargo update -p rustio-admin`. **No template edit required**:
+the served URL stays `/static/admin.css` and the rendered bundle
+is byte-equivalent to the 0.8.1 bundle (modulo the `:root`
+splitting and the section-header comments added to every
+fragment).
+
+No schema columns added or removed. No HTTP routes added or
+removed. No public API change in `rustio-admin`,
+`rustio-admin-macros`, or `rustio-admin-cli`. No middleware order
+changes.
+
+### Changed
+
+- **CSS source layout reorganised.** Contributors now author
+  fragments under `crates/rustio-admin/assets/static/admin/`
+  instead of editing one 2089-line file. Layout follows the
+  Primer / Carbon convention so contributors landing from those
+  ecosystems can find their way without a README. Each fragment
+  carries an `==========` section header explaining its role and
+  cascade dependencies. Original rationale comments preserved
+  verbatim where they belong.
+- **Delivery uses `concat!(include_str!, …)`.** `ADMIN_CSS` in
+  `src/admin/routes.rs` switched from a single `include_str!` to
+  a compile-time `concat!` over every fragment in cascade order.
+  The browser still receives one bundle at `/static/admin.css` —
+  one HTTP request, baked into the binary, no runtime `@import`
+  waterfall, no extra routes. Self-hosted / no-FOUT / no-CDN
+  doctrine preserved.
+
+### Added
+
+- **`DESIGN_DOCTRINE.md`** at the repo root. Ten sections
+  explaining the *why* behind RustIO's visual identity — what
+  every token means, when to use which surface rung, how the
+  dark palette diverges from the light, what "operational UI"
+  means in practice, how the bundle is assembled, and the
+  workflow for adding a new fragment. Intended as the canonical
+  reference for design decisions in the framework.
+
+### Internal
+
+- **Cascade order documented in two places, kept in lock-step.**
+  The `@import` list in `admin.css` and the `concat!` block in
+  `routes.rs` are the source of truth for fragment order. A
+  comment in each file points to the other; both must move
+  together when a new fragment is added.
+- **No bundler, no PostCSS, no SCSS, no CSS-in-JS.** Pure
+  hand-written CSS, baked into the binary at `cargo build` time.
+  The framework's "one binary, no toolchain" deploy story is
+  unchanged.
 
 
 ## [0.8.1] — 2026-05-11
