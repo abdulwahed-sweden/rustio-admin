@@ -23,6 +23,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use sha2::{Digest, Sha256};
 
+// public:
 /// Replace any password-like value with a fixed placeholder. Use this
 /// in summary strings and error messages — never the real password,
 /// not even truncated.
@@ -30,6 +31,7 @@ pub const fn redact_password() -> &'static str {
     "<password>"
 }
 
+// public:
 /// Render a short, privacy-preserving fingerprint of a token. The
 /// returned string includes the first 8 chars of `sha256(token)` —
 /// just enough for an operator to correlate two log lines about the
@@ -46,6 +48,7 @@ pub fn redact_token(token: &str) -> String {
     format!("<token:…{prefix}>")
 }
 
+// public:
 /// Replace an MFA secret with a fixed placeholder. MFA secrets are
 /// always stored encrypted at rest; this helper exists so a stray
 /// log statement during development can't accidentally write the
@@ -54,6 +57,7 @@ pub const fn redact_mfa_secret() -> &'static str {
     "<mfa-secret>"
 }
 
+// public:
 /// Replace a backup code with a fixed placeholder. Codes are
 /// short-lived single-use; like passwords, the right log line is
 /// "redacted" with no fingerprint.

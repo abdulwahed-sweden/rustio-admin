@@ -71,6 +71,7 @@ pub(crate) struct RecoveryState {
 }
 
 impl RecoveryState {
+    // internal:
     /// Build from `Admin`, sizing the buckets from
     /// `RecoveryPolicy::request_rate_limit()` and
     /// `consume_rate_limit()`. Called once at registration time.

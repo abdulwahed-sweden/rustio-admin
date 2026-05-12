@@ -77,6 +77,7 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m
 });
 
+// internal:
 /// Render an icon inline. Returns an empty string if `name` is
 /// unknown (templates remain forgiving — a missing icon shouldn't
 /// crash the page render).
