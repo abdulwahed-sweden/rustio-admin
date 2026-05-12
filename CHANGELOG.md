@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.10.0** | 2026-05-13 | Flagship example replacement. `examples/minimal/` retired; `examples/library-circulation/` ships as the canonical demo (4 models, 3 FKs, 135-row deterministic seed). Macro learns `Option<DateTime<Utc>>`. Documentation topology consolidated into `docs/design/` + `docs/archive/`. Zero framework runtime change. |
 | **0.9.0** | 2026-05-12 | Surface declaration. Doctrine moved to `docs/`; cascade lockstep invariant CI-enforced; 419/419 pub items annotated `// public:` or `// internal:` (355 + 64); `docs/public-api.md` enumerates the public surface. Zero behavioural / visibility changes. |
 | **0.8.2** | 2026-05-12 | Admin stylesheet split into a Primer/Carbon-style multi-file source tree + `DESIGN_DOCTRINE.md`. Pure refactor — bundle byte-stream and visual output preserved; one HTTP request, baked into the binary. |
 | **0.8.1** | 2026-05-11 | Visibility recovery pass — model_name slug canonicalisation, error-page chrome, history-label expansion, scaffold middleware + secret-key + README, top-bar MFA, doctor surface, `#[rustio(display_name)]`. |
@@ -29,6 +30,115 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.10.0] — 2026-05-13
+
+Flagship example replacement, plus a narrow macro fix and a
+documentation-topology cleanup that piled up since 0.9.0.
+**No framework runtime change, no schema migration, no public
+API change.** The privatisation pass originally slated for 0.10.0
+in `docs/RUSTIO_STRATEGY.md` is deferred to a later minor — this
+release is the consolidation that earns it.
+
+### Migration from 0.9.0
+
+Bump `rustio-admin = "0.10.0"` and run
+`cargo update -p rustio-admin`. No source change required in
+downstream projects. The new example uses only the public API
+declared in `docs/public-api.md`; consuming projects continue to
+work unchanged.
+
+No schema columns added or removed. No HTTP routes added or
+removed. No middleware order changes. No CSS / token / cascade
+changes. No public-API signature changes.
+
+### Added
+
+- **`examples/library-circulation/`** — the framework's new
+  canonical demo. Four models (`Branch`, `Patron`, `Item`,
+  `Loan`), three foreign keys, five SQL migrations including a
+  135-row deterministic seed. Boots via `cargo run -p
+  library-circulation` against a local Postgres + a superuser
+  bootstrapped through `rustio user create`. Designed for
+  contributor approachability over business-domain realism;
+  the 10-step linear `main.rs` is the canonical "how do I wire
+  up a rustio-admin app?" reference.
+
+  Documented inline at `examples/library-circulation/README.md`.
+  See the file's "What this example does not yet demonstrate"
+  section for the two framework gaps it intentionally surfaces.
+
+- **`docs/design/`** subdirectory. Seven long-form design specs
+  moved from repo root: `DESIGN_AUDIT.md`, `DESIGN_R2_ORGANISATIONAL.md`,
+  `DESIGN_R3_MFA.md`, `DESIGN_R4_EMERGENCY.md`, `DESIGN_RECOVERY.md`,
+  `DESIGN_SESSIONS.md`, `DESIGN_SYSTEM.md`. Filenames preserved
+  so the ~50 source-comment references (e.g., `// see
+  DESIGN_R2_ORGANISATIONAL.md §10.3`) remain grep-resolvable.
+
+- **`docs/archive/`** additions. The two superseded planning
+  documents (`rustio-admin-strategic-reset-plan.md`,
+  `rustio-admin-apis-and-docs-plan.md`) are archived alongside
+  `VISIBILITY_AUDIT.md`. Repo-root markdown is now exactly four
+  files: `README.md`, `CHANGELOG.md`, `LICENSE`, `ROADMAP.md`.
+
+### Changed
+
+- **`#[derive(RustioAdmin)]` accepts `Option<DateTime<Utc>>`
+  fields.** Previously rejected with "unsupported field type for
+  RustioAdmin: Option<DateTime<Utc>>" — asymmetric with the
+  existing `Option<String>` and `Option<i64>` support. The fix
+  is symmetric: `FieldKind::OptionalDateTime` added to the macro,
+  mapped to the framework's already-existing
+  `FieldType::OptionalDateTime` variant. Non-optional `DateTime<Utc>`
+  behaviour unchanged; `Option<String>` and `Option<i64>`
+  unchanged; other `Option<T>` types still fail with the same
+  error message.
+
+- **Repo-root `README.md`** updated for the new docs topology.
+  New "Documentation" section near Install lists the canonical
+  paths (`docs/`, `docs/design/`, `docs/public-api.md`,
+  `docs/archive/`). All design-doc links migrated from
+  `./DESIGN_FOO.md` to `./docs/design/DESIGN_FOO.md`. The
+  "Reading paths" example link migrated from
+  `examples/minimal/` to `examples/library-circulation/`.
+
+- **`docs/README.md`** updated to index the moved design specs
+  and archive entries.
+
+### Removed
+
+- **`examples/minimal/`** — the previous "hello-world" example.
+  Superseded by `examples/library-circulation/`. Git history
+  preserves the four files for anyone who wants the
+  pre-replacement skeleton (`git show v0.9.0:examples/minimal/...`).
+
+### Deferred (documented framework gaps)
+
+Two framework capabilities the new example surfaced as
+unreachable from project code today. Both are deliberately not
+patched around in this release; future minors may address them
+with narrow framework changes:
+
+- **Custom bulk-action implementations.** The framework's
+  `AdminOps::execute_bulk_action` dispatch trait is `pub(crate)`
+  (`crates/rustio-admin/src/admin/types.rs:232`); project code
+  cannot override it. Declaring `ModelAdmin::bulk_actions()`
+  without a working dispatch would render dead buttons.
+- **Idempotent permission-group seeding.**
+  `permissions::create_group` is not idempotent and no public
+  `ensure_group` / `find_group_by_name` helper exists.
+
+Both deferrals are documented inline in
+`examples/library-circulation/migrations/0005_seed.sql`'s footer
+and in the example README's "What this example does not yet
+demonstrate" section.
+
+### Internal
+
+- **CHANGELOG ordering** continues to flip pre-existing
+  `[Unreleased]` into the new versioned section; "Releases at a
+  glance" gains a 0.10.0 row.
 
 
 ## [0.9.0] — 2026-05-12
