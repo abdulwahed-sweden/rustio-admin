@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.9.0** | 2026-05-12 | Surface declaration. Doctrine moved to `docs/`; cascade lockstep invariant CI-enforced; 419/419 pub items annotated `// public:` or `// internal:` (355 + 64); `docs/public-api.md` enumerates the public surface. Zero behavioural / visibility changes. |
 | **0.8.2** | 2026-05-12 | Admin stylesheet split into a Primer/Carbon-style multi-file source tree + `DESIGN_DOCTRINE.md`. Pure refactor — bundle byte-stream and visual output preserved; one HTTP request, baked into the binary. |
 | **0.8.1** | 2026-05-11 | Visibility recovery pass — model_name slug canonicalisation, error-page chrome, history-label expansion, scaffold middleware + secret-key + README, top-bar MFA, doctor surface, `#[rustio(display_name)]`. |
 | **0.8.0** | 2026-05-11 | R4 — CLI emergency recovery: `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`. |
@@ -28,6 +29,90 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.9.0] — 2026-05-12
+
+Surface-declaration release. The framework's public API surface is
+now explicitly enumerated; every `pub` item in `rustio-admin` and
+`rustio-admin-macros` carries a stability declaration. **No
+runtime behaviour, signatures, visibility, or templates changed
+in this release** — the work is descriptive, not destructive.
+
+This is the consolidation phase of the path to 1.0.0 documented
+in `docs/RUSTIO_STRATEGY.md`. The privatisation pass that acts on
+the annotations lands in 0.10.0.
+
+### Migration from 0.8.2
+
+Bump `rustio-admin = "0.9.0"` and run
+`cargo update -p rustio-admin`. No source change required in
+downstream projects. The annotation comments are inline source-
+tree metadata; they do not affect compilation, runtime, or the
+served HTTP / CSS / template surfaces.
+
+No schema columns added or removed. No HTTP routes added or
+removed. No middleware order changes. No CSS / token / cascade
+changes.
+
+### Added
+
+- **`docs/RUSTIO_STRATEGY.md`** + **`docs/DESIGN_DOCTRINE.md`**.
+  All human-meant prose documentation moved into `docs/`; root-
+  level Markdown sprawl reduced. `VISIBILITY_AUDIT.md` archived
+  under `docs/archive/`. Repo root now reads as `README.md +
+  CHANGELOG.md + LICENSE + Cargo.toml` plus the new top-level
+  `RUSTIO_STRATEGY.md` working file.
+
+- **Cascade lockstep CI test**
+  (`crates/rustio-admin/tests/cascade_lockstep.rs`, ≤50 LOC).
+  Asserts the `@import url(...)` order in
+  `assets/static/admin/admin.css` matches the `include_str!(...)`
+  order in `ADMIN_CSS` in `src/admin/routes.rs`. Any future PR
+  that drifts the two lists fails the test with a readable
+  side-by-side diff. Replaces the previous "comments + code
+  review" enforcement of the framework's most fragile invariant.
+
+- **`docs/public-api.md`**. Generated enumeration of every
+  `// public:` item across the workspace. Grouped by crate /
+  module path. Includes the explicit note that the document is
+  descriptive, not normative — annotation does not itself
+  guarantee SemVer stability before 1.0.
+
+### Changed
+
+- **Every `pub` item in `crates/rustio-admin/src/` and
+  `crates/rustio-admin-macros/src/` is now annotated with exactly
+  one of `// public:` or `// internal:`.** The annotation lives on
+  the line above any `///` doc block, so rustdoc output and
+  doc-comment grouping are unaffected.
+
+  - `// public:` — intended stable surface toward 1.0.
+  - `// internal:` — `pub` today, candidate for `pub(crate)` in
+    0.10.0. Used only where confidence is high (items inside
+    `pub(crate) mod` sub-modules reached only via the doc-hidden
+    `__integration` test door, plus a small number of plumbing
+    constructors and one renderer-internal probe).
+
+  Coverage: **419 / 419** declared `pub` items classified.
+  Distribution: **355 `// public:` + 64 `// internal:`**.
+
+  The annotation pass is descriptive. No `pub` was changed to
+  `pub(crate)` in 0.9.0. The privatisation pass lands in 0.10.0,
+  giving downstream projects one minor release of advance notice
+  of which items become private.
+
+### Internal
+
+- **`pub(crate)` declaration count** is unchanged across the full
+  Phase C pass (183 framework-wide, identical to the start of
+  0.9.0 work). The annotation pass introduced zero visibility
+  changes.
+
+- **Cascade order is now a CI-enforced invariant.** Refactoring
+  the `concat!(include_str!, …)` block in `routes.rs` without the
+  matching `@import` update in `admin.css` fails the new
+  integration test before any byte of CSS reaches a browser.
 
 
 ## [0.8.2] — 2026-05-12
