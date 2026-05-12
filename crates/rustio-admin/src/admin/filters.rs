@@ -28,6 +28,7 @@
 
 use crate::admin::{AdminField, FieldType};
 
+// public:
 /// The role a field plays in the admin UI. One field maps to exactly
 /// one role; the ordering of branches in [`classify_field`] resolves
 /// overlaps (e.g. an `email` column is `FieldRole::Email`, not
@@ -55,6 +56,7 @@ pub enum FieldRole {
 }
 
 impl FieldRole {
+    // public:
     /// `true` when the role carries personal data and should be masked
     /// by default on list views.
     pub fn is_sensitive(self) -> bool {
@@ -62,6 +64,7 @@ impl FieldRole {
     }
 }
 
+// public:
 /// Everything a form / list renderer needs to present one field to a
 /// human. All strings are plain text (no HTML) — the caller escapes
 /// before emitting.
@@ -81,6 +84,7 @@ pub struct FieldUI {
     pub relation_label: Option<String>,
 }
 
+// public:
 /// What shape of filter the admin list page should render for a given
 /// field.
 #[non_exhaustive]
@@ -101,6 +105,7 @@ pub enum FilterKind {
     RelationSelect { target_model: String },
 }
 
+// public:
 /// One filter the list page should show for a model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FilterDef {
@@ -113,6 +118,7 @@ pub struct FilterDef {
 // classify_field
 // ---------------------------------------------------------------------------
 
+// public:
 /// Assign a [`FieldRole`] to one field.
 ///
 /// Order of precedence (highest first):
@@ -156,6 +162,7 @@ pub fn classify_field(f: &AdminField) -> FieldRole {
 // field_ui_metadata
 // ---------------------------------------------------------------------------
 
+// public:
 /// Package a field's display metadata for the admin form / list
 /// renderers. All strings are plain text — escape before emitting.
 pub fn field_ui_metadata(f: &AdminField) -> FieldUI {
@@ -208,6 +215,7 @@ pub fn field_ui_metadata(f: &AdminField) -> FieldUI {
     }
 }
 
+// public:
 /// Like [`field_ui_metadata`] but relation-aware. Pass the singular
 /// display name of the target model when the schema records a relation
 /// for this field; the returned [`FieldUI`] then carries
@@ -224,6 +232,7 @@ pub fn field_ui_metadata_with_relation(f: &AdminField, relation_target: Option<&
     ui
 }
 
+// public:
 /// Render "Target #42" for a foreign-key cell on a list view. Falls
 /// back to the raw id when the caller doesn't have a target name.
 pub fn format_relation_cell(id: i64, target: Option<&str>) -> String {
@@ -237,6 +246,7 @@ pub fn format_relation_cell(id: i64, target: Option<&str>) -> String {
 // infer_filters
 // ---------------------------------------------------------------------------
 
+// public:
 /// Infer the filter controls for a model's list page from its fields.
 /// Order follows the order of `fields`; every filter references a
 /// field that actually exists on the model.
@@ -244,6 +254,7 @@ pub fn infer_filters(fields: &[AdminField]) -> Vec<FilterDef> {
     infer_filters_with_relations(fields, |_| None)
 }
 
+// public:
 /// Like [`infer_filters`] but invokes `relation_target_of` for each
 /// field to detect relation columns. If the callback returns
 /// `Some(target)`, the filter is emitted as
@@ -288,6 +299,7 @@ where
 // mask_pii
 // ---------------------------------------------------------------------------
 
+// public:
 /// Produce a masked display string for a sensitive value. Keeps the
 /// first few characters so a reviewer can tell which row they're
 /// looking at, replaces the rest with `•`. Length of the output
