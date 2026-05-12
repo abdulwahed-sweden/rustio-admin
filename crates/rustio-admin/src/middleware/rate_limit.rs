@@ -14,6 +14,7 @@ use crate::error::{Error, Result};
 use crate::http::{Request, Response};
 use crate::router::Next;
 
+// public:
 #[derive(Clone)]
 pub struct RateLimiter {
     inner: Arc<Inner>,
@@ -32,6 +33,7 @@ struct Bucket {
 }
 
 impl RateLimiter {
+    // public:
     pub fn new(capacity: u32, window: Duration) -> Self {
         let refill = capacity as f64 / window.as_secs_f64().max(0.001);
         Self {
@@ -43,6 +45,7 @@ impl RateLimiter {
         }
     }
 
+    // public:
     pub fn default_limits() -> Self {
         Self::new(120, Duration::from_secs(60))
     }
@@ -75,6 +78,7 @@ impl RateLimiter {
     }
 }
 
+// public:
 /// The middleware function. Wrap a limiter into a closure and hand
 /// it to `Router::middleware(...)`.
 pub fn rate_limit(

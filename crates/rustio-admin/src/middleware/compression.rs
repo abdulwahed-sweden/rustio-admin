@@ -18,6 +18,7 @@ use crate::router::Next;
 
 const MIN_SIZE: usize = 1024;
 
+// public:
 pub async fn gzip(req: Request, next: Next) -> Result<Response> {
     let accepts_gzip = req
         .header("accept-encoding")

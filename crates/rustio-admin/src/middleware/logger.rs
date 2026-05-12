@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::http::{Request, Response};
 use crate::router::Next;
 
+// public:
 pub async fn logger(req: Request, next: Next) -> Result<Response> {
     let method = req.method().clone();
     let path = req.path().to_string();

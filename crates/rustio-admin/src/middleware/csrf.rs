@@ -21,10 +21,14 @@ use crate::error::{Error, Result};
 use crate::http::{Request, Response};
 use crate::router::Next;
 
+// public:
 pub const CSRF_COOKIE: &str = "rustio_csrf";
+// public:
 pub const CSRF_HEADER: &str = "x-csrf-token";
+// public:
 pub const CSRF_FIELD: &str = "_csrf";
 
+// public:
 /// A value a handler can pull out of the request context to embed in a
 /// rendered form. Lightweight; just wraps a string.
 #[derive(Debug, Clone)]
@@ -32,6 +36,7 @@ pub struct CsrfGuard {
     pub token: String,
 }
 
+// public:
 pub async fn csrf_protect(mut req: Request, next: Next) -> Result<Response> {
     let existing_token = cookie_value(&req, CSRF_COOKIE);
     let needs_cookie = existing_token.is_none();
