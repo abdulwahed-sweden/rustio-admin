@@ -10,12 +10,14 @@ use crate::auth::purge_expired_sessions;
 use crate::auth::recovery::purge_expired_reset_tokens;
 use crate::orm::Db;
 
+// public:
 /// Spin up the standard housekeeping tasks. Call this once during
 /// app startup. Returns immediately — the tasks run forever.
 pub fn spawn_housekeeping(db: Db) {
     spawn_session_sweeper(db.clone());
 }
 
+// public:
 /// Periodic maintenance loop — every 10 minutes, sweep:
 ///
 /// 1. Expired sessions (`auth::purge_expired_sessions`) — removes

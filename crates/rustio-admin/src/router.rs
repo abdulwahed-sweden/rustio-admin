@@ -13,14 +13,18 @@ use hyper::Method;
 use crate::error::{Error, Result};
 use crate::http::{response_from_error, Request, Response};
 
+// public:
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
+// public:
 pub type HandlerFn =
     Arc<dyn Fn(Request) -> BoxFuture<'static, Result<Response>> + Send + Sync + 'static>;
 
+// public:
 pub type MiddlewareFn =
     Arc<dyn Fn(Request, Next) -> BoxFuture<'static, Result<Response>> + Send + Sync + 'static>;
 
+// public:
 pub struct Next {
     chain: Vec<MiddlewareFn>,
     handler: HandlerFn,
@@ -28,6 +32,7 @@ pub struct Next {
 }
 
 impl Next {
+    // public:
     pub fn run(mut self, req: Request) -> BoxFuture<'static, Result<Response>> {
         Box::pin(async move {
             if self.index < self.chain.len() {
@@ -52,6 +57,7 @@ enum Segment {
     Param(String),
 }
 
+// public:
 pub struct Router {
     routes: Vec<Route>,
     middleware: Vec<MiddlewareFn>,
@@ -64,6 +70,7 @@ impl Default for Router {
 }
 
 impl Router {
+    // public:
     pub fn new() -> Self {
         Self {
             routes: Vec::new(),
@@ -71,6 +78,7 @@ impl Router {
         }
     }
 
+    // public:
     pub fn middleware<F, Fut>(mut self, mw: F) -> Self
     where
         F: Fn(Request, Next) -> Fut + Send + Sync + 'static,
@@ -81,6 +89,7 @@ impl Router {
         self
     }
 
+    // public:
     pub fn get<F, Fut>(self, path: &str, handler: F) -> Self
     where
         F: Fn(Request) -> Fut + Send + Sync + 'static,
@@ -89,6 +98,7 @@ impl Router {
         self.route(Method::GET, path, handler)
     }
 
+    // public:
     pub fn post<F, Fut>(self, path: &str, handler: F) -> Self
     where
         F: Fn(Request) -> Fut + Send + Sync + 'static,
@@ -97,6 +107,7 @@ impl Router {
         self.route(Method::POST, path, handler)
     }
 
+    // public:
     pub fn route<F, Fut>(mut self, method: Method, path: &str, handler: F) -> Self
     where
         F: Fn(Request) -> Fut + Send + Sync + 'static,
@@ -144,6 +155,7 @@ impl Router {
         }
     }
 
+    // public:
     pub async fn dispatch(&self, mut req: Request) -> Response {
         let matched = self.find(req.method(), req.path());
 

@@ -6,29 +6,49 @@
 
 #![forbid(unsafe_code)]
 
+// public:
 pub mod admin;
+// public:
 pub mod auth;
+// public:
 pub mod background;
+// public:
 pub mod email;
+// public:
 pub mod error;
+// public:
 pub mod http;
+// public:
 pub mod middleware;
+// public:
 pub mod migrations;
+// public:
 pub mod orm;
+// public:
 pub mod router;
+// public:
 pub mod server;
+// public:
 pub mod templates;
 
+// public:
 pub use crate::admin::{
     register_admin_routes, Admin, AdminField, AdminModel, FieldType, Fieldset, ModelAdmin,
 };
+// public:
 pub use crate::auth::{Identity, Role};
+// public:
 pub use crate::error::{Error, Result};
+// public:
 pub use crate::http::{FormData, Request, Response};
+// public:
 pub use crate::orm::{Db, DbOptions, Model, Row, Value};
+// public:
 pub use crate::router::{Next, Router};
+// public:
 pub use crate::server::Server;
 
+// public:
 pub use rustio_admin_macros::RustioAdmin;
 
 // `RustioAdmin` emits `::rustio_admin::*` paths in its expansion. That
@@ -39,6 +59,7 @@ pub use rustio_admin_macros::RustioAdmin;
 #[cfg(test)]
 extern crate self as rustio_admin;
 
+// internal: test-only re-export surface, gated by integration-test feature
 /// Test-only re-exports for the integration-test suite under
 /// `tests/integration_*.rs`. NOT part of the public API — the
 /// module is `#[doc(hidden)]` and gated behind the
@@ -63,6 +84,7 @@ extern crate self as rustio_admin;
 #[doc(hidden)]
 #[cfg(feature = "integration-test")]
 pub mod __integration {
+    // internal: test-only re-export
     pub use crate::auth::recovery_admin::{
         admin_revoke_sessions, admin_set_temp_password, check_account_lockout,
         check_session_elevated, issue_admin_reset_token, lock_user_account,
@@ -75,12 +97,14 @@ pub mod __integration {
     // consume / disable / regenerate flows. The `auth::mfa` module
     // is `pub(crate)`, so this is the only door under the
     // `integration-test` feature. See `DESIGN_R3_MFA.md` §13.3.
+    // internal: test-only re-export
     pub use crate::auth::mfa::{
         confirm_enrolment, consume_backup_code, current_step, disable_mfa, generate_totp,
         promote_session_to_mfa_verified, provision_secret, regenerate_backup_codes,
         verify_totp_for_user, BackupConsumeOutcome, DisableOutcome, EnrolOutcome, MfaKey,
         ProvisionedSecret, RegenOutcome, VerifyOutcome, BACKUP_CODE_COUNT,
     };
+    // internal: test-only wrapper for the pub(crate) hash helper
     /// R4 emergency-recovery test-only helper — forwards to the
     /// `pub(crate)` `auth::sessions::hash_token_for_storage` so
     /// the integration suite can verify that an
@@ -96,6 +120,7 @@ pub mod __integration {
         crate::auth::sessions::hash_token_for_storage(token)
     }
 
+    // internal: test-only request builder
     /// Construct a minimal [`crate::http::Request`] for integration
     /// tests. POST to `/test`, no headers, no body, no params.
     /// Adequate for runtime fns that read only `client_ip` (None)

@@ -29,11 +29,13 @@ use serde::Serialize;
 
 use crate::error::{Error, Result};
 
+// public:
 pub struct Templates {
     env: Mutex<Environment<'static>>,
 }
 
 impl Templates {
+    // public:
     /// Build the environment.
     ///
     /// `project_templates_dir = None` → embedded templates only.
@@ -105,6 +107,7 @@ impl Templates {
         }))
     }
 
+    // public:
     /// Render a template by name.
     pub fn render<S: Serialize>(&self, name: &str, ctx: &S) -> Result<String> {
         let mut env = self
@@ -122,6 +125,7 @@ impl Templates {
         })
     }
 
+    // public:
     /// Render with a per-model override hook.
     ///
     /// Tries `admin/<model>/<page>` first (where `<page>` is `name`
