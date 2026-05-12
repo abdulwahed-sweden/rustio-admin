@@ -87,6 +87,7 @@ use crate::error::Result;
 use crate::http::Request;
 use crate::orm::Db;
 
+// internal:
 /// Add the additive R2 lockout columns on `rustio_users`.
 ///
 /// - `failed_login_count INT NOT NULL DEFAULT 0` — incremented by
@@ -144,6 +145,7 @@ pub async fn migrate_user_lockout_schema(db: &Db) -> Result<()> {
 
 // ---- Login-throttle runtime (R2 commit #9) ---------------------------------
 
+// internal:
 /// Whether an account is currently soft-locked. Returned by
 /// [`check_account_lockout`]; the login flow refuses with a uniform
 /// 401 on `Locked`, regardless of whether the next field would have
@@ -164,6 +166,7 @@ pub enum LockState {
     Locked { until: DateTime<Utc> },
 }
 
+// internal:
 /// Outcome of [`record_failed_login`]. Lets the caller decide
 /// whether to emit the typed [`crate::admin::audit::AuditEvent::AccountLocked`]
 /// row — emission lives at the call site so it can attach the
@@ -185,6 +188,7 @@ pub enum ThrottleOutcome {
     Disabled { count: i32 },
 }
 
+// internal:
 /// Read the lockout state for a user. Cheap — single indexed lookup
 /// on `id`. The login flow calls this BEFORE password verification
 /// (per `DESIGN_R2_ORGANISATIONAL.md` §3.3 + §9.1) so a locked
@@ -215,6 +219,7 @@ pub async fn check_account_lockout(db: &Db, user_id: i64) -> Result<LockState> {
     }
 }
 
+// internal:
 /// Record a failed login attempt. Increments
 /// `rustio_users.failed_login_count`, stamps `last_failed_login_at`,
 /// and — if the threshold trips — sets `locked_until` to NOW() +
@@ -286,6 +291,7 @@ pub async fn record_failed_login(
     })
 }
 
+// internal:
 /// Record a successful login. Zeroes `failed_login_count` and clears
 /// `last_failed_login_at`. `locked_until` is left alone — the row
 /// reaches this fn only when `check_account_lockout` returned
@@ -320,6 +326,7 @@ pub async fn record_successful_login(db: &Db, user_id: i64) -> Result<()> {
 // (manual lock, password reset by other), that goes through
 // `auth::sessions::invalidate_sessions`, not these helpers.
 
+// internal:
 /// Promote a session into the *elevated* trust band, valid for `ttl`
 /// from now. The login flow's re-auth wall (handler in R2 commit #11)
 /// calls this after the actor re-verifies their password; the admin-
@@ -354,6 +361,7 @@ pub async fn promote_session_elevated(db: &Db, session_id: i64, ttl: ChronoDurat
     Ok(())
 }
 
+// internal:
 /// Whether the given session is currently elevated. Returns `true`
 /// iff the session row exists, is not revoked, and
 /// `elevated_until > NOW()`. Returns `false` for missing /
@@ -460,6 +468,7 @@ async fn update_token_mail_status(db: &Db, token_id: i64, status: &str) -> Resul
     Ok(())
 }
 
+// internal:
 /// The acting administrator. Bundled because both admin-reset
 /// runtime fns need the same two fields and the unbundled
 /// signatures otherwise hit clippy's `too_many_arguments` floor.
@@ -472,6 +481,7 @@ pub struct AdminActor<'a> {
     pub email: &'a str,
 }
 
+// internal:
 /// Outcome of [`issue_admin_reset_token`] (email mode). The handler
 /// (R2 commit #15) maps `Issued` to a "reset email sent" success
 /// page; `UnknownTarget` and `InactiveTarget` both render a
@@ -499,6 +509,7 @@ pub enum AdminIssueOutcome {
     InactiveTarget,
 }
 
+// internal:
 /// Outcome of [`admin_set_temp_password`] (temp_pw mode). On
 /// success the plaintext temp password is in `temp_password` —
 /// the handler (commit #15) renders it ONCE on the success page
@@ -518,6 +529,7 @@ pub enum AdminTempPwOutcome {
     InactiveTarget,
 }
 
+// internal:
 /// Issue an admin-initiated password-reset email. The target
 /// receives a link to R1's `/admin/reset-password/<token>` flow,
 /// which already handles the password-change + session-revocation
@@ -687,6 +699,7 @@ pub async fn issue_admin_reset_token(
     })
 }
 
+// internal:
 /// Set a temp password directly. The admin shares the temp value
 /// with the target out-of-band (in person, secure chat, etc.).
 /// Target signs in with the temp password → `must_change_password`
@@ -811,6 +824,7 @@ pub async fn admin_set_temp_password(
 // lock-time revocation already cleared them); admin-revoke-sessions
 // is a sibling of lock that only revokes (no `locked_until` write).
 
+// internal:
 /// Lock-duration choice. Locked-decision presets per
 /// `DESIGN_R2_ORGANISATIONAL.md` §12 (15min / 1h / 24h / 7d /
 /// indefinite + freeform-minutes). The handler maps the form's
@@ -834,6 +848,7 @@ pub enum LockDuration {
 }
 
 impl LockDuration {
+    // internal:
     /// Compute the absolute `locked_until` timestamp for this
     /// duration. `Indefinite` returns a year-9999 instant per
     /// the schema doctrine.
@@ -851,6 +866,7 @@ impl LockDuration {
     }
 }
 
+// internal:
 /// Outcome of [`lock_user_account`].
 #[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
 #[derive(Debug, Clone)]
@@ -866,6 +882,7 @@ pub enum LockOutcome {
     UnknownTarget,
 }
 
+// internal:
 /// Outcome of [`unlock_user_account`].
 #[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
 #[derive(Debug, Clone)]
@@ -878,6 +895,7 @@ pub enum UnlockOutcome {
     UnknownTarget,
 }
 
+// internal:
 /// Outcome of [`admin_revoke_sessions`].
 #[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
 #[derive(Debug, Clone)]
@@ -889,6 +907,7 @@ pub enum AdminRevokeOutcome {
     UnknownTarget,
 }
 
+// internal:
 /// Apply a manual lock to a target user. Sets `locked_until`,
 /// revokes every session via `invalidate_sessions(..,
 /// AdministrativeRevoke)`, emits per-revoked-session
@@ -980,6 +999,7 @@ pub async fn lock_user_account(
     })
 }
 
+// internal:
 /// Clear a manual lock. Sets `locked_until = NULL` and zeroes the
 /// `failed_login_count` so the auto-throttle window resets. Does
 /// NOT touch sessions — the lock-time revocation already cleared
@@ -1026,6 +1046,7 @@ pub async fn unlock_user_account(
     Ok(UnlockOutcome::Unlocked { target_user_id })
 }
 
+// internal:
 /// Revoke every active session for a target user. Sibling of
 /// [`lock_user_account`] but without the `locked_until` write —
 /// the user can still sign back in immediately on a fresh

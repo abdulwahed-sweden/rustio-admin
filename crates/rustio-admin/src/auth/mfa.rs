@@ -195,6 +195,7 @@ const MFA_VERIFIED_SESSION_DAYS: i64 = 14;
 
 type HmacSha1 = Hmac<Sha1>;
 
+// internal:
 /// AES-256-GCM key material for TOTP secret encryption (D1).
 ///
 /// 32 raw bytes — the AES-256 key. Constructed from the
@@ -223,6 +224,7 @@ pub struct MfaKey([u8; 32]);
 
 #[allow(dead_code)] // see MfaKey type comment — light up in R3 commit #6+
 impl MfaKey {
+    // internal:
     /// Read the framework-wide secret key from the
     /// `RUSTIO_SECRET_KEY` environment variable.
     ///
@@ -262,6 +264,7 @@ impl MfaKey {
         Ok(Self(bytes))
     }
 
+    // internal:
     /// Construct from raw 32 bytes. Used by tests and explicit
     /// project wiring (e.g. a project that derives the key from
     /// AWS KMS / HashiCorp Vault rather than an env var).
@@ -278,6 +281,7 @@ impl MfaKey {
     }
 }
 
+// internal:
 /// Encrypt `plaintext` under `key` with AES-256-GCM.
 ///
 /// Returns the on-disk byte layout: `nonce (12 bytes) ||
@@ -311,6 +315,7 @@ pub fn wrap_secret(plaintext: &[u8], key: &MfaKey) -> Vec<u8> {
     out
 }
 
+// internal:
 /// Decrypt `input` (`nonce || ciphertext || tag`) under `key`.
 ///
 /// **Failure modes** (all surface as `Error::Internal` — the
@@ -346,6 +351,7 @@ pub fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
 // Backup codes (R3 commit #4)
 // -----------------------------------------------------------------
 
+// internal:
 /// Number of backup codes generated per batch. Locked at 8 per
 /// `DESIGN_R3_MFA.md` Appendix B. Industry-standard range is
 /// 8-16; 8 is enough for emergency use without bloating the
@@ -353,6 +359,7 @@ pub fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
 #[allow(dead_code)] // call site lands in R3 commit #6 (enrolment runtime)
 pub const BACKUP_CODE_COUNT: usize = 8;
 
+// internal:
 /// Backup-code length in characters, excluding the visual
 /// hyphen separator at position 4. Locked at 8 (rendered as
 /// `XXXX-XXXX`) per `DESIGN_R3_MFA.md` Appendix B.
@@ -413,6 +420,7 @@ fn backup_code_argon2() -> Result<Argon2<'static>> {
 /// ```
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) +
                     // commit when regenerate_backup_codes lands
+// internal:
 pub fn generate_backup_codes(count: usize) -> Vec<String> {
     let mut rng = rand::thread_rng();
     let alphabet_len = BACKUP_CODE_ALPHABET.len();
@@ -432,6 +440,7 @@ pub fn generate_backup_codes(count: usize) -> Vec<String> {
         .collect()
 }
 
+// internal:
 /// Normalise a user-submitted backup code for hash comparison.
 ///
 /// Strips every non-alphanumeric character (so `XXXX-XXXX`,
@@ -449,6 +458,7 @@ pub fn normalise_backup_code(input: &str) -> String {
         .to_ascii_uppercase()
 }
 
+// internal:
 /// Hash a backup code with Argon2id (low-memory params).
 ///
 /// Generates a fresh 16-byte salt per call from the OS RNG.
@@ -479,6 +489,7 @@ pub fn hash_backup_code(plaintext: &str) -> Result<String> {
     Ok(hash.to_string())
 }
 
+// internal:
 /// Verify a normalised backup-code candidate against a stored
 /// PHC hash.
 ///
@@ -519,6 +530,7 @@ pub fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
 // signal. See DESIGN_R3_MFA.md §9.4 + Appendix B for the
 // trade-off discussion.
 
+// internal:
 /// TOTP step number for the given Unix time and step interval.
 ///
 /// Pure function: `now_unix / step_seconds` (integer division).
@@ -533,6 +545,7 @@ pub fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
     now_unix / step_seconds
 }
 
+// internal:
 /// Generate a 6-digit TOTP code for the given secret + step
 /// per RFC 6238 (HMAC-SHA1 + dynamic truncation per RFC 4226
 /// §5.3).
@@ -574,6 +587,7 @@ pub fn generate_totp(secret: &[u8], step: u64) -> u32 {
     bin_code % 1_000_000
 }
 
+// internal:
 /// Verify a TOTP candidate within the configured step skew.
 ///
 /// Tries the current step ± `skew_steps` against `candidate`.
@@ -616,6 +630,7 @@ pub fn verify_totp(
 // Enrolment runtime (R3 commit #6)
 // -----------------------------------------------------------------
 
+// internal:
 /// A freshly-provisioned TOTP secret + its base32 encoding for
 /// QR / manual-entry display.
 ///
@@ -641,6 +656,7 @@ pub struct ProvisionedSecret {
     pub base32: String,
 }
 
+// internal:
 /// Generate a fresh TOTP secret + its base32 encoding.
 ///
 /// Pure (apart from the OS RNG read). Returns 20 raw bytes
@@ -660,6 +676,7 @@ pub fn provision_secret() -> ProvisionedSecret {
     }
 }
 
+// internal:
 /// Build an `otpauth://totp/<issuer>:<account>?...` URL per
 /// the de-facto-standard Google Authenticator Key URI format.
 ///
@@ -726,6 +743,7 @@ fn base32_encode_no_pad(bytes: &[u8]) -> String {
     out
 }
 
+// internal:
 /// RFC 4648 base32 decoder (no padding), used to recover the
 /// TOTP secret from the enrolment form's hidden `secret_base32`
 /// field. Inverse of [`base32_encode_no_pad`].
@@ -774,6 +792,7 @@ pub fn base32_decode_no_pad(input: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+// internal:
 /// Outcome of [`confirm_enrolment`]. Lets the caller render the
 /// right page without embedding HTTP concerns in the runtime
 /// layer.
@@ -797,6 +816,7 @@ pub enum EnrolOutcome {
     AlreadyEnrolled,
 }
 
+// internal:
 /// Confirm a TOTP enrolment by verifying the user's first code
 /// against the provisioned secret, then persisting everything.
 ///
@@ -945,6 +965,7 @@ pub async fn confirm_enrolment(
 // Verification runtime — TOTP login second factor (R3 commit #7)
 // -----------------------------------------------------------------
 
+// internal:
 /// Outcome of [`verify_totp_for_user`]. Lets the verify
 /// handler render the right page without embedding HTTP
 /// concerns in the runtime layer.
@@ -982,6 +1003,7 @@ pub enum VerifyOutcome {
     NotEnrolled,
 }
 
+// internal:
 /// Verify a TOTP candidate for an enrolled user.
 ///
 /// **Inputs.**
@@ -1116,6 +1138,7 @@ pub async fn verify_totp_for_user(
 // Backup-code consume runtime (R3 commit #8)
 // -----------------------------------------------------------------
 
+// internal:
 /// Outcome of [`consume_backup_code`]. Lets the verify handler
 /// render the right page without embedding HTTP concerns in the
 /// runtime layer.
@@ -1152,6 +1175,7 @@ pub enum BackupConsumeOutcome {
     AlreadyUsed,
 }
 
+// internal:
 /// Consume a backup code as the second factor on the verify
 /// flow.
 ///
@@ -1314,6 +1338,7 @@ pub async fn consume_backup_code(
 // Disable MFA runtime (R3 commit #9)
 // -----------------------------------------------------------------
 
+// internal:
 /// Outcome of [`disable_mfa`]. Lets the disable handler render
 /// the right page without embedding HTTP concerns in the
 /// runtime layer.
@@ -1342,6 +1367,7 @@ pub enum DisableOutcome {
     PolicyRequired,
 }
 
+// internal:
 /// Disable MFA for a user.
 ///
 /// **Inputs.**
@@ -1473,6 +1499,7 @@ pub async fn disable_mfa(
 // Backup-code regenerate runtime (R3 commit #10)
 // -----------------------------------------------------------------
 
+// internal:
 /// Outcome of [`regenerate_backup_codes`]. Lets the regenerate
 /// handler render the right page without embedding HTTP
 /// concerns in the runtime layer.
@@ -1497,6 +1524,7 @@ pub enum RegenOutcome {
     NotEnrolled,
 }
 
+// internal:
 /// Regenerate the backup-code batch for a user atomically.
 ///
 /// **Inputs.**
@@ -1644,6 +1672,7 @@ pub async fn regenerate_backup_codes(
 // Trust-escalation primitive (R3 commit #11)
 // -----------------------------------------------------------------
 
+// internal:
 /// Promote a session from `authenticated` to `mfa_verified` via
 /// token rotation per `DESIGN_SESSIONS.md` §11 + Doctrine 17.
 ///
@@ -1725,6 +1754,7 @@ pub async fn promote_session_to_mfa_verified(
     Ok(token)
 }
 
+// internal:
 /// Variant of [`crate::auth::recovery_admin::promote_session_elevated`]
 /// for the MFA-enrolled re-auth path. UPDATEs `elevated_until +
 /// trust_level = 'mfa_verified'` in place (no token rotation).
@@ -1766,6 +1796,7 @@ pub async fn promote_session_mfa_elevated(
     Ok(())
 }
 
+// public:
 /// Framework-wide MFA enforcement policy.
 ///
 /// Plain `Copy` enum (no trait object) — operators wire it onto
@@ -1834,6 +1865,7 @@ impl Default for MfaPolicy {
     }
 }
 
+// internal:
 /// Add the additive R3 MFA schema.
 ///
 /// Adds four columns on `rustio_users`:

@@ -21,6 +21,7 @@
 
 use crate::error::{Error, Result};
 
+// public:
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Role {
     User,
@@ -31,6 +32,7 @@ pub enum Role {
 }
 
 impl Role {
+    // public:
     /// Numeric rank used for `includes` comparisons and the
     /// rank-ceiling guard. Values are spaced (100 / 300 / 600 / 900 /
     /// 1000) so projects extending the ladder via group-rank labels
@@ -47,11 +49,13 @@ impl Role {
         }
     }
 
+    // public:
     /// `self` is allowed to do anything `other` can do.
     pub fn includes(self, other: Role) -> bool {
         self.rank() >= other.rank()
     }
 
+    // public:
     /// Stable, lowercase identifier. Matches the SQL `role` column.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -63,6 +67,7 @@ impl Role {
         }
     }
 
+    // public:
     /// Human-readable label for templates.
     pub fn label(self) -> &'static str {
         match self {
@@ -74,6 +79,7 @@ impl Role {
         }
     }
 
+    // public:
     /// Parse from the SQL string. Errors map to `Error::BadRequest`
     /// so HTTP handlers can surface them directly.
     pub fn parse(s: &str) -> Result<Self> {
@@ -87,12 +93,14 @@ impl Role {
         }
     }
 
+    // public:
     /// Is this role allowed into the admin panel at all?
     /// Staff and higher pass.
     pub fn can_access_panel(self) -> bool {
         self.rank() >= Role::Staff.rank()
     }
 
+    // public:
     /// Bypasses per-model group permission checks. Administrator and
     /// Developer can do anything the framework knows how to do; lower
     /// tiers must hold the matching `<admin>.<action>_<model>` permission.
@@ -101,6 +109,7 @@ impl Role {
     }
 }
 
+// public:
 /// Roles the framework refuses to lose its last active member of.
 ///
 /// The orphan guards in `auth/guards.rs` and `auth::would_orphan_role`

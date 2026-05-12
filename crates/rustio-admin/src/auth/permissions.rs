@@ -35,9 +35,11 @@ use super::users::Identity;
 #[cfg(test)]
 use super::role::Role;
 
+// public:
 /// Marker type used by the admin's authorize macro for fast-paths on admins.
 pub struct Superuser;
 
+// public:
 #[derive(Debug, Clone)]
 pub struct Permission {
     pub id: i64,
@@ -45,6 +47,7 @@ pub struct Permission {
     pub description: String,
 }
 
+// public:
 #[derive(Debug, thiserror::Error)]
 pub enum PermissionError {
     #[error("permission `{0}` not found")]
@@ -57,6 +60,7 @@ pub enum PermissionError {
 
 // --- schema ---------------------------------------------------------------
 
+// public:
 pub async fn init_permission_tables(db: &Db) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS rustio_permissions (
@@ -148,6 +152,7 @@ fn invalidate_group_cache(db: &Db, group_id: i64) {
 
 // --- reads ----------------------------------------------------------------
 
+// public:
 /// All permission names belonging to the given user — direct + via
 /// groups — unioned into one set. Cached for 60s.
 pub async fn permissions_for_user(db: &Db, user_id: i64) -> Result<Arc<HashSet<String>>> {
@@ -186,6 +191,7 @@ pub async fn permissions_for_user(db: &Db, user_id: i64) -> Result<Arc<HashSet<S
     Ok(arc)
 }
 
+// public:
 /// Ask "does this identity have permission X?".
 ///
 /// Order of checks (load-bearing):
@@ -230,6 +236,7 @@ async fn permission_id(db: &Db, name: &str) -> Result<i64> {
         .map_err(|e| Error::Internal(format!("{e}")))
 }
 
+// public:
 pub async fn grant_to_user(db: &Db, user_id: i64, permission: &str) -> Result<()> {
     let pid = permission_id(db, permission).await?;
     sqlx::query(
@@ -245,6 +252,7 @@ pub async fn grant_to_user(db: &Db, user_id: i64, permission: &str) -> Result<()
     Ok(())
 }
 
+// public:
 pub async fn grant_to_group(db: &Db, group_id: i64, permission: &str) -> Result<()> {
     let pid = permission_id(db, permission).await?;
     sqlx::query(
@@ -260,6 +268,7 @@ pub async fn grant_to_group(db: &Db, group_id: i64, permission: &str) -> Result<
     Ok(())
 }
 
+// public:
 pub async fn create_group(db: &Db, name: &str, description: &str) -> Result<i64> {
     let row = sqlx::query(
         "INSERT INTO rustio_groups (name, description)
@@ -274,6 +283,7 @@ pub async fn create_group(db: &Db, name: &str, description: &str) -> Result<i64>
         .map_err(|e| Error::Internal(format!("{e}")))
 }
 
+// public:
 pub async fn add_user_to_group(db: &Db, user_id: i64, group_id: i64) -> Result<()> {
     sqlx::query(
         "INSERT INTO rustio_user_groups (user_id, group_id)
@@ -288,6 +298,7 @@ pub async fn add_user_to_group(db: &Db, user_id: i64, group_id: i64) -> Result<(
     Ok(())
 }
 
+// public:
 pub async fn remove_user_from_group(db: &Db, user_id: i64, group_id: i64) -> Result<()> {
     sqlx::query("DELETE FROM rustio_user_groups WHERE user_id = $1 AND group_id = $2")
         .bind(user_id)
@@ -298,6 +309,7 @@ pub async fn remove_user_from_group(db: &Db, user_id: i64, group_id: i64) -> Res
     Ok(())
 }
 
+// public:
 /// For an admin model named `posts`, register the canonical four
 /// permissions: `add_post`, `change_post`, `delete_post`, `view_post`.
 /// Idempotent.

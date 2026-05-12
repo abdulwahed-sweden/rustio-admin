@@ -40,6 +40,7 @@ use crate::orm::Db;
 use super::role::Role;
 use super::users::{would_orphan_protected, Identity};
 
+// public:
 /// Forbid a user from saving an edit to their own record that drops
 /// their role below its current rank or flips `is_active` to false.
 /// Self-keep-rank is allowed; raising one's own rank is blocked
@@ -66,6 +67,7 @@ pub fn enforce_self_demote_safe(
     Ok(())
 }
 
+// public:
 /// Forbid a user from modifying another user whose role is at-or-above
 /// their own. Editing one's own record is allowed; the self-* guards
 /// catch the dangerous cases.
@@ -81,6 +83,7 @@ pub fn enforce_cross_rank_safe(actor: &Identity, target_id: i64, target_role: Ro
     Ok(())
 }
 
+// public:
 /// Forbid a user from assigning a role with rank strictly greater
 /// than their own. Same-rank is allowed so an Admin can re-save
 /// another Admin's record (already-existing target's rank ladder is
@@ -94,6 +97,7 @@ pub fn enforce_role_ceiling(actor: &Identity, requested_role: Role) -> Result<()
     Ok(())
 }
 
+// public:
 /// Reject changes that would empty the active-member set for any
 /// protected role. Wraps [`would_orphan_protected`] and returns a
 /// human-readable error naming the role that would be orphaned.

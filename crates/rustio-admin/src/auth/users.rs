@@ -13,6 +13,7 @@ use crate::orm::{Db, Row};
 use super::role::Role;
 use super::sessions::create_session;
 
+// public:
 /// The identity attached to a request by the auth middleware. Kept
 /// cheap to clone because we pass it into handler bodies.
 #[derive(Debug, Clone)]
@@ -62,17 +63,20 @@ pub struct Identity {
 }
 
 impl Identity {
+    // public:
     /// Administrator-or-higher (Administrator, Developer).
     pub fn is_admin(&self) -> bool {
         self.is_active && self.role.includes(Role::Administrator)
     }
 
+    // public:
     /// Anyone allowed into the admin panel (Staff and above).
     pub fn can_access_admin(&self) -> bool {
         self.is_active && self.role.can_access_panel()
     }
 }
 
+// public:
 pub struct StoredUser {
     pub id: i64,
     pub email: String,
@@ -94,6 +98,7 @@ pub struct StoredUser {
     pub mfa_enabled: bool,
 }
 
+// public:
 /// Read-only view of a user, used by the built-in admin profile page.
 /// Excludes `password_hash` deliberately. Construct via
 /// [`load_user_profile`].
@@ -111,6 +116,7 @@ pub struct UserProfile {
     pub demo_label: Option<String>,
 }
 
+// public:
 pub async fn init_user_tables(db: &Db) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS rustio_users (
@@ -145,6 +151,7 @@ pub async fn init_user_tables(db: &Db) -> Result<()> {
 ///    for CHECK constraints, so we guard via `pg_constraint`).
 /// 4. Add the indexes.
 /// 5. Add the profile-display columns.
+// public:
 pub async fn migrate_user_schema(db: &Db) -> Result<()> {
     sqlx::query("UPDATE rustio_users SET role = 'administrator' WHERE role = 'admin'")
         .execute(db.pool())
@@ -198,6 +205,7 @@ pub async fn migrate_user_schema(db: &Db) -> Result<()> {
     Ok(())
 }
 
+// public:
 pub fn hash_password(plain: &str) -> Result<String> {
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
@@ -206,6 +214,7 @@ pub fn hash_password(plain: &str) -> Result<String> {
         .map_err(|e| Error::Internal(format!("password hashing: {e}")))
 }
 
+// public:
 pub fn verify_password(plain: &str, stored_hash: &str) -> bool {
     match PasswordHash::new(stored_hash) {
         Ok(parsed) => Argon2::default()
@@ -215,6 +224,7 @@ pub fn verify_password(plain: &str, stored_hash: &str) -> bool {
     }
 }
 
+// public:
 pub async fn create_user(db: &Db, email: &str, password: &str, role: Role) -> Result<i64> {
     let hash = hash_password(password)?;
     let row = sqlx::query(
@@ -246,6 +256,7 @@ pub async fn create_user(db: &Db, email: &str, password: &str, role: Role) -> Re
     Ok(id)
 }
 
+// public:
 pub async fn find_user_by_email(db: &Db, email: &str) -> Result<Option<StoredUser>> {
     let row = sqlx::query(
         "SELECT id, email, password_hash, role, is_active, is_demo, demo_label, \
@@ -275,6 +286,7 @@ pub async fn find_user_by_email(db: &Db, email: &str) -> Result<Option<StoredUse
     }
 }
 
+// public:
 /// Load a user by id for display purposes. Returns `Ok(None)` for a
 /// missing id (callers map to 404). Returns `Err` only on a real DB
 /// failure or a corrupted role string. Never reads `password_hash`.
@@ -328,6 +340,7 @@ pub async fn load_user_profile(db: &Db, user_id: i64) -> Result<Option<UserProfi
 /// driven self-change wants to keep the current device alive
 /// (`SessionTarget::UserExceptCurrent`). Wiring it in here would
 /// remove that flexibility.
+// public:
 pub async fn set_password(db: &Db, user_id: i64, new_password: &str) -> Result<()> {
     let hash = hash_password(new_password)?;
     sqlx::query(
@@ -343,6 +356,7 @@ pub async fn set_password(db: &Db, user_id: i64, new_password: &str) -> Result<(
     Ok(())
 }
 
+// public:
 pub async fn update_user_role(db: &Db, user_id: i64, role: Role) -> Result<()> {
     sqlx::query("UPDATE rustio_users SET role = $1, updated_at = $2 WHERE id = $3")
         .bind(role.as_str())
@@ -361,6 +375,7 @@ pub async fn update_user_role(db: &Db, user_id: i64, role: Role) -> Result<()> {
 /// pool would empty it (count == 1 and the target user IS in that
 /// pool, AND the proposed new state would no longer satisfy
 /// membership).
+// public:
 pub fn verdict_for_orphan_role(
     active_count_in_protected: i64,
     target_is_in_protected: bool,
@@ -390,6 +405,7 @@ pub fn verdict_for_orphan_role(
 /// - exactly one active member of `protected_role` exists, AND
 /// - the target user IS that member, AND
 /// - the proposed state would remove them from the protected pool.
+// public:
 pub async fn would_orphan_role(
     db: &Db,
     user_id: i64,
@@ -422,6 +438,7 @@ pub async fn would_orphan_role(
 /// Walk every entry in [`super::role::protected_roles`] and return
 /// the first protected role whose membership would be orphaned by
 /// the proposed change. `None` means the change is safe.
+// public:
 pub async fn would_orphan_protected(
     db: &Db,
     user_id: i64,
@@ -439,6 +456,7 @@ pub async fn would_orphan_protected(
 /// Legacy alias preserved so external callers keep compiling. Prefer
 /// [`would_orphan_protected`] which generalises across every role in
 /// [`super::role::protected_roles`].
+// public:
 #[deprecated(
     since = "0.3.0",
     note = "use `would_orphan_protected` to cover every protected role, not just Developer"
@@ -455,6 +473,7 @@ pub async fn would_orphan_developers(
     would_orphan_role(db, user_id, Role::Developer, role, active).await
 }
 
+// public:
 /// Verify credentials and create a session. Returns the session token
 /// to set in the cookie. A deliberately vague error on failure — we
 /// don't want to leak whether the email was valid.

@@ -10,7 +10,9 @@
 //! the user's groups. The permission string is
 //! `<app>.<action>_<model>` — e.g. `posts.change_post`.
 
+// public:
 pub mod emergency;
+// public:
 pub mod guards;
 pub(crate) mod mfa;
 mod permissions;
@@ -27,13 +29,16 @@ mod role;
 pub(crate) mod sessions;
 mod users;
 
+// public:
 pub use mfa::MfaPolicy;
 pub(crate) use permissions::invalidate_user_cache;
+// public:
 pub use permissions::{
     add_user_to_group, check_permission, create_group, grant_to_group, grant_to_user,
     init_permission_tables, permissions_for_user, register_model_permissions,
     remove_user_from_group, Permission, PermissionError, Superuser,
 };
+// public:
 pub use recovery::{
     DefaultPasswordPolicy, DefaultRecoveryPolicy, LoginThrottle, PasswordPolicy,
     PasswordPolicyError, RecoveryPolicy, SharedPasswordPolicy, SharedRecoveryPolicy,
@@ -46,15 +51,19 @@ pub use recovery::{
 // projects compose recovery via the trait surfaces re-exported above.
 // `purge_expired_reset_tokens` (R1 commit #12) is reached the same
 // way from `background::spawn_session_sweeper`.
+// public:
 pub use role::{protected_roles, Role};
+// public:
 pub use sessions::{
     create_session, current_session_id, delete_session, identity_from_session, init_session_tables,
     invalidate_sessions, list_active_for_user, logout_session, purge_expired_sessions,
     session_token_from_cookie, InvalidationOutcome, Session, SessionInvalidationReason,
     SessionTarget, SessionTrust, SESSION_COOKIE,
 };
+// public:
 #[allow(deprecated)]
 pub use users::would_orphan_developers;
+// public:
 pub use users::{
     create_user, find_user_by_email, hash_password, init_user_tables, load_user_profile, login,
     migrate_user_schema, set_password, update_user_role, verdict_for_orphan_role, verify_password,
@@ -64,6 +73,7 @@ pub use users::{
 use crate::error::Result;
 use crate::orm::Db;
 
+// public:
 /// Initialise every auth-related table. Safe to call on every boot.
 pub async fn init_tables(db: &Db) -> Result<()> {
     init_user_tables(db).await?;
