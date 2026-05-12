@@ -42,11 +42,13 @@ use crate::error::Result;
 use crate::http::{Request, Response};
 use crate::router::Next;
 
+// public:
 /// Response + request header name. Lower-case to keep parity with the
 /// HTTP/2 wire format and to match what other observability tooling
 /// (OpenTelemetry, Cloudflare, etc.) writes.
 pub const CORRELATION_ID_HEADER: &str = "x-correlation-id";
 
+// public:
 /// Wrapper carried in the request context so handlers can pull it
 /// out via `req.ctx().get::<CorrelationId>()`. The inner string is
 /// the UUID rendered in hyphenated lowercase form.
@@ -54,12 +56,14 @@ pub const CORRELATION_ID_HEADER: &str = "x-correlation-id";
 pub struct CorrelationId(pub String);
 
 impl CorrelationId {
+    // public:
     /// Borrow the underlying id string.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
+// public:
 /// Middleware: attach a UUID v7 to every request, surface it in the
 /// response, and stash it in the request context for the audit
 /// pipeline to pick up.

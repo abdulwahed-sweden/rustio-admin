@@ -6,6 +6,7 @@ use crate::error::Result;
 use crate::http::{Request, Response};
 use crate::router::Next;
 
+// public:
 pub async fn security_headers(req: Request, next: Next) -> Result<Response> {
     let mut resp = next.run(req).await?;
     let headers_to_add = [
