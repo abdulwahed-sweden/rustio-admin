@@ -25,12 +25,14 @@ use crate::orm::{Db, Row};
 use super::role::Role;
 use super::users::Identity;
 
+// public:
 /// The cookie name we look for and set. Constant so middleware and
 /// handlers stay in sync.
 pub const SESSION_COOKIE: &str = "rustio_session";
 
 const SESSION_LENGTH_DAYS: i64 = 14;
 
+// public:
 /// Trust level a session has acquired. The login flow mints
 /// [`SessionTrust::Authenticated`]; the future re-auth wall promotes
 /// to [`SessionTrust::Elevated`]; a successful TOTP step on this
@@ -47,6 +49,7 @@ pub enum SessionTrust {
 }
 
 impl SessionTrust {
+    // public:
     /// Stable lowercase identifier matching the SQL `trust_level`
     /// column's CHECK constraint.
     pub const fn as_str(self) -> &'static str {
@@ -57,6 +60,7 @@ impl SessionTrust {
         }
     }
 
+    // public:
     /// Numeric ladder for partial-order comparisons.
     pub const fn rank(self) -> u8 {
         match self {
@@ -66,11 +70,13 @@ impl SessionTrust {
         }
     }
 
+    // public:
     /// `self` is at least as trusted as `other`.
     pub const fn satisfies(self, other: SessionTrust) -> bool {
         self.rank() >= other.rank()
     }
 
+    // public:
     /// Parse from the SQL `trust_level` column. Defaults to
     /// `Authenticated` on unknown input so a malformed migration
     /// can't lock anyone out.
@@ -83,6 +89,7 @@ impl SessionTrust {
     }
 }
 
+// public:
 /// Why a session is being invalidated. Drives both the audit
 /// `action_type` and decisions about whether to clear remembered MFA
 /// or mint a replacement session.
@@ -118,6 +125,7 @@ pub enum SessionInvalidationReason {
 }
 
 impl SessionInvalidationReason {
+    // public:
     /// Stable lowercase identifier persisted in
     /// `rustio_sessions.revoked_reason` and used as the audit
     /// `action_type` suffix.
@@ -140,6 +148,7 @@ impl SessionInvalidationReason {
     }
 }
 
+// public:
 /// Which sessions an [`invalidate_sessions`] call targets.
 #[derive(Debug, Clone, Copy)]
 pub enum SessionTarget {
@@ -157,6 +166,7 @@ pub enum SessionTarget {
     Single { session_id: i64 },
 }
 
+// public:
 /// One session row, reconstructed from `rustio_sessions`. Returned
 /// by [`list_active_for_user`] for the active-sessions UI.
 #[derive(Debug, Clone, Serialize)]
@@ -172,6 +182,7 @@ pub struct Session {
     pub user_agent: Option<String>,
 }
 
+// public:
 /// Outcome of an [`invalidate_sessions`] call. Used by the audit
 /// pipeline to write one row per affected session and by the caller
 /// to decide whether to clear the user's cookie.
@@ -183,6 +194,7 @@ pub struct InvalidationOutcome {
     pub reason: Option<SessionInvalidationReason>,
 }
 
+// public:
 pub async fn init_session_tables(db: &Db) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS rustio_sessions (
@@ -333,6 +345,7 @@ pub(crate) async fn migrate_session_lifecycle(db: &Db) -> Result<()> {
     Ok(())
 }
 
+// public:
 pub async fn create_session(db: &Db, user_id: i64) -> Result<String> {
     let token = random_token();
     let token_hash = hash_token_for_storage(&token);
@@ -355,6 +368,7 @@ pub async fn create_session(db: &Db, user_id: i64) -> Result<String> {
     Ok(token)
 }
 
+// public:
 /// Hard-delete a session row by cookie token. Retained as a
 /// pre-0.4.0 compatibility shim — internal callers are migrating to
 /// [`invalidate_sessions`], which soft-revokes via `revoked_at` and
@@ -371,6 +385,7 @@ pub async fn delete_session(db: &Db, token: &str) -> Result<()> {
     Ok(())
 }
 
+// public:
 /// Centralised session invalidation — the single legitimate writer of
 /// `rustio_sessions.revoked_at`.
 ///
@@ -448,6 +463,7 @@ pub async fn invalidate_sessions(
     })
 }
 
+// public:
 /// Convenience wrapper for the existing logout flow. Routes through
 /// [`invalidate_sessions`] with `SessionTarget::Single` and
 /// `SessionInvalidationReason::Logout`.
@@ -479,6 +495,7 @@ pub async fn logout_session(db: &Db, token: &str) -> Result<()> {
     Ok(())
 }
 
+// public:
 /// List a user's currently-active sessions, ordered by `last_seen`
 /// descending so the active-sessions UI surfaces the most recently
 /// used row first. Excludes revoked + expired rows.
@@ -512,6 +529,7 @@ pub async fn list_active_for_user(db: &Db, user_id: i64) -> Result<Vec<Session>>
         .collect()
 }
 
+// public:
 /// Resolve the cookie token to its `session_id` (active sessions
 /// only). Used by the active-sessions UI to mark which row is the
 /// current device, and by `UserExceptCurrent` callers.
@@ -530,6 +548,7 @@ pub async fn current_session_id(db: &Db, token: &str) -> Result<Option<i64>> {
     Ok(id)
 }
 
+// public:
 pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identity>> {
     // Fast path: lookup by sha-256 of the cookie token. Every session
     // created in 0.4.0+ has `token_hash` populated, and the unique
@@ -620,6 +639,7 @@ pub async fn identity_from_session(db: &Db, token: &str) -> Result<Option<Identi
     }))
 }
 
+// public:
 /// Delete all expired sessions. Intended to be called periodically
 /// from a background task (see `background::spawn_session_sweeper`).
 pub async fn purge_expired_sessions(db: &Db) -> Result<u64> {
@@ -629,6 +649,7 @@ pub async fn purge_expired_sessions(db: &Db) -> Result<u64> {
     Ok(result.rows_affected())
 }
 
+// public:
 pub fn session_token_from_cookie(cookie_header: &str) -> Option<String> {
     let prefix = format!("{SESSION_COOKIE}=");
     for part in cookie_header.split(';') {

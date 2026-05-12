@@ -47,6 +47,7 @@ use crate::orm::Db;
 
 // ---- Outcomes ------------------------------------------------------------
 
+// public:
 /// Outcome of [`reset_password`]. The CLI uses this to compose the
 /// post-mutation summary line ("password set, N sessions revoked"
 /// or "user not found").
@@ -56,6 +57,7 @@ pub enum ResetOutcome {
     UnknownTarget,
 }
 
+// public:
 /// Outcome of [`unlock`].
 #[derive(Debug, Clone)]
 pub enum UnlockOutcome {
@@ -63,6 +65,7 @@ pub enum UnlockOutcome {
     UnknownTarget,
 }
 
+// public:
 /// Outcome of [`disable_mfa`].
 #[derive(Debug, Clone)]
 pub enum DisableMfaOutcome {
@@ -74,6 +77,7 @@ pub enum DisableMfaOutcome {
     UnknownTarget,
 }
 
+// public:
 /// Outcome of [`promote`]. `SoleAdministratorDemoteRefused` is the
 /// only "refuse the operation outright" branch — the rest of the
 /// emergency surface allows action on any extant target (the
@@ -97,6 +101,7 @@ pub enum PromoteOutcome {
     SoleAdministratorDemoteRefused,
 }
 
+// public:
 /// Outcome of [`emergency_access`].
 #[derive(Debug, Clone)]
 pub enum EmergencyAccessOutcome {
@@ -140,6 +145,7 @@ async fn target_exists(db: &Db, user_id: i64) -> Result<Option<bool>> {
 /// (doctrine 22) and runs its own atomic statement; a transaction
 /// boundary here keeps the password mutation isolated from the
 /// session sweep.
+// public:
 pub async fn reset_password(
     db: &Db,
     target_user_id: i64,
@@ -189,6 +195,7 @@ pub async fn reset_password(
 /// Returns `previously_locked` so the CLI can render "the account
 /// was indeed locked, now cleared" vs. "the account was already
 /// open, this was a no-op" without an extra round-trip.
+// public:
 pub async fn unlock(db: &Db, target_user_id: i64) -> Result<UnlockOutcome> {
     if target_exists(db, target_user_id).await?.is_none() {
         return Ok(UnlockOutcome::UnknownTarget);
@@ -240,6 +247,7 @@ pub async fn unlock(db: &Db, target_user_id: i64) -> Result<UnlockOutcome> {
 ///
 /// Atomic: the column clear + backup-code DELETE land in one
 /// transaction. Session revocation runs after commit.
+// public:
 pub async fn disable_mfa(db: &Db, target_user_id: i64) -> Result<DisableMfaOutcome> {
     if target_exists(db, target_user_id).await?.is_none() {
         return Ok(DisableMfaOutcome::UnknownTarget);
@@ -308,6 +316,7 @@ pub async fn disable_mfa(db: &Db, target_user_id: i64) -> Result<DisableMfaOutco
 /// the promote operation isolated from concurrent session reads.
 /// Session revocation runs after commit per the
 /// `invalidate_sessions` contract.
+// public:
 pub async fn promote(db: &Db, target_user_id: i64, new_role: Role) -> Result<PromoteOutcome> {
     let row: Option<(String, bool)> =
         sqlx::query_as("SELECT role, is_active FROM rustio_users WHERE id = $1")
@@ -386,6 +395,7 @@ pub async fn promote(db: &Db, target_user_id: i64, new_role: Role) -> Result<Pro
 /// `InactiveTarget` is the only emergency operation that refuses
 /// inactive users: issuing a URL to a deactivated account has no
 /// recovery semantic.
+// public:
 pub async fn emergency_access(
     db: &Db,
     target_user_id: i64,
@@ -480,6 +490,7 @@ use InvalidationOutcome as _;
 /// the caller passes it through [`reset_password`] which Argon2-
 /// hashes it for `rustio_users.password_hash` and then prints the
 /// plaintext exactly once.
+// public:
 pub fn generate_temp_password(len: usize) -> String {
     use rand::Rng;
     // 54 chars: A-Z minus I, O, L; a-z minus i, l, o; 2-9 (no 0 or 1).
@@ -495,6 +506,7 @@ pub fn generate_temp_password(len: usize) -> String {
 /// `correlation_id` middleware writes per request, so a future
 /// cross-table audit pivot can join framework rows and CLI rows on
 /// this column without per-source post-processing.
+// public:
 pub fn fresh_correlation_id() -> String {
     uuid::Uuid::now_v7().hyphenated().to_string()
 }

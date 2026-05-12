@@ -148,6 +148,7 @@ pub(crate) async fn migrate_user_recovery_schema(db: &Db) -> Result<()> {
 
 // ---- Password policy -------------------------------------------------------
 
+// public:
 /// Validates a candidate password against project-defined rules.
 ///
 /// The framework ships [`DefaultPasswordPolicy`] (length-only floor)
@@ -196,6 +197,7 @@ pub trait PasswordPolicy: Send + Sync {
     fn min_length(&self) -> usize;
 }
 
+// public:
 /// Type-erased shared password-policy reference, mirroring
 /// [`crate::email::SharedMailer`]. The framework's `Admin` holds one
 /// of these; defaults to `Arc::new(DefaultPasswordPolicy::new())`
@@ -203,6 +205,7 @@ pub trait PasswordPolicy: Send + Sync {
 /// `Admin::password_policy(Arc::new(...))`.
 pub type SharedPasswordPolicy = Arc<dyn PasswordPolicy>;
 
+// public:
 /// Reasons a candidate password fails policy validation.
 ///
 /// Variants intentionally omit the candidate plaintext — none of the
@@ -237,6 +240,7 @@ impl std::fmt::Display for PasswordPolicyError {
 
 impl std::error::Error for PasswordPolicyError {}
 
+// public:
 /// Length-only password policy. Default `min_len` is **10** — the
 /// secure-by-default baseline R1 ships with: long enough to defeat
 /// trivial guessing under Argon2id + per-IP rate-limiting (NIST SP
@@ -260,11 +264,13 @@ pub struct DefaultPasswordPolicy {
 }
 
 impl DefaultPasswordPolicy {
+    // public:
     /// New policy with the framework's default floor (`min_len = 10`).
     pub const fn new() -> Self {
         Self { min_len: 10 }
     }
 
+    // public:
     /// New policy with an explicit floor. Useful for projects that
     /// want a stronger length baseline without authoring a full
     /// `PasswordPolicy` impl.
@@ -302,6 +308,7 @@ impl PasswordPolicy for DefaultPasswordPolicy {
 
 // ---- Login throttle (R2) ---------------------------------------------------
 
+// public:
 /// Auto-throttle parameters for the login flow
 /// (`DESIGN_R2_ORGANISATIONAL.md` §3.3 + §12 locked decisions).
 ///
@@ -340,6 +347,7 @@ pub struct LoginThrottle {
 }
 
 impl LoginThrottle {
+    // public:
     /// The framework's locked default
     /// (`DESIGN_R2_ORGANISATIONAL.md` §12): **5 failures /
     /// 10-minute window / 15-minute soft lock**. `const`-constructible
@@ -359,6 +367,7 @@ impl Default for LoginThrottle {
 
 // ---- Recovery policy -------------------------------------------------------
 
+// public:
 /// Tunables for the R1 recovery flow: token TTL, rate-limit shape,
 /// strict-mailer boot guard, and public-site-URL derivation.
 ///
@@ -535,10 +544,12 @@ pub trait RecoveryPolicy: Send + Sync {
     }
 }
 
+// public:
 /// Type-erased shared recovery-policy reference, mirroring
 /// [`SharedPasswordPolicy`] / [`crate::email::SharedMailer`].
 pub type SharedRecoveryPolicy = Arc<dyn RecoveryPolicy>;
 
+// public:
 /// Length-only / rate-limit-only baseline policy. Public fields plus
 /// chainable `with_*` setters so projects that want to tweak one knob
 /// don't need to author a full trait impl.
@@ -551,6 +562,7 @@ pub struct DefaultRecoveryPolicy {
 }
 
 impl DefaultRecoveryPolicy {
+    // public:
     /// New policy with the framework's locked defaults
     /// (`DESIGN_RECOVERY.md` §17): TTL 1h, request 5/15min, consume
     /// 10/5min, strict-mailer guard off.
@@ -563,6 +575,7 @@ impl DefaultRecoveryPolicy {
         }
     }
 
+    // public:
     /// Override the reset-token TTL. Projects that want shorter
     /// blast-radius windows pass `Duration::minutes(30)`; projects
     /// that need user-friendlier deadlines pass `Duration::hours(2)`.
@@ -571,18 +584,21 @@ impl DefaultRecoveryPolicy {
         self
     }
 
+    // public:
     /// Override the request-endpoint rate-limit shape.
     pub fn with_request_rate_limit(mut self, capacity: u32, window: StdDuration) -> Self {
         self.request_rate_limit = (capacity, window);
         self
     }
 
+    // public:
     /// Override the consume-endpoint rate-limit shape.
     pub fn with_consume_rate_limit(mut self, capacity: u32, window: StdDuration) -> Self {
         self.consume_rate_limit = (capacity, window);
         self
     }
 
+    // public:
     /// Toggle the strict-mailer boot guard. When `true`, R1's boot
     /// sequence (commits #7+) refuses to start with the default
     /// `LogMailer`. Default `false`.
@@ -770,6 +786,7 @@ pub(crate) enum IssueOutcome {
     RateLimited,
 }
 
+// internal:
 /// Whether the mailer's `send` call returned `Ok` or a typed
 /// `MailerError`. Persisted on the token row's `mail_status` column
 /// and into the audit row's `metadata.email_send_status`.
