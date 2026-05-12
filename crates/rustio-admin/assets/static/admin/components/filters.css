@@ -1,0 +1,202 @@
+/* ============================================================
+ * rustio-admin / components / filters
+ *
+ * Search bar, sidebar filter panel, the URL-driven toolbar, and
+ * the active-filters strip with removable pills. Dropdown
+ * machinery (toolbar dropdown panels) lives in
+ * components/dropdowns.css.
+ *
+ * Filters in RustIO are URL-driven — every chip is an `<a>` and
+ * every state transition is a navigation. No Apply step.
+ * ============================================================ */
+
+.rio-search-bar {
+  display: flex;
+  gap: var(--rio-s2);
+  margin-bottom: var(--rio-s4);
+}
+/* Wrap that holds the input + the absolutely-positioned magnifying
+ * glass icon. Takes the input's flex sizing so the search bar layout
+ * is unchanged from the bare-input version. */
+.rio-search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.rio-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--rio-text-subtle);
+  pointer-events: none;
+}
+.rio-search-input {
+  flex: 1;
+  padding: 0.6rem var(--rio-s4);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface);
+  color: var(--rio-text-strong);
+  font: inherit;
+  font-size: var(--rio-fs-md);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+/* Make room for the leading glyph when the input lives inside a
+ * `.rio-search-input-wrap`. Bare inputs (no wrap) keep the original
+ * left padding. */
+.rio-search-input-wrap .rio-search-input { padding-left: 2.4rem; }
+.rio-search-input::placeholder { color: var(--rio-text-subtle); }
+.rio-search-input:focus {
+  outline: none;
+  border-color: var(--rio-accent);
+  box-shadow: 0 0 0 3px rgb(var(--rio-accent-rgb) / 0.12);
+}
+
+.rio-filters {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  padding: var(--rio-s4);
+  margin-bottom: var(--rio-s4);
+}
+.rio-filters-title {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rio-text-subtle);
+  margin: 0 0 var(--rio-s2);
+}
+.rio-filter-group { margin-bottom: var(--rio-s3); }
+.rio-filter-group summary {
+  cursor: pointer;
+  font-weight: var(--rio-fw-semibold);
+  font-size: var(--rio-fs-md);
+  padding: var(--rio-s1) 0;
+  color: var(--rio-text-strong);
+}
+.rio-filter-options {
+  list-style: none;
+  margin: var(--rio-s2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.rio-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  background: var(--rio-surface-2);
+  color: var(--rio-text);
+  border: 1px solid var(--rio-border);
+  border-radius: 999px;
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  line-height: var(--rio-lh-ui);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.rio-filter-chip:hover {
+  text-decoration: none;
+  background: var(--rio-surface-3);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+}
+.rio-filter-chip--active,
+.rio-filter-chip--active:hover {
+  background: rgb(var(--rio-accent-rgb) / 0.10);
+  color: var(--rio-accent);
+  border-color: rgb(var(--rio-accent-rgb) / 0.30);
+}
+
+/* ----- Toolbar ---------------------------------------------------- *
+ * Container row above the list — search bar plus any number of
+ * dropdown toggles. Search bar flexes; dropdowns sit fixed-width
+ * on the trailing edge. */
+
+.rio-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  margin-bottom: var(--rio-s4);
+  flex-wrap: wrap;
+}
+
+.rio-toolbar .rio-search-bar {
+  flex: 1;
+  min-width: 280px;
+  margin-bottom: 0;
+}
+
+/* ----- Active filters strip ---------------------------------------
+ * Compact row that surfaces every currently-set filter as a removable
+ * pill (`Field: value ×`). Sits between the toolbar and the table —
+ * gives the user a one-glance view of what's filtering the list and
+ * a one-click way to drop a single filter without opening the
+ * dropdown. Hidden when no filters are active. */
+.rio-active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: var(--rio-s4);
+  background: var(--rio-surface-2);
+  border: 1px dashed var(--rio-border);
+  border-radius: var(--rio-radius);
+  font-size: var(--rio-fs-sm);
+}
+.rio-active-filters-label {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rio-text-subtle);
+  margin-right: 0.2rem;
+}
+.rio-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.25rem 0.2rem 0.65rem;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: 999px;
+  color: var(--rio-text);
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+}
+.rio-active-pill-key { color: var(--rio-text-subtle); font-weight: var(--rio-fw-medium); }
+.rio-active-pill-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  color: var(--rio-text-subtle);
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+}
+.rio-active-pill-x:hover {
+  background: var(--rio-surface-3);
+  color: var(--rio-text-strong);
+  text-decoration: none;
+}
+.rio-active-filters-clear {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  text-decoration: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--rio-radius-sm);
+}
+.rio-active-filters-clear:hover {
+  color: var(--rio-accent);
+  text-decoration: none;
+}

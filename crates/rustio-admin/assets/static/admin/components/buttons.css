@@ -1,0 +1,86 @@
+/* ============================================================
+ * rustio-admin / components / buttons
+ *
+ * Five variants: default neutral, --primary (accent fill), --danger
+ * (red fill), --ghost (transparent), --danger-ghost (transparent
+ * red). Plus a --sm modifier for inline row actions.
+ *
+ * Buttons feel calm and tactile, not glossy. We change colour and
+ * surface on hover (instead of dimming with opacity) — that reads
+ * as deliberate UI feedback rather than a flashy SaaS hover.
+ * ============================================================ */
+
+.rio-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem var(--rio-s4);
+  background: var(--rio-surface);
+  color: var(--rio-text);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  font-size: var(--rio-fs-md);                 /* 15px */
+  font-weight: var(--rio-fw-semibold);
+  line-height: var(--rio-lh-ui);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--rio-shadow-xs);
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 0.06s;
+}
+.rio-button:hover {
+  background: var(--rio-surface-3);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+  text-decoration: none;
+}
+.rio-button:active { transform: translateY(1px); }
+.rio-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.rio-button--primary {
+  background: var(--rio-accent);
+  color: #fff;
+  border-color: var(--rio-accent);
+  box-shadow: 0 1px 3px rgba(160, 52, 26, 0.25);
+}
+.rio-button--primary:hover {
+  background: var(--rio-accent-hover);
+  border-color: var(--rio-accent-hover);
+  color: #fff;
+}
+.rio-button--danger {
+  background: var(--rio-danger);
+  color: #fff;
+  border-color: var(--rio-danger);
+}
+.rio-button--danger:hover { color: #fff; }
+.rio-button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rio-text-muted);
+  box-shadow: none;
+}
+.rio-button--ghost:hover {
+  color: var(--rio-text-strong);
+  background: var(--rio-surface-3);
+  border-color: transparent;
+}
+.rio-button--danger-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rio-danger);
+  box-shadow: none;
+}
+.rio-button--danger-ghost:hover {
+  background: var(--rio-danger-bg);
+  border-color: transparent;
+}
+
+/* Compact button for inline row actions (Edit / Delete in table
+ * rows, etc.). Matches the proportions of a body-text affordance
+ * rather than a primary CTA. */
+.rio-button--sm {
+  padding: 0.3rem 0.55rem;
+  font-size: var(--rio-fs-sm);
+  gap: 0.3rem;
+}
+.rio-button--sm .rio-icon { width: 14px; height: 14px; }

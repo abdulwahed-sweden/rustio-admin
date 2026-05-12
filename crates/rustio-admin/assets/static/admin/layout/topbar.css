@@ -1,0 +1,71 @@
+/* ============================================================
+ * rustio-admin / layout / topbar
+ *
+ * Sticky top chrome — brand mark, identity strip, theme toggle,
+ * mobile sidebar toggle. Sits above all page content;
+ * `position: sticky` keeps it pinned during scroll.
+ * ============================================================ */
+
+.rio-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s4);
+  padding: 0 var(--rio-s5);
+  height: var(--rio-topbar-h);
+  background: var(--rio-surface);
+  border-bottom: 1px solid var(--rio-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.rio-topbar-brand {
+  font-weight: var(--rio-fw-bold);
+  font-size: var(--rio-fs-lg);                 /* 17px */
+  color: var(--rio-text-strong);
+  letter-spacing: var(--rio-tracking-heading);
+}
+.rio-topbar-brand:hover { text-decoration: none; }
+.rio-topbar-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s4);
+  flex-wrap: wrap;
+}
+.rio-topbar-identity {
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-md);                 /* 15px */
+  font-weight: var(--rio-fw-regular);
+}
+.rio-topbar-link {
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-medium);
+}
+.rio-topbar-link:hover { color: var(--rio-text); }
+.rio-topbar-logout { display: inline; }
+.rio-sidebar-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  padding: var(--rio-s1) var(--rio-s2);
+  color: var(--rio-text);
+  cursor: pointer;
+}
+.rio-theme-toggle {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  padding: 0.5rem 0.85rem;
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-medium);
+  color: var(--rio-text-muted);
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+.rio-theme-toggle:hover {
+  background: var(--rio-surface-3);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+}

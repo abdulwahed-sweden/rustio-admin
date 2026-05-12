@@ -1,0 +1,224 @@
+/* ============================================================
+ * rustio-admin / components / tables
+ *
+ * The canonical .rio-table — calm and spacious. Sortable headers,
+ * zebra stripes, FK click-throughs, bulk-select row checkboxes,
+ * the floating bulk-action bar, and the definition-list helpers
+ * used by user-profile show pages.
+ *
+ * Page-specific overrides (dashboard model index, permissions
+ * matrix, session cards) live under pages/.
+ * ============================================================ */
+
+/* Tables — calm and spacious. Rows are 14px tall in padding so a
+ * full screen breathes; the zebra stripe uses surface-2 (a quiet
+ * neutral lift) instead of an accent-tinted overlay so the eye
+ * doesn't read it as a colour signal. Header text is uppercase but
+ * small enough not to compete with cell content. */
+.rio-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--rio-fs-base);                /* 16px cell text */
+}
+.rio-table th, .rio-table td {
+  padding: 0.85rem var(--rio-s4);
+  text-align: left;
+  border-bottom: 1px solid var(--rio-border-soft);
+}
+.rio-table th {
+  font-weight: var(--rio-fw-bold);
+  font-size: var(--rio-fs-xs);                  /* 13px — quiet label */
+  color: var(--rio-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--rio-surface-2);
+  border-bottom: 1px solid var(--rio-border);
+  white-space: nowrap;
+}
+.rio-table tbody tr:last-child td { border-bottom: none; }
+.rio-table tbody tr { transition: background-color 0.1s; }
+
+.rio-th--number, .rio-td--number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-fs-sm);
+}
+
+/* Foreign-key click-throughs in list cells. Reads as a link without
+ * shouting — underline on hover only, accent color on hover/focus. */
+.rio-fk-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--rio-border);
+}
+.rio-fk-link:hover,
+.rio-fk-link:focus {
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
+  outline: none;
+}
+
+/* Datetime cells: monospace + nowrap so an ISO timestamp never breaks
+ * at the `T`. Tabular figures keep columns aligned vertically. */
+.rio-td--datetime {
+  white-space: nowrap;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--rio-text-muted);
+}
+
+/* Text cells (string fields) clip to a single line with a hard
+ * max-width and an ellipsis tail. The list template adds a `title=`
+ * attribute on these cells, so hovering reveals the full value
+ * natively without needing a custom tooltip. The cap is `min(20rem,
+ * 28vw)` so the cell shrinks gracefully on narrower viewports and
+ * never starves the date / actions columns of space. */
+.rio-td--text {
+  max-width: min(20rem, 28vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rio-th--checkbox, .rio-td--checkbox { text-align: center; width: 36px; padding-right: 0; }
+.rio-th--actions, .rio-td--actions { width: 1%; white-space: nowrap; text-align: right; }
+
+/* Bulk-select checkbox in the leading column. The native control
+ * is restyled to match the framework's accent + radius so the row
+ * checkboxes don't look like a plain HTML default. */
+.rio-row-checkbox,
+.rio-row-checkbox-all {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--rio-border-strong);
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--rio-surface);
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
+  margin: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+.rio-row-checkbox:hover,
+.rio-row-checkbox-all:hover { border-color: var(--rio-text-muted); }
+.rio-row-checkbox:checked,
+.rio-row-checkbox-all:checked,
+.rio-row-checkbox-all:indeterminate {
+  background: var(--rio-accent);
+  border-color: var(--rio-accent);
+}
+.rio-row-checkbox:checked::after,
+.rio-row-checkbox-all:checked::after {
+  content: "";
+  width: 10px; height: 10px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") center/contain no-repeat;
+}
+.rio-row-checkbox-all:indeterminate::after {
+  content: "";
+  width: 9px; height: 2px;
+  background: #fff;
+  border-radius: 1px;
+}
+/* Selected row gets a faint accent wash so the highlight reads at a
+ * glance during a bulk operation. */
+.rio-table tbody tr.is-selected,
+.rio-table tbody tr.is-selected:nth-child(even) {
+  background: rgb(var(--rio-accent-rgb) / 0.06);
+}
+.rio-table tbody tr.is-selected:hover { background: rgb(var(--rio-accent-rgb) / 0.10); }
+
+/* ----- Bulk action bar -------------------------------------------------
+ * Sticky strip that appears above the table when ≥1 row is checked.
+ * Contains a count, the destructive action, and a clear-selection
+ * link. The CSS keeps it hidden by default; admin.js adds
+ * `is-active` to the wrapping form once any checkbox is checked. */
+.rio-bulk-bar {
+  display: none;
+  align-items: center;
+  gap: var(--rio-s3);
+  padding: 0.7rem var(--rio-s4);
+  margin-bottom: var(--rio-s3);
+  background: var(--rio-text-strong);
+  color: var(--rio-surface);
+  border-radius: var(--rio-radius);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-semibold);
+  box-shadow: var(--rio-shadow);
+}
+.rio-bulk-form.is-active .rio-bulk-bar { display: flex; }
+.rio-bulk-bar-count strong { font-weight: var(--rio-fw-bold); }
+/* Inverted button — solid surface inside the dark bar so the action
+ * stays high-contrast without bleeding into the strip. */
+.rio-bulk-bar .rio-button {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: none;
+}
+.rio-bulk-bar .rio-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.40);
+  color: #fff;
+}
+.rio-bulk-bar .rio-button--danger {
+  background: var(--rio-danger);
+  border-color: var(--rio-danger);
+}
+.rio-bulk-bar .rio-button--danger:hover {
+  background: var(--rio-danger);
+  border-color: var(--rio-danger);
+  filter: brightness(1.1);
+}
+.rio-bulk-bar-clear {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font: inherit;
+  font-weight: var(--rio-fw-semibold);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--rio-radius-sm);
+}
+.rio-bulk-bar-clear:hover { color: #fff; }
+
+/* Zebra: surface-2 (quiet neutral). Hover lifts to surface-3. */
+.rio-table--striped tbody tr:nth-child(even) { background: var(--rio-surface-2); }
+.rio-table tbody tr:hover { background: var(--rio-surface-3); }
+
+/* Sortable headers — wrap the label in a link; arrow surfaces in the
+ * active direction. Header looks identical to a non-sortable cell
+ * until the user is hovering / has clicked. */
+.rio-th-sort {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.rio-th-sort:hover { color: var(--rio-text-strong); text-decoration: none; }
+.rio-th--sort-asc .rio-th-sort,
+.rio-th--sort-desc .rio-th-sort { color: var(--rio-accent); }
+
+.rio-list { padding: 0; overflow: hidden; }
+.rio-list .rio-table { margin: 0; }
+.rio-list .rio-table th:first-child,
+.rio-list .rio-table td:first-child { padding-left: var(--rio-s5); }
+.rio-list .rio-table th:last-child,
+.rio-list .rio-table td:last-child { padding-right: var(--rio-s5); }
+
+/* Definition lists for the user profile show-grid. */
+.rio-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--rio-s2) var(--rio-s5);
+  margin: 0;
+}
+.rio-dl dt { font-weight: 600; color: var(--rio-text-muted); }
+.rio-dl dd { margin: 0; }

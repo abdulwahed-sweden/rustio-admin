@@ -1,0 +1,70 @@
+/* ============================================================
+ * rustio-admin / layout / responsive
+ *
+ * Mobile-first breakpoints — must be imported AFTER all layout
+ * and component files so its rules win the cascade.
+ *
+ *   < 768px   → sidebar collapses off-canvas behind a hamburger
+ *   ≥ 768px   → sidebar pinned, sticky to viewport
+ *   ≥ 1280px  → wider sidebar, more main padding, 3-col checkboxes
+ *
+ * Print rules live in print/print.css.
+ * ============================================================ */
+
+/* Tables overflow horizontally on narrow screens. */
+.rio-list, .rio-card { overflow-x: auto; }
+
+/* Mobile: sidebar collapsed off-canvas behind a hamburger. The
+ * `flex: 0 0 var(--rio-sidebar-w)` from layout/sidebar.css is
+ * overridden here so the fixed-position drawer doesn't reserve
+ * track in the flex row. */
+.rio-sidebar {
+  display: none;
+  flex: 0 0 auto;
+  position: fixed;
+  inset: var(--rio-topbar-h) 0 0 0;
+  z-index: 20;
+  width: 80vw;
+  max-width: 320px;
+  border-right: 1px solid var(--rio-border);
+  box-shadow: var(--rio-shadow-lg);
+  overflow-y: auto;
+}
+.rio-shell[data-sidebar="open"] .rio-sidebar { display: block; }
+.rio-sidebar-toggle { display: inline-flex; }
+
+/* Tablet: sidebar pinned in the flex row, sticky to the viewport just
+ * below the topbar. `align-self: flex-start` opts out of the row's
+ * stretch so the element keeps a viewport-height box; `overflow-y:
+ * auto` lets long sidebar content scroll independently when the
+ * navigation outgrows the screen. */
+@media (min-width: 768px) {
+  .rio-sidebar {
+    display: block;
+    flex: 0 0 var(--rio-sidebar-w);
+    align-self: flex-start;
+    position: sticky;
+    top: var(--rio-topbar-h);
+    height: calc(100vh - var(--rio-topbar-h));
+    overflow-y: auto;
+    width: auto;
+    max-width: none;
+    box-shadow: none;
+  }
+  .rio-sidebar-toggle { display: none; }
+  .rio-checkbox-list { grid-template-columns: 1fr 1fr; }
+}
+
+/* Desktop: wider sidebar, more padding. Main content caps at ~1280px
+ * so a 4K monitor doesn't stretch a table row across the user's whole
+ * field of view — the eye loses the cell on the way back. */
+@media (min-width: 1280px) {
+  :root { --rio-sidebar-w: 260px; }
+  .rio-main {
+    padding: var(--rio-s6) var(--rio-s7);
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .rio-checkbox-list { grid-template-columns: 1fr 1fr 1fr; }
+}

@@ -1,0 +1,19 @@
+/* ============================================================
+ * rustio-admin / base / reset
+ *
+ * Box-model reset, html/body normalization, root font-size pin.
+ * Nothing visual — just enough housekeeping so the rest of the
+ * stylesheet can assume a 16px html root and box-sizing: border-box.
+ * ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+/* Set the html root font-size explicitly — a few browsers / user
+ * preferences ship a non-16px default, and our scale assumes 16px. */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  /* Tab character width in code blocks. */
+  tab-size: 2;
+}

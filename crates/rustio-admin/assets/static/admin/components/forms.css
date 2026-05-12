@@ -1,0 +1,163 @@
+/* ============================================================
+ * rustio-admin / components / forms
+ *
+ * Form shell, fieldsets, fields, inputs, textareas, selects,
+ * checkboxes, and the form action bar. Single-column flow by
+ * default with optional `.rio-field--full` for explicit grid spans
+ * inside a grid-mode fieldset.
+ *
+ * Table-row bulk-select checkboxes (.rio-row-checkbox) live in
+ * components/tables.css since they're table-shaped controls, not
+ * form-shell controls.
+ * ============================================================ */
+
+/* Editorial wrapper for form pages — caps content width so labels +
+ * inputs read at a comfortable line length. Forms ship at 880px max
+ * (matches Linear / Stripe / Vercel admin); page header lives inside
+ * the same shell so headings, breadcrumbs, and inputs share an
+ * alignment guide. */
+.rio-form-shell {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* Forms stack vertically with a comfortable rhythm. `gap` on the
+ * form means consecutive .rio-field / .rio-fieldset / .rio-form-actions
+ * siblings get spacing automatically — no per-element margin
+ * accounting and no double-margin collapse surprises. */
+.rio-form {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s5);
+}
+.rio-fieldset {
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-lg);
+  padding: var(--rio-s6) var(--rio-s5);
+  margin: 0;
+  background: var(--rio-surface);
+  box-shadow: var(--rio-shadow);
+}
+.rio-fieldset > legend {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--rio-text-subtle);
+  padding: 0 var(--rio-s2);
+  margin-left: calc(-1 * var(--rio-s2));
+}
+/* Single-column field flow by default. Forms read better as a
+ * vertical reading column than a 2-up grid that leaves gaps when a
+ * model has 3 short fields and 1 textarea. The grid still resolves
+ * `field--full` cleanly because every cell is implicitly full-width. */
+.rio-fieldset-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s5);
+}
+
+.rio-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+}
+.rio-field--full { grid-column: 1 / -1; }
+.rio-field-label {
+  font-weight: var(--rio-fw-semibold);
+  font-size: var(--rio-fs-md);
+  color: var(--rio-text-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.rio-required {
+  color: var(--rio-danger);
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  margin-left: 0;
+}
+.rio-field-hint {
+  margin: 0;
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text-muted);
+  line-height: var(--rio-lh-ui);
+}
+.rio-field-errors {
+  list-style: none;
+  margin: var(--rio-s1) 0 0;
+  padding: 0;
+  color: var(--rio-danger);
+  font-size: var(--rio-fs-sm);
+}
+
+.rio-input,
+.rio-textarea,
+.rio-select {
+  width: 100%;
+  padding: 0.6rem var(--rio-s3);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface);
+  color: var(--rio-text-strong);
+  font: inherit;
+  font-size: var(--rio-fs-md);
+  line-height: var(--rio-lh-ui);
+  transition: border-color 0.12s, box-shadow 0.12s, background-color 0.12s;
+}
+.rio-input::placeholder,
+.rio-textarea::placeholder { color: var(--rio-text-subtle); }
+.rio-input:hover,
+.rio-textarea:hover,
+.rio-select:hover { border-color: var(--rio-border-strong); }
+.rio-input:focus,
+.rio-textarea:focus,
+.rio-select:focus {
+  outline: none;
+  border-color: var(--rio-accent);
+  box-shadow: 0 0 0 3px rgb(var(--rio-accent-rgb) / 0.12);
+}
+.rio-input:disabled,
+.rio-textarea:disabled,
+.rio-select:disabled {
+  background: var(--rio-surface-2);
+  color: var(--rio-text-subtle);
+  cursor: not-allowed;
+}
+.rio-textarea { font-family: var(--rio-font-sans); resize: vertical; min-height: 7rem; }
+
+.rio-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  cursor: pointer;
+}
+.rio-checkbox input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--rio-accent);
+}
+.rio-checkbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--rio-s2);
+}
+
+/* Form action bar — primary save buttons sit left, secondary
+ * (History) and destructive (Delete / Cancel) push right via
+ * `.rio-form-actions-spacer`. A top divider grounds the row so it
+ * reads as a deliberate footer rather than buttons floating below
+ * the card. */
+.rio-form-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  flex-wrap: wrap;
+  padding-top: var(--rio-s5);
+  border-top: 1px solid var(--rio-border-soft);
+}
+.rio-form-actions-spacer { flex: 1; min-width: var(--rio-s4); }

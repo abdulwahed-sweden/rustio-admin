@@ -1,0 +1,15 @@
+/* ============================================================
+ * rustio-admin / tokens / radius
+ *
+ *   === Tokens — radius ===
+ *
+ * Three corners. `sm` for inputs / chips / row checkboxes; the
+ * default for cards / popovers; `lg` for the page-level fieldset
+ * and login card.
+ * ============================================================ */
+
+:root {
+  --rio-radius: 10px;
+  --rio-radius-sm: 6px;
+  --rio-radius-lg: 14px;
+}

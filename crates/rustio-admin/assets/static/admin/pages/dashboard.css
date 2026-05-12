@@ -1,0 +1,24 @@
+/* ============================================================
+ * rustio-admin / pages / dashboard
+ *
+ * Dashboard model index — the `<th>` cell holds the model name as
+ * a link. The generic `.rio-table th` rules render that as small
+ * uppercase accent-coloured text, which fights the section h2 above
+ * it. Override here so the model name reads as a strong, plain link
+ * in the dashboard context.
+ * ============================================================ */
+
+.rio-app-models th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--rio-fs-md);
+  background: transparent;
+  border-bottom: 1px solid var(--rio-border-soft);
+  padding: 0.85rem var(--rio-s4);
+}
+.rio-app-models th a {
+  color: var(--rio-text-strong);
+  font-weight: var(--rio-fw-semibold);
+}
+.rio-app-models th a:hover { color: var(--rio-accent); text-decoration: none; }
+.rio-app-models td { padding: 0.85rem var(--rio-s4); border-bottom: 1px solid var(--rio-border-soft); }

@@ -1,0 +1,55 @@
+/* ============================================================
+ * rustio-admin / components / cards
+ *
+ * Surface containers — page headers, breadcrumbs, action rows,
+ * the canonical card box, the empty-state placeholder, and the
+ * .rio-meta low-emphasis caption. These are the page-chrome
+ * primitives every screen leans on.
+ * ============================================================ */
+
+.rio-page-header {
+  margin-bottom: var(--rio-s5);
+}
+.rio-breadcrumbs {
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text-subtle);
+  font-weight: var(--rio-fw-medium);
+  margin-bottom: var(--rio-s2);
+}
+.rio-breadcrumbs a {
+  color: var(--rio-text-muted);
+  font-weight: var(--rio-fw-semibold);
+}
+.rio-breadcrumbs a:hover { color: var(--rio-text-strong); }
+.rio-page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rio-s4);
+  flex-wrap: wrap;
+}
+.rio-page-actions h1 { color: var(--rio-text-strong); }
+
+.rio-card {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-lg);
+  padding: var(--rio-s5);
+  margin-bottom: var(--rio-s5);
+  box-shadow: var(--rio-shadow);
+}
+.rio-card-section {
+  margin-top: var(--rio-s5);
+  padding-top: var(--rio-s4);
+  border-top: 1px solid var(--rio-border-soft);
+}
+.rio-empty {
+  padding: var(--rio-s6);
+  text-align: center;
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-md);
+}
+.rio-meta {
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-sm);
+}

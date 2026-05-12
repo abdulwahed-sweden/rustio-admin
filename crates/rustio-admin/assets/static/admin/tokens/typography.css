@@ -1,0 +1,98 @@
+/* ============================================================
+ * rustio-admin / tokens / typography
+ *
+ *   === Tokens — typography ===
+ *
+ * Three families + a consistent scale.
+ * Geist (Latin) + Tajawal / Noto Naskh (Arabic) + Geist Mono.
+ * The size scale `--rio-fs-xs … --rio-fs-display` is the canonical
+ * ladder; component styles resolve through it. Adding a new size
+ * belongs in CHANGELOG.md.
+ *
+ * @font-face declarations live in base/typography.css so the
+ * font binaries load alongside the rules that consume them.
+ * ============================================================ */
+
+:root {
+  /* Latin UI — Geist leads, then Inter / Plex Sans, then platform UI. */
+  --rio-font-sans:
+    "Geist",
+    "Inter",
+    "IBM Plex Sans",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+
+  /* Arabic UI — compact admin surfaces (buttons, navbars, sidebar
+   * labels, table cells, badges, form labels). Tajawal first; Noto
+   * Naskh as a graceful fallback so Arabic text never lands on a
+   * Latin face. */
+  --rio-font-arabic:
+    "Tajawal",
+    "Noto Naskh Arabic",
+    system-ui,
+    sans-serif;
+
+  /* Arabic body — long-form copy, descriptions, settings/help pages.
+   * Noto Naskh has higher x-height + softer terminals → reads better
+   * in long paragraphs than Tajawal. */
+  --rio-font-arabic-body:
+    "Noto Naskh Arabic",
+    "Tajawal",
+    serif;
+
+  /* Code — Geist Mono, then JetBrains/Plex Mono, then platform mono. */
+  --rio-font-mono:
+    "Geist Mono",
+    "JetBrains Mono",
+    "IBM Plex Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+  /* Size scale — rem-based, 16px html root.
+   * Floor is now 13px for true micro-text only (kbd shortcut, footer).
+   * Everyday surfaces land between 14px and 16px so a ten-hour session
+   * never strains. Table cells / sidebar / buttons all sit at 15px. */
+  --rio-font-size-base: 1rem;         /* 16px — body baseline */
+  --rio-fs-xs:    0.8125rem;          /* 13px — kbd, footer, tiny meta */
+  --rio-fs-sm:    0.9rem;             /* 14.4px — table headers, hint text */
+  --rio-fs-md:    0.9375rem;          /* 15px — sidebar, nav, button label */
+  --rio-fs-base:  1rem;               /* 16px — body, table cell */
+  --rio-fs-lg:    1.0625rem;          /* 17px — main prose body */
+  --rio-fs-xl:    1.25rem;            /* 20px — section h3 */
+  --rio-fs-h3:    1.375rem;           /* 22px */
+  --rio-fs-h2:    1.625rem;           /* 26px */
+  --rio-fs-h1:    1.875rem;           /* 30px — calmer than 34px */
+  --rio-fs-display: 2.25rem;          /* 36px — login title */
+
+  /* Line heights — tuned per script. Arabic needs more leading because
+   * Naskh letterforms hang above and below the baseline. UI lh widened
+   * to 1.5 so dense table rows still breathe. */
+  --rio-lh-tight:  1.25;              /* h1/h2/h3, big display */
+  --rio-lh-ui:     1.5;               /* dense UI: buttons, tags, table */
+  --rio-lh-body:   1.65;              /* English paragraph body */
+  --rio-lh-arabic: 1.95;              /* Arabic paragraph body */
+
+  /* Weights — opt-in via tokens so the design system can tune
+   * regular/medium/semibold/bold without touching every site. */
+  --rio-fw-regular:  400;
+  --rio-fw-medium:   500;
+  --rio-fw-semibold: 600;
+  --rio-fw-bold:     700;
+
+  /* Tracking (Latin only — Arabic resets to 0 in base/typography.css).
+   * Geist is drawn for slight negative tracking on display sizes. */
+  --rio-tracking-display: -0.022em;
+  --rio-tracking-heading: -0.012em;
+  --rio-tracking-body:    -0.003em;
+  --rio-tracking-tabular: 0;
+}
