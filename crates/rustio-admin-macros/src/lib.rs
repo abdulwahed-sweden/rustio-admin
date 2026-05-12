@@ -548,10 +548,65 @@ fn parse_relation_attr(
 
 fn plural_snake(camel: &str) -> String {
     let snake = camel_to_snake(camel);
+    // Regular English pluralisation. Irregular plurals (Person →
+    // People, Mouse → Mice) need `#[rustio(admin_name = "...")]`.
     if snake.ends_with('s') {
+        // Already ends in 's' — leave as-is so structs named in the
+        // plural (`Posts`) don't become `postss`. Edge cases like
+        // `Bus` → `buses` need the F1 override.
         snake
+    } else if snake.ends_with('x')
+        || snake.ends_with('z')
+        || snake.ends_with("ch")
+        || snake.ends_with("sh")
+    {
+        format!("{snake}es")
+    } else if let Some(stem) = snake.strip_suffix('y') {
+        // consonant + y → ies (Category → Categories);
+        // vowel + y → s (Toy → Toys).
+        let before = stem.chars().last();
+        if matches!(before, Some('a' | 'e' | 'i' | 'o' | 'u')) || stem.is_empty() {
+            format!("{snake}s")
+        } else {
+            format!("{stem}ies")
+        }
     } else {
         format!("{snake}s")
+    }
+}
+
+#[cfg(test)]
+mod plural_snake_tests {
+    use super::plural_snake;
+
+    #[test]
+    fn regular_plurals() {
+        assert_eq!(plural_snake("Post"), "posts");
+        assert_eq!(plural_snake("Loan"), "loans");
+        assert_eq!(plural_snake("BlogPost"), "blog_posts");
+        assert_eq!(plural_snake("CaseAction"), "case_actions");
+    }
+
+    #[test]
+    fn ch_sh_x_z_suffixes_take_es() {
+        assert_eq!(plural_snake("Branch"), "branches");
+        assert_eq!(plural_snake("Box"), "boxes");
+        assert_eq!(plural_snake("Dish"), "dishes");
+        assert_eq!(plural_snake("Buzz"), "buzzes");
+    }
+
+    #[test]
+    fn consonant_y_becomes_ies_vowel_y_keeps_s() {
+        assert_eq!(plural_snake("Category"), "categories");
+        assert_eq!(plural_snake("Story"), "stories");
+        assert_eq!(plural_snake("Toy"), "toys");
+        assert_eq!(plural_snake("Day"), "days");
+    }
+
+    #[test]
+    fn trailing_s_left_alone() {
+        assert_eq!(plural_snake("Posts"), "posts");
+        assert_eq!(plural_snake("Status"), "status");
     }
 }
 
