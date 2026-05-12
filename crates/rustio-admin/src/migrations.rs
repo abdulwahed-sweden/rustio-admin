@@ -8,21 +8,25 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 use crate::orm::Db;
 
+// public:
 pub struct MigrationFile {
     pub version: i64,
     pub name: String,
     pub path: PathBuf,
 }
 
+// public:
 #[derive(Debug, Clone, Default)]
 pub struct ApplyOptions {
     pub verbose: bool,
 }
 
+// public:
 pub async fn apply(db: &Db, dir: impl AsRef<Path>) -> Result<Vec<String>> {
     apply_with(db, dir, ApplyOptions::default()).await
 }
 
+// public:
 pub async fn apply_with(db: &Db, dir: impl AsRef<Path>, opts: ApplyOptions) -> Result<Vec<String>> {
     ensure_tracking_table(db).await?;
 
@@ -78,6 +82,7 @@ pub async fn apply_with(db: &Db, dir: impl AsRef<Path>, opts: ApplyOptions) -> R
     Ok(newly)
 }
 
+// public:
 pub async fn applied_versions(db: &Db) -> Result<Vec<i64>> {
     ensure_tracking_table(db).await?;
     let rows =
@@ -87,6 +92,7 @@ pub async fn applied_versions(db: &Db) -> Result<Vec<i64>> {
     Ok(rows)
 }
 
+// public:
 pub async fn status(db: &Db, dir: impl AsRef<Path>) -> Result<Vec<(String, bool)>> {
     let applied = applied_versions(db).await?;
     let files = discover(dir.as_ref())?;
@@ -101,6 +107,7 @@ pub async fn status(db: &Db, dir: impl AsRef<Path>) -> Result<Vec<(String, bool)
         .collect())
 }
 
+// public:
 pub fn generate(dir: impl AsRef<Path>, name: &str) -> Result<PathBuf> {
     let dir = dir.as_ref();
     fs::create_dir_all(dir)?;

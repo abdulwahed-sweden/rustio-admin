@@ -4,8 +4,10 @@
 
 use std::fmt;
 
+// public:
 pub type Result<T> = std::result::Result<T, Error>;
 
+// public:
 #[derive(Debug)]
 pub enum Error {
     BadRequest(String),
@@ -18,6 +20,7 @@ pub enum Error {
 }
 
 impl Error {
+    // public:
     pub fn status(&self) -> u16 {
         match self {
             Error::BadRequest(_) => 400,
@@ -30,6 +33,7 @@ impl Error {
         }
     }
 
+    // public:
     /// The message as shown to the client. For 500s we deliberately
     /// return a generic string — the real detail stays in logs.
     pub fn client_message(&self) -> &str {

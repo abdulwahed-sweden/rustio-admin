@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::error::{Error, Result};
 
+// public:
 /// Shared handle to the database. Cheap to clone; every handler gets
 /// its own clone.
 #[derive(Clone)]
@@ -20,12 +21,14 @@ pub struct Db {
 }
 
 impl Db {
+    // public:
     /// Connect with sensible production defaults: 30 max connections,
     /// 1s acquire timeout, 5min idle timeout.
     pub async fn connect(url: &str) -> Result<Self> {
         Self::connect_with(url, DbOptions::default()).await
     }
 
+    // public:
     pub async fn connect_with(url: &str, opts: DbOptions) -> Result<Self> {
         let pool = PgPoolOptions::new()
             .max_connections(opts.max_connections)
@@ -39,10 +42,12 @@ impl Db {
         Ok(Self { pool })
     }
 
+    // public:
     pub fn pool(&self) -> &PgPool {
         &self.pool
     }
 
+    // public:
     pub async fn health_check(&self) -> Result<()> {
         sqlx::query("SELECT 1")
             .fetch_one(&self.pool)
@@ -66,6 +71,7 @@ impl Db {
     }
 }
 
+// public:
 #[derive(Clone, Debug)]
 pub struct DbOptions {
     pub max_connections: u32,
@@ -87,6 +93,7 @@ impl Default for DbOptions {
     }
 }
 
+// public:
 /// The value types the framework understands. Kept small on purpose.
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -149,60 +156,72 @@ impl<T: Into<Value>> From<Option<T>> for Value {
     }
 }
 
+// public:
 pub struct Row<'a> {
     inner: &'a PgRow,
 }
 
 impl<'a> Row<'a> {
+    // public:
     pub fn from_pg(row: &'a PgRow) -> Self {
         Self { inner: row }
     }
 
+    // public:
     pub fn get_i32(&self, col: &str) -> Result<i32> {
         self.inner
             .try_get::<i32, _>(col)
             .map_err(|e| Error::Internal(format!("get_i32({col}): {e}")))
     }
+    // public:
     pub fn get_i64(&self, col: &str) -> Result<i64> {
         self.inner
             .try_get::<i64, _>(col)
             .map_err(|e| Error::Internal(format!("get_i64({col}): {e}")))
     }
+    // public:
     pub fn get_optional_i64(&self, col: &str) -> Result<Option<i64>> {
         self.inner
             .try_get::<Option<i64>, _>(col)
             .map_err(|e| Error::Internal(format!("{col}: {e}")))
     }
+    // public:
     pub fn get_bool(&self, col: &str) -> Result<bool> {
         self.inner
             .try_get::<bool, _>(col)
             .map_err(|e| Error::Internal(format!("get_bool({col}): {e}")))
     }
+    // public:
     pub fn get_string(&self, col: &str) -> Result<String> {
         self.inner
             .try_get::<String, _>(col)
             .map_err(|e| Error::Internal(format!("get_string({col}): {e}")))
     }
+    // public:
     pub fn get_optional_string(&self, col: &str) -> Result<Option<String>> {
         self.inner
             .try_get::<Option<String>, _>(col)
             .map_err(|e| Error::Internal(format!("{col}: {e}")))
     }
+    // public:
     pub fn get_datetime(&self, col: &str) -> Result<DateTime<Utc>> {
         self.inner
             .try_get::<DateTime<Utc>, _>(col)
             .map_err(|e| Error::Internal(format!("{col}: {e}")))
     }
+    // public:
     pub fn get_optional_datetime(&self, col: &str) -> Result<Option<DateTime<Utc>>> {
         self.inner
             .try_get::<Option<DateTime<Utc>>, _>(col)
             .map_err(|e| Error::Internal(format!("{col}: {e}")))
     }
+    // public:
     pub fn get_uuid(&self, col: &str) -> Result<Uuid> {
         self.inner
             .try_get::<Uuid, _>(col)
             .map_err(|e| Error::Internal(format!("get_uuid({col}): {e}")))
     }
+    // public:
     pub fn get_json(&self, col: &str) -> Result<JsonValue> {
         self.inner
             .try_get::<JsonValue, _>(col)
@@ -210,6 +229,7 @@ impl<'a> Row<'a> {
     }
 }
 
+// public:
 pub trait Model: Send + Sync + Sized + 'static {
     const TABLE: &'static str;
     const COLUMNS: &'static [&'static str];
@@ -222,6 +242,7 @@ pub trait Model: Send + Sync + Sized + 'static {
 
 // ---- Generic CRUD helpers -----------------------------------------------
 
+// public:
 pub async fn all<M: Model>(db: &Db) -> Result<Vec<M>> {
     let sql = format!(
         "SELECT {} FROM {} ORDER BY id DESC",
@@ -232,6 +253,7 @@ pub async fn all<M: Model>(db: &Db) -> Result<Vec<M>> {
     rows.iter().map(|r| M::from_row(Row::from_pg(r))).collect()
 }
 
+// public:
 pub async fn page<M: Model>(db: &Db, limit: i64, offset: i64) -> Result<Vec<M>> {
     let sql = format!(
         "SELECT {} FROM {} ORDER BY id DESC LIMIT $1 OFFSET $2",
@@ -246,6 +268,7 @@ pub async fn page<M: Model>(db: &Db, limit: i64, offset: i64) -> Result<Vec<M>> 
     rows.iter().map(|r| M::from_row(Row::from_pg(r))).collect()
 }
 
+// public:
 pub async fn count<M: Model>(db: &Db) -> Result<i64> {
     let sql = format!("SELECT COUNT(*) AS c FROM {}", M::TABLE);
     let row = sqlx::query(&sql).fetch_one(db.pool()).await?;
@@ -253,6 +276,7 @@ pub async fn count<M: Model>(db: &Db) -> Result<i64> {
         .map_err(|e| Error::Internal(format!("count: {e}")))
 }
 
+// public:
 pub async fn find<M: Model>(db: &Db, id: i64) -> Result<Option<M>> {
     let sql = format!(
         "SELECT {} FROM {} WHERE id = $1",
@@ -266,6 +290,7 @@ pub async fn find<M: Model>(db: &Db, id: i64) -> Result<Option<M>> {
     }
 }
 
+// public:
 pub async fn create<M: Model>(db: &Db, model: &M) -> Result<i64> {
     let cols = M::INSERT_COLUMNS.join(", ");
     let placeholders: Vec<String> = (1..=M::INSERT_COLUMNS.len())
@@ -288,6 +313,7 @@ pub async fn create<M: Model>(db: &Db, model: &M) -> Result<i64> {
     Ok(id)
 }
 
+// public:
 pub async fn update<M: Model>(db: &Db, id: i64, model: &M) -> Result<()> {
     let sets: Vec<String> = M::INSERT_COLUMNS
         .iter()
@@ -309,6 +335,7 @@ pub async fn update<M: Model>(db: &Db, id: i64, model: &M) -> Result<()> {
     Ok(())
 }
 
+// public:
 pub async fn delete<M: Model>(db: &Db, id: i64) -> Result<()> {
     let sql = format!("DELETE FROM {} WHERE id = $1", M::TABLE);
     sqlx::query(&sql).bind(id).execute(db.pool()).await?;

@@ -37,6 +37,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 
+// public:
 /// One outbound message. Plaintext body is required; HTML is
 /// optional. Extra headers are project-controlled.
 #[derive(Debug, Clone)]
@@ -49,6 +50,7 @@ pub struct Mail {
 }
 
 impl Mail {
+    // public:
     /// Build a message with the framework's canonical security
     /// envelope appended to the plaintext body. Used by recovery
     /// flows so every framework-emitted email carries the same
@@ -90,6 +92,7 @@ impl Mail {
     }
 }
 
+// public:
 /// Errors a [`Mailer`] can return. The most important variant is
 /// [`MailerError::ConfigurationMissing`] — the framework treats it
 /// as a hard boot failure when production deployments forget to wire
@@ -126,6 +129,7 @@ impl fmt::Display for MailerError {
 
 impl std::error::Error for MailerError {}
 
+// public:
 /// Async outbound-mail interface. Project implementations live in
 /// the project crate so the framework never imports `lettre` /
 /// `aws-sdk-ses` / etc.
@@ -143,6 +147,7 @@ pub trait Mailer: Send + Sync {
     >;
 }
 
+// public:
 /// Default mailer. Writes the message to `log::info!` instead of
 /// sending it. Safe for dev / CI / testing where outbound SMTP is
 /// forbidden or undesirable; not suitable for production — recovery
@@ -156,6 +161,7 @@ pub trait Mailer: Send + Sync {
 pub struct LogMailer;
 
 impl LogMailer {
+    // public:
     pub fn new() -> Self {
         Self
     }
@@ -208,6 +214,7 @@ fn is_token_url_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '/' | ':' | '.' | '?' | '&' | '=' | '#')
 }
 
+// public:
 /// Type-erased shared mailer reference. The framework's `Admin`
 /// holds one of these; defaults to `Arc::new(LogMailer)` until a
 /// project overrides via `Admin::mailer(Arc::new(...))`.

@@ -17,12 +17,14 @@ use crate::error::Result;
 use crate::http::{Request, Response};
 use crate::router::Router;
 
+// public:
 pub struct Server {
     router: Arc<Router>,
     addr: SocketAddr,
 }
 
 impl Server {
+    // public:
     pub fn new(router: Router, addr: SocketAddr) -> Self {
         Self {
             router: Arc::new(router),
@@ -30,6 +32,7 @@ impl Server {
         }
     }
 
+    // public:
     /// Run until Ctrl-C / SIGTERM. Active connections get a brief grace
     /// period to drain before the runtime drops them.
     pub async fn run(self) -> Result<()> {
@@ -148,6 +151,7 @@ async fn shutdown_signal() {
     }
 }
 
+// public:
 /// Serve a static file from disk. Strips path separators and rejects
 /// `..` traversal.
 pub async fn serve_static(root: std::path::PathBuf, name: &str) -> Result<Response> {
