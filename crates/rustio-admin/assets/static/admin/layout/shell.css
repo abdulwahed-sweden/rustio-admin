@@ -1,0 +1,45 @@
+/* ============================================================
+ * rustio-admin / layout / shell
+ *
+ * Page-level flex shell: banner → topbar → (sidebar + main) →
+ * footer. Layout uses flex (not grid) so an absent sidebar (login,
+ * forbidden, error, public chrome) doesn't leave a 240px ghost
+ * column squeezing the main content.
+ *
+ * Mobile-first off-canvas overrides live in layout/responsive.css.
+ * ============================================================ */
+
+.rio-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rio-banner {
+  padding: var(--rio-s2) var(--rio-s4);
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--rio-fs-sm);
+}
+.rio-banner--demo {
+  background: var(--rio-warning-bg);
+  color: var(--rio-warning);
+  border-bottom: 1px solid var(--rio-border);
+}
+
+/* Layout uses flex, not grid, so an absent sidebar (login page,
+ * forbidden, error, public chrome) doesn't leave a 240px ghost
+ * column squeezing the main content. With sidebar: row of two
+ * children, sidebar is fixed-width. Without: main takes 100%. */
+.rio-layout {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.rio-main {
+  flex: 1 1 auto;
+  padding: var(--rio-s6) var(--rio-s5);
+  min-width: 0;
+}

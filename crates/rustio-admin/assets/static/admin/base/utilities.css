@@ -1,0 +1,37 @@
+/* ============================================================
+ * rustio-admin / base / utilities
+ *
+ * Tiny single-purpose helpers — typographic scale forcers,
+ * tabular-numeric data, the prose container, and the .rio-icon
+ * inline-SVG glyph baseline. These are the framework's only
+ * "atom" classes; everything else is a component.
+ * ============================================================ */
+
+/* Tabular numerals on data — IDs, counts, timestamps. */
+.rio-num, [data-tabular] { font-variant-numeric: tabular-nums; }
+
+/* Strong, content-grade prose container (settings/help pages). */
+.rio-prose {
+  font-size: var(--rio-fs-lg);            /* 17px */
+  line-height: var(--rio-lh-body);        /* 1.6 */
+  max-width: 68ch;
+}
+.rio-prose p { margin: 0 0 var(--rio-s4); }
+.rio-prose:lang(ar) p { line-height: var(--rio-lh-arabic); }
+
+/* Force a specific size on muted / hint text — never below 13px. */
+.rio-text-xs { font-size: var(--rio-fs-xs); }
+.rio-text-sm { font-size: var(--rio-fs-sm); }
+.rio-text-md { font-size: var(--rio-fs-md); }
+
+/* Force-dense line-height for chip / badge / tag-like surfaces. */
+.rio-tight { line-height: var(--rio-lh-ui); }
+
+/* Inline-SVG glyph — sits on the text baseline. Used in buttons,
+ * sidebar links, dropdowns, search inputs. */
+.rio-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  width: 1em;
+  height: 1em;
+}

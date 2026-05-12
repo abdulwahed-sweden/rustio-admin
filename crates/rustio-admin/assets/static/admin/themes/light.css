@@ -1,0 +1,42 @@
+/* ============================================================
+ * rustio-admin / themes / light
+ *
+ * Explicit light override. When the user explicitly picks light
+ * while the OS is in dark mode, we need to fully restore the light
+ * scale — including semantic surfaces and shadows — so the cascade
+ * doesn't leak dark values through. Mirrors :root, minus the
+ * typography/spacing tokens which never differ between modes.
+ *
+ * Must be imported AFTER themes/dark.css so the explicit override
+ * wins on source order.
+ * ============================================================ */
+
+html[data-rio-theme="light"] {
+  --rio-bg: #EEF1F6;
+  --rio-surface: #FFFFFF;
+  --rio-surface-2: #F7F9FC;
+  --rio-surface-3: #EFF2F7;
+
+  --rio-text-strong: #111827;
+  --rio-text: #1F2937;
+  --rio-text-muted: #4B5563;
+  --rio-text-subtle: #6B7280;
+
+  --rio-border-soft: #ECEFF4;
+  --rio-border: #DEE3EC;
+  --rio-border-strong: #C5CCD9;
+
+  --rio-success: #15803D;
+  --rio-warning: #B45309;
+  --rio-danger:  #B91C1C;
+  --rio-success-bg: #ECFDF5;
+  --rio-warning-bg: #FFFBEB;
+  --rio-danger-bg:  #FEF2F2;
+  --rio-info-bg:    #FDF3EF;
+
+  --rio-shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --rio-shadow:    0 1px 3px rgba(17, 24, 39, 0.05),
+                   0 1px 2px rgba(17, 24, 39, 0.03);
+  --rio-shadow-lg: 0 16px 40px rgba(17, 24, 39, 0.10),
+                   0 2px 8px  rgba(17, 24, 39, 0.05);
+}

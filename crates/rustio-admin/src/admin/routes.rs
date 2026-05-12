@@ -30,11 +30,98 @@ use crate::orm::Db;
 use crate::router::Router;
 use crate::templates::Templates;
 
-/// Embedded stylesheet baked into the binary. P8 ships a single
-/// hand-written CSS file; project overrides happen via
-/// `Admin::theme(...)` (CSS custom properties) rather than an asset
-/// override, so we don't expose a disk path here.
-const ADMIN_CSS: &str = include_str!("../../assets/static/admin.css");
+/// Embedded stylesheet baked into the binary.
+///
+/// The admin stylesheet is authored as a multi-file architecture
+/// under `assets/static/admin/` (tokens → themes → base → layout →
+/// components → pages → responsive → print), modelled on GitHub
+/// Primer / IBM Carbon. The browser still receives one concatenated
+/// bundle so we keep our "self-hosted, single round-trip, no FOUT"
+/// doctrine.
+///
+/// Order below MUST mirror the `@import` manifest in
+/// `assets/static/admin/admin.css` exactly — the two lists are the
+/// source of cascade order, and they must stay in lock-step or the
+/// served bundle will silently drift from what contributors author.
+///
+/// Project overrides happen via `Admin::theme(...)` (CSS custom
+/// properties) rather than an asset override, so we don't expose a
+/// disk path here.
+const ADMIN_CSS: &str = concat!(
+    // ---- tokens -----------------------------------------------
+    include_str!("../../assets/static/admin/tokens/colors.css"),
+    "\n",
+    include_str!("../../assets/static/admin/tokens/spacing.css"),
+    "\n",
+    include_str!("../../assets/static/admin/tokens/radius.css"),
+    "\n",
+    include_str!("../../assets/static/admin/tokens/shadows.css"),
+    "\n",
+    include_str!("../../assets/static/admin/tokens/typography.css"),
+    "\n",
+    // ---- themes -----------------------------------------------
+    include_str!("../../assets/static/admin/themes/dark.css"),
+    "\n",
+    include_str!("../../assets/static/admin/themes/light.css"),
+    "\n",
+    // ---- base -------------------------------------------------
+    include_str!("../../assets/static/admin/base/reset.css"),
+    "\n",
+    include_str!("../../assets/static/admin/base/base.css"),
+    "\n",
+    include_str!("../../assets/static/admin/base/typography.css"),
+    "\n",
+    include_str!("../../assets/static/admin/base/utilities.css"),
+    "\n",
+    // ---- layout -----------------------------------------------
+    include_str!("../../assets/static/admin/layout/shell.css"),
+    "\n",
+    include_str!("../../assets/static/admin/layout/topbar.css"),
+    "\n",
+    include_str!("../../assets/static/admin/layout/sidebar.css"),
+    "\n",
+    include_str!("../../assets/static/admin/layout/footer.css"),
+    "\n",
+    // ---- components -------------------------------------------
+    include_str!("../../assets/static/admin/components/cards.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/buttons.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/forms.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/tables.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/filters.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/dropdowns.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/pagination.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/pills.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/flashes.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/timeline.css"),
+    "\n",
+    include_str!("../../assets/static/admin/components/tabs.css"),
+    "\n",
+    // ---- pages ------------------------------------------------
+    include_str!("../../assets/static/admin/pages/auth.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/dashboard.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/permissions.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/sessions.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/errors.css"),
+    "\n",
+    // ---- responsive — mobile-first overrides, last so they win.
+    include_str!("../../assets/static/admin/layout/responsive.css"),
+    "\n",
+    // ---- print ------------------------------------------------
+    include_str!("../../assets/static/admin/print/print.css"),
+);
 
 /// Embedded admin JS (theme toggle + sidebar drawer). ≤200 LOC, no
 /// build step.

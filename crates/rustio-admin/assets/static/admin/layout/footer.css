@@ -1,0 +1,14 @@
+/* ============================================================
+ * rustio-admin / layout / footer
+ *
+ * Quiet bottom strip — copyright, version, build info. Lives below
+ * the layout flex; never sticky.
+ * ============================================================ */
+
+.rio-footer {
+  padding: var(--rio-s4) var(--rio-s5);
+  text-align: center;
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text-subtle);
+  border-top: 1px solid var(--rio-border);
+}

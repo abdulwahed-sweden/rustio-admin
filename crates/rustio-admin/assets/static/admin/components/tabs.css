@@ -1,0 +1,29 @@
+/* ============================================================
+ * rustio-admin / components / tabs
+ *
+ * Horizontal tab strip — bottom-border indicator for the active
+ * tab; no background fill so the strip integrates with surrounding
+ * page chrome.
+ * ============================================================ */
+
+.rio-tabs {
+  display: flex;
+  gap: var(--rio-s1);
+  border-bottom: 1px solid var(--rio-border);
+  margin-bottom: var(--rio-s4);
+  flex-wrap: wrap;
+}
+.rio-tab {
+  padding: 0.55rem var(--rio-s4);
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-semibold);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.rio-tab:hover { color: var(--rio-text-strong); text-decoration: none; }
+.rio-tab--active {
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
+  font-weight: var(--rio-fw-bold);
+}

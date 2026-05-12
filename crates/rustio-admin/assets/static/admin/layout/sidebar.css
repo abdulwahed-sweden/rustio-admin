@@ -1,0 +1,63 @@
+/* ============================================================
+ * rustio-admin / layout / sidebar
+ *
+ * Left navigation rail — section headings, link rows, active-rail
+ * accent. Pinned in the flex row at tablet+; collapses to an
+ * off-canvas drawer below 768px (see layout/responsive.css).
+ * ============================================================ */
+
+.rio-sidebar {
+  flex: 0 0 var(--rio-sidebar-w);
+  background: var(--rio-surface);
+  border-right: 1px solid var(--rio-border);
+  padding: var(--rio-s5) var(--rio-s3);
+}
+.rio-sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rio-sidebar-section {
+  font-size: var(--rio-fs-xs);                 /* 13px */
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rio-text-subtle);
+  margin: var(--rio-s5) 0 var(--rio-s2);
+  padding: 0 var(--rio-s3);
+}
+.rio-sidebar-section:first-child { margin-top: 0; }
+.rio-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem var(--rio-s3);
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text);
+  font-size: var(--rio-fs-md);                 /* 15px */
+  font-weight: var(--rio-fw-semibold);
+  line-height: var(--rio-lh-ui);
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+}
+.rio-sidebar-link:hover {
+  background: var(--rio-surface-3);
+  color: var(--rio-text-strong);
+  text-decoration: none;
+}
+.rio-sidebar-link.is-active {
+  background: rgb(var(--rio-accent-rgb) / 0.10);
+  color: var(--rio-accent);
+  box-shadow: inset 3px 0 0 var(--rio-accent);
+}
+.rio-sidebar-link .rio-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--rio-text-subtle);
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+.rio-sidebar-link:hover .rio-icon { color: var(--rio-text-strong); }
+.rio-sidebar-link.is-active .rio-icon { color: var(--rio-accent); }

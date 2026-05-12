@@ -1,0 +1,13 @@
+/* ============================================================
+ * rustio-admin / print / print
+ *
+ * Strip page chrome (topbar, sidebar, footer, action rows, anchors
+ * in the page-action bar) for paper output. Cards lose their box
+ * shadow and pick up a neutral grey border so they print cleanly.
+ * ============================================================ */
+
+@media print {
+  .rio-topbar, .rio-sidebar, .rio-footer, .rio-form-actions, .rio-page-actions a { display: none !important; }
+  .rio-card { box-shadow: none; border-color: #ccc; }
+  body { background: #fff; }
+}

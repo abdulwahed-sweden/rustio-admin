@@ -1,0 +1,92 @@
+/* rustio-admin — hand-written stylesheet, split for contributors.
+ *
+ * Six-variable theme; project overrides via Admin::theme(...) and
+ * its `_theme.html` partial that injects `:root { --rio-* … }`.
+ * Mobile-first, three breakpoints. Dark palette flips via the
+ * combination of `prefers-color-scheme: dark` and an explicit
+ * `data-rio-theme="dark"` attribute on `<html>`.
+ *
+ * Source layout follows the Primer / Carbon convention:
+ *
+ *   tokens  → themes → base → layout → components →
+ *   pages   → responsive → print
+ *
+ * Each fragment is a stand-alone CSS file with its own section
+ * header; admin.css is the manifest that wires them in cascade
+ * order. See DESIGN_DOCTRINE.md for the visual identity behind the
+ * tokens — what every colour, weight, and surface lift means and
+ * when to use them.
+ *
+ * --- Delivery ---------------------------------------------------
+ *
+ * The framework binary concatenates every fragment at compile time
+ * (see `ADMIN_CSS` in `src/admin/routes.rs`) and serves one bundle
+ * at `/static/admin.css`. The `@import` statements below are the
+ * contributor-facing source of truth for cascade order. **If you
+ * add a fragment, update BOTH this manifest AND the `concat!`
+ * list in routes.rs** — they must stay in lock-step or the served
+ * bundle will silently drift.
+ *
+ * --- Self-hosted fonts (SIL OFL-1.1) ----------------------------
+ *
+ *   Latin / UI    — Geist Variable (wght 100..900)
+ *   Code          — Geist Mono Variable (wght 100..900)
+ *   Arabic UI     — Tajawal 400 / 500 / 700
+ *                   (compact surfaces: buttons, sidebar, tables, badges)
+ *   Arabic body   — Noto Naskh Arabic Variable (wght 400..700)
+ *                   (paragraphs, descriptions, long-form copy)
+ *
+ * The font binaries are baked into the rustio-admin binary; no CDN
+ * round-trip, no FOUT, no GDPR/tracking surface. @font-face
+ * declarations live in base/typography.css.
+ */
+
+/* ---- Design tokens — single source of truth for the visual scale. */
+@import url("tokens/colors.css");
+@import url("tokens/spacing.css");
+@import url("tokens/radius.css");
+@import url("tokens/shadows.css");
+@import url("tokens/typography.css");
+
+/* ---- Themes — dark first, explicit-light last so it wins source order. */
+@import url("themes/dark.css");
+@import url("themes/light.css");
+
+/* ---- Base — reset, body, typography, utilities. */
+@import url("base/reset.css");
+@import url("base/base.css");
+@import url("base/typography.css");
+@import url("base/utilities.css");
+
+/* ---- Layout shell — topbar / sidebar / main / footer. */
+@import url("layout/shell.css");
+@import url("layout/topbar.css");
+@import url("layout/sidebar.css");
+@import url("layout/footer.css");
+
+/* ---- Components — concrete UI primitives. */
+@import url("components/cards.css");
+@import url("components/buttons.css");
+@import url("components/forms.css");
+@import url("components/tables.css");
+@import url("components/filters.css");
+@import url("components/dropdowns.css");
+@import url("components/pagination.css");
+@import url("components/pills.css");
+@import url("components/flashes.css");
+@import url("components/timeline.css");
+@import url("components/tabs.css");
+
+/* ---- Pages — anything specific to one screen. */
+@import url("pages/auth.css");
+@import url("pages/dashboard.css");
+@import url("pages/permissions.css");
+@import url("pages/sessions.css");
+@import url("pages/errors.css");
+
+/* ---- Responsive — mobile-first overrides; MUST come after layout
+ *      and components so its rules win the cascade on small screens. */
+@import url("layout/responsive.css");
+
+/* ---- Print — drop chrome, keep ink. */
+@import url("print/print.css");

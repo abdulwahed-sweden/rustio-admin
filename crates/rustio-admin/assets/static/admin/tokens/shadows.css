@@ -1,0 +1,18 @@
+/* ============================================================
+ * rustio-admin / tokens / shadows
+ *
+ *   === Tokens — shadows ===
+ *
+ * Shadows are deliberately quiet. Premium tooling prefers borders +
+ * surface contrast over drop shadow. We only use shadow for a hint
+ * of weight on cards, and a real lift on transient overlays.
+ * Dark-mode equivalents live in themes/dark.css.
+ * ============================================================ */
+
+:root {
+  --rio-shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --rio-shadow:    0 1px 3px rgba(17, 24, 39, 0.05),
+                   0 1px 2px rgba(17, 24, 39, 0.03);
+  --rio-shadow-lg: 0 16px 40px rgba(17, 24, 39, 0.10),
+                   0 2px 8px  rgba(17, 24, 39, 0.05);
+}

@@ -1,0 +1,107 @@
+/* ============================================================
+ * rustio-admin / pages / permissions
+ *
+ * Group permissions matrix — the Group edit page lays permissions
+ * out as a model × action grid instead of a flat alphabetical list.
+ * Wide enough for a 5-column layout (label + 4 actions + row-toggle)
+ * at the typical admin surface width; collapses to a horizontally
+ * scrollable container on narrow viewports.
+ * ============================================================ */
+
+.rio-perm-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--rio-fs-sm);
+  margin-top: var(--rio-s2);
+  margin-bottom: var(--rio-s3);
+}
+.rio-perm-matrix thead th {
+  text-align: center;
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rio-text-muted);
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--rio-border);
+  background: var(--rio-surface-2);
+}
+.rio-perm-matrix th.rio-perm-matrix__model {
+  text-align: left;
+}
+.rio-perm-matrix tbody th {
+  text-align: left;
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-strong);
+  padding: 10px 12px;
+  background: var(--rio-surface);
+}
+.rio-perm-matrix tbody td {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--rio-border-soft);
+}
+.rio-perm-matrix tbody tr:hover td,
+.rio-perm-matrix tbody tr:hover th {
+  background: var(--rio-surface-2);
+}
+.rio-perm-matrix tbody tr:last-child td,
+.rio-perm-matrix tbody tr:last-child th {
+  border-bottom: none;
+}
+.rio-perm-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+}
+.rio-perm-cell input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.rio-perm-cell__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.rio-perm-na {
+  color: var(--rio-text-subtle);
+  font-family: var(--rio-font-mono);
+}
+.rio-perm-row-all {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--rio-border);
+  background: var(--rio-surface);
+  color: var(--rio-text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.rio-perm-row-all:hover {
+  background: var(--rio-accent);
+  color: #fff;
+  border-color: var(--rio-accent);
+}
+.rio-perm-extras {
+  margin-top: var(--rio-s3);
+  padding: var(--rio-s2) 0 0;
+  border-top: 1px dashed var(--rio-border);
+}
+.rio-perm-extras summary {
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-muted);
+  cursor: pointer;
+  padding: 4px 0;
+}

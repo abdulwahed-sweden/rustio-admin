@@ -1,0 +1,22 @@
+/* ============================================================
+ * rustio-admin / tokens / spacing
+ *
+ *   === Tokens — spacing ===
+ *
+ * Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. Plus two
+ * shell-layout reservations (--rio-sidebar-w / --rio-topbar-h)
+ * that some component rules need to compute against.
+ * ============================================================ */
+
+:root {
+  --rio-s1: 0.25rem;
+  --rio-s2: 0.5rem;
+  --rio-s3: 0.75rem;
+  --rio-s4: 1rem;
+  --rio-s5: 1.5rem;
+  --rio-s6: 2rem;
+  --rio-s7: 3rem;
+
+  --rio-sidebar-w: 240px;
+  --rio-topbar-h: 64px;
+}

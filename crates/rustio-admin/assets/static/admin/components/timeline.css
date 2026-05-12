@@ -1,0 +1,28 @@
+/* ============================================================
+ * rustio-admin / components / timeline
+ *
+ * Vertical log surface for audit history — each entry is a
+ * left-rail-coloured row keyed to its semantic kind (success /
+ * info / warning / error / muted).
+ * ============================================================ */
+
+.rio-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+}
+.rio-timeline-item {
+  padding: var(--rio-s3) var(--rio-s4);
+  border-left: 3px solid var(--rio-border);
+  background: var(--rio-surface-2);
+  border-radius: 0 var(--rio-radius-sm) var(--rio-radius-sm) 0;
+  font-size: var(--rio-fs-md);
+}
+.rio-timeline-item--success { border-left-color: var(--rio-success); }
+.rio-timeline-item--info    { border-left-color: var(--rio-accent); }
+.rio-timeline-item--warning { border-left-color: var(--rio-warning); }
+.rio-timeline-item--error   { border-left-color: var(--rio-danger); }
+.rio-timeline-item--muted   { border-left-color: var(--rio-border); }

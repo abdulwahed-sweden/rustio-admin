@@ -1,0 +1,27 @@
+/* ============================================================
+ * rustio-admin / base / base
+ *
+ * Body baseline — font family, size, line-height, color, bg.
+ * Sets the global typographic defaults that every other rule
+ * inherits or overrides. Heading + paragraph + code rules live
+ * in base/typography.css.
+ * ============================================================ */
+
+body {
+  font-family: var(--rio-font-sans);
+  font-size: var(--rio-font-size-base);   /* 16px */
+  line-height: var(--rio-lh-body);        /* 1.6 */
+  font-weight: var(--rio-fw-regular);
+  color: var(--rio-text);
+  background: var(--rio-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Safe global features — kerning + contextual alternates apply
+   * cleanly to every script. Stylistic alternates (Geist's ss01/ss03/
+   * cv11) are opted-in via .rio-latin so they never interfere with
+   * Tajawal / Noto Naskh / CJK shaping. */
+  font-feature-settings: "kern", "calt";
+  font-variant-ligatures: common-ligatures;
+  letter-spacing: var(--rio-tracking-body);
+}
