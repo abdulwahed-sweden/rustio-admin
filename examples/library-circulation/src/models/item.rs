@@ -5,6 +5,7 @@ use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};
 #[derive(Debug, Clone, RustioAdmin)]
 pub struct Item {
     pub id: i64,
+    #[rustio(belongs_to = "Branch", display = "name")]
     pub branch_id: i64,
     pub title: String,
     pub kind: String,
