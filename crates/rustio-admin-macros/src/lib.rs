@@ -15,6 +15,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DeriveInput, Fields, Lit, Meta};
 
+// public:
 #[proc_macro_derive(RustioAdmin, attributes(rustio))]
 pub fn derive_rustio_admin(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
