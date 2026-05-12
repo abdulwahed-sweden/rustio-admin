@@ -1,0 +1,12 @@
+[package]
+name = "library-circulation"
+version = "0.0.0"
+edition.workspace = true
+publish = false
+
+[[bin]]
+name = "library-circulation"
+path = "src/main.rs"
+
+[dependencies]
+rustio-admin.workspace = true

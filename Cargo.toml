@@ -5,6 +5,7 @@ members = [
     "crates/rustio-admin-macros",
     "crates/rustio-admin-cli",
     "examples/minimal",
+    "examples/library-circulation",
 ]
 
 [workspace.package]
