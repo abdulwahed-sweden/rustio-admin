@@ -147,6 +147,15 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 // we surface UTC values directly.
                 out.push((#fname_str.to_string(), self.#fname.format("%Y-%m-%dT%H:%M").to_string()));
             },
+            FieldKind::OptionalDateTime => quote! {
+                // Symmetric to `OptionalString` / `OptionalI64`: None →
+                // empty string, Some(v) → same ISO-8601 form as the
+                // non-optional `DateTime` arm.
+                out.push((#fname_str.to_string(), match &self.#fname {
+                    Some(v) => v.format("%Y-%m-%dT%H:%M").to_string(),
+                    None => String::new(),
+                }));
+            },
         };
         display_value_arms.push(display_arm);
 
@@ -253,6 +262,27 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 });
                 from_form_fields.push(quote! { #fname });
             }
+            FieldKind::OptionalDateTime => {
+                // Symmetric to `OptionalI64`: blank → None (legitimate),
+                // garbage → validation error + None (NOT silently
+                // defaulted to `Utc::now()` like the non-optional arm).
+                from_form_parses.push(quote! {
+                    let #fname: ::std::option::Option<::chrono::DateTime<::chrono::Utc>> =
+                        match form.get(#fname_str).map(str::trim) {
+                            None | Some("") => ::std::option::Option::None,
+                            Some(raw) => match ::chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M") {
+                                Ok(dt) => ::std::option::Option::Some(
+                                    ::chrono::DateTime::<::chrono::Utc>::from_naive_utc_and_offset(dt, ::chrono::Utc),
+                                ),
+                                Err(_) => {
+                                    errors.push(#date_invalid_msg.to_string());
+                                    ::std::option::Option::None
+                                }
+                            },
+                        };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
         }
 
         update_tuples.push(quote! {
@@ -340,6 +370,7 @@ enum FieldKind {
     DateTimeAuto,
     OptionalString,
     OptionalI64,
+    OptionalDateTime,
 }
 
 impl FieldKind {
@@ -352,6 +383,7 @@ impl FieldKind {
             FieldKind::DateTime | FieldKind::DateTimeAuto => format_ident!("DateTime"),
             FieldKind::OptionalString => format_ident!("OptionalString"),
             FieldKind::OptionalI64 => format_ident!("OptionalI64"),
+            FieldKind::OptionalDateTime => format_ident!("OptionalDateTime"),
         }
     }
 }
@@ -396,6 +428,9 @@ fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
         "DateTime<Utc>" | "chrono::DateTime<chrono::Utc>" => FieldKind::DateTime,
         "Option<String>" => FieldKind::OptionalString,
         "Option<i64>" => FieldKind::OptionalI64,
+        "Option<DateTime<Utc>>" | "Option<chrono::DateTime<chrono::Utc>>" => {
+            FieldKind::OptionalDateTime
+        }
         other => {
             return Err(syn::Error::new_spanned(
                 ty,
