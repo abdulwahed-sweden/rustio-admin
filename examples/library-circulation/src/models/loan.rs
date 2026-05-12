@@ -5,7 +5,9 @@ use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};
 #[derive(Debug, Clone, RustioAdmin)]
 pub struct Loan {
     pub id: i64,
+    #[rustio(belongs_to = "Patron", display = "full_name")]
     pub patron_id: i64,
+    #[rustio(belongs_to = "Item", display = "title")]
     pub item_id: i64,
     pub status: String,
     pub borrowed_at: DateTime<Utc>,
