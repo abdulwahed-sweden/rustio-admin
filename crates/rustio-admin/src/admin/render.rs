@@ -1422,9 +1422,7 @@ pub(crate) fn form_ctx(
             // non-nullable field does.
             let required =
                 !f.field_type.nullable() && !matches!(f.field_type, super::types::FieldType::Bool);
-            let (mut options, multiple, mut searchable, mut has_more) = if let Some(values) =
-                f.choices
-            {
+            let (options, multiple, searchable, has_more) = if let Some(values) = f.choices {
                 let mut opts: Vec<SelectOption> = Vec::with_capacity(values.len() + 1);
                 if f.field_type.nullable() {
                     opts.push(SelectOption {
@@ -1443,26 +1441,6 @@ pub(crate) fn form_ctx(
             } else {
                 (None, false, false, false)
             };
-
-            // Synthesise a status select when no enum is declared.
-            // UI-only — the underlying field stays a String. Triggers
-            // when field.name == "status" and no choices/relation.
-            let mut widget = widget;
-            if f.name == "status" && options.is_none() {
-                options = Some(vec![
-                    SelectOption {
-                        value: "draft".to_string(),
-                        label: "draft".to_string(),
-                    },
-                    SelectOption {
-                        value: "published".to_string(),
-                        label: "published".to_string(),
-                    },
-                ]);
-                searchable = false;
-                has_more = false;
-                widget = "select";
-            }
             let span: u8 = if widget == "textarea" { 2 } else { 1 };
             let search_url = f
                 .relation
