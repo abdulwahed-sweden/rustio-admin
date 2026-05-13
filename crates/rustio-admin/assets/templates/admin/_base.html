@@ -32,7 +32,31 @@
     {% block content %}{% endblock %}
   </main>
 </div>
-<footer class="rio-footer">{{ footer_copyright }}</footer>
+<footer class="rio-footer" role="contentinfo" aria-label="Administration footer">
+  <div class="rio-footer__col rio-footer__col--id">
+    <span class="rio-footer__brand">RustIO Admin</span>
+    <span class="rio-footer__sep" aria-hidden="true">·</span>
+    <span class="rio-footer__version">v{{ framework_version }}</span>
+    <span class="rio-footer__sep" aria-hidden="true">·</span>
+    <span class="rio-footer__env rio-footer__env--{{ environment_kind }}" title="Runtime environment ({{ environment_label }})">{{ environment_label }}</span>
+  </div>
+  <nav class="rio-footer__col rio-footer__col--nav" aria-label="Footer navigation">
+    <a class="rio-footer__link" href="https://docs.rs/rustio-admin/{{ framework_version }}" target="_blank" rel="noopener noreferrer">Documentation</a>
+    {% if identity %}
+    <span class="rio-footer__sep" aria-hidden="true">·</span>
+    <a class="rio-footer__link" href="/admin/history">Audit log</a>
+    <span class="rio-footer__sep" aria-hidden="true">·</span>
+    <a class="rio-footer__link" href="/admin/account/sessions">Sessions</a>
+    {% endif %}
+  </nav>
+  <div class="rio-footer__col rio-footer__col--context">
+    {% if identity %}
+    <span class="rio-footer__user" title="Signed in as">{{ identity.email }}</span>
+    <span class="rio-footer__sep" aria-hidden="true">·</span>
+    {% endif %}
+    <time class="rio-footer__time" datetime="{{ server_now }}" title="Server render time (UTC)">{{ server_now }}</time>
+  </div>
+</footer>
 <script src="/static/admin.js" defer></script>
 </body>
 </html>

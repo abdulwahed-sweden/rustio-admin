@@ -56,6 +56,23 @@ pub(crate) struct BaseContext {
     pub site_header: String,
     pub index_title: String,
     pub footer_copyright: String,
+    /// Framework SemVer (`env!("CARGO_PKG_VERSION")`). Surfaced in
+    /// the footer's identity column and used to deep-link the
+    /// "Documentation" entry at the matching `docs.rs/rustio-admin/X.Y.Z`.
+    pub framework_version: &'static str,
+    /// Free-text label rendered in the footer's environment badge —
+    /// `RUSTIO_ENV` if set, otherwise "Development" for debug builds
+    /// and "Production" for release builds. Cached in a process-wide
+    /// `OnceLock`; one env read per process, not per request.
+    pub environment_label: &'static str,
+    /// Stable kind discriminator for CSS targeting (`prod` lights the
+    /// success dot, `dev` lights the amber dot, anything else stays
+    /// neutral). Derived from `environment_label`.
+    pub environment_kind: &'static str,
+    /// UTC timestamp formatted at render time. Renders in the
+    /// footer's context column so operators can read at-a-glance
+    /// when a given page was generated.
+    pub server_now: String,
     /// `true` when the active session belongs to a demo user (`is_demo`
     /// column on `rustio_users`). Templates use this to render the red
     /// banner above the page content.
@@ -96,6 +113,34 @@ pub(crate) fn hex_to_rgb_triplet(hex: &str) -> String {
     format!("{r} {g} {b}")
 }
 
+/// Environment label resolved from `RUSTIO_ENV` (if set) else
+/// derived from build kind. Cached process-wide: one env read at
+/// first request, reused thereafter.
+fn environment_label() -> &'static str {
+    static ENV_LABEL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    ENV_LABEL.get_or_init(|| {
+        std::env::var("RUSTIO_ENV").unwrap_or_else(|_| {
+            if cfg!(debug_assertions) {
+                "Development".into()
+            } else {
+                "Production".into()
+            }
+        })
+    })
+}
+
+/// Stable CSS-class discriminator paired with `environment_label`.
+/// Free-text labels (`Staging`, `Sandbox`, …) collapse to `other`
+/// so the footer's coloured dot only lights for the two operational
+/// extremes.
+fn environment_kind(label: &str) -> &'static str {
+    match label.to_ascii_lowercase().as_str() {
+        "production" | "prod" => "prod",
+        "development" | "dev" => "dev",
+        _ => "other",
+    }
+}
+
 impl BaseContext {
     // internal:
     pub fn new(identity: Option<&Identity>, csrf_token: String, admin: &Admin) -> Self {
@@ -107,6 +152,7 @@ impl BaseContext {
         let theme = admin.active_theme();
         let accent_hex = theme.accent.clone();
         let accent_rgb = accent_hex.as_deref().map(hex_to_rgb_triplet);
+        let env_label = environment_label();
         Self {
             identity: identity.map(IdentityCtx::from),
             csrf_token,
@@ -114,6 +160,10 @@ impl BaseContext {
             site_header: b.site_header.clone(),
             index_title: b.index_title.clone(),
             footer_copyright: b.footer_copyright.clone(),
+            framework_version: env!("CARGO_PKG_VERSION"),
+            environment_label: env_label,
+            environment_kind: environment_kind(env_label),
+            server_now: chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string(),
             is_demo_session,
             demo_label,
             has_theme_overrides: theme.has_overrides(),

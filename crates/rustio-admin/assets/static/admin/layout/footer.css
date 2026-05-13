@@ -1,14 +1,164 @@
 /* ============================================================
  * rustio-admin / layout / footer
  *
- * Quiet bottom strip — copyright, version, build info. Lives below
- * the layout flex; never sticky.
+ * Operational chrome. Three columns of low-noise, useful
+ * information rather than a copyright tagline:
+ *
+ *   left   → framework identity   (brand · version · env badge)
+ *   center → documentation orientation (docs · audit · sessions)
+ *   right  → request context       (user · server render time)
+ *
+ * Visually grafted onto the admin shell: same `--rio-surface` as
+ * the topbar, a single hairline top border separates it from the
+ * content, no gradients, no oversized branding, no marketing
+ * copy. Tabular numerals for the version + timestamp so columns
+ * stay aligned across page transitions.
+ *
+ * Compact spacing + `--rio-fs-xs` typography keeps the bar low
+ * profile on tall lists and avoids stealing attention from the
+ * working surface. Below 720px the columns stack vertically and
+ * the separators stay visible to preserve the information rhythm.
  * ============================================================ */
 
 .rio-footer {
-  padding: var(--rio-s4) var(--rio-s5);
-  text-align: center;
-  font-size: var(--rio-fs-sm);
-  color: var(--rio-text-subtle);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--rio-s4);
+  padding: var(--rio-s3) var(--rio-s5);
   border-top: 1px solid var(--rio-border);
+  background: var(--rio-surface);
+  color: var(--rio-text-subtle);
+  font-size: var(--rio-fs-xs);
+  font-feature-settings: "tnum" 1, "kern" 1;
+  line-height: var(--rio-lh-ui);
+}
+
+.rio-footer__col {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.rio-footer__col--id      { justify-content: flex-start; }
+.rio-footer__col--nav     { justify-content: center;     }
+.rio-footer__col--context { justify-content: flex-end;   }
+
+.rio-footer__brand {
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-secondary, var(--rio-text-muted));
+  letter-spacing: -0.005em;
+}
+
+.rio-footer__version,
+.rio-footer__time {
+  color: var(--rio-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.rio-footer__sep {
+  color: var(--rio-text-subtle);
+  opacity: 0.45;
+  user-select: none;
+}
+
+/* ---- Environment badge --------------------------------------- *
+ * Neutral chrome (border + soft surface tint) so the badge reads
+ * as a metadata chip, not a status pill. A 6px coloured dot is
+ * the single concentrated point of emphasis — calm green for
+ * production, calm amber for development, neutral grey for
+ * anything else (Staging, Sandbox, …). No filled backgrounds,
+ * no saturated text. */
+.rio-footer__env {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0 var(--rio-s2);
+  height: 1.5em;
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface-2, transparent);
+  font-size: 0.85em;
+  font-weight: var(--rio-fw-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rio-text-muted);
+}
+
+.rio-footer__env::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rio-text-subtle);
+  flex-shrink: 0;
+}
+
+/* `cargo run` / debug builds → amber. `cargo run --release` and
+ * containerised production deploys → green. Free-text labels
+ * (`Staging`, `Sandbox`) collapse to the neutral grey default. */
+.rio-footer__env--prod::before { background: #16a34a; }
+.rio-footer__env--dev::before  { background: #d97706; }
+
+/* ---- Navigation links ---------------------------------------- *
+ * Underline-on-hover only — no permanent decoration, keeps the
+ * row from feeling like a links salad. Accent colour replaces
+ * the muted grey on hover so the operator sees clearly where the
+ * cursor will go. */
+.rio-footer__link {
+  color: var(--rio-text-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.rio-footer__link:hover,
+.rio-footer__link:focus-visible {
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
+  outline: none;
+}
+
+/* ---- Current user ------------------------------------------- *
+ * Capped width — long admin emails truncate with an ellipsis
+ * rather than pushing the timestamp off-row. */
+.rio-footer__user {
+  color: var(--rio-text-muted);
+  font-weight: var(--rio-fw-medium);
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.rio-footer__time {
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---- Narrow viewport ----------------------------------------- *
+ * Stack the three columns vertically below 720px. Separators
+ * stay (still readable as inline punctuation when the column
+ * collapses to a row of small chips). */
+@media (max-width: 720px) {
+  .rio-footer {
+    grid-template-columns: 1fr;
+    gap: var(--rio-s2);
+    padding: var(--rio-s3) var(--rio-s4);
+    text-align: center;
+  }
+
+  .rio-footer__col--id,
+  .rio-footer__col--nav,
+  .rio-footer__col--context {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .rio-footer__user {
+    max-width: 22ch;
+  }
 }
