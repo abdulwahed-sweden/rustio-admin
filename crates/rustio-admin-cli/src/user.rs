@@ -64,6 +64,21 @@ pub enum Action {
         /// interactive confirm-twice prompt.
         #[arg(long)]
         password: Option<String>,
+        /// Optional given name. Surfaces in recovery-email greetings
+        /// when display_name is unset.
+        #[arg(long)]
+        first_name: Option<String>,
+        /// Optional family name. Pairs with first_name in the
+        /// recovery-email signature block.
+        #[arg(long)]
+        last_name: Option<String>,
+        /// Preferred display name. Takes precedence over first_name
+        /// in greetings. Falls back to first_name → email-local-part.
+        #[arg(long)]
+        display_name: Option<String>,
+        /// Job title — second line of the email signature block.
+        #[arg(long)]
+        job_title: Option<String>,
     },
     /// List every user with id / email / role / active flag.
     List,
@@ -201,7 +216,23 @@ pub async fn run(action: Action) -> Result<(), String> {
             email,
             role,
             password,
-        } => create(db, email, role.into(), password).await,
+            first_name,
+            last_name,
+            display_name,
+            job_title,
+        } => {
+            create(
+                db,
+                email,
+                role.into(),
+                password,
+                first_name,
+                last_name,
+                display_name,
+                job_title,
+            )
+            .await
+        }
         Action::List => list(db).await,
         Action::Role { email, role } => set_role(db, email, role.into()).await,
         Action::Delete { email } => delete(db, email).await,
@@ -228,7 +259,17 @@ pub async fn run(action: Action) -> Result<(), String> {
     }
 }
 
-async fn create(db: Db, email: String, role: Role, password: Option<String>) -> Result<(), String> {
+#[allow(clippy::too_many_arguments)]
+async fn create(
+    db: Db,
+    email: String,
+    role: Role,
+    password: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    display_name: Option<String>,
+    job_title: Option<String>,
+) -> Result<(), String> {
     auth::init_tables(&db)
         .await
         .map_err(|e| format!("init auth tables: {e}"))?;
@@ -258,6 +299,33 @@ async fn create(db: Db, email: String, role: Role, password: Option<String>) -> 
     let id = auth::create_user(&db, &email, &pw, role)
         .await
         .map_err(|e| format!("create_user: {e}"))?;
+
+    // Profile identity columns — populated post-create so the
+    // existing `create_user` signature doesn't grow. All four are
+    // optional; UPDATE sets only the columns the operator supplied.
+    if first_name.is_some()
+        || last_name.is_some()
+        || display_name.is_some()
+        || job_title.is_some()
+    {
+        sqlx::query(
+            "UPDATE rustio_users SET \
+                first_name   = COALESCE($1, first_name), \
+                last_name    = COALESCE($2, last_name), \
+                display_name = COALESCE($3, display_name), \
+                job_title    = COALESCE($4, job_title) \
+              WHERE id = $5",
+        )
+        .bind(first_name.as_deref())
+        .bind(last_name.as_deref())
+        .bind(display_name.as_deref())
+        .bind(job_title.as_deref())
+        .bind(id)
+        .execute(db.pool())
+        .await
+        .map_err(|e| format!("profile fields: {e}"))?;
+    }
+
     println!("Created user id={id} email={email} role={role}");
     Ok(())
 }

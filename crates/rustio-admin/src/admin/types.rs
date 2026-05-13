@@ -323,10 +323,66 @@ pub struct EditRow {
 }
 
 // public:
-/// Per-project admin branding. Defaults are RustIO-flavoured;
-/// projects override via [`Admin::site_branding`].
+/// Per-project admin branding — the user-facing identity layer.
+///
+/// Production deployments MUST set [`SiteBranding::app_name`] (or
+/// use the [`Admin::app_name`] builder) — the framework name
+/// `RustIO` should never appear as the visible product identity for
+/// end users. RustIO is the vendor; the *deployed application* is
+/// what users see in their inbox, on the login page, and in the
+/// password-reset flow.
+///
+/// Field roles:
+///
+///   - [`app_name`](Self::app_name) — primary user-facing product
+///     identity. Used by every framework-emitted surface that
+///     reaches end users: email subjects + headers, recovery
+///     pages, admin chrome footer, audit summaries.
+///   - [`app_tagline`](Self::app_tagline) — optional secondary
+///     line. Renders as the descriptor under the brand wordmark
+///     in recovery emails. `None` falls back to the framework's
+///     generic "Account security notification" caption.
+///   - [`support_email`](Self::support_email) — optional contact
+///     surfaced in the recovery email footer ("If you didn't
+///     request this, contact <support@…>"). `None` omits the
+///     line.
+///   - [`public_url`](Self::public_url) — canonical public URL
+///     used when composing reset links if the request's
+///     `Host` / `X-Forwarded-Host` derivation is unreliable.
+///     `None` falls back to header-derived URLs.
+///   - [`show_powered_by`](Self::show_powered_by) — opt-in
+///     "Powered by RustIO" credit in the chrome footer + email
+///     footer. Defaults to `false`; the framework name stays
+///     invisible to end users unless the project explicitly
+///     enables this.
+///
+/// Legacy fields ([`site_title`](Self::site_title) /
+/// [`site_header`](Self::site_header) / etc.) predate this
+/// architecture and are still honoured for backwards compatibility,
+/// but their defaults were renamed away from "RustIO administration"
+/// so a zero-config build no longer leaks the framework name. New
+/// code should use the `app_*` fields exclusively.
 #[derive(Clone, Debug)]
 pub struct SiteBranding {
+    /// Primary user-facing product identity. Visible in:
+    /// page chrome (topbar, footer), email subjects + headers,
+    /// audit summaries, recovery pages, login screen.
+    pub app_name: String,
+    /// Optional secondary line for use under the brand wordmark in
+    /// emails / auth surfaces. Examples: "Operational library
+    /// management", "Health-system administration". `None` falls
+    /// back to "Account security notification" in recovery emails.
+    pub app_tagline: Option<String>,
+    /// Optional support contact surfaced in recovery email footer.
+    pub support_email: Option<String>,
+    /// Optional canonical public URL — e.g. `https://library.example.com`.
+    /// Used as the reset-link base when `Host` header isn't trustworthy.
+    pub public_url: Option<String>,
+    /// `true` → renders a small, low-contrast "Powered by RustIO"
+    /// line in the admin chrome footer and at the very bottom of
+    /// framework emails. Default: `false` (framework name invisible).
+    pub show_powered_by: bool,
+    // ---- legacy fields, retained for backwards compatibility -----
     pub site_title: String,
     pub site_header: String,
     pub index_title: String,
@@ -338,12 +394,21 @@ pub struct SiteBranding {
 
 impl Default for SiteBranding {
     fn default() -> Self {
+        // Generic "Admin" defaults so a zero-config build doesn't
+        // leak the framework name. Real projects MUST set app_name
+        // via `Admin::app_name(...)` or a full `site_branding(...)`
+        // override.
         Self {
-            site_title: "RustIO administration".into(),
-            site_header: "RustIO administration".into(),
+            app_name: "Admin".into(),
+            app_tagline: None,
+            support_email: None,
+            public_url: None,
+            show_powered_by: false,
+            site_title: "Admin".into(),
+            site_header: "Admin".into(),
             index_title: "Site administration".into(),
-            footer_copyright: format!("RustIO {}", env!("CARGO_PKG_VERSION")),
-            domain: "rustio.local".into(),
+            footer_copyright: String::new(),
+            domain: "localhost".into(),
         }
     }
 }
@@ -524,9 +589,63 @@ impl Admin {
     }
 
     // public:
-    /// Override the default RustIO branding.
+    /// Replace the entire [`SiteBranding`] block. For finer-grained
+    /// adjustments, use the per-field builders below
+    /// ([`Admin::app_name`], [`Admin::app_tagline`], …).
     pub fn site_branding(mut self, branding: SiteBranding) -> Self {
         self.site_branding = branding;
+        self
+    }
+
+    // public:
+    /// Set the user-facing product identity. **Recommended for every
+    /// production deployment** — the framework name "RustIO" should
+    /// not appear in operational user surfaces.
+    ///
+    /// Example: `Admin::new().app_name("Library Circulation")`.
+    /// Also mirrors the value into the legacy `site_title` /
+    /// `site_header` fields so older paths that still read them stay
+    /// coherent with the new identity.
+    pub fn app_name(mut self, name: impl Into<String>) -> Self {
+        let n = name.into();
+        self.site_branding.app_name = n.clone();
+        // Mirror into the legacy fields so any old read path stays
+        // consistent with the canonical name. Projects that override
+        // `site_branding` directly bypass this mirroring.
+        self.site_branding.site_title = n.clone();
+        self.site_branding.site_header = n;
+        self
+    }
+
+    // public:
+    /// Set an optional secondary line shown under the brand
+    /// wordmark in emails + auth pages.
+    pub fn app_tagline(mut self, tagline: impl Into<String>) -> Self {
+        self.site_branding.app_tagline = Some(tagline.into());
+        self
+    }
+
+    // public:
+    /// Set the support contact surfaced in recovery emails.
+    pub fn support_email(mut self, email: impl Into<String>) -> Self {
+        self.site_branding.support_email = Some(email.into());
+        self
+    }
+
+    // public:
+    /// Set the canonical public URL — used as a base when composing
+    /// reset links if request-header derivation is unreliable.
+    pub fn public_url(mut self, url: impl Into<String>) -> Self {
+        self.site_branding.public_url = Some(url.into());
+        self
+    }
+
+    // public:
+    /// Opt in to the small "Powered by RustIO" credit in chrome
+    /// footer + email footer. Off by default; the framework name
+    /// stays invisible to end users unless this is enabled.
+    pub fn show_powered_by(mut self, show: bool) -> Self {
+        self.site_branding.show_powered_by = show;
         self
     }
 

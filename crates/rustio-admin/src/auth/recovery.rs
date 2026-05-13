@@ -956,24 +956,33 @@ pub(crate) async fn issue_reset_token(
             );
             let when = chrono::Utc::now();
             let ttl_human = humanize_ttl(ttl);
-            let site_header = admin.branding().site_header.clone();
+            let branding = admin.branding();
+            let app_name = branding.app_name.clone();
+            let app_tagline = branding.app_tagline.clone();
+            let support_email = branding.support_email.clone();
+            let show_powered_by = branding.show_powered_by;
+            let greeting = user.greeting_name();
+            let (sig_primary, sig_title) = user.signature_lines();
             let body = format!(
-                "We received a request to reset the password on your \
-                 {site_header} account.\n\n\
+                "Hello {greeting},\n\n\
+                 We received a request to reset the password for your \
+                 {app_name} account.\n\n\
                  Open the link below to set a new password:\n\n\
                  {reset_link}\n\n\
-                 The link expires {ttl_human}. If you didn't request this, \
-                 you can safely ignore this email — your password stays \
-                 unchanged.\n",
+                 This link expires {ttl_human}. If you didn't request \
+                 this, you can safely ignore this email — your password \
+                 stays unchanged.\n",
             );
             let intro = format!(
-                "We received a request to reset the password on your \
-                 {site_header} account. Choose a new password to continue."
+                "We received a request to reset the password for your \
+                 {app_name} account. Choose a new password to continue."
             );
             let fine_print = format!("This link expires {ttl_human}.");
             let html = crate::email::render_recovery_html(crate::email::RecoveryEmailParts {
-                site_header: &site_header,
+                app_name: &app_name,
+                app_tagline: app_tagline.as_deref(),
                 title: "Reset your password",
+                greeting_name: &greeting,
                 intro: &intro,
                 cta_label: "Set a new password",
                 cta_url: &reset_link,
@@ -982,12 +991,16 @@ pub(crate) async fn issue_reset_token(
                 request_ip: Some(&ip),
                 ua_summary: user_agent_owned.as_deref(),
                 correlation_id,
+                signature_primary: Some(&sig_primary),
+                signature_title: sig_title.as_deref(),
+                support_email: support_email.as_deref(),
+                show_powered_by,
             });
             let mail = Mail::framework_envelope(
                 user.email.clone(),
-                format!("Reset your password — {site_header}"),
+                format!("Reset your password — {app_name}"),
                 body,
-                &site_header,
+                &app_name,
                 Some(&ip),
                 user_agent_owned.as_deref(),
                 when,

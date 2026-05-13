@@ -118,8 +118,10 @@ impl Mail {
 /// belt-and-braces).
 pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
     let RecoveryEmailParts {
-        site_header,
+        app_name,
+        app_tagline,
         title,
+        greeting_name,
         intro,
         cta_label,
         cta_url,
@@ -128,12 +130,20 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
         request_ip,
         ua_summary,
         correlation_id,
+        signature_primary,
+        signature_title,
+        support_email,
+        show_powered_by,
     } = parts;
 
     let cta_url_safe = html_attr_escape(cta_url);
     let cta_url_text = html_text_escape(cta_url);
-    let site_header_text = html_text_escape(site_header);
+    let app_name_text = html_text_escape(app_name);
+    let tagline_text = html_text_escape(
+        app_tagline.unwrap_or("Account security notification"),
+    );
     let title_text = html_text_escape(title);
+    let greeting_text = html_text_escape(greeting_name);
     let intro_text = html_text_escape(intro);
     let fine_print_text = html_text_escape(fine_print);
     let cta_label_text = html_text_escape(cta_label);
@@ -197,6 +207,64 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
         None => String::new(),
     };
 
+    // Signature block — account-owner identity at the bottom of the
+    // email body. Hidden entirely when the caller has no primary line
+    // (e.g. unknown / unset profile fields).
+    let signature_block = match signature_primary {
+        Some(primary) => {
+            let primary_safe = html_text_escape(primary);
+            let title_line = match signature_title {
+                Some(t) => format!(
+                    r##"<div style="color:#6B7280;font-size:13px;line-height:1.5;">{}</div>"##,
+                    html_text_escape(t)
+                ),
+                None => String::new(),
+            };
+            format!(
+                r##"
+    <!-- Account-owner signature. Hidden when profile fields are unset. -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+      border="0" style="margin:0 0 8px 0;">
+    <tr><td style="padding-top:8px;">
+      <div style="color:#6B7280;font-size:11px;font-weight:600;
+        letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px 0;">
+        Account owner
+      </div>
+      <div style="color:#111827;font-size:14px;font-weight:600;
+        line-height:1.4;">{primary_safe}</div>
+      {title_line}
+      <div style="color:#6B7280;font-size:13px;line-height:1.5;">{app_name_text}</div>
+    </td></tr>
+    </table>"##
+            )
+        }
+        None => String::new(),
+    };
+
+    // Support contact line — rendered inside the operational footer
+    // when the project has set one.
+    let support_line = match support_email {
+        Some(addr) => {
+            let addr_safe = html_attr_escape(addr);
+            let addr_text = html_text_escape(addr);
+            format!(
+                r##"<p style="margin:6px 0 0 0;color:#9CA3AF;font-size:11px;line-height:1.5;">
+      Need help? Contact <a href="mailto:{addr_safe}" style="color:#6B7280;text-decoration:none;">{addr_text}</a>.
+    </p>"##
+            )
+        }
+        None => String::new(),
+    };
+
+    // Opt-in "Powered by RustIO" credit. Off by default.
+    let powered_by_line = if show_powered_by {
+        r##"<p style="margin:10px 0 0 0;color:#D1D5DB;font-size:10px;line-height:1.5;letter-spacing:0.02em;">
+      Powered by RustIO
+    </p>"##.to_string()
+    } else {
+        String::new()
+    };
+
     // Preheader: shown in inbox preview rows; hidden in the body.
     let preheader = format!("{title_text} — {fine_print_text}");
     let preheader_safe = html_text_escape(&preheader);
@@ -241,15 +309,16 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
   <tr>
   <td class="rio-mail-card" style="padding:40px 40px 32px 40px;">
 
-    <!-- Wordmark + operational descriptor -->
+    <!-- Wordmark + operational descriptor. App identity owns the
+         wordmark; framework name is intentionally absent here. -->
     <div style="margin:0 0 28px 0;">
-      <div style="font-size:13px;font-weight:600;letter-spacing:0.04em;
-        color:#111827;line-height:1.3;">
-        {site_header_text}
+      <div style="font-size:14px;font-weight:700;letter-spacing:-0.005em;
+        color:#0B0F19;line-height:1.3;">
+        {app_name_text}
       </div>
       <div style="font-size:11px;font-weight:500;letter-spacing:0.10em;
         color:#6B7280;text-transform:uppercase;margin-top:4px;">
-        Account security notification
+        {tagline_text}
       </div>
     </div>
 
@@ -260,7 +329,11 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
       {title_text}
     </h1>
 
-    <!-- Intro -->
+    <!-- Greeting + intro -->
+    <p style="margin:0 0 12px 0;color:#111827;font-size:15px;
+      line-height:1.65;font-weight:500;">
+      Hello {greeting_text},
+    </p>
     <p style="margin:0 0 32px 0;color:#374151;font-size:15px;
       line-height:1.65;">
       {intro_text}
@@ -309,7 +382,7 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
       border="0" style="margin:0 0 28px 0;">
     <tr><td style="padding:6px 0;color:#6B7280;font-size:13px;
       width:90px;vertical-align:top;">System</td>
-      <td style="padding:6px 0;color:#1F2937;font-size:13px;">{site_header_text}</td></tr>
+      <td style="padding:6px 0;color:#1F2937;font-size:13px;">{app_name_text}</td></tr>
     <tr><td style="padding:6px 0;color:#6B7280;font-size:13px;
       width:90px;vertical-align:top;">When</td>
       <td style="padding:6px 0;color:#1F2937;font-size:13px;
@@ -320,7 +393,7 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
 
     <!-- Warning panel: if not you -->
     <div style="padding:18px 20px;background:#FFF8EB;border:1px solid #F2D9A7;
-      border-radius:6px;margin:0 0 8px 0;">
+      border-radius:6px;margin:0 0 24px 0;">
       <p style="margin:0;color:#6B4F12;font-size:13px;line-height:1.55;">
         <strong style="color:#4F3B0A;font-weight:600;">If this wasn't you</strong>
         — ignore this email. Your password stays unchanged, and the link
@@ -328,12 +401,13 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
         sessions from the Sessions page.
       </p>
     </div>
-
+{signature_block}
   </td>
   </tr>
   </table>
 
-  <!-- Footer — operational tone, no marketing -->
+  <!-- Footer — operational tone, no marketing. App identity speaks;
+       framework name appears only when explicitly opted-in. -->
   <table role="presentation" cellpadding="0" cellspacing="0" border="0"
     style="max-width:560px;width:100%;margin:18px auto 0 auto;">
   <tr><td align="center" style="padding:0 8px;">
@@ -342,10 +416,12 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
       <span style="font-variant-numeric:tabular-nums;">{when_str}</span>
     </p>
     <p style="margin:6px 0 0 0;color:#9CA3AF;font-size:11px;line-height:1.5;">
-      You are receiving this because someone requested a password reset
-      for an account on {site_header_text}. If that wasn't you, no
-      action is required.
+      You are receiving this because a password reset was requested
+      for your account on {app_name_text}. If that wasn't you,
+      no action is required.
     </p>
+    {support_line}
+    {powered_by_line}
   </td></tr>
   </table>
 
@@ -368,8 +444,20 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
 /// supplied accent override, a footer-link tuple) are SemVer-safe.
 #[non_exhaustive]
 pub struct RecoveryEmailParts<'a> {
-    pub site_header: &'a str,
+    /// User-facing product identity, e.g. `"Library Circulation"`.
+    /// **Required for production**: never set this to a framework
+    /// name. Renders as the brand wordmark, in the security
+    /// envelope's "System" row, and in the email footer.
+    pub app_name: &'a str,
+    /// Optional descriptor under the wordmark — e.g.
+    /// `"Operational library management"`. `None` falls back to
+    /// `"Account security notification"`.
+    pub app_tagline: Option<&'a str>,
     pub title: &'a str,
+    /// Greeting label resolved by the caller via the documented
+    /// `display_name → first_name → email-local-part → "there"`
+    /// fallback. Rendered as `"Hello {greeting_name},"`.
+    pub greeting_name: &'a str,
     pub intro: &'a str,
     pub cta_label: &'a str,
     pub cta_url: &'a str,
@@ -384,6 +472,16 @@ pub struct RecoveryEmailParts<'a> {
     /// stays compatible with a future MFA verification-code shape.
     /// `None` hides the reference panel.
     pub correlation_id: Option<&'a str>,
+    /// Account-owner signature primary line ("Abdulwahed Mansour"
+    /// or a name-equivalent). `None` hides the signature block.
+    pub signature_primary: Option<&'a str>,
+    /// Optional secondary signature line (job title).
+    pub signature_title: Option<&'a str>,
+    /// Optional support contact surfaced in the email footer.
+    pub support_email: Option<&'a str>,
+    /// `true` → render the low-key "Powered by RustIO" footer
+    /// credit. Off by default; the framework name stays invisible.
+    pub show_powered_by: bool,
 }
 
 /// Minimal HTML-text escape for the visible-text positions in the
@@ -650,10 +748,12 @@ mod tests {
     fn recovery_html_contains_required_markers_and_escapes() {
         let when = Utc.with_ymd_and_hms(2026, 5, 13, 14, 30, 0).unwrap();
         let html = render_recovery_html(RecoveryEmailParts {
-            site_header: "RustIO Admin",
+            app_name: "Library Circulation",
+            app_tagline: Some("Operational library management"),
             title: "Reset your password",
-            intro: "We received a request to reset the password on your \
-                    RustIO Admin account. Choose a new password to continue.",
+            greeting_name: "Abdulwahed",
+            intro: "We received a request to reset the password for your \
+                    Library Circulation account. Choose a new password to continue.",
             cta_label: "Set a new password",
             cta_url: "http://127.0.0.1:3000/admin/reset-password/abc123",
             fine_print: "This link expires in 30 minutes.",
@@ -661,44 +761,89 @@ mod tests {
             request_ip: Some("127.0.0.1"),
             ua_summary: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15"),
             correlation_id: Some("019e212b-9f63-7512-be44-daaa8e6267e2"),
+            signature_primary: Some("Abdulwahed Mansour"),
+            signature_title: Some("Principal Administrator"),
+            support_email: Some("support@library.example.com"),
+            show_powered_by: false,
         });
         // Structural markers
         assert!(html.starts_with("<!DOCTYPE html>"));
         assert!(html.contains("viewport"));
         assert!(!html.contains("multipart")); // not in HTML body
+        // App identity owns the surface — framework name absent.
+        assert!(html.contains("Library Circulation"));
+        assert!(!html.contains("RustIO Admin"));
+        // Tagline replaces the default descriptor when provided.
+        assert!(html.contains("Operational library management"));
+        assert!(!html.contains("Account security notification"));
         // Required content
-        assert!(html.contains("RustIO Admin"));
         assert!(html.contains("Reset your password"));
+        assert!(html.contains("Hello Abdulwahed,"));
         assert!(html.contains("Set a new password"));
         assert!(html.contains("http://127.0.0.1:3000/admin/reset-password/abc123"));
         assert!(html.contains("This link expires in 30 minutes."));
         assert!(html.contains("2026-05-13 14:30 UTC"));
         assert!(html.contains("127.0.0.1"));
         assert!(html.contains("Mozilla/5.0"));
-        // Phase 3F: descriptor under brand
-        assert!(html.contains("Account security notification"));
         // Phase 3E: verification reference panel
         assert!(html.contains("Verification reference"));
         assert!(html.contains("6267E2"));
         // Phase 3G: operational footer tone
         assert!(html.contains("Session-aware authentication"));
+        // Signature block
+        assert!(html.contains("Account owner"));
+        assert!(html.contains("Abdulwahed Mansour"));
+        assert!(html.contains("Principal Administrator"));
+        // Support contact line
+        assert!(html.contains("support@library.example.com"));
+        // Powered-by stays invisible when not opted in
+        assert!(!html.contains("Powered by RustIO"));
         // Anti-phishing copy
         assert!(html.contains("If this wasn"));
         // Brand-accent CTA
         assert!(html.contains("#0F8C7E"));
 
         // Write a copy to /tmp so the developer can open it in a
-        // browser to visually verify the rendered email. Cheap
-        // dev-feedback loop; failure to write is non-fatal (CI may
-        // run in read-only sandboxes).
+        // browser to visually verify the rendered email.
         let _ = std::fs::write("/tmp/rustio-recovery-email-preview.html", &html);
+    }
+
+    #[test]
+    fn recovery_html_powered_by_appears_only_when_opted_in() {
+        let when = Utc.with_ymd_and_hms(2026, 5, 13, 14, 30, 0).unwrap();
+        let html = render_recovery_html(RecoveryEmailParts {
+            app_name: "Library Circulation",
+            app_tagline: None,
+            title: "Reset your password",
+            greeting_name: "there",
+            intro: "We received a request.",
+            cta_label: "Set a new password",
+            cta_url: "http://example/x",
+            fine_print: "Expires soon.",
+            when,
+            request_ip: None,
+            ua_summary: None,
+            correlation_id: None,
+            signature_primary: None,
+            signature_title: None,
+            support_email: None,
+            show_powered_by: true,
+        });
+        // Tagline falls back to the security caption when not set.
+        assert!(html.contains("Account security notification"));
+        // Powered-by line appears.
+        assert!(html.contains("Powered by RustIO"));
+        // No signature block when fields unset.
+        assert!(!html.contains("Account owner"));
     }
 
     #[test]
     fn recovery_html_escapes_html_in_inputs() {
         let html = render_recovery_html(RecoveryEmailParts {
-            site_header: "<script>alert(1)</script>",
+            app_name: "<script>alert(1)</script>",
+            app_tagline: Some("<b>raw</b>"),
             title: "Title & co",
+            greeting_name: "Alice<script>",
             intro: "Body <em>x</em>",
             cta_label: "Click >>",
             cta_url: "http://example.com/?a=1&b=2",
@@ -707,6 +852,10 @@ mod tests {
             request_ip: Some("<bad>"),
             ua_summary: Some("\"chrome\""),
             correlation_id: None,
+            signature_primary: Some("<sig>"),
+            signature_title: Some("<title>"),
+            support_email: Some("a@<b>"),
+            show_powered_by: false,
         });
         // Script tag must NOT be present unescaped anywhere
         assert!(!html.contains("<script>alert(1)</script>"));
