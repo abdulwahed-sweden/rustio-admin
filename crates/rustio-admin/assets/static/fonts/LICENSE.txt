@@ -10,18 +10,49 @@ Latin UI + monospace
   GeistMono-Variable.woff2      Copyright 2023 The Geist Mono Font Project Authors
                                 Source: https://github.com/vercel/geist-font
 
-Arabic UI (compact surfaces — buttons, labels, tables, badges)
---------------------------------------------------------------
-  Tajawal-Regular.woff2     Copyright 2017 The Tajawal Project Authors
-  Tajawal-Medium.woff2      (Mohamed Gaber, Boutros International)
-  Tajawal-Bold.woff2        Source: https://github.com/Gue3bara/Tajawal
+Latin fallback (full Latin-ext / Cyrillic / Greek / Vietnamese)
+---------------------------------------------------------------
+  InterVariable.woff2           Copyright 2016 The Inter Project Authors
+                                (Rasmus Andersson and contributors)
+                                Source: https://github.com/rsms/inter
+                                Variable wght axis: 100..900
 
-Arabic body (paragraphs, descriptions, settings/help pages)
------------------------------------------------------------
+Arabic (primary reading face — Naskh, humanist)
+-----------------------------------------------
   NotoNaskhArabic-Variable.woff2
                                 Copyright 2022 The Noto Project Authors
                                 Source: https://github.com/notofonts/arabic
                                 Variable wght axis: 400..700
+
+Arabic display accent (selective use via .rio-arabic-display)
+-------------------------------------------------------------
+  Tajawal-Regular.woff2     Copyright 2017 The Tajawal Project Authors
+  Tajawal-Medium.woff2      (Mohamed Gaber, Boutros International)
+  Tajawal-Bold.woff2        Source: https://github.com/Gue3bara/Tajawal
+
+International scripts (auto-loaded by unicode-range)
+----------------------------------------------------
+  NotoSansThai-Variable.woff2
+                                Copyright 2022 The Noto Project Authors
+                                Source: https://github.com/notofonts/thai
+                                Variable wght axis: 100..900
+
+  NotoSansDevanagari-Variable.woff2
+                                Copyright 2022 The Noto Project Authors
+                                Source: https://github.com/notofonts/devanagari
+                                Variable wght axis: 100..900
+
+CJK (locale-gated via :lang(ja|ko|zh))
+--------------------------------------
+  NotoSansJP-Regular.woff2      Copyright 2022 The Noto Project Authors
+  NotoSansKR-Regular.woff2      Source: https://github.com/notofonts/noto-cjk
+  NotoSansSC-Regular.woff2      Static wght 400; browsers synthesise bold.
+                                Han Unification: U+4E00-9FFF (CJK Unified
+                                Ideographs) is shared between Japanese
+                                Kanji, Simplified Chinese, and Traditional
+                                Chinese. base/typography-i18n.css gates
+                                each face by `:lang()` to prevent visual
+                                shape collision in mixed-script content.
 
 Per the OFL-1.1, these fonts are bundled into the rustio-admin binary
 and re-distributed unmodified. The full OFL-1.1 text must accompany

@@ -29,16 +29,24 @@
  *
  * --- Self-hosted fonts (SIL OFL-1.1) ----------------------------
  *
- *   Latin / UI    — Geist Variable (wght 100..900)
+ *   Latin / UI    — Geist Variable (wght 100..900, primary identity)
+ *   Latin fallback — Inter Variable  (wght 100..900, Latin-ext +
+ *                   Cyrillic + Greek + Vietnamese coverage)
  *   Code          — Geist Mono Variable (wght 100..900)
- *   Arabic UI     — Tajawal 400 / 500 / 700
- *                   (compact surfaces: buttons, sidebar, tables, badges)
- *   Arabic body   — Noto Naskh Arabic Variable (wght 400..700)
- *                   (paragraphs, descriptions, long-form copy)
+ *   Arabic        — Noto Naskh Arabic Variable (wght 400..700, primary
+ *                   reading face across the framework)
+ *   Arabic accent — Tajawal 400 / 500 / 700 (geometric display use,
+ *                   opt-in via .rio-arabic-display)
+ *   Thai          — Noto Sans Thai Variable (wght 100..900, auto)
+ *   Devanagari    — Noto Sans Devanagari Variable (wght 100..900, auto)
+ *   Japanese      — Noto Sans JP Regular   (lang-gated)
+ *   Korean        — Noto Sans KR Regular   (lang-gated)
+ *   Simpl. Chinese — Noto Sans SC Regular  (lang-gated)
  *
  * The font binaries are baked into the rustio-admin binary; no CDN
  * round-trip, no FOUT, no GDPR/tracking surface. @font-face
- * declarations live in base/typography.css.
+ * declarations live in base/typography.css (Latin + Arabic) and
+ * base/typography-i18n.css (Thai, Devanagari, CJK).
  */
 
 /* ---- Design tokens — single source of truth for the visual scale. */
@@ -56,6 +64,7 @@
 @import url("base/reset.css");
 @import url("base/base.css");
 @import url("base/typography.css");
+@import url("base/typography-i18n.css");
 @import url("base/utilities.css");
 
 /* ---- Layout shell — topbar / sidebar / main / footer. */

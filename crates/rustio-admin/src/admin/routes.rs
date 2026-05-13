@@ -71,6 +71,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/base/typography.css"),
     "\n",
+    include_str!("../../assets/static/admin/base/typography-i18n.css"),
+    "\n",
     include_str!("../../assets/static/admin/base/utilities.css"),
     "\n",
     // ---- layout -----------------------------------------------
@@ -132,17 +134,29 @@ const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 /// and avoids the FOUT/CDN round-trip every consuming app would
 /// otherwise inherit from a Google Fonts <link>.
 ///
-/// Latin: Geist (variable wght 100..900) + Geist Mono (variable wght
-/// 100..900). Arabic: Tajawal (UI surfaces — buttons, sidebar, tables)
-/// in 400/500/700, plus Noto Naskh Arabic (paragraph body, variable
-/// wght 400..700).
+/// Latin (identity): Geist Variable wght 100..900. Latin fallback:
+/// Inter Variable (Latin-ext + Cyrillic + Greek + Vietnamese under
+/// one variable file). Mono: Geist Mono Variable. Arabic: Noto
+/// Naskh Arabic Variable wght 400..700 (default reading face) +
+/// Tajawal 400/500/700 (selective geometric accent). International
+/// scripts: Noto Sans Thai + Devanagari (variable, auto-loaded via
+/// unicode-range) + Noto Sans JP/KR/SC (static Regular, lang-gated
+/// to avoid Han Unification shape collisions).
 const FONT_GEIST: &[u8] = include_bytes!("../../assets/static/fonts/Geist-Variable.woff2");
 const FONT_GEIST_MONO: &[u8] = include_bytes!("../../assets/static/fonts/GeistMono-Variable.woff2");
+const FONT_INTER: &[u8] = include_bytes!("../../assets/static/fonts/InterVariable.woff2");
 const FONT_TAJAWAL_REG: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Regular.woff2");
 const FONT_TAJAWAL_MED: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Medium.woff2");
 const FONT_TAJAWAL_BOLD: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Bold.woff2");
 const FONT_NOTO_NASKH_AR: &[u8] =
     include_bytes!("../../assets/static/fonts/NotoNaskhArabic-Variable.woff2");
+const FONT_NOTO_THAI: &[u8] =
+    include_bytes!("../../assets/static/fonts/NotoSansThai-Variable.woff2");
+const FONT_NOTO_DEVA: &[u8] =
+    include_bytes!("../../assets/static/fonts/NotoSansDevanagari-Variable.woff2");
+const FONT_NOTO_JP: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansJP-Regular.woff2");
+const FONT_NOTO_KR: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansKR-Regular.woff2");
+const FONT_NOTO_SC: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansSC-Regular.woff2");
 
 use super::handlers::{self, AdminCtx};
 use super::render;
@@ -582,6 +596,26 @@ pub fn register_admin_routes(
         "/static/fonts/NotoNaskhArabic-Variable.woff2",
         |_req| async move { Ok(font_response(FONT_NOTO_NASKH_AR)) },
     );
+    let router = router.get("/static/fonts/InterVariable.woff2", |_req| async move {
+        Ok(font_response(FONT_INTER))
+    });
+    let router = router.get(
+        "/static/fonts/NotoSansThai-Variable.woff2",
+        |_req| async move { Ok(font_response(FONT_NOTO_THAI)) },
+    );
+    let router = router.get(
+        "/static/fonts/NotoSansDevanagari-Variable.woff2",
+        |_req| async move { Ok(font_response(FONT_NOTO_DEVA)) },
+    );
+    let router = router.get("/static/fonts/NotoSansJP-Regular.woff2", |_req| async move {
+        Ok(font_response(FONT_NOTO_JP))
+    });
+    let router = router.get("/static/fonts/NotoSansKR-Regular.woff2", |_req| async move {
+        Ok(font_response(FONT_NOTO_KR))
+    });
+    let router = router.get("/static/fonts/NotoSansSC-Regular.woff2", |_req| async move {
+        Ok(font_response(FONT_NOTO_SC))
+    });
 
     // Public: login/logout.
     let c = ctx.clone();

@@ -3,21 +3,49 @@
  *
  *   === Tokens — typography ===
  *
- * Three families + a consistent scale.
- * Geist (Latin) + Tajawal / Noto Naskh (Arabic) + Geist Mono.
+ * Multilingual family stacks + a consistent size scale.
+ *
+ *   Latin UI         → Geist (primary), Inter (fallback), Plex Sans
+ *   Latin extended   → Inter covers Latin-ext / Cyrillic / Greek /
+ *                      Vietnamese under one variable file
+ *   Arabic           → Noto Naskh Arabic (primary, humanist body),
+ *                      Tajawal (geometric accent / fallback)
+ *   Mono             → Geist Mono
+ *   Thai             → Noto Sans Thai      (auto-loaded by unicode-range)
+ *   Devanagari       → Noto Sans Devanagari (auto-loaded by unicode-range)
+ *   Japanese         → Noto Sans JP        (selected by `:lang(ja)`)
+ *   Korean           → Noto Sans KR        (selected by `:lang(ko)`)
+ *   Simpl. Chinese   → Noto Sans SC        (selected by `:lang(zh)`)
+ *
+ * Han Unification: Japanese Kanji / Simplified Chinese Hanzi /
+ * Traditional Hanzi share U+4E00-9FFF. Mixing them in a single
+ * global fallback chain would render Chinese content with Japanese
+ * shapes (or vice versa). Avoid this by leaving CJK out of
+ * `--rio-font-sans` and selecting via `:lang()` in
+ * base/typography-i18n.css.
+ *
  * The size scale `--rio-fs-xs … --rio-fs-display` is the canonical
  * ladder; component styles resolve through it. Adding a new size
  * belongs in CHANGELOG.md.
  *
- * @font-face declarations live in base/typography.css so the
- * font binaries load alongside the rules that consume them.
+ * @font-face declarations live in:
+ *   - base/typography.css      → Geist, Geist Mono, Tajawal, Naskh, Inter
+ *   - base/typography-i18n.css → Thai, Devanagari, Noto Sans JP/KR/SC
  * ============================================================ */
 
 :root {
-  /* Latin UI — Geist leads, then Inter / Plex Sans, then platform UI. */
+  /* Latin UI — Geist leads (the framework's identity), Inter is the
+   * real second-tier fallback with full Latin-ext / Cyrillic / Greek
+   * / Vietnamese coverage under one variable file. Thai +
+   * Devanagari sit further down the chain so any Thai / Devanagari
+   * character on a Latin-themed page renders correctly without a
+   * `lang` tag; their `unicode-range` filters in
+   * base/typography-i18n.css keep the download conditional. */
   --rio-font-sans:
     "Geist",
     "Inter",
+    "Noto Sans Thai",
+    "Noto Sans Devanagari",
     "IBM Plex Sans",
     system-ui,
     -apple-system,
@@ -29,18 +57,20 @@
     sans-serif;
 
   /* Arabic UI — compact admin surfaces (buttons, navbars, sidebar
-   * labels, table cells, badges, form labels). Tajawal first; Noto
-   * Naskh as a graceful fallback so Arabic text never lands on a
-   * Latin face. */
+   * labels, table cells, badges, form labels). Noto Naskh Arabic
+   * is the default reading face across the framework — humanist,
+   * generous x-height, calm for long reading. Tajawal is retained
+   * for selective geometric display use (promote it with the
+   * `.rio-arabic-display` utility class). */
   --rio-font-arabic:
-    "Tajawal",
     "Noto Naskh Arabic",
+    "Tajawal",
     system-ui,
     sans-serif;
 
   /* Arabic body — long-form copy, descriptions, settings/help pages.
-   * Noto Naskh has higher x-height + softer terminals → reads better
-   * in long paragraphs than Tajawal. */
+   * Same priority as the UI token; line-height + size adjustments
+   * applied via base/typography.css's `:lang(ar)` rules. */
   --rio-font-arabic-body:
     "Noto Naskh Arabic",
     "Tajawal",
@@ -57,6 +87,47 @@
     Consolas,
     "Liberation Mono",
     monospace;
+
+  /* --- Locale-gated CJK stacks ---------------------------------- *
+   * Applied only when an element carries `lang="ja|ko|zh|zh-CN|
+   * zh-Hans"`, via base/typography-i18n.css. System fallbacks
+   * (Hiragino, Yu Gothic, PingFang, Malgun, Apple SD Gothic Neo)
+   * keep CJK content readable on the OS layer while Noto downloads
+   * or on networks where the woff2 fetch fails. */
+  --rio-font-japanese:
+    "Noto Sans JP",
+    "Hiragino Kaku Gothic ProN",
+    "Yu Gothic UI",
+    "Meiryo",
+    sans-serif;
+
+  --rio-font-korean:
+    "Noto Sans KR",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    sans-serif;
+
+  --rio-font-chinese:
+    "Noto Sans SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+
+  /* Thai + Devanagari are also available as standalone tokens for
+   * components that want to pin the family explicitly; everyday
+   * pages get them automatically via --rio-font-sans + the
+   * unicode-range gate on their @font-face. */
+  --rio-font-thai:
+    "Noto Sans Thai",
+    "Sukhumvit Set",
+    "Leelawadee UI",
+    sans-serif;
+
+  --rio-font-devanagari:
+    "Noto Sans Devanagari",
+    "Hindi Sangam MN",
+    "Nirmala UI",
+    sans-serif;
 
   /* Size scale — rem-based, 16px html root.
    * Floor is now 13px for true micro-text only (kbd shortcut, footer).
