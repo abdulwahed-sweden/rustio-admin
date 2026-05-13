@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.13.0** | 2026-05-13 | Phase G privatisation pass: 59 items annotated `// internal:` (since 0.9.0) flipped from `pub` to `pub(crate)`. Public surface narrowed by ~17% (419 → 360 items). Pairs with new `DESIGN_EMAIL.md` doctrine codifying the framework-emitted email conventions stabilised in 0.12.0. |
 | **0.12.0** | 2026-05-13 | Three substantial threads: public bulk-action dispatch hook (closes D.4); production password-recovery flow with real SMTP + polished HTML email + project-identity branding architecture (RustIO name no longer leaks to end users); operator-DX `rustio doctor email` with provider presets, `--html-preview`, send cooldown, and a formal `.env` developer contract. End-to-end verified against real Gmail delivery. |
 | **0.11.0** | 2026-05-13 | Multilingual typography (Inter + Thai + Devanagari + locale-gated CJK; Noto Naskh promoted to primary Arabic face) + production three-column admin footer with environment badge, render timestamp, real operational links. New `DESIGN_CHROME.md` doctrine. |
 | **0.10.2** | 2026-05-13 | `permissions::create_group` is now idempotent (mirrors the `permission_id` ON CONFLICT idiom). Closes one of the two framework gaps that the canonical example documented. |
@@ -34,6 +35,126 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.13.0] — 2026-05-13
+
+Minor release pairing two threads that both prepare the framework
+for the 1.0 commitment surface:
+
+  1. **Phase G — privatisation pass.** Every item annotated
+     `// internal:` since the 0.9.0 annotation pass (419 items
+     tagged `// public:` or `// internal:`, of which 64 were
+     internal) has had its visibility narrowed from `pub` to
+     `pub(crate)`. **Net effect**: 59 items removed from the
+     external surface (~17% reduction). 5 markers stay `pub`
+     because they decorate cross-crate test re-exports in
+     `lib.rs` gated behind `#[doc(hidden)]` +
+     `cfg(feature = "integration-test")`.
+
+  2. **`DESIGN_EMAIL.md` doctrine.** Codifies the
+     framework-emitted email conventions stabilised in 0.12.0
+     (recovery flow shipped to production against real Gmail).
+     Covers plaintext-first MIME shape, app-identity vs framework-
+     identity separation, the unconditional security envelope,
+     the anti-phishing warning panel, verification-reference
+     derivation from `correlation_id`, greeting + signature
+     fallback chain, subject-line vocabulary for the five known
+     email types, and the hard refusals (no tracking pixels, no
+     external `<img>`, no JS, no CDN assets).
+
+**No schema migration. No runtime behaviour change.** Phase G is
+a static visibility narrowing; tests + the example
+(`library-circulation`) continue to compile and pass against the
+in-crate items they always used.
+
+### Migration from 0.12.0
+
+Bump `rustio-admin = "0.13.0"` and run
+`cargo update -p rustio-admin`.
+
+For most projects, no source change required. If a project was
+reaching into the framework's MFA crypto primitives or R2 admin-
+recovery internals (against the `// internal:` annotations'
+intent), the compiler will surface the now-`pub(crate)` paths as
+"private" — switch to the public R3/R4 surface in
+`auth::emergency` and `auth::mfa::policy`, which is what those
+items were designed to expose.
+
+### Changed
+
+- **`auth::mfa` privatisation** (20 items):
+  - `MfaKey` struct, `MfaKey::from_bytes`, `MfaKey` env loader
+  - `wrap_secret`, `unwrap_secret` — AES-256-GCM primitives
+  - `generate_totp`, `current_step`, `verify_totp`
+  - `generate_backup_codes`, `normalise_backup_code`,
+    `hash_backup_code`, `verify_backup_code`
+  - `BACKUP_CODE_COUNT`, `BACKUP_CODE_LEN` constants
+  - `confirm_enrolment`, `verify_totp_for_user`,
+    `consume_backup_code`, `disable_mfa`,
+    `regenerate_backup_codes`,
+    `promote_session_to_mfa_verified`
+  - `migrate_user_mfa_schema`
+  All are framework-internal implementations. The public R3 MFA
+  policy + admin-driven disable surface lives unchanged in
+  `auth::mfa::policy` and `auth::emergency`.
+
+- **`auth::recovery_admin` privatisation** (21 items): R2 admin-
+  driven recovery internals — `LockState`, `ThrottleOutcome`,
+  `AdminActor`, `AdminIssueOutcome`, `AdminTempPwOutcome`,
+  `LockDuration`, `LockOutcome`, `UnlockOutcome`,
+  `AdminRevokeOutcome`, plus their associated `pub fn`
+  helpers (`record_failed_login`, `record_successful_login`,
+  `check_account_lockout`, `lock_user_account`, ...). The public
+  R2 admin-driven recovery surface (admin-reset, admin-unlock,
+  re-auth wall) is exposed via `auth::emergency`'s public
+  functions, which remain `pub`.
+
+- **Handler-internal constructors** (4 items):
+  `admin::handlers::AdminCtx::new`,
+  `admin::render::BaseContext::new`,
+  `admin::recovery_handlers::RecoveryState::new`,
+  `admin::icons::render`. These never made sense as public API —
+  callers construct via `Admin::new()` builders, which then own
+  the contexts.
+
+- **Minor surfaces** (3 items):
+  `http::__integration_test_fake` (gated to test feature only),
+  `auth::recovery::MailerEmailStatus`,
+  `admin::types::AdminTheme::has_overrides`.
+
+### Added
+
+- **`docs/design/DESIGN_EMAIL.md`** (~540 lines) — doctrine
+  document for framework-emitted emails. Indexed in
+  `docs/README.md` under "Design specs."
+
+### Internal
+
+- All 271 lib unit tests + 1 cascade-lockstep test + workspace
+  tests pass unchanged. Per-crate compile time effectively
+  identical (privatisation has no monomorphisation impact).
+- `docs/public-api.md` requires no updates — Phase C's
+  enumeration of 355 public items correctly excluded the 64
+  `// internal:` annotated items, so no entries in the
+  public-API list reference now-privatised symbols. Verified
+  via a structural audit (`grep -wf <privatised-names>`).
+- Workspace + CLI bumped to 0.13.0. "Releases at a glance"
+  gains a 0.13.0 row.
+
+### Public surface
+
+| Metric | 0.12.0 | 0.13.0 | Delta |
+|---|---:|---:|---:|
+| `pub` items in framework crate (annotated as `public:`) | 355 | 355 | 0 |
+| `pub` items annotated `internal:` (leaked surface) | 59 | 0 | **-59** |
+| Cross-crate test re-exports (gated, doc-hidden) | 5 | 5 | 0 |
+| **Effective external API surface** | **419** | **360** | **-14%** |
+
+This is the largest pre-1.0 surface narrowing in the project's
+history. Future refactors of MFA crypto + R2 internals are now
+non-breaking — those signatures are crate-internal and free to
+move.
 
 
 ## [0.12.0] — 2026-05-13
