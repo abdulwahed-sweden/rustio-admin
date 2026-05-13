@@ -269,10 +269,15 @@ pub async fn grant_to_group(db: &Db, group_id: i64, permission: &str) -> Result<
 }
 
 // public:
+/// Idempotent. A second call with the same `name` returns the
+/// existing group's id; the stored `description` is preserved
+/// (first-write-wins). Mirrors the `permission_id` upsert idiom
+/// in this module.
 pub async fn create_group(db: &Db, name: &str, description: &str) -> Result<i64> {
     let row = sqlx::query(
         "INSERT INTO rustio_groups (name, description)
          VALUES ($1, $2)
+         ON CONFLICT (name) DO UPDATE SET description = rustio_groups.description
          RETURNING id",
     )
     .bind(name)

@@ -734,9 +734,9 @@ VALUES (
 
 
 -- ============================================================
--- Framework gaps surfaced during D.4 investigation (2026-05-13)
+-- Framework gap surfaced during D.4 investigation (2026-05-13)
 -- ============================================================
--- Two items intentionally NOT seeded here because the framework's
+-- One item intentionally NOT seeded here because the framework's
 -- current public API does not expose a clean project-side hook:
 --
 --   * Custom bulk-action implementations.
@@ -745,13 +745,17 @@ VALUES (
 --     `ModelAdmin::bulk_actions()` without an implementation
 --     would create dead buttons in the admin UI.
 --
---   * Idempotent permission-group creation.
---     `permissions::create_group` is not idempotent and no public
---     `ensure_group` / `find_group_by_name` helper exists.
---     SQL-side group seeding would need to run AFTER
---     `admin.seed_permissions()`, which is in Rust at boot — and
---     migrations run before that step.
+-- This is a framework decision for a future commit, not an
+-- example workaround. The example demonstrates the framework's
+-- depth via relational data + audit emission + RBAC defaults
+-- only.
 --
--- Both are framework decisions for a future commit, not example
--- workarounds. The example demonstrates the framework's depth
--- via relational data + audit emission + RBAC defaults only.
+-- Permission-group seeding (previously listed here as a second
+-- gap) became viable in 0.10.2 when `permissions::create_group`
+-- learned ON CONFLICT semantics. Group rows still aren't seeded
+-- from this SQL file because SQL migrations run before
+-- `admin.seed_permissions()` (in Rust at boot), so the
+-- permission rows the groups would bind to don't exist yet at
+-- migration time. Seeding groups + bindings belongs in Rust
+-- alongside the boot path; left out of this example to keep
+-- main.rs linear and teaching-focused.

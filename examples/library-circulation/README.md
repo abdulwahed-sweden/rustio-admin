@@ -63,16 +63,23 @@ rustio user create --email admin@example.test --role developer
 
 ## What this example does not yet demonstrate
 
-Two framework capabilities are not exercised here because they
-need follow-up framework work:
+One framework capability is not exercised here because it needs
+follow-up framework work:
 
 - **Custom bulk actions.** Need a public project-side dispatch
   hook; the existing `AdminOps` trait is `pub(crate)`.
-- **Seeded permission groups.** Need an idempotent group-seeding
-  helper; `permissions::create_group` is not idempotent today.
 
-Both deferrals are also recorded in `migrations/0005_seed.sql`'s
+The deferral is also recorded in `migrations/0005_seed.sql`'s
 footer comment.
+
+(Permission-group seeding was previously listed here as a second
+gap. As of 0.10.2 `permissions::create_group` is idempotent —
+safe to call repeatedly from Rust seed code at boot. Groups are
+still not seeded in this example because SQL migrations run
+before `admin.seed_permissions()`, so the SQL file can't bind
+groups to permission rows that don't exist yet; group seeding
+belongs in Rust alongside the boot path. Left out to keep
+`main.rs` teaching-focused.)
 
 ## File layout
 
