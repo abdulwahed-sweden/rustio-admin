@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.11.0** | 2026-05-13 | Multilingual typography (Inter + Thai + Devanagari + locale-gated CJK; Noto Naskh promoted to primary Arabic face) + production three-column admin footer with environment badge, render timestamp, real operational links. New `DESIGN_CHROME.md` doctrine. |
 | **0.10.2** | 2026-05-13 | `permissions::create_group` is now idempotent (mirrors the `permission_id` ON CONFLICT idiom). Closes one of the two framework gaps that the canonical example documented. |
 | **0.10.1** | 2026-05-13 | Integration-pass bugfixes: `plural_snake` learns regular English rules (`-ch/-sh/-x/-z`, consonant+`y`); removed offensive defaulting that synthesised `draft/published` for any field named `status`. Canonical example declares `belongs_to` on its FK fields. |
 | **0.10.0** | 2026-05-13 | Flagship example replacement. `examples/minimal/` retired; `examples/library-circulation/` ships as the canonical demo (4 models, 3 FKs, 135-row deterministic seed). Macro learns `Option<DateTime<Utc>>`. Documentation topology consolidated into `docs/design/` + `docs/archive/`. Zero framework runtime change. |
@@ -30,6 +31,52 @@ leaves the alpha track.
 
 
 ## [Unreleased]
+
+No changes yet.
+
+
+## [0.11.0] — 2026-05-13
+
+Minor release covering the multilingual typography infrastructure
+and the production admin footer. Two substantial additions that
+ship together: the typography work made Inter actually load (it
+was in the token fallback chain since 0.1.1 but never had a
+`@font-face`), added Thai / Devanagari / locale-gated CJK
+coverage, and promoted Noto Naskh Arabic to the default Arabic
+reading face; the footer work replaced the single-line copyright
+strip with a three-column operational bar carrying framework
+identity, navigation, and request context. Companion
+`DESIGN_CHROME.md` doctrine documents both retroactively (topbar)
+and prospectively (Phase D bulk-action confirmation bar).
+
+**No schema migration, no public API signature change.** Two
+observable behaviours change — see *Behavioural changes* below.
+
+### Migration from 0.10.2
+
+Bump `rustio-admin = "0.11.0"` and run
+`cargo update -p rustio-admin`.
+
+If your project consumes `--rio-font-arabic` either directly or
+via `:lang(ar)` rendering, expect Noto Naskh Arabic as the
+default face rather than Tajawal. Long-form Arabic reading now
+uses Naskh's humanist x-height + softer terminals; UI surfaces
+follow suit. Tajawal stays in the fallback chain and can be
+re-pinned per surface via the new `.rio-arabic-display` utility
+class.
+
+If your project overrides `_base.html`, the framework's
+production footer is rendered through `BaseContext`'s four new
+fields (`framework_version`, `environment_label`,
+`environment_kind`, `server_now`). Custom templates that block
+the framework footer continue to work; templates that extend
+`_base.html` pick up the new footer automatically.
+
+Set `RUSTIO_ENV=Production` (or `=Staging`, `=Sandbox`, etc.)
+on your deployment if you want the footer's environment badge to
+reflect deploy-time rather than build-time facts. Without it the
+badge shows "Development" for debug builds and "Production" for
+release builds.
 
 ### Added
 
@@ -113,6 +160,30 @@ leaves the alpha track.
   zero for Latin-only pages, ~144 KB additional on Thai +
   Devanagari pages, ~530 KB–~1.1 MB on CJK pages (one-time, then
   cached for one year).
+- New `BaseContext` fields populated in `BaseContext::new`: no
+  caller-signature changes; every existing handler picks them up.
+- `RUSTIO_ENV` resolved once per process via `OnceLock`; one
+  syscall at first request, none thereafter.
+- Workspace + CLI bumped to 0.11.0. "Releases at a glance" gains
+  a 0.11.0 row.
+
+### Behavioural changes (downstream-visible)
+
+These are intentional design changes, but observable for projects
+upgrading without theme overrides:
+
+1. **Default Arabic face changes from Tajawal to Noto Naskh
+   Arabic.** Surfaces tagged `lang="ar"` or wrapped in
+   `[dir="rtl"]` render in Naskh's humanist style. To pin the
+   geometric Tajawal style on a specific surface, apply the new
+   `.rio-arabic-display` utility class.
+2. **Footer markup expands from one line to a three-column bar.**
+   Projects that extend `_base.html` keep working; projects that
+   replaced the footer with custom markup are unaffected (their
+   override still wins). Footer vertical real estate is roughly
+   unchanged (`--rio-fs-xs` text on `--rio-s3` padding is more
+   compact per row than the previous `--rio-fs-sm` on
+   `--rio-s4`).
 
 
 ## [0.10.2] — 2026-05-13
