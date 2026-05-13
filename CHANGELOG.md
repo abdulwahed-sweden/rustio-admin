@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.10.2** | 2026-05-13 | `permissions::create_group` is now idempotent (mirrors the `permission_id` ON CONFLICT idiom). Closes one of the two framework gaps that the canonical example documented. |
 | **0.10.1** | 2026-05-13 | Integration-pass bugfixes: `plural_snake` learns regular English rules (`-ch/-sh/-x/-z`, consonant+`y`); removed offensive defaulting that synthesised `draft/published` for any field named `status`. Canonical example declares `belongs_to` on its FK fields. |
 | **0.10.0** | 2026-05-13 | Flagship example replacement. `examples/minimal/` retired; `examples/library-circulation/` ships as the canonical demo (4 models, 3 FKs, 135-row deterministic seed). Macro learns `Option<DateTime<Utc>>`. Documentation topology consolidated into `docs/design/` + `docs/archive/`. Zero framework runtime change. |
 | **0.9.0** | 2026-05-12 | Surface declaration. Doctrine moved to `docs/`; cascade lockstep invariant CI-enforced; 419/419 pub items annotated `// public:` or `// internal:` (355 + 64); `docs/public-api.md` enumerates the public surface. Zero behavioural / visibility changes. |
@@ -31,6 +32,71 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.10.2] — 2026-05-13
+
+Patch release closing one of the two framework gaps that
+`examples/library-circulation/migrations/0005_seed.sql` listed
+under D.4. **No schema migration, no public API signature
+change.** One observable behaviour changes — see
+*Behavioural changes* below.
+
+### Migration from 0.10.1
+
+Bump `rustio-admin = "0.10.2"` and run
+`cargo update -p rustio-admin`.
+
+If your project relied on `permissions::create_group` returning
+an error on duplicate names (e.g. as a uniqueness check), switch
+to selecting from `rustio_groups` first or treat the returned id
+as "create-or-existing." Most projects can drop existence guards
+around `create_group` calls; the second call is now a no-op that
+returns the existing id.
+
+### Fixed
+
+- **`permissions::create_group` was not idempotent.** Repeated
+  calls with the same `name` hit the `UNIQUE` constraint on
+  `rustio_groups.name` and surfaced a sqlx unique-violation —
+  forcing every Rust seed path to either guard the call or eat
+  the error. The function now mirrors the `permission_id` idiom
+  in the same module:
+  `ON CONFLICT (name) DO UPDATE SET description = rustio_groups.description RETURNING id`.
+  The no-op self-assignment exists solely so `RETURNING` fires
+  on the conflict path. A second call with the same name returns
+  the existing group's id; the stored description is preserved
+  (first-write-wins) — idempotency applies when the args match,
+  and an explicit description mutator would be a separate
+  helper.
+  (`crates/rustio-admin/src/auth/permissions.rs:272`)
+
+### Behavioural changes (downstream-visible)
+
+- **`rustio group create <name>` no longer errors on duplicates.**
+  The CLI command (sole caller of `create_group`) succeeds on
+  re-runs and prints the same `Created group id=X name=...` line
+  with the original id. Friendlier for shell scripting; existing
+  scripts that relied on the error to detect duplicates need to
+  switch to a `rustio group list` check (or accept the new
+  idempotent semantics).
+
+### Documentation
+
+- `examples/library-circulation/migrations/0005_seed.sql` footer
+  trimmed from two gaps to one (bulk-action dispatch hook stays
+  deferred). The migration comment now notes that group seeding
+  is *viable* in 0.10.2 but still belongs in Rust at boot, not in
+  SQL — SQL migrations run before `admin.seed_permissions()`, so
+  the permission rows that group rows would bind to don't exist
+  at migration time.
+- `examples/library-circulation/README.md` "does not yet
+  demonstrate" section updated to match.
+
+### Internal
+
+- Workspace + CLI bumped to 0.10.2. "Releases at a glance" gains
+  a 0.10.2 row.
 
 
 ## [0.10.1] — 2026-05-13
