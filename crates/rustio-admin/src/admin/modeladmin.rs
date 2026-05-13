@@ -108,16 +108,107 @@ pub trait ModelAdmin: AdminModel {
     /// bulk bar (next to the framework's built-in Delete). Default:
     /// none.
     ///
-    /// `BulkAction` is metadata only — the dispatcher
-    /// (`AdminOps::execute_bulk_action`) is what actually runs the
-    /// action on the selected rows. Project models that need a custom
-    /// action override `AdminOps::execute_bulk_action` to match on
-    /// `name` and apply the work; the framework's default impl
-    /// returns a clear `BadRequest` for any name it doesn't recognise,
-    /// so a forgotten implementation surfaces as an error page rather
-    /// than a silent no-op.
+    /// `BulkAction` is metadata only — pair this method with an
+    /// [`ModelAdmin::execute_bulk_action`] override that matches on
+    /// `name` and applies the work. The framework's default
+    /// dispatcher returns a clear `BadRequest` for any name it
+    /// doesn't recognise, so a forgotten implementation surfaces as
+    /// an error page rather than a silent no-op.
     fn bulk_actions() -> &'static [BulkAction] {
         &[]
+    }
+
+    /// Run a project-defined bulk action against `ids`. Called once
+    /// per `POST /admin/:model/bulk/:name` submission with the full
+    /// id list — the implementation chooses between a single bulk
+    /// SQL update and a per-row loop.
+    ///
+    /// The framework wraps this call with one [`audit::record`]
+    /// emission per submission (using `BulkActionContext.actor`,
+    /// `correlation_id`, and the `BulkActionResult` outcome).
+    /// Projects don't need to audit the dispatch envelope themselves;
+    /// any business-level audit emissions inside the action body are
+    /// still the project's call.
+    ///
+    /// Two channels for "something went wrong":
+    ///
+    ///   - **Action itself failed** — return `Err(...)`. The framework
+    ///     surfaces it as a 4xx/5xx page and still writes an audit row
+    ///     for the attempt.
+    ///   - **Some rows failed** — return `Ok(BulkActionResult)` with
+    ///     a populated `failed` list. The framework records a
+    ///     partial-success audit row and renders the per-id failure
+    ///     summary on the next request.
+    ///
+    /// The framework's built-in `delete` action does **not** flow
+    /// through this method. It runs through the cascade-aware
+    /// `/bulk_delete` route. Override `delete` semantics on the
+    /// underlying [`crate::Model`] / handler layer if you need
+    /// custom delete behaviour.
+    ///
+    /// The default implementation returns a structured error so a
+    /// declared-but-unimplemented action surfaces clearly:
+    ///
+    /// ```ignore
+    /// use std::future::Future;
+    /// use std::pin::Pin;
+    /// use rustio_admin::{
+    ///     BulkAction, BulkActionContext, BulkActionResult, Db, ModelAdmin, Result,
+    /// };
+    ///
+    /// # struct Loan; impl rustio_admin::AdminModel for Loan {
+    /// #     const ADMIN_NAME: &'static str = ""; const DISPLAY_NAME: &'static str = "";
+    /// #     const SINGULAR_NAME: &'static str = ""; const FIELDS: &'static [rustio_admin::AdminField] = &[];
+    /// #     fn display_values(&self) -> Vec<(String, String)> { vec![] }
+    /// #     fn from_form(_: &rustio_admin::FormData) -> ::std::result::Result<Self, Vec<String>> { Err(vec![]) }
+    /// #     fn object_label(&self) -> String { String::new() } fn id(&self) -> i64 { 0 }
+    /// #     fn values_to_update(&self) -> Vec<(&'static str, rustio_admin::Value)> { vec![] }
+    /// # }
+    /// impl ModelAdmin for Loan {
+    ///     fn bulk_actions() -> &'static [BulkAction] {
+    ///         &[BulkAction {
+    ///             name: "mark_overdue",
+    ///             label: "Mark overdue",
+    ///             destructive: false,
+    ///             confirm: true,
+    ///         }]
+    ///     }
+    ///
+    ///     fn execute_bulk_action<'a>(
+    ///         action: &'a str,
+    ///         ids: &'a [i64],
+    ///         _db: &'a Db,
+    ///         _ctx: &'a BulkActionContext<'a>,
+    ///     ) -> Pin<Box<dyn Future<Output = Result<BulkActionResult>> + Send + 'a>> {
+    ///         Box::pin(async move {
+    ///             match action {
+    ///                 "mark_overdue" => Ok(BulkActionResult::ok(ids.len())),
+    ///                 _ => Ok(BulkActionResult::default()),
+    ///             }
+    ///         })
+    ///     }
+    /// }
+    /// ```
+    fn execute_bulk_action<'a>(
+        action: &'a str,
+        _ids: &'a [i64],
+        _db: &'a crate::orm::Db,
+        _ctx: &'a crate::admin::bulk::BulkActionContext<'a>,
+    ) -> ::std::pin::Pin<
+        ::std::boxed::Box<
+            dyn ::std::future::Future<
+                    Output = crate::error::Result<crate::admin::bulk::BulkActionResult>,
+                > + ::std::marker::Send
+                + 'a,
+        >,
+    > {
+        let owned = action.to_string();
+        Box::pin(async move {
+            Err(crate::error::Error::BadRequest(format!(
+                "bulk action `{owned}` has no project handler — \
+                 override `ModelAdmin::execute_bulk_action` on this model"
+            )))
+        })
     }
 }
 

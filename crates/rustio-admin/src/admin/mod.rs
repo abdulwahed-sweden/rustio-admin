@@ -3,6 +3,8 @@
 pub(crate) mod admin_recovery_handlers;
 // public:
 pub mod audit;
+// public:
+pub mod bulk;
 pub(crate) mod builtin;
 // public:
 pub mod filters;
@@ -25,6 +27,8 @@ mod types;
 pub use audit::{
     ensure_table, for_object, recent, record, ActionType, AdminAction, AuditEvent, LogEntry,
 };
+// public:
+pub use bulk::{BulkActionContext, BulkActionFailure, BulkActionResult};
 // public:
 pub use filters::{
     classify_field, field_ui_metadata, field_ui_metadata_with_relation, format_relation_cell,
