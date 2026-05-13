@@ -32,7 +32,78 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- **Public bulk-action dispatch hook.** Project models can now
+  back the buttons that `ModelAdmin::bulk_actions()` already
+  declared, closing the second of the two D.4-documented
+  framework gaps. The dispatch contract is a single new default
+  method on the public `ModelAdmin` trait:
+  ```rust
+  fn execute_bulk_action<'a>(
+      action: &'a str,
+      ids: &'a [i64],
+      db: &'a Db,
+      ctx: &'a BulkActionContext<'a>,
+  ) -> Pin<Box<dyn Future<Output = Result<BulkActionResult>> + Send + 'a>>
+  ```
+  Default returns `BadRequest` with the action name so a
+  declared-but-unimplemented action surfaces clearly. The
+  internal type-erased `AdminOps` trait remains `pub(crate)`;
+  `ConcreteOps<M>::execute_bulk_action` forwards into the
+  model's override.
+- New module `rustio_admin::admin::bulk` exporting three public
+  types, all `#[non_exhaustive]` for SemVer headroom:
+  - `BulkActionContext<'a>` — actor, correlation id, client IP.
+    `pub fn new(actor: &Identity) -> Self` for unit-test
+    construction.
+  - `BulkActionResult` — succeeded count, per-row failure list,
+    optional operator-facing summary. Constructors
+    `BulkActionResult::ok(n)`, `::partial(n, failures)`,
+    builder `::with_message(...)`, accessor `::total()`.
+  - `BulkActionFailure` — `id: i64` + `reason: String`.
+    Constructor `BulkActionFailure::new(id, reason)`.
+- Re-exported at the crate root:
+  `pub use rustio_admin::{BulkActionContext, BulkActionFailure,
+   BulkActionResult};`.
+- Handler emits **one** audit row per bulk submission. The row
+  carries `action_type` = `Update` (or `Delete` for actions
+  declared `destructive: true`), `model_name` = the admin slug,
+  `object_id = 0` (the framework's "this row describes a bulk
+  dispatch" marker), and structured `metadata`:
+  `{ "kind": "bulk_action", "action", "model", "ids",
+     "succeeded", "failed_ids", "failure_reasons" }`. Projects
+  do not need to call `audit::record` themselves for the
+  dispatch envelope.
+
+### Internal
+
+- `ConcreteOps<M>` impl bound tightened from `M: AdminModel +
+  Model` to `M: AdminModel + ModelAdmin + Model`. Functionally a
+  no-op — `Admin::model::<M>()` has always required
+  `M: ModelAdmin`, so every M that reached `ConcreteOps` already
+  satisfied the trait — but lets `ConcreteOps::execute_bulk_action`
+  delegate to `M::execute_bulk_action` without a separate
+  blanket bound.
+- `CoreUserOps::execute_bulk_action` returns a structured
+  "not available on the framework User entry" error.
+- Five new unit tests in `admin::bulk::tests` cover
+  `BulkActionResult` constructors + `total()` + `with_message()`.
+- Doctest on `ModelAdmin::execute_bulk_action` demonstrates the
+  override shape (project-side `match action` dispatch).
+
+### Deferred
+
+- Per-action permissions. `BulkActionContext.actor` is already in
+  scope inside the project handler, so any project can do its
+  own `actor.role`/`actor.email`-based check today. A future
+  commit may add an optional `permission: &'static str` field
+  to `BulkAction` for framework-level enforcement.
+- Example integration. `examples/library-circulation` is
+  intentionally untouched in this commit — the second commit in
+  this Phase D wrap-up adds a `mark_overdue` /
+  `mark_returned` demonstration to `Loan` and closes the
+  example README's "does not yet demonstrate" list.
 
 
 ## [0.11.0] — 2026-05-13

@@ -880,10 +880,74 @@ pub(crate) async fn handle_bulk_action(
     // declared `confirm: true`; one-click actions skip the confirm
     // page entirely.
     if form.bool_flag("_confirmed") || !action.confirm {
-        entry
+        let correlation_id = super::builtin::correlation_id_from(req);
+        let ip = super::builtin::client_ip(req);
+        let bulk_ctx = super::bulk::BulkActionContext {
+            actor: &identity,
+            correlation_id: correlation_id.as_deref(),
+            ip_address: ip.as_deref(),
+        };
+        // Dispatch to the project's ModelAdmin override (or surface
+        // the framework's "no project handler" BadRequest when the
+        // action was declared but not implemented).
+        let outcome = entry
             .ops
-            .execute_bulk_action(&ctx.db, action.name, &ids)
+            .execute_bulk_action(&ctx.db, action.name, &ids, &bulk_ctx)
             .await?;
+
+        // One audit row per submission. `object_id = 0` is the
+        // framework's signal that this is a bulk dispatch, not a
+        // single-object action; the affected ids live in
+        // `metadata.ids`. The history page can render bulk rows
+        // distinctly by checking `object_id == 0` and reading the
+        // structured metadata.
+        let failed_ids: Vec<i64> = outcome.failed.iter().map(|f| f.id).collect();
+        let failure_reasons: Vec<&str> = outcome
+            .failed
+            .iter()
+            .map(|f| f.reason.as_str())
+            .collect();
+        let metadata = serde_json::json!({
+            "kind": "bulk_action",
+            "action": action.name,
+            "model": entry.admin_name,
+            "ids": ids,
+            "succeeded": outcome.succeeded,
+            "failed_ids": failed_ids,
+            "failure_reasons": failure_reasons,
+        });
+        let summary = match outcome.message.as_deref() {
+            Some(msg) => msg.to_string(),
+            None => format!(
+                "bulk action `{action}` on {model}: {ok} succeeded, {fail} failed",
+                action = action.name,
+                model = entry.admin_name,
+                ok = outcome.succeeded,
+                fail = outcome.failed.len(),
+            ),
+        };
+        let action_type = if action.destructive {
+            super::audit::ActionType::Delete
+        } else {
+            super::audit::ActionType::Update
+        };
+        let _ = super::audit::record(
+            &ctx.db,
+            super::audit::LogEntry {
+                user_id: identity.user_id,
+                action_type,
+                model_name: entry.admin_name,
+                object_id: 0,
+                ip_address: ip.as_deref(),
+                summary,
+                correlation_id: correlation_id.as_deref(),
+                session_id: None,
+                metadata: Some(metadata),
+                actor_user_id: None,
+                event: None,
+            },
+        )
+        .await;
         return Ok(Response::redirect(format!("/admin/{admin_name}")));
     }
 

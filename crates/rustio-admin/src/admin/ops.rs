@@ -15,6 +15,8 @@ use crate::error::Result;
 use crate::http::FormData;
 use crate::orm::{Db, Row};
 
+use super::bulk::{BulkActionContext, BulkActionResult};
+use super::modeladmin::ModelAdmin;
 use super::types::{
     AdminModel, AdminOps, CreateResult, EditRow, ListOpts, ListPage, ListRow, UpdateResult,
 };
@@ -33,7 +35,7 @@ impl<M> ConcreteOps<M> {
 
 impl<M> AdminOps for ConcreteOps<M>
 where
-    M: AdminModel + crate::orm::Model,
+    M: AdminModel + ModelAdmin + crate::orm::Model,
 {
     fn list<'a>(
         &'a self,
@@ -252,5 +254,20 @@ where
             let found = crate::orm::find::<M>(db, id).await?;
             Ok(found.map(|m| m.object_label()))
         })
+    }
+
+    fn execute_bulk_action<'a>(
+        &'a self,
+        db: &'a Db,
+        name: &'a str,
+        ids: &'a [i64],
+        ctx: &'a BulkActionContext<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<BulkActionResult>> + Send + 'a>> {
+        // Forward to the project's `ModelAdmin::execute_bulk_action`.
+        // The model's override decides per-action semantics; the
+        // framework's default impl (in modeladmin.rs) returns a
+        // structured BadRequest when the action name has no project
+        // handler.
+        M::execute_bulk_action(name, ids, db, ctx)
     }
 }

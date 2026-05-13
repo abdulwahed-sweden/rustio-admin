@@ -36,17 +36,31 @@ Generated from `// public:` annotations across the workspace.
 ### `rustio_admin::admin`
 
 - `pub mod audit;`
+- `pub mod bulk;`
 - `pub mod filters;`
 - `pub mod modeladmin;`
 - `pub mod redact;`
 - `pub mod relations;`
 - `pub use audit::`
+- `pub use bulk::{BulkActionContext, BulkActionFailure, BulkActionResult};`
 - `pub use filters::`
 - `pub use modeladmin::`
 - `pub use redact::`
 - `pub use relations::`
 - `pub use routes::register_admin_routes;`
 - `pub use types::`
+
+### `rustio_admin::admin::bulk`
+
+- `pub struct BulkActionContext<'a>` — `#[non_exhaustive]`; fields `actor: &'a Identity`, `correlation_id: Option<&'a str>`, `ip_address: Option<&'a str>`.
+- `pub fn new(actor: &'a Identity) -> Self`
+- `pub struct BulkActionResult` — `#[non_exhaustive]`; fields `succeeded: usize`, `failed: Vec<BulkActionFailure>`, `message: Option<String>`.
+- `pub fn ok(succeeded: usize) -> Self`
+- `pub fn partial(succeeded: usize, failed: Vec<BulkActionFailure>) -> Self`
+- `pub fn total(&self) -> usize`
+- `pub fn with_message(mut self, message: impl Into<String>) -> Self`
+- `pub struct BulkActionFailure` — `#[non_exhaustive]`; fields `id: i64`, `reason: String`.
+- `pub fn new(id: i64, reason: impl Into<String>) -> Self`
 
 ### `rustio_admin::admin::audit`
 
@@ -86,6 +100,7 @@ Generated from `// public:` annotations across the workspace.
 
 - `pub struct Fieldset`
 - `pub trait ModelAdmin: AdminModel`
+- `fn execute_bulk_action<'a>(action: &'a str, ids: &'a [i64], db: &'a Db, ctx: &'a BulkActionContext<'a>) -> Pin<Box<dyn Future<Output = Result<BulkActionResult>> + Send + 'a>>` — default returns `BadRequest` with the action name; projects override to dispatch declared `bulk_actions()`.
 - `pub struct BulkAction`
 - `pub enum SortDir`
 - `pub fn sql(self) -> &'static str`

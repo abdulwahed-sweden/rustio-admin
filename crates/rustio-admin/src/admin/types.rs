@@ -261,10 +261,15 @@ pub(crate) trait AdminOps: Send + Sync {
     /// Run a project-defined bulk action against the supplied row
     /// ids. Called once per submission with the full id list, so the
     /// implementation can choose between a single bulk SQL update or
-    /// a per-row loop. The default impl returns `BadRequest` with the
-    /// action name embedded — projects override to match on `name`
-    /// and apply the work; an unknown name surfaces as a clear error
-    /// page rather than a silent no-op.
+    /// a per-row loop.
+    ///
+    /// The real public dispatcher is
+    /// [`super::ModelAdmin::execute_bulk_action`];
+    /// [`super::ops::ConcreteOps<M>`] forwards into the model's
+    /// override from this trait method. The
+    /// [`super::types::CoreUserOps`] entry has no project surface
+    /// (the User row is framework-owned), so it returns the
+    /// "no project handler" error verbatim.
     ///
     /// Note: the framework's built-in `delete` action is **not**
     /// dispatched through here. It runs through the cascade-aware
@@ -272,18 +277,11 @@ pub(crate) trait AdminOps: Send + Sync {
     /// `delete` instead if you need custom delete semantics.
     fn execute_bulk_action<'a>(
         &'a self,
-        _db: &'a Db,
+        db: &'a Db,
         name: &'a str,
-        _ids: &'a [i64],
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        let owned = name.to_string();
-        Box::pin(async move {
-            Err(crate::error::Error::BadRequest(format!(
-                "bulk action `{owned}` has no project handler — override \
-                 AdminOps::execute_bulk_action on this model to implement it"
-            )))
-        })
-    }
+        ids: &'a [i64],
+        ctx: &'a super::bulk::BulkActionContext<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<super::bulk::BulkActionResult>> + Send + 'a>>;
 }
 
 // public:
@@ -955,6 +953,26 @@ impl AdminOps for CoreUserOps {
         _id: i64,
     ) -> Pin<Box<dyn Future<Output = Result<Option<String>>> + Send + 'a>> {
         Box::pin(async { Err(core_user_route_error()) })
+    }
+
+    fn execute_bulk_action<'a>(
+        &'a self,
+        _db: &'a Db,
+        name: &'a str,
+        _ids: &'a [i64],
+        _ctx: &'a super::bulk::BulkActionContext<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<super::bulk::BulkActionResult>> + Send + 'a>> {
+        // The User entry has no project-owned bulk actions; the
+        // framework manages user row writes through dedicated CLI /
+        // admin routes. Surface the same "no project handler" shape
+        // as the ModelAdmin default so a misconfigured registration
+        // gets a clear error rather than a silent no-op.
+        let owned = name.to_string();
+        Box::pin(async move {
+            Err(crate::error::Error::BadRequest(format!(
+                "bulk action `{owned}` is not available on the framework User entry"
+            )))
+        })
     }
 }
 
