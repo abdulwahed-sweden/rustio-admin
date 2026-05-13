@@ -81,7 +81,7 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
 /// Render an icon inline. Returns an empty string if `name` is
 /// unknown (templates remain forgiving — a missing icon shouldn't
 /// crash the page render).
-pub fn render_inline(name: &str, class: &str) -> String {
+pub(crate) fn render_inline(name: &str, class: &str) -> String {
     let Some(inner) = ICONS.get(name) else {
         log::warn!("icon({name:?}) not found — rendering empty");
         return String::new();

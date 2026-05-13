@@ -75,7 +75,7 @@ impl RecoveryState {
     /// Build from `Admin`, sizing the buckets from
     /// `RecoveryPolicy::request_rate_limit()` and
     /// `consume_rate_limit()`. Called once at registration time.
-    pub fn from_admin(admin: &Admin) -> Self {
+    pub(crate) fn from_admin(admin: &Admin) -> Self {
         let policy = admin.active_recovery_policy();
         let (req_cap, req_window) = policy.request_rate_limit();
         let (cons_cap, cons_window) = policy.consume_rate_limit();

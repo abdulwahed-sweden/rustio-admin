@@ -220,7 +220,7 @@ type HmacSha1 = Hmac<Sha1>;
 /// site.
 #[derive(Clone)]
 #[allow(dead_code)] // call sites land in R3 commit #6+ (enrol / verify runtime)
-pub struct MfaKey([u8; 32]);
+pub(crate) struct MfaKey([u8; 32]);
 
 #[allow(dead_code)] // see MfaKey type comment — light up in R3 commit #6+
 impl MfaKey {
@@ -244,7 +244,7 @@ impl MfaKey {
     /// `MfaPolicy != Disabled` is wired in a later commit; this
     /// constructor reports the failure but does NOT enforce
     /// "policy says Disabled, so missing key is fine."
-    pub fn from_env() -> Result<Self> {
+    pub(crate) fn from_env() -> Result<Self> {
         let raw = std::env::var("RUSTIO_SECRET_KEY").map_err(|_| {
             Error::Internal(
                 "RUSTIO_SECRET_KEY env var is unset; required when MfaPolicy != Disabled".into(),
@@ -268,7 +268,7 @@ impl MfaKey {
     /// Construct from raw 32 bytes. Used by tests and explicit
     /// project wiring (e.g. a project that derives the key from
     /// AWS KMS / HashiCorp Vault rather than an env var).
-    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+    pub(crate) fn from_bytes(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
 
@@ -299,7 +299,7 @@ impl MfaKey {
 /// not use. Returning `Vec<u8>` directly keeps the call sites
 /// simple.
 #[allow(dead_code)] // call site lands in R3 commit #6 (enrol_secret runtime)
-pub fn wrap_secret(plaintext: &[u8], key: &MfaKey) -> Vec<u8> {
+pub(crate) fn wrap_secret(plaintext: &[u8], key: &MfaKey) -> Vec<u8> {
     let mut nonce_bytes = [0u8; 12];
     rand::thread_rng().fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
@@ -331,7 +331,7 @@ pub fn wrap_secret(plaintext: &[u8], key: &MfaKey) -> Vec<u8> {
 /// The function is constant-time at the AEAD primitive level;
 /// the framework adds no timing-leak surface on top of it.
 #[allow(dead_code)] // call site lands in R3 commit #7 (verify_totp runtime)
-pub fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
+pub(crate) fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
     if input.len() < 12 + 16 {
         return Err(Error::Internal(format!(
             "MFA ciphertext too short ({} bytes); minimum is 28 (nonce + tag)",
@@ -357,13 +357,13 @@ pub fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
 /// 8-16; 8 is enough for emergency use without bloating the
 /// post-enrolment confirmation page.
 #[allow(dead_code)] // call site lands in R3 commit #6 (enrolment runtime)
-pub const BACKUP_CODE_COUNT: usize = 8;
+pub(crate) const BACKUP_CODE_COUNT: usize = 8;
 
 // internal:
 /// Backup-code length in characters, excluding the visual
 /// hyphen separator at position 4. Locked at 8 (rendered as
 /// `XXXX-XXXX`) per `DESIGN_R3_MFA.md` Appendix B.
-pub const BACKUP_CODE_LEN: usize = 8;
+pub(crate) const BACKUP_CODE_LEN: usize = 8;
 
 /// 31-character ambiguity-stripped alphabet for backup codes.
 /// Excludes `0` / `O` (digit zero / letter O), `1` / `I` /
@@ -421,7 +421,7 @@ fn backup_code_argon2() -> Result<Argon2<'static>> {
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) +
                     // commit when regenerate_backup_codes lands
 // internal:
-pub fn generate_backup_codes(count: usize) -> Vec<String> {
+pub(crate) fn generate_backup_codes(count: usize) -> Vec<String> {
     let mut rng = rand::thread_rng();
     let alphabet_len = BACKUP_CODE_ALPHABET.len();
     (0..count)
@@ -450,7 +450,7 @@ pub fn generate_backup_codes(count: usize) -> Vec<String> {
 ///
 /// Idempotent: `normalise(normalise(x)) == normalise(x)`.
 #[allow(dead_code)] // call site lands in R3 commit #8 (consume_backup_code runtime)
-pub fn normalise_backup_code(input: &str) -> String {
+pub(crate) fn normalise_backup_code(input: &str) -> String {
     input
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
@@ -480,7 +480,7 @@ pub fn normalise_backup_code(input: &str) -> String {
 /// - Hashing itself fails (rare; usually OOM under contrived
 ///   conditions).
 #[allow(dead_code)] // call site lands in R3 commit #6 (enrolment runtime)
-pub fn hash_backup_code(plaintext: &str) -> Result<String> {
+pub(crate) fn hash_backup_code(plaintext: &str) -> Result<String> {
     let argon2 = backup_code_argon2()?;
     let salt = SaltString::generate(&mut rand::thread_rng());
     let hash = argon2
@@ -502,7 +502,7 @@ pub fn hash_backup_code(plaintext: &str) -> Result<String> {
 /// distinguish causes; the user-facing response is uniform per
 /// `DESIGN_R3_MFA.md` §4.4.
 #[allow(dead_code)] // call site lands in R3 commit #8 (consume_backup_code runtime)
-pub fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
+pub(crate) fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
     let parsed = match PasswordHash::new(hash) {
         Ok(p) => p,
         Err(_) => return false,
@@ -540,7 +540,7 @@ pub fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
 /// previously accepted by [`verify_totp`] for replay protection
 /// (D4).
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) + #7 (verify_totp)
-pub fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
+pub(crate) fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
     debug_assert!(step_seconds > 0, "step_seconds must be > 0");
     now_unix / step_seconds
 }
@@ -568,7 +568,7 @@ pub fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
 /// length per the HMAC construction; the framework never
 /// produces an invalid secret length internally.
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) + #7 (verify_totp)
-pub fn generate_totp(secret: &[u8], step: u64) -> u32 {
+pub(crate) fn generate_totp(secret: &[u8], step: u64) -> u32 {
     // UFCS to disambiguate from `aes_gcm::aead::KeyInit` —
     // both traits define a `new_from_slice` method.
     let mut mac = <HmacSha1 as Mac>::new_from_slice(secret).expect("HMAC accepts any key length");
@@ -607,7 +607,7 @@ pub fn generate_totp(secret: &[u8], step: u64) -> u32 {
 /// `RecoveryPolicy::mfa_skew_steps`) is 1, giving a 90-second
 /// total acceptance window at the canonical 30-second step.
 #[allow(dead_code)] // call site lands in R3 commit #7 (verify_totp runtime)
-pub fn verify_totp(
+pub(crate) fn verify_totp(
     secret: &[u8],
     candidate: u32,
     now_unix: u64,
@@ -643,7 +643,7 @@ pub fn verify_totp(
 /// in process memory; the at-rest persistence contract (D1)
 /// is enforced inside `confirm_enrolment` via [`wrap_secret`].
 #[allow(dead_code)] // fields read by the enrolment GET handler in a later commit
-pub struct ProvisionedSecret {
+pub(crate) struct ProvisionedSecret {
     /// 20 random bytes from the OS RNG. RFC 6238 recommends
     /// HMAC-SHA1's block size (64 bytes) or output size
     /// (20 bytes); 20 is the universal authenticator-app
@@ -666,7 +666,7 @@ pub struct ProvisionedSecret {
 /// issuer name or the user's email; those concerns live at the
 /// HTTP layer.
 #[allow(dead_code)] // call site lands in the enrolment GET handler
-pub fn provision_secret() -> ProvisionedSecret {
+pub(crate) fn provision_secret() -> ProvisionedSecret {
     let mut bytes = vec![0u8; 20];
     rand::thread_rng().fill_bytes(&mut bytes);
     let base32 = base32_encode_no_pad(&bytes);
@@ -700,7 +700,7 @@ pub fn provision_secret() -> ProvisionedSecret {
 /// but not the other; including both is the broadest-compat
 /// move per Google's own spec.
 #[allow(dead_code)] // call site lands at the enrolment GET handler (R3 commit #13)
-pub fn build_otpauth_url(
+pub(crate) fn build_otpauth_url(
     issuer: &str,
     account: &str,
     base32_secret: &str,
@@ -763,7 +763,7 @@ fn base32_encode_no_pad(bytes: &[u8]) -> String {
 /// Pinned by round-trip tests:
 /// `decode(encode(input)) == input` for arbitrary input.
 #[allow(dead_code)] // call site lands at the enrolment POST handler (R3 commit #13)
-pub fn base32_decode_no_pad(input: &str) -> Option<Vec<u8>> {
+pub(crate) fn base32_decode_no_pad(input: &str) -> Option<Vec<u8>> {
     let mut buffer: u32 = 0;
     let mut bits_in_buffer: u8 = 0;
     let mut out = Vec::with_capacity(input.len() * 5 / 8 + 1);
@@ -797,7 +797,7 @@ pub fn base32_decode_no_pad(input: &str) -> Option<Vec<u8>> {
 /// right page without embedding HTTP concerns in the runtime
 /// layer.
 #[allow(dead_code)] // variants light up at the HTTP handler in a later commit
-pub enum EnrolOutcome {
+pub(crate) enum EnrolOutcome {
     /// The user's first TOTP code matched the just-provisioned
     /// secret. The secret has been encrypted and persisted on
     /// the user row; the 8 backup codes have been hashed and
@@ -865,7 +865,7 @@ pub enum EnrolOutcome {
 /// existing sessions per `DESIGN_R3_MFA.md` §4.1.
 #[allow(dead_code)] // call site lands at the enrolment POST handler in a later commit
 #[allow(clippy::too_many_arguments)]
-pub async fn confirm_enrolment(
+pub(crate) async fn confirm_enrolment(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -977,7 +977,7 @@ pub async fn confirm_enrolment(
 /// exist for forensic logging, future audit emission, and
 /// internal debugging only.
 #[allow(dead_code)] // variants light up at the verify handler in a later commit
-pub enum VerifyOutcome {
+pub(crate) enum VerifyOutcome {
     /// The candidate code matched within the skew window AND
     /// the matched step is strictly greater than
     /// `mfa_last_used_step`. The runtime has stamped the new
@@ -1055,7 +1055,7 @@ pub enum VerifyOutcome {
 /// runs through `auth::sessions::invalidate_sessions` at the
 /// handler level — not here.
 #[allow(dead_code)] // call site lands at the verify POST handler in a later commit
-pub async fn verify_totp_for_user(
+pub(crate) async fn verify_totp_for_user(
     db: &Db,
     user_id: i64,
     candidate_code_str: &str,
@@ -1149,7 +1149,7 @@ pub async fn verify_totp_for_user(
 /// `NotEnrolled` in the rendered copy. The variant distinctions
 /// exist for forensic logging and internal debugging only.
 #[allow(dead_code)] // variants light up at the verify handler in a later commit
-pub enum BackupConsumeOutcome {
+pub(crate) enum BackupConsumeOutcome {
     /// The candidate matched an unused backup code. The row has
     /// been atomically marked `used_at = NOW()`; the audit row
     /// has been emitted. The caller proceeds with trust
@@ -1229,7 +1229,7 @@ pub enum BackupConsumeOutcome {
 /// consume is an out-of-band recovery event worth surfacing in
 /// the forensic chain.
 #[allow(dead_code)] // call site lands at the verify POST handler in a later commit
-pub async fn consume_backup_code(
+pub(crate) async fn consume_backup_code(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -1343,7 +1343,7 @@ pub async fn consume_backup_code(
 /// the right page without embedding HTTP concerns in the
 /// runtime layer.
 #[allow(dead_code)] // variants light up at the disable handler in a later commit
-pub enum DisableOutcome {
+pub(crate) enum DisableOutcome {
     /// MFA disabled successfully. The user row's four MFA
     /// columns are reset (`mfa_enabled = FALSE`, the secret +
     /// key id + last-used step all NULL). The backup-code rows
@@ -1411,7 +1411,7 @@ pub enum DisableOutcome {
 /// what actually happened; a partial success that fails
 /// invalidation never produces an audit row.
 #[allow(dead_code)] // call site lands at the disable POST handler in a later commit
-pub async fn disable_mfa(
+pub(crate) async fn disable_mfa(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -1504,7 +1504,7 @@ pub async fn disable_mfa(
 /// handler render the right page without embedding HTTP
 /// concerns in the runtime layer.
 #[allow(dead_code)] // variants light up at the regenerate handler in a later commit
-pub enum RegenOutcome {
+pub(crate) enum RegenOutcome {
     /// A fresh batch of `BACKUP_CODE_COUNT` codes was generated
     /// inside an atomic transaction (D3). The old batch — all
     /// rows for this user — was deleted in the same transaction
@@ -1577,7 +1577,7 @@ pub enum RegenOutcome {
 /// MVCC — both states (old batch intact / new batch active)
 /// are observable; no in-between is.
 #[allow(dead_code)] // call site lands at the regenerate POST handler in a later commit
-pub async fn regenerate_backup_codes(
+pub(crate) async fn regenerate_backup_codes(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -1716,7 +1716,7 @@ pub async fn regenerate_backup_codes(
 /// token ride into the elevated state; the rotation forbids
 /// that.
 #[allow(dead_code)] // call site lands at the verify POST handler in a later commit
-pub async fn promote_session_to_mfa_verified(
+pub(crate) async fn promote_session_to_mfa_verified(
     db: &Db,
     current_session_id: i64,
     user_id: i64,
@@ -1778,7 +1778,7 @@ pub async fn promote_session_to_mfa_verified(
 /// verify path; the re-auth path stamps the same trust level
 /// via UPDATE without a new cookie.
 #[allow(dead_code)] // call site lands at /admin/reauth POST in R3 commit #17
-pub async fn promote_session_mfa_elevated(
+pub(crate) async fn promote_session_mfa_elevated(
     db: &Db,
     session_id: i64,
     ttl: ChronoDuration,
@@ -1928,7 +1928,7 @@ impl Default for MfaPolicy {
 /// `rustio_users` existing first (which `auth::init_tables`
 /// guarantees by ordering this call after `init_user_tables`
 /// and the R1 / R2 schema migrations).
-pub async fn migrate_user_mfa_schema(db: &Db) -> Result<()> {
+pub(crate) async fn migrate_user_mfa_schema(db: &Db) -> Result<()> {
     sqlx::query(
         "ALTER TABLE rustio_users \
          ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE",

@@ -453,7 +453,7 @@ impl AdminTheme {
     // internal:
     /// `true` when at least one field is set. Used by the renderer to
     /// decide whether to emit the inline `<style>` block at all.
-    pub fn has_overrides(&self) -> bool {
+    pub(crate) fn has_overrides(&self) -> bool {
         self.accent.is_some()
             || self.bg.is_some()
             || self.surface.is_some()

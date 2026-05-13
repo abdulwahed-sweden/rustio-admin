@@ -156,7 +156,7 @@ fn environment_kind(label: &str) -> &'static str {
 
 impl BaseContext {
     // internal:
-    pub fn new(identity: Option<&Identity>, csrf_token: String, admin: &Admin) -> Self {
+    pub(crate) fn new(identity: Option<&Identity>, csrf_token: String, admin: &Admin) -> Self {
         let b = admin.branding();
         let (is_demo_session, demo_label) = match identity {
             Some(i) => (i.is_demo, i.demo_label.clone()),
