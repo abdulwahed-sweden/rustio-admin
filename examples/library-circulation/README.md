@@ -45,6 +45,10 @@ rustio user create --email admin@example.test --role developer
 ## What this example demonstrates
 
 - Relational modelling across four tables with three foreign keys.
+- `#[rustio(belongs_to = "Target", display = "field")]` on each
+  FK column. The admin renders proper `<select>` dropdowns on
+  create / edit and turns the FK cell in list views into a
+  navigation link to the related row's edit page.
 - `Admin::new().model::<T>()` wiring for every model.
 - The R0-canonical middleware chain (logger → correlation_id →
   security_headers → csrf_protect).
