@@ -139,7 +139,7 @@ impl Request {
     /// integration suite — see `DESIGN_R2_ORGANISATIONAL.md` §10.3.
     #[doc(hidden)]
     #[cfg(feature = "integration-test")]
-    pub fn __integration_test_fake(path: String, headers: HashMap<String, String>) -> Self {
+    pub(crate) fn __integration_test_fake(path: String, headers: HashMap<String, String>) -> Self {
         Self::new(
             hyper::Method::POST,
             path,

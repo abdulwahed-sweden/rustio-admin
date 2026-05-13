@@ -114,7 +114,7 @@ use crate::orm::Db;
 ///
 /// Idempotent. Safe to call on every boot. Depends on `rustio_users`
 /// existing first.
-pub async fn migrate_user_lockout_schema(db: &Db) -> Result<()> {
+pub(crate) async fn migrate_user_lockout_schema(db: &Db) -> Result<()> {
     sqlx::query(
         "ALTER TABLE rustio_users \
          ADD COLUMN IF NOT EXISTS failed_login_count INT NOT NULL DEFAULT 0",
@@ -156,7 +156,7 @@ pub async fn migrate_user_lockout_schema(db: &Db) -> Result<()> {
 /// informational: the lockout check itself uses `> NOW()` semantics,
 /// so callers don't need to compare the timestamp themselves.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LockState {
+pub(crate) enum LockState {
     /// Account is logged-in-able as far as throttle state is
     /// concerned (`locked_until IS NULL` or `<= NOW()`).
     Unlocked,
@@ -173,7 +173,7 @@ pub enum LockState {
 /// request's `correlation_id` and `ip_address` without threading
 /// them through the runtime layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ThrottleOutcome {
+pub(crate) enum ThrottleOutcome {
     /// Counter incremented, threshold not yet reached.
     Recorded { count: i32 },
     /// This failure tripped the threshold; account is now locked
@@ -199,7 +199,7 @@ pub enum ThrottleOutcome {
 /// should `find_user_by_email` first; this fn is keyed on a verified
 /// id). Returns `LockState::Unlocked` when `locked_until IS NULL`
 /// or has already elapsed.
-pub async fn check_account_lockout(db: &Db, user_id: i64) -> Result<LockState> {
+pub(crate) async fn check_account_lockout(db: &Db, user_id: i64) -> Result<LockState> {
     let row = sqlx::query("SELECT locked_until FROM rustio_users WHERE id = $1")
         .bind(user_id)
         .fetch_optional(db.pool())
@@ -240,7 +240,7 @@ pub async fn check_account_lockout(db: &Db, user_id: i64) -> Result<LockState> {
 /// threshold and both write the same `locked_until` value
 /// (idempotent), and a concurrent successful login can't happen
 /// because the password was wrong on this attempt.
-pub async fn record_failed_login(
+pub(crate) async fn record_failed_login(
     db: &Db,
     user_id: i64,
     throttle: LoginThrottle,
@@ -300,7 +300,7 @@ pub async fn record_failed_login(
 ///
 /// Idempotent on its own column writes — repeating the call against
 /// an already-zeroed row is a no-op at the database level.
-pub async fn record_successful_login(db: &Db, user_id: i64) -> Result<()> {
+pub(crate) async fn record_successful_login(db: &Db, user_id: i64) -> Result<()> {
     sqlx::query(
         "UPDATE rustio_users SET \
             failed_login_count = 0, \
@@ -347,7 +347,7 @@ pub async fn record_successful_login(db: &Db, user_id: i64) -> Result<()> {
 /// `false` and every admin-recovery action will require a fresh
 /// re-auth. That's the documented escape hatch when a project sets
 /// `reauth_window = ChronoDuration::zero()`.
-pub async fn promote_session_elevated(db: &Db, session_id: i64, ttl: ChronoDuration) -> Result<()> {
+pub(crate) async fn promote_session_elevated(db: &Db, session_id: i64, ttl: ChronoDuration) -> Result<()> {
     sqlx::query(
         "UPDATE rustio_sessions \
             SET elevated_until = NOW() + (INTERVAL '1 second' * $2::bigint), \
@@ -373,7 +373,7 @@ pub async fn promote_session_elevated(db: &Db, session_id: i64, ttl: ChronoDurat
 /// commit #11). The post-reauth handler then promotes the session
 /// and redirects back to the original URL, which now passes the
 /// check.
-pub async fn check_session_elevated(db: &Db, session_id: i64) -> Result<bool> {
+pub(crate) async fn check_session_elevated(db: &Db, session_id: i64) -> Result<bool> {
     let row = sqlx::query(
         "SELECT elevated_until FROM rustio_sessions \
           WHERE session_id = $1 AND revoked_at IS NULL",
@@ -476,7 +476,7 @@ async fn update_token_mail_status(db: &Db, token_id: i64, status: &str) -> Resul
 /// plaintext NEVER lands in audit metadata
 /// (`DESIGN_R2_ORGANISATIONAL.md` §13).
 #[derive(Debug, Clone, Copy)]
-pub struct AdminActor<'a> {
+pub(crate) struct AdminActor<'a> {
     pub user_id: i64,
     pub email: &'a str,
 }
@@ -491,7 +491,7 @@ pub struct AdminActor<'a> {
 /// here just adds UX complexity for no security benefit.
 #[allow(dead_code)] // variant fields consumed by R2 commit #15 handler
 #[derive(Debug, Clone)]
-pub enum AdminIssueOutcome {
+pub(crate) enum AdminIssueOutcome {
     /// Token row inserted, mail dispatch attempted (status in
     /// `email_status`), audit row written. The token plaintext is
     /// in the email body — never returned from this fn.
@@ -519,7 +519,7 @@ pub enum AdminIssueOutcome {
 /// other DB column.
 #[allow(dead_code)] // variant fields consumed by R2 commit #15 handler
 #[derive(Debug, Clone)]
-pub enum AdminTempPwOutcome {
+pub(crate) enum AdminTempPwOutcome {
     Set {
         target_user_id: i64,
         temp_password: String,
@@ -550,7 +550,7 @@ pub enum AdminTempPwOutcome {
 /// via `SessionInvalidationReason::PasswordReset`. The path is
 /// audit-distinguishable from a self-initiated reset by the
 /// `PasswordResetByOther` event type on this issue row.
-pub async fn issue_admin_reset_token(
+pub(crate) async fn issue_admin_reset_token(
     db: &Db,
     admin: &Admin,
     request: &Request,
@@ -716,7 +716,7 @@ pub async fn issue_admin_reset_token(
 /// [`crate::auth::invalidate_sessions`] with
 /// `SessionInvalidationReason::PasswordResetByOther`. No direct
 /// `revoked_at` write.
-pub async fn admin_set_temp_password(
+pub(crate) async fn admin_set_temp_password(
     db: &Db,
     request: &Request,
     target_user_id: i64,
@@ -834,7 +834,7 @@ pub async fn admin_set_temp_password(
 /// rather than NULL so the partial index
 /// `rustio_users_locked_until_idx` continues to find it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LockDuration {
+pub(crate) enum LockDuration {
     FifteenMinutes,
     OneHour,
     TwentyFourHours,
@@ -852,7 +852,7 @@ impl LockDuration {
     /// Compute the absolute `locked_until` timestamp for this
     /// duration. `Indefinite` returns a year-9999 instant per
     /// the schema doctrine.
-    pub fn to_locked_until(self, now: DateTime<Utc>) -> DateTime<Utc> {
+    pub(crate) fn to_locked_until(self, now: DateTime<Utc>) -> DateTime<Utc> {
         match self {
             Self::FifteenMinutes => now + ChronoDuration::minutes(15),
             Self::OneHour => now + ChronoDuration::hours(1),
@@ -870,7 +870,7 @@ impl LockDuration {
 /// Outcome of [`lock_user_account`].
 #[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
 #[derive(Debug, Clone)]
-pub enum LockOutcome {
+pub(crate) enum LockOutcome {
     /// Lock applied. `until` is the absolute UTC instant the lock
     /// expires (year 9999 for indefinite). `revoked_session_count`
     /// is how many active sessions were revoked at lock time.
@@ -886,7 +886,7 @@ pub enum LockOutcome {
 /// Outcome of [`unlock_user_account`].
 #[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
 #[derive(Debug, Clone)]
-pub enum UnlockOutcome {
+pub(crate) enum UnlockOutcome {
     /// Lock cleared (or row was already unlocked — same UPDATE,
     /// same audit row, same response shape).
     Unlocked {
@@ -899,7 +899,7 @@ pub enum UnlockOutcome {
 /// Outcome of [`admin_revoke_sessions`].
 #[allow(dead_code)] // variant fields consumed by R2 commit #16 handlers
 #[derive(Debug, Clone)]
-pub enum AdminRevokeOutcome {
+pub(crate) enum AdminRevokeOutcome {
     Revoked {
         target_user_id: i64,
         revoked_session_count: usize,
@@ -917,7 +917,7 @@ pub enum AdminRevokeOutcome {
 /// Doctrine 22: revocation goes through
 /// `auth::invalidate_sessions`. This fn never writes
 /// `revoked_at` directly.
-pub async fn lock_user_account(
+pub(crate) async fn lock_user_account(
     db: &Db,
     request: &Request,
     target_user_id: i64,
@@ -1009,7 +1009,7 @@ pub async fn lock_user_account(
 /// is a no-op at the row level. The audit row still emits, which
 /// matters for forensic-trace completeness when an admin re-runs
 /// unlock after losing the response.
-pub async fn unlock_user_account(
+pub(crate) async fn unlock_user_account(
     db: &Db,
     request: &Request,
     target_user_id: i64,
@@ -1057,7 +1057,7 @@ pub async fn unlock_user_account(
 /// `auth::invalidate_sessions`. No `AccountLocked` audit row
 /// emits because no lock was applied; only the per-revoked-session
 /// `SessionsRevokedByOther` rows.
-pub async fn admin_revoke_sessions(
+pub(crate) async fn admin_revoke_sessions(
     db: &Db,
     request: &Request,
     target_user_id: i64,

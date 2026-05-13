@@ -65,7 +65,7 @@ pub(crate) struct AdminCtx {
 
 impl AdminCtx {
     // internal:
-    pub fn new(admin: Arc<Admin>, db: Db, templates: Arc<Templates>) -> Self {
+    pub(crate) fn new(admin: Arc<Admin>, db: Db, templates: Arc<Templates>) -> Self {
         Self {
             admin,
             db,
