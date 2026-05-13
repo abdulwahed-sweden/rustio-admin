@@ -31,10 +31,21 @@ use crate::models::patron::Patron;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Auto-load `.env` from the cwd / parent dirs so operators don't
+    // have to `set -a; source .env; set +a` before `cargo run`. If
+    // no `.env` exists this is a harmless no-op.
+    let dotenv_path = dotenvy::dotenv().ok();
+
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format_target(false)
         .try_init()
         .ok();
+
+    if let Some(p) = dotenv_path {
+        println!("env: loaded {}", p.display());
+    } else {
+        println!("env: no .env file found; reading from process environment only");
+    }
 
     // 1. Connection string — env override, localhost dev fallback.
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
@@ -53,30 +64,55 @@ async fn main() -> Result<()> {
     migrations::apply(&db, concat!(env!("CARGO_MANIFEST_DIR"), "/migrations")).await?;
 
     // 5. Resolve the mailer from env. `SMTP_HOST` present → real SMTP
-    //    via `LettreSmtpMailer`. Unset → `LogMailer` writes the
-    //    would-be email body to stdout (safe dev default; recovery
-    //    flow still emits audit + redirects normally). Malformed
-    //    SMTP env causes a hard boot failure so misconfigurations
-    //    fail loud instead of silently swallowing reset emails.
+    //    via `LettreSmtpMailer`, validated with a boot-time
+    //    handshake. Unset → `LogMailer`. Misconfiguration is fatal:
+    //    silent fallback would hide the misconfiguration from the
+    //    operator until users started complaining about missing
+    //    reset emails.
     let mailer: SharedMailer = match smtp_config_from_env() {
         Ok(Some(cfg)) => {
-            println!(
-                "mailer: SMTP via {host}:{port} (TLS={tls}) from {from}",
-                host = cfg.host,
-                port = cfg.port,
-                tls = if cfg.implicit_tls { "implicit" } else { "starttls" },
-                from = cfg.from,
-            );
-            Arc::new(
-                LettreSmtpMailer::new(cfg)
-                    .map_err(|e| rustio_admin::Error::Internal(format!("mailer: {e}")))?,
-            )
+            let host = cfg.host.clone();
+            let port = cfg.port;
+            let tls = if cfg.implicit_tls { "implicit" } else { "starttls" };
+            let from = cfg.from.to_string();
+            let smtp_mailer = LettreSmtpMailer::new(cfg)
+                .map_err(|e| rustio_admin::Error::Internal(format!("mailer: {e}")))?;
+
+            // Boot-time SMTP handshake. Refuse to start on auth /
+            // TLS / DNS failure — the operator gets a clear error
+            // on `cargo run` instead of a silent "the reset email
+            // never arrived" later.
+            print!("mailer: validating SMTP to {host}:{port} (TLS={tls})… ");
+            use std::io::Write;
+            std::io::stdout().flush().ok();
+            match smtp_mailer.smoke_test().await {
+                Ok(()) => {
+                    println!("OK");
+                    println!("mailer: SMTP authenticated; recovery emails will be delivered as {from}");
+                }
+                Err(e) => {
+                    println!("FAILED");
+                    eprintln!();
+                    eprintln!("mailer: SMTP boot-time handshake to {host}:{port} failed:");
+                    eprintln!("        {e}");
+                    eprintln!();
+                    eprintln!("Common causes:");
+                    eprintln!("  • SMTP_PASSWORD is wrong (Gmail: must be a 16-char App Password, no spaces)");
+                    eprintln!("  • 2-Step Verification is not enabled on the Google account");
+                    eprintln!("  • Wrong port for TLS mode (use 465 + implicit, or 587 + starttls)");
+                    eprintln!("  • Network egress to {host}:{port} is blocked");
+                    eprintln!();
+                    return Err(rustio_admin::Error::Internal(
+                        "mailer: SMTP handshake failed (see stderr above)".into(),
+                    ));
+                }
+            }
+            Arc::new(smtp_mailer)
         }
         Ok(None) => {
-            println!(
-                "mailer: SMTP_HOST unset; using LogMailer (recovery emails will \
-                 print to stdout, not be delivered)"
-            );
+            println!("mailer: SMTP_HOST not set — using LogMailer.");
+            println!("        Recovery emails will be written to stdout, NOT delivered.");
+            println!("        To enable real delivery, see examples/library-circulation/.env.example.");
             Arc::new(LogMailer::new())
         }
         Err(e) => {

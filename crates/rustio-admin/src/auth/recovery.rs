@@ -958,20 +958,22 @@ pub(crate) async fn issue_reset_token(
             let ttl_human = humanize_ttl(ttl);
             let site_header = admin.branding().site_header.clone();
             let body = format!(
-                "We received a request to sign you back in to {site_header}.\n\n\
-                 Click the link below to set a new password:\n\n\
+                "We received a request to reset the password on your \
+                 {site_header} account.\n\n\
+                 Open the link below to set a new password:\n\n\
                  {reset_link}\n\n\
-                 The link expires {ttl_human}. If you didn't request this, you can \
-                 safely ignore this email.\n",
+                 The link expires {ttl_human}. If you didn't request this, \
+                 you can safely ignore this email — your password stays \
+                 unchanged.\n",
             );
             let intro = format!(
-                "We received a request to sign you back in to {site_header}. \
-                 Click the button below to set a new password."
+                "We received a request to reset the password on your \
+                 {site_header} account. Choose a new password to continue."
             );
             let fine_print = format!("This link expires {ttl_human}.");
             let html = crate::email::render_recovery_html(crate::email::RecoveryEmailParts {
                 site_header: &site_header,
-                title: "Sign back in to your account",
+                title: "Reset your password",
                 intro: &intro,
                 cta_label: "Set a new password",
                 cta_url: &reset_link,
@@ -979,10 +981,11 @@ pub(crate) async fn issue_reset_token(
                 when,
                 request_ip: Some(&ip),
                 ua_summary: user_agent_owned.as_deref(),
+                correlation_id,
             });
             let mail = Mail::framework_envelope(
                 user.email.clone(),
-                format!("{site_header} — sign-in link"),
+                format!("Reset your password — {site_header}"),
                 body,
                 &site_header,
                 Some(&ip),

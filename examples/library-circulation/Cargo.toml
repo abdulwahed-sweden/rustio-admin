@@ -26,3 +26,7 @@ lettre = { version = "0.11", default-features = false, features = ["smtp-transpo
 # every `log::info!` call inside the framework is silent.
 log = "0.4"
 env_logger = "0.11"
+# Auto-load `.env` so the operator doesn't have to remember
+# `set -a; source .env; set +a`. The example crate is the right
+# place for this — the framework itself stays env-agnostic.
+dotenvy = "0.15"

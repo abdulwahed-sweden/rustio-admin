@@ -127,6 +127,7 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
         when,
         request_ip,
         ua_summary,
+        correlation_id,
     } = parts;
 
     let cta_url_safe = html_attr_escape(cta_url);
@@ -156,6 +157,43 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
              word-break:break-word;\">{}</td></tr>",
             html_text_escape(ua)
         ),
+        None => String::new(),
+    };
+
+    // Derive a 6-char reference code from the correlation id. UUID v7 is
+    // 32 hex chars after stripping dashes; the last 6 give the operator a
+    // visible identifier that matches the audit row's correlation_id.
+    let reference_panel = match correlation_id {
+        Some(cid) => {
+            let stripped: String = cid.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+            let take_from = stripped.len().saturating_sub(6);
+            let code = stripped[take_from..].to_ascii_uppercase();
+            format!(
+                r##"
+    <!-- Verification reference: derived from the per-request correlation id.
+         Operators can match this against the audit log row. -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+      border="0" style="margin:0 0 28px 0;">
+    <tr><td style="padding:18px 20px;background:#F7F9FC;
+      border:1px solid #DEE3EC;border-radius:6px;">
+      <div style="color:#6B7280;font-size:11px;font-weight:600;
+        letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px 0;">
+        Verification reference
+      </div>
+      <div style="color:#111827;font-family:'SFMono-Regular',Menlo,Consolas,
+        'Liberation Mono',monospace;font-size:22px;font-weight:600;
+        letter-spacing:0.18em;font-variant-numeric:tabular-nums;
+        line-height:1.2;">{}</div>
+      <div style="color:#6B7280;font-size:12px;line-height:1.5;
+        margin:8px 0 0 0;">
+        Keep this for your security records. It identifies this reset
+        attempt in the audit log; you don't need to type it anywhere.
+      </div>
+    </td></tr>
+    </table>"##,
+                html_text_escape(&code)
+            )
+        }
         None => String::new(),
     };
 
@@ -198,41 +236,50 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
     border="0" style="max-width:560px;width:100%;
-    background:#FFFFFF;border:1px solid #DEE3EC;border-radius:8px;
+    background:#FFFFFF;border:1px solid #DEE3EC;border-radius:10px;
     box-shadow:0 1px 2px rgba(17,24,39,0.04);">
   <tr>
   <td class="rio-mail-card" style="padding:40px 40px 32px 40px;">
 
-    <!-- Wordmark — small, calm; not oversized branding -->
-    <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;
-      color:#6B7280;text-transform:uppercase;margin:0 0 24px 0;">
-      {site_header_text}
+    <!-- Wordmark + operational descriptor -->
+    <div style="margin:0 0 28px 0;">
+      <div style="font-size:13px;font-weight:600;letter-spacing:0.04em;
+        color:#111827;line-height:1.3;">
+        {site_header_text}
+      </div>
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.10em;
+        color:#6B7280;text-transform:uppercase;margin-top:4px;">
+        Account security notification
+      </div>
     </div>
 
     <!-- Title -->
-    <h1 class="rio-mail-title" style="margin:0 0 16px 0;color:#111827;
-      font-size:26px;line-height:1.25;font-weight:600;
-      letter-spacing:-0.012em;">
+    <h1 class="rio-mail-title" style="margin:0 0 14px 0;color:#0B0F19;
+      font-size:28px;line-height:1.2;font-weight:700;
+      letter-spacing:-0.018em;">
       {title_text}
     </h1>
 
     <!-- Intro -->
     <p style="margin:0 0 32px 0;color:#374151;font-size:15px;
-      line-height:1.6;">
+      line-height:1.65;">
       {intro_text}
     </p>
 
-    <!-- CTA Button: single point of emphasis -->
+    <!-- CTA Button: single point of emphasis. Full-width on the
+         card, generous padding, drop shadow for click-confidence. -->
     <table role="presentation" class="rio-mail-cta" cellpadding="0"
-      cellspacing="0" border="0" style="margin:0 0 24px 0;">
+      cellspacing="0" border="0" width="100%" style="margin:0 0 18px 0;">
     <tr>
-    <td style="border-radius:6px;background:#0F8C7E;">
+    <td align="center" style="border-radius:8px;background:#0F8C7E;
+      box-shadow:0 1px 3px rgba(15,140,126,0.30),
+      0 1px 2px rgba(15,140,126,0.18);">
       <a href="{cta_url_safe}"
-        style="display:inline-block;padding:14px 28px;
+        style="display:block;padding:18px 32px;
         font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,
-        Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;
+        Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;
         color:#FFFFFF;text-decoration:none;letter-spacing:-0.005em;
-        border-radius:6px;">
+        border-radius:8px;text-align:center;">
         {cta_label_text}
       </a>
     </td>
@@ -241,9 +288,9 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
 
     <!-- URL fallback for clients that strip buttons -->
     <p style="margin:0 0 8px 0;color:#6B7280;font-size:13px;line-height:1.5;">
-      Or copy and paste this link into your browser:
+      Or paste this link into your browser:
     </p>
-    <p style="margin:0 0 32px 0;font-size:13px;line-height:1.5;
+    <p style="margin:0 0 28px 0;font-size:13px;line-height:1.5;
       word-break:break-all;font-family:'SFMono-Regular',Menlo,Consolas,
       'Liberation Mono',monospace;">
       <a href="{cta_url_safe}" style="color:#0F8C7E;text-decoration:none;">{cta_url_text}</a>
@@ -253,7 +300,7 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
     <p style="margin:0 0 32px 0;color:#6B7280;font-size:13px;line-height:1.5;">
       {fine_print_text}
     </p>
-
+{reference_panel}
     <!-- Divider -->
     <hr style="border:none;border-top:1px solid #ECEFF4;margin:0 0 24px 0;">
 
@@ -272,12 +319,13 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
     </table>
 
     <!-- Warning panel: if not you -->
-    <div style="padding:16px 18px;background:#FFF8EB;border:1px solid #F2D9A7;
+    <div style="padding:18px 20px;background:#FFF8EB;border:1px solid #F2D9A7;
       border-radius:6px;margin:0 0 8px 0;">
-      <p style="margin:0;color:#6B4F12;font-size:13px;line-height:1.5;">
+      <p style="margin:0;color:#6B4F12;font-size:13px;line-height:1.55;">
         <strong style="color:#4F3B0A;font-weight:600;">If this wasn't you</strong>
-        — ignore this email. Your password stays unchanged. You can also
-        sign in and visit your sessions page to revoke any open sessions.
+        — ignore this email. Your password stays unchanged, and the link
+        above will expire on its own. You can also sign in and revoke open
+        sessions from the Sessions page.
       </p>
     </div>
 
@@ -285,11 +333,21 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
   </tr>
   </table>
 
-  <!-- Footer -->
-  <p style="margin:20px 0 0 0;color:#6B7280;font-size:12px;line-height:1.5;
-    text-align:center;">
-    Sent by {site_header_text} at <span style="font-variant-numeric:tabular-nums;">{when_str}</span>.
-  </p>
+  <!-- Footer — operational tone, no marketing -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+    style="max-width:560px;width:100%;margin:18px auto 0 auto;">
+  <tr><td align="center" style="padding:0 8px;">
+    <p style="margin:0;color:#9CA3AF;font-size:12px;line-height:1.6;">
+      Session-aware authentication · Audit-logged ·
+      <span style="font-variant-numeric:tabular-nums;">{when_str}</span>
+    </p>
+    <p style="margin:6px 0 0 0;color:#9CA3AF;font-size:11px;line-height:1.5;">
+      You are receiving this because someone requested a password reset
+      for an account on {site_header_text}. If that wasn't you, no
+      action is required.
+    </p>
+  </td></tr>
+  </table>
 
 </td>
 </tr>
@@ -319,6 +377,13 @@ pub struct RecoveryEmailParts<'a> {
     pub when: DateTime<Utc>,
     pub request_ip: Option<&'a str>,
     pub ua_summary: Option<&'a str>,
+    /// Per-request correlation id (UUID v7). The framework derives
+    /// a 6-character `reference` from its last hex chars and
+    /// renders it inside a security-style panel — operators can
+    /// match the reference to the audit row, and the visual block
+    /// stays compatible with a future MFA verification-code shape.
+    /// `None` hides the reference panel.
+    pub correlation_id: Option<&'a str>,
 }
 
 /// Minimal HTML-text escape for the visible-text positions in the
@@ -586,29 +651,37 @@ mod tests {
         let when = Utc.with_ymd_and_hms(2026, 5, 13, 14, 30, 0).unwrap();
         let html = render_recovery_html(RecoveryEmailParts {
             site_header: "RustIO Admin",
-            title: "Sign back in to your account",
-            intro: "We received a request to sign you back in to RustIO Admin. \
-                    Click the button below to set a new password.",
+            title: "Reset your password",
+            intro: "We received a request to reset the password on your \
+                    RustIO Admin account. Choose a new password to continue.",
             cta_label: "Set a new password",
             cta_url: "http://127.0.0.1:3000/admin/reset-password/abc123",
             fine_print: "This link expires in 30 minutes.",
             when,
             request_ip: Some("127.0.0.1"),
             ua_summary: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15"),
+            correlation_id: Some("019e212b-9f63-7512-be44-daaa8e6267e2"),
         });
         // Structural markers
         assert!(html.starts_with("<!DOCTYPE html>"));
         assert!(html.contains("viewport"));
-        assert!(html.contains("multipart")  == false); // we don't reference multipart in HTML
+        assert!(!html.contains("multipart")); // not in HTML body
         // Required content
         assert!(html.contains("RustIO Admin"));
-        assert!(html.contains("Sign back in to your account"));
+        assert!(html.contains("Reset your password"));
         assert!(html.contains("Set a new password"));
         assert!(html.contains("http://127.0.0.1:3000/admin/reset-password/abc123"));
         assert!(html.contains("This link expires in 30 minutes."));
         assert!(html.contains("2026-05-13 14:30 UTC"));
         assert!(html.contains("127.0.0.1"));
         assert!(html.contains("Mozilla/5.0"));
+        // Phase 3F: descriptor under brand
+        assert!(html.contains("Account security notification"));
+        // Phase 3E: verification reference panel
+        assert!(html.contains("Verification reference"));
+        assert!(html.contains("6267E2"));
+        // Phase 3G: operational footer tone
+        assert!(html.contains("Session-aware authentication"));
         // Anti-phishing copy
         assert!(html.contains("If this wasn"));
         // Brand-accent CTA
@@ -633,6 +706,7 @@ mod tests {
             when: Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap(),
             request_ip: Some("<bad>"),
             ua_summary: Some("\"chrome\""),
+            correlation_id: None,
         });
         // Script tag must NOT be present unescaped anywhere
         assert!(!html.contains("<script>alert(1)</script>"));

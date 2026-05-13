@@ -132,8 +132,27 @@ pub struct LettreSmtpMailer {
 }
 
 impl LettreSmtpMailer {
+    /// Perform a one-shot SMTP handshake against the configured
+    /// server: TCP connect → TLS handshake (or STARTTLS upgrade)
+    /// → EHLO → AUTH → QUIT. No message is sent. Returns `Ok(())`
+    /// if every step succeeds; `Err(...)` carrying the lettre
+    /// error otherwise.
+    ///
+    /// Used at boot to fail loud on misconfigured credentials. The
+    /// alternative — wait for the first password-reset attempt to
+    /// surface the auth failure inside the `mail_status = 'failed'`
+    /// audit row — hides the misconfiguration from the operator
+    /// until users start complaining about missing reset emails.
+    pub async fn smoke_test(&self) -> Result<(), String> {
+        self.transport
+            .test_connection()
+            .await
+            .map_err(|e| format!("SMTP handshake to remote failed: {e}"))?;
+        Ok(())
+    }
+
     /// Build the transport from `cfg`. Performs no I/O; the first
-    /// network call happens inside `send`.
+    /// network call happens inside `send` or `smoke_test`.
     pub fn new(cfg: SmtpConfig) -> Result<Self, String> {
         let creds = Credentials::new(cfg.username.clone(), cfg.password.clone());
         let tls_params = TlsParameters::new(cfg.host.clone())
