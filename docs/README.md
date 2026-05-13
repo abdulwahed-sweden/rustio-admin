@@ -26,6 +26,7 @@ Index of human-readable documentation for rustio-admin.
 - [design/DESIGN_R2_ORGANISATIONAL.md](design/DESIGN_R2_ORGANISATIONAL.md) — R2 admin-driven recovery, lockout, re-auth, forced rotation.
 - [design/DESIGN_R3_MFA.md](design/DESIGN_R3_MFA.md) — R3 TOTP multi-factor authentication.
 - [design/DESIGN_R4_EMERGENCY.md](design/DESIGN_R4_EMERGENCY.md) — R4 CLI emergency-recovery primitives.
+- [design/DESIGN_CHROME.md](design/DESIGN_CHROME.md) — operational chrome conventions (footer, topbar, future bars).
 
 ## Archive
 
