@@ -1,0 +1,161 @@
+/* ============================================================
+ * rustio-admin / base / typography (international scripts)
+ *
+ * Five script families layered on top of the Latin + Arabic
+ * base in base/typography.css. Two delivery tiers:
+ *
+ *   1. Auto-loaded via `unicode-range` (no `lang` tag needed)
+ *      - Thai          → Noto Sans Thai
+ *      - Devanagari    → Noto Sans Devanagari
+ *      These scripts occupy non-colliding code-point ranges, so
+ *      the browser fetches the file only when the page actually
+ *      renders Thai / Devanagari glyphs. They sit in
+ *      `--rio-font-sans` so untagged Thai / Devanagari content
+ *      (patron names, free-text fields) renders correctly.
+ *
+ *   2. Locale-gated via `:lang(ja|ko|zh)` (Han Unification)
+ *      - Japanese      → Noto Sans JP
+ *      - Korean        → Noto Sans KR
+ *      - Simpl. Chinese → Noto Sans SC
+ *      U+4E00-9FFF (CJK Unified Ideographs) is shared between
+ *      Japanese Kanji, Simplified Hanzi, and Traditional Hanzi —
+ *      same code points, different glyphs. A naive global
+ *      fallback would render Japanese names with Chinese shapes
+ *      (or vice versa). Selecting via `:lang()` matches the
+ *      closest declared ancestor language, so nested mixed-script
+ *      content (e.g. an `<en-default>` page with a `<span lang="ja">`)
+ *      shapes correctly per region.
+ *
+ * CJK uses one static-Regular woff2 per language (browsers
+ * synthesise bold). Variable CJK fonts ship as 100+ subset files
+ * per language; the framework's per-file route registration makes
+ * that impractical without a build-script generator. Static-400
+ * covers full JIS Level 1+2 (JP), common Hangul + Hanja (KR), and
+ * GB2312-level Hanzi (SC) in a single download.
+ *
+ * Layered AFTER base/typography.css so :lang() rules override the
+ * Arabic block where nesting overlaps.
+ * ============================================================ */
+
+/* ---- @font-face: Thai (auto-loaded) -------------------------- */
+
+@font-face {
+  font-family: "Noto Sans Thai";
+  src: url("/static/fonts/NotoSansThai-Variable.woff2") format("woff2-variations"),
+       url("/static/fonts/NotoSansThai-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  /* Thai script + zero-width joiners + dotted-circle placeholder.
+   * Latin / Latin-ext already covered by Geist + Inter. */
+  unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC;
+}
+
+/* ---- @font-face: Devanagari (auto-loaded) -------------------- */
+
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: url("/static/fonts/NotoSansDevanagari-Variable.woff2") format("woff2-variations"),
+       url("/static/fonts/NotoSansDevanagari-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  /* Devanagari + Vedic Extensions + ZWJ/ZWNJ + Indian Rupee +
+   * dotted-circle + common conjuncts. */
+  unicode-range: U+0900-097F, U+1CD0-1CFF, U+200C-200D, U+20A8, U+20B9,
+                 U+25CC, U+A830-A839, U+A8E0-A8FF;
+}
+
+/* ---- @font-face: Japanese (locale-gated) --------------------- *
+ * Hiragana + Katakana + CJK Unified Ideographs (Japanese shapes) +
+ * Halfwidth Forms. The unicode-range filter prevents Latin-only
+ * pages from fetching the ~1 MB woff2. */
+@font-face {
+  font-family: "Noto Sans JP";
+  src: url("/static/fonts/NotoSansJP-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+3000-30FF, U+31F0-31FF, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+/* ---- @font-face: Korean (locale-gated) ----------------------- *
+ * Hangul Jamo + Compatibility Jamo + Hangul Syllables + Jamo
+ * Extended A/B + CJK Unified (Hanja in Korean shapes) +
+ * Halfwidth Forms. */
+@font-face {
+  font-family: "Noto Sans KR";
+  src: url("/static/fonts/NotoSansKR-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+1100-11FF, U+3000-30FF, U+3130-318F, U+4E00-9FFF,
+                 U+A960-A97F, U+AC00-D7AF, U+D7B0-D7FF, U+FF00-FFEF;
+}
+
+/* ---- @font-face: Simplified Chinese (locale-gated) ----------- *
+ * CJK Unified Ideographs (Simplified shapes) + common Chinese
+ * punctuation + Halfwidth Forms. Note: collides with the JP
+ * unicode-range on U+4E00-9FFF — disambiguation happens via
+ * `:lang()` below, not unicode-range. */
+@font-face {
+  font-family: "Noto Sans SC";
+  src: url("/static/fonts/NotoSansSC-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+/* ---- Locale-gated CJK font-family application ---------------- *
+ *
+ * `:lang()` matches the closest declared language on or above the
+ * element. Nested mixed-script content honours the inner lang
+ * (e.g. a Japanese-default page with `<span lang="zh">` renders
+ * the span in Simplified Chinese shapes).
+ *
+ * No `:lang(X) *` descendant selectors — children with their own
+ * `lang` attribute take over via the same `:lang()` rules, which
+ * is the correct cascade for multilingual admin content. Children
+ * without an explicit `lang` inherit through normal CSS.
+ *
+ * Latin numerals + ASCII punctuation inside a `:lang(ja|ko|zh)`
+ * block fall through to the same `font-family` chain — Noto Sans
+ * JP/KR/SC include matching Latin shapes designed to harmonise
+ * with the CJK glyphs, so mixed-script lines stay visually even.
+ */
+
+:lang(ja) {
+  font-family: var(--rio-font-japanese);
+}
+
+:lang(ko) {
+  font-family: var(--rio-font-korean);
+}
+
+:lang(zh),
+:lang(zh-CN),
+:lang(zh-Hans) {
+  font-family: var(--rio-font-chinese);
+}
+
+/* ---- Explicit utility classes --------------------------------*
+ * For surfaces that need to pin a script's family regardless of
+ * the page's `lang` attribute. Useful for example for a sidebar
+ * label that always reads in Japanese, or an Arabic display
+ * heading that wants Tajawal's geometric style instead of Naskh.
+ */
+
+.rio-japanese        { font-family: var(--rio-font-japanese); }
+.rio-korean          { font-family: var(--rio-font-korean); }
+.rio-chinese         { font-family: var(--rio-font-chinese); }
+.rio-thai            { font-family: var(--rio-font-thai); }
+.rio-devanagari      { font-family: var(--rio-font-devanagari); }
+
+/* Tajawal display variant for selective Arabic accents (badges,
+ * marketing headers, callouts). The framework's default Arabic
+ * face is now Noto Naskh; this utility opts back into Tajawal's
+ * geometric style where it suits the design. */
+.rio-arabic-display {
+  font-family: "Tajawal", "Noto Naskh Arabic", system-ui, sans-serif;
+}

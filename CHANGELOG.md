@@ -31,7 +31,72 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- **Multilingual typography infrastructure.** Six new self-hosted
+  variable / single-weight woff2 fonts (~3.1 MB binary), wired
+  through a new `base/typography-i18n.css` fragment and matching
+  cascade entries in `admin.css` + `routes.rs`:
+  - **Inter Variable** (~344 KB, wght 100..900) — the second-tier
+    Latin fallback that `--rio-font-sans` already documented but
+    never actually loaded. Covers Latin + Latin-ext + Cyrillic
+    (basic + extended) + Greek (basic + extended) + Vietnamese
+    under one variable file with a unicode-range filter.
+  - **Noto Sans Thai Variable** (~27 KB) and **Noto Sans
+    Devanagari Variable** (~119 KB) — auto-loaded via unicode-range
+    on `U+0E00-0E5B` and `U+0900-097F` respectively. Latin-only
+    pages never fetch them.
+  - **Noto Sans JP / KR / SC** (static Regular, ~993 / 530 /
+    1116 KB) — locale-gated via `:lang(ja)`, `:lang(ko)`,
+    `:lang(zh|zh-CN|zh-Hans)` so Han Unification (shared
+    `U+4E00-9FFF` between Japanese Kanji and Simplified Chinese
+    Hanzi) doesn't render one region's content with the other
+    region's shapes. Browsers synthesise bold.
+- New CSS tokens in `tokens/typography.css`: `--rio-font-japanese`,
+  `--rio-font-korean`, `--rio-font-chinese`, `--rio-font-thai`,
+  `--rio-font-devanagari`. Each pairs the Noto face with the
+  platform-native CJK / Thai / Devanagari font (Hiragino, PingFang,
+  Malgun, Apple SD Gothic Neo, Sukhumvit, Hindi Sangam, etc.) for
+  graceful fallback while the woff2 is in flight.
+- New utility classes: `.rio-japanese`, `.rio-korean`,
+  `.rio-chinese`, `.rio-thai`, `.rio-devanagari` to pin a family
+  regardless of cascade order. Plus `.rio-arabic-display` to opt
+  back into Tajawal's geometric style on selective accents now
+  that Naskh is the default.
+
+### Changed
+
+- **Arabic primary face is now Noto Naskh Arabic** (was Tajawal).
+  Both `--rio-font-arabic` (compact UI) and `--rio-font-arabic-body`
+  (long-form) lead with Naskh; Tajawal remains in the fallback
+  chain and stays available for selective geometric use via the
+  new `.rio-arabic-display` utility. Naskh's higher x-height and
+  humanist terminals improve readability in admin tables, forms,
+  audit logs, and mixed Arabic / English interfaces — the surfaces
+  where Tajawal's compact geometry previously felt cramped.
+- `tokens/typography.css` header comment expanded to document the
+  full multilingual stack and the Han-Unification rationale for
+  the locale-gated CJK approach.
+- `admin.css` header expanded with the new font inventory and the
+  `base/typography-i18n.css` cascade entry.
+- `assets/static/fonts/LICENSE.txt` extended with Inter / Noto
+  Sans Thai / Devanagari / JP / KR / SC attribution sections.
+
+### Internal
+
+- `routes.rs`: six new `include_bytes!` font consts (`FONT_INTER`,
+  `FONT_NOTO_THAI`, `FONT_NOTO_DEVA`, `FONT_NOTO_JP`,
+  `FONT_NOTO_KR`, `FONT_NOTO_SC`) and matching `router.get`
+  handlers under `/static/fonts/`. Each served with the existing
+  `font/woff2` + 1-year immutable cache headers.
+- Cascade lockstep test (`tests/cascade_lockstep.rs`) updated
+  implicitly — it walks `admin.css` and `routes.rs`, both of which
+  now reference the new `base/typography-i18n.css` fragment in
+  matching positions. Passes.
+- Binary size: +~3.1 MB (six new woff2 files). Download wire cost:
+  zero for Latin-only pages, ~144 KB additional on Thai +
+  Devanagari pages, ~530 KB–~1.1 MB on CJK pages (one-time, then
+  cached for one year).
 
 
 ## [0.10.2] — 2026-05-13
