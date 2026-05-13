@@ -8,7 +8,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.10.1"
+version = "0.10.2"
 edition = "2021"
 rust-version = "1.80"
 license = "MIT"
@@ -17,5 +17,5 @@ homepage = "https://github.com/abdulwahed-sweden/rustio-admin"
 authors = ["Abdulwahed Mansour"]
 
 [workspace.dependencies]
-rustio-admin = { version = "0.10.1", path = "crates/rustio-admin" }
-rustio-admin-macros = { version = "0.10.1", path = "crates/rustio-admin-macros" }
+rustio-admin = { version = "0.10.2", path = "crates/rustio-admin" }
+rustio-admin-macros = { version = "0.10.2", path = "crates/rustio-admin-macros" }
