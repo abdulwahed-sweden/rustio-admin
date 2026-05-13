@@ -33,6 +33,22 @@ leaves the alpha track.
 
 ### Added
 
+- **Production admin footer — three-column operational chrome.**
+  Replaces the single-line copyright strip with a calm bottom bar
+  modeled after Django-admin's maturity but in RustIO's modern
+  system aesthetic. Three columns: identity (brand · version ·
+  environment badge), navigation (documentation · audit log ·
+  sessions), context (current operator · UTC render timestamp).
+  Surface grafted to the admin shell (`--rio-surface` + hairline
+  top border), tabular numerals on version + timestamp, no
+  gradients, no oversized branding.
+- `BaseContext` now exposes `framework_version`, `environment_label`,
+  `environment_kind`, and `server_now`. `RUSTIO_ENV` env var
+  overrides the auto-detected build kind; "Development" /
+  "Production" map to amber / green status dots, free-text labels
+  ("Staging", "Sandbox", …) collapse to a neutral grey dot. The
+  env var is read once and cached in a process-wide `OnceLock` —
+  no per-request syscall.
 - **Multilingual typography infrastructure.** Six new self-hosted
   variable / single-weight woff2 fonts (~3.1 MB binary), wired
   through a new `base/typography-i18n.css` fragment and matching
