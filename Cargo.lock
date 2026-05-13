@@ -1364,6 +1364,7 @@ name = "library-circulation"
 version = "0.0.0"
 dependencies = [
  "chrono",
+ "dotenvy",
  "env_logger",
  "lettre",
  "log",
