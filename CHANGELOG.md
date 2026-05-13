@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.12.0** | 2026-05-13 | Three substantial threads: public bulk-action dispatch hook (closes D.4); production password-recovery flow with real SMTP + polished HTML email + project-identity branding architecture (RustIO name no longer leaks to end users); operator-DX `rustio doctor email` with provider presets, `--html-preview`, send cooldown, and a formal `.env` developer contract. End-to-end verified against real Gmail delivery. |
 | **0.11.0** | 2026-05-13 | Multilingual typography (Inter + Thai + Devanagari + locale-gated CJK; Noto Naskh promoted to primary Arabic face) + production three-column admin footer with environment badge, render timestamp, real operational links. New `DESIGN_CHROME.md` doctrine. |
 | **0.10.2** | 2026-05-13 | `permissions::create_group` is now idempotent (mirrors the `permission_id` ON CONFLICT idiom). Closes one of the two framework gaps that the canonical example documented. |
 | **0.10.1** | 2026-05-13 | Integration-pass bugfixes: `plural_snake` learns regular English rules (`-ch/-sh/-x/-z`, consonant+`y`); removed offensive defaulting that synthesised `draft/published` for any field named `status`. Canonical example declares `belongs_to` on its FK fields. |
@@ -32,13 +33,79 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+No changes yet.
+
+
+## [0.12.0] — 2026-05-13
+
+Three substantial threads ship together:
+
+  1. **Public bulk-action dispatch hook** — projects can now
+     back the buttons that `ModelAdmin::bulk_actions()` already
+     declared. Closes the second of the two D.4-documented
+     framework gaps. `AdminOps` stays `pub(crate)`; the public
+     surface is a single new default method on `ModelAdmin`.
+  2. **Production password-recovery flow** — real SMTP transport
+     via project-side `lettre` integration, polished HTML email
+     body, brand-identity architecture so the framework name no
+     longer leaks into user-facing surfaces. End-to-end verified
+     against real Gmail delivery to a real inbox.
+  3. **Operator DX** — `rustio doctor email` subcommand with
+     provider presets (Gmail / Resend / Postmark / Mailgun /
+     SendGrid / Ethereal), `--html-preview` mode, accidental-
+     send cooldown, and a formal `.env` developer contract.
+     Boot-time SMTP smoke test refuses to start the app silently
+     against misconfigured SMTP.
+
+**No schema migration that requires manual intervention** — the
+new `rustio_users` profile columns (`first_name`, `last_name`,
+`display_name`, `job_title`) are added by an idempotent
+`ALTER TABLE … ADD COLUMN IF NOT EXISTS` on framework boot.
+
+### Migration from 0.11.0
+
+Bump `rustio-admin = "0.12.0"` and run
+`cargo update -p rustio-admin`.
+
+If your project consumes the `--rio-font-arabic` token (0.11.0)
+nothing changes. New work for 0.12.0 is opt-in:
+
+  - **Use the new branding API.** Replace
+    `Admin::new().site_branding(SiteBranding { site_header:
+    "X".into(), ... })` with the canonical builders:
+    ```rust
+    Admin::new()
+        .app_name("My Product")
+        .app_tagline("Operational management")
+        .support_email("support@example.com")
+        .public_url("https://admin.example.com")
+    ```
+    Legacy `site_branding(...)` still works for backwards compat;
+    the defaults for `site_title` / `site_header` were renamed
+    from "RustIO administration" to "Admin" so a zero-config
+    build no longer leaks the framework name.
+
+  - **Wire a real SMTP transport.** Copy
+    `examples/library-circulation/src/mailer.rs` into your
+    project (or fork the example) and install via
+    `Admin::mailer(Arc::new(LettreSmtpMailer::new(cfg)?))`.
+    Configure with `MAIL_PROVIDER=gmail|resend|postmark|...`
+    plus `SMTP_USER` + `SMTP_PASSWORD`, or set the explicit
+    `SMTP_HOST` / `SMTP_PORT` / `SMTP_TLS` fields. Without
+    SMTP configured the framework falls back to `LogMailer`
+    (writes to stdout, no delivery).
+
+  - **Validate before booting** via `rustio doctor email`.
+    Surfaces wrong App Password / 2FA-off / wrong TLS-port
+    combo / blocked egress in < 2 seconds.
+
 ### Added
 
-- **Public bulk-action dispatch hook.** Project models can now
-  back the buttons that `ModelAdmin::bulk_actions()` already
-  declared, closing the second of the two D.4-documented
-  framework gaps. The dispatch contract is a single new default
-  method on the public `ModelAdmin` trait:
+#### Bulk-action dispatch
+
+- **Public `ModelAdmin::execute_bulk_action` hook.** The
+  dispatch contract is a single new default method on the
+  public `ModelAdmin` trait:
   ```rust
   fn execute_bulk_action<'a>(
       action: &'a str,
@@ -52,91 +119,167 @@ leaves the alpha track.
   internal type-erased `AdminOps` trait remains `pub(crate)`;
   `ConcreteOps<M>::execute_bulk_action` forwards into the
   model's override.
-- New module `rustio_admin::admin::bulk` exporting three public
-  types, all `#[non_exhaustive]` for SemVer headroom:
-  - `BulkActionContext<'a>` — actor, correlation id, client IP.
-    `pub fn new(actor: &Identity) -> Self` for unit-test
-    construction.
-  - `BulkActionResult` — succeeded count, per-row failure list,
-    optional operator-facing summary. Constructors
-    `BulkActionResult::ok(n)`, `::partial(n, failures)`,
-    builder `::with_message(...)`, accessor `::total()`.
-  - `BulkActionFailure` — `id: i64` + `reason: String`.
-    Constructor `BulkActionFailure::new(id, reason)`.
-- Re-exported at the crate root:
-  `pub use rustio_admin::{BulkActionContext, BulkActionFailure,
-   BulkActionResult};`.
-- Handler emits **one** audit row per bulk submission. The row
-  carries `action_type` = `Update` (or `Delete` for actions
-  declared `destructive: true`), `model_name` = the admin slug,
-  `object_id = 0` (the framework's "this row describes a bulk
-  dispatch" marker), and structured `metadata`:
-  `{ "kind": "bulk_action", "action", "model", "ids",
-     "succeeded", "failed_ids", "failure_reasons" }`. Projects
-  do not need to call `audit::record` themselves for the
-  dispatch envelope.
+- **New module `rustio_admin::admin::bulk`** exporting three
+  public types, all `#[non_exhaustive]` for SemVer headroom:
+  `BulkActionContext<'a>`, `BulkActionResult`,
+  `BulkActionFailure`. Re-exported at the crate root.
+- Handler emits one audit row per bulk submission with
+  structured `metadata` (`{kind, action, model, ids,
+  succeeded, failed_ids, failure_reasons}`).
+- `examples/library-circulation/`'s `Loan` model demonstrates
+  the hook with `mark_overdue` + `mark_returned` actions.
 
-### Internal
+#### Recovery / email infrastructure
 
-- `ConcreteOps<M>` impl bound tightened from `M: AdminModel +
-  Model` to `M: AdminModel + ModelAdmin + Model`. Functionally a
-  no-op — `Admin::model::<M>()` has always required
-  `M: ModelAdmin`, so every M that reached `ConcreteOps` already
-  satisfied the trait — but lets `ConcreteOps::execute_bulk_action`
-  delegate to `M::execute_bulk_action` without a separate
-  blanket bound.
-- `CoreUserOps::execute_bulk_action` returns a structured
-  "not available on the framework User entry" error.
-- Five new unit tests in `admin::bulk::tests` cover
-  `BulkActionResult` constructors + `total()` + `with_message()`.
-- Doctest on `ModelAdmin::execute_bulk_action` demonstrates the
-  override shape (project-side `match action` dispatch).
+- **`Mail::with_html(html) -> Self`** chainable builder.
+  Mailer transports send both as `multipart/alternative`.
+- **`render_recovery_html(RecoveryEmailParts)`** — framework's
+  polished HTML body for recovery emails. Calm typography,
+  hairline separation, single brand-accent CTA, mobile
+  `@media` query, inlined CSS for client compatibility.
+  Honours the project's `app_name` / `app_tagline` /
+  `support_email`.
+- **`RecoveryEmailParts::new(app_name, title, greeting_name,
+  intro, cta_url, fine_print, when) -> Self`** constructor
+  for external-crate callers (works around `#[non_exhaustive]`).
+- **Profile columns on `rustio_users`**: `first_name`,
+  `last_name`, `display_name`, `job_title` (idempotent
+  migration). `StoredUser::greeting_name()` resolves
+  `display_name → first_name → email-local-part → "there"`.
+  `StoredUser::signature_lines()` returns
+  `(primary, optional_title)` for the email signature block.
+- `rustio user create` grows `--first-name`,
+  `--last-name`, `--display-name`, `--job-title` flags.
+
+#### Branding architecture
+
+- **`SiteBranding` extended with the user-facing identity
+  layer**: `app_name` (primary product identity),
+  `app_tagline` (optional descriptor), `support_email`,
+  `public_url`, `show_powered_by` (opt-in framework credit;
+  default `false`).
+- **`Admin` builders**: `.app_name(...)`, `.app_tagline(...)`,
+  `.support_email(...)`, `.public_url(...)`,
+  `.show_powered_by(...)`. `app_name()` also mirrors into the
+  legacy `site_title` / `site_header` fields so old code paths
+  stay coherent.
+- **`BaseContext`** gains `app_name`, `app_tagline`,
+  `show_powered_by` fields. Chrome footer's hard-coded "RustIO
+  Admin" string replaced with `{{ app_name }}`; "Powered by
+  RustIO" credit is now opt-in via `show_powered_by`.
+
+#### `rustio doctor email`
+
+- **New subcommand** with structured ✓ / ⚠ / ✗ output.
+  Validates env-var presence, opens TLS handshake, performs
+  EHLO + AUTH, and optionally sends a test message via
+  `--to <address>`. No credentials echoed (`SMTP_PASSWORD`
+  reported as `(set, N chars)`).
+- **Provider presets**: `MAIL_PROVIDER=<key>` auto-fills
+  host / port / TLS / default user from a shared table.
+  Known: `gmail`, `resend`, `postmark`, `mailgun`,
+  `sendgrid`, `ethereal`. Both the CLI doctor and the
+  example's `smtp_config_from_env()` honour the same table.
+  Explicit `SMTP_*` env vars always override.
+- **`--html-preview`** flag renders the recovery email body
+  with realistic placeholder data, writes to
+  `/tmp/rustio-email-preview.html`, opens it in the
+  default browser. No SMTP traffic. Reads `APP_NAME` /
+  `SUPPORT_EMAIL` / `MAIL_FOOTER_TEXT` from env.
+- **30-second cooldown** on `--to <addr>` sends (stamp at
+  `/tmp/rustio-doctor-email-last-send`). Prevents
+  accidental-spam loops.
+
+#### Developer contract
+
+- **`.env` excluded from git** via `.gitignore` (`.env`,
+  `.env.*`, allowlist `.env.example`). Real credentials
+  cannot accidentally be committed.
+- **`.env.example` rewritten as the canonical developer
+  contract**: `APP_NAME`, `APP_ENV`, `DATABASE_URL`,
+  `RUSTIO_SECRET_KEY`, `MAIL_PROVIDER` + `SMTP_*`,
+  `SUPPORT_EMAIL`, `RUSTIO_ENV`. Inline Google App Password
+  setup steps + Style A (preset) vs Style B (explicit)
+  framing.
+- **`dotenvy::dotenv()` auto-load** in the
+  `library-circulation` example's `main.rs` — no
+  `set -a; source .env; set +a` shell ritual.
+- **Boot-time SMTP smoke test** via
+  `LettreSmtpMailer::smoke_test()` (TCP → TLS → EHLO →
+  AUTH → QUIT). Refuses to boot when `SMTP_HOST` is set
+  but credentials fail; prints a structured diagnostic.
 
 ### Changed
 
-- `audit::record` now accepts `object_id == 0` to represent the
-  bulk-dispatch row shape — the affected ids live in
-  `metadata.ids` and `metadata.kind == "bulk_action"`. Negative
-  values remain rejected. Per-object emissions (`object_id > 0`)
-  are unaffected. Pair fix for the bulk-action hook above; the
-  hook declares the `object_id = 0` convention and `audit::record`
-  was rejecting it.
-- `BulkAction` is now re-exported at the crate root
-  (`rustio_admin::BulkAction`) for surface symmetry with the
-  dispatch types (`BulkActionContext` / `BulkActionResult` /
-  `BulkActionFailure`). Still also available at
-  `rustio_admin::admin::BulkAction`.
+- **`audit::record` accepts `object_id == 0`** as the
+  bulk-dispatch row shape (`metadata.kind == "bulk_action"`;
+  affected ids in `metadata.ids`). Negative values still
+  rejected. Per-object emissions (`object_id > 0`) unaffected.
+- **`BulkAction` is now at the crate root**
+  (`rustio_admin::BulkAction`) for symmetry with the dispatch
+  types. Still available at `rustio_admin::admin::BulkAction`.
+- **`ConcreteOps<M>` impl bound tightened** from
+  `M: AdminModel + Model` to
+  `M: AdminModel + ModelAdmin + Model`. Functionally a no-op —
+  `Admin::model::<M>()` always required `ModelAdmin` — lets
+  `execute_bulk_action` delegate to `M::execute_bulk_action`
+  cleanly.
+- **Recovery email tone polish**: subject is now
+  `Reset your password — {app_name}` (was
+  `{X} — sign-in link`). Body opens with `Hello {greeting_name},`
+  and closes with a `Account owner / {name} / {title} / {app_name}`
+  signature block. Intro phrase changed from `"on your X account"`
+  to `"for your X account"`.
+- **Recovery page wording unified**: "This link is no longer
+  valid" → "This reset link has expired"; "Send sign-in link"
+  → "Send reset link". One vocabulary across page chrome,
+  email subject, and email body.
+- **Recovery pages gain `.rio-login-aside` panel** — calm
+  operational security info under each form (Secure account
+  recovery / Check your email / Why links expire).
+- **Login card widened** from 400 → 440px to accommodate the
+  aside panel cleanly.
+- **`SiteBranding` defaults cleansed**: `site_title` and
+  `site_header` defaults moved from "RustIO administration"
+  to the generic "Admin" placeholder so a zero-config build
+  no longer leaks the framework name.
 
-### Example
+### Behavioural changes (downstream-visible)
 
-- `examples/library-circulation/`'s `Loan` model demonstrates the
-  new dispatch hook with two project-defined actions:
-  - `mark_overdue` — flips `active` loans to `overdue`. Loans
-    already overdue or returned are reported as per-id failures
-    with explicit reasons.
-  - `mark_returned` — flips `active` and `overdue` loans to
-    `returned` and stamps `returned_at = NOW()`. Already-returned
-    loans report as failures.
-  Both actions use a SELECT-then-UPDATE round-trip pattern:
-  read each selected id's current status, partition into
-  eligible vs. ineligible, run one UPDATE for the eligibles,
-  return a `BulkActionResult` with the per-id failure list and
-  an operator-facing summary. No abstractions; explicit SQL.
-- `sqlx` added as a direct dependency on the example (matches
-  the `rustio startproject` scaffold template).
-- Example README "What this example demonstrates" lists the
-  bulk-action hook; "What this example does not yet demonstrate"
-  section retired (both D.4 documented gaps now closed).
-- `examples/library-circulation/migrations/0005_seed.sql` footer
-  trimmed accordingly.
+These are intentional design changes, but observable for
+projects upgrading:
 
-### Deferred
+1. **Email subject changes from `{X} — sign-in link` to
+   `Reset your password — {app_name}`.** Projects that
+   inbox-filter by subject must update their rules.
+2. **The chrome footer no longer shows the framework version /
+   Documentation link to unauthenticated visitors** unless
+   `Admin::show_powered_by(true)` is set. Authenticated
+   operators still see in-product navigation (`Audit log`,
+   `Sessions`).
+3. **Email body uses `app_name` not `site_header`.** Projects
+   that overrode `site_header` for branding need to call
+   `Admin::app_name(...)` instead — or, for legacy compat,
+   `Admin::site_branding(...)` with both fields set.
+4. **Default Arabic font face stays Noto Naskh** (carried
+   forward from 0.11.0).
 
-- Per-action permissions. `BulkActionContext.actor` is already in
-  scope inside the project handler, so any project can do its
-  own `actor.role`/`actor.email`-based check today. A future
-  commit may add an optional `permission: &'static str` field
-  to `BulkAction` for framework-level enforcement.
+### Internal
+
+- New unit tests on `BulkActionResult` constructors
+  (`admin::bulk::tests`) — 5 tests.
+- New HTML-render tests on `render_recovery_html` covering
+  identity escaping, powered-by opt-in, signature
+  conditional, support-email line — 3 tests.
+- `RecoveryEmailParts` reshaped to carry `app_name` instead
+  of `site_header`; legacy callers within the framework
+  crate construct via struct literal (in-crate access to
+  `#[non_exhaustive]`).
+- `lettre = "0.11"` added as a direct dep on the CLI and the
+  library-circulation example (the framework crate stays
+  lettre-free; that boundary holds).
+- Workspace + CLI bumped to 0.12.0. "Releases at a glance"
+  gains a 0.12.0 row.
 
 
 ## [0.11.0] — 2026-05-13
