@@ -127,12 +127,22 @@ async fn main() -> Result<()> {
     //    branding owns every customer-visible surface (emails, login
     //    page, recovery flow, chrome). RustIO is intentionally
     //    absent from these — projects pass their real product name.
-    let admin = Admin::new()
-        .app_name("Library Circulation")
+    //
+    //    `APP_NAME` and `SUPPORT_EMAIL` flow in from the env so a
+    //    developer can fork this example without editing source —
+    //    matches the `.env.example` developer contract.
+    let app_name =
+        std::env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
+    let support_email = std::env::var("SUPPORT_EMAIL").ok();
+    let mut admin_builder = Admin::new()
+        .app_name(app_name)
         .app_tagline("Operational library management")
-        .support_email("support@library.example.com")
         .public_url("http://127.0.0.1:3000")
-        .mailer(mailer)
+        .mailer(mailer);
+    if let Some(s) = support_email {
+        admin_builder = admin_builder.support_email(s);
+    }
+    let admin = admin_builder
         .model::<Branch>()
         .model::<Patron>()
         .model::<Item>()
