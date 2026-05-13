@@ -484,6 +484,46 @@ pub struct RecoveryEmailParts<'a> {
     pub show_powered_by: bool,
 }
 
+impl<'a> RecoveryEmailParts<'a> {
+    // public:
+    /// Construct a [`RecoveryEmailParts`] with sensible defaults
+    /// for the optional fields. Required fields are positional;
+    /// everything else lands in a safe "none"/default state and
+    /// callers mutate the public field directly.
+    ///
+    /// Lets external crates (the CLI's `doctor email`
+    /// `--html-preview`, project-side test scaffolding) construct
+    /// the struct around its `#[non_exhaustive]` attribute.
+    pub fn new(
+        app_name: &'a str,
+        title: &'a str,
+        greeting_name: &'a str,
+        intro: &'a str,
+        cta_url: &'a str,
+        fine_print: &'a str,
+        when: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            app_name,
+            app_tagline: None,
+            title,
+            greeting_name,
+            intro,
+            cta_label: "Set a new password",
+            cta_url,
+            fine_print,
+            when,
+            request_ip: None,
+            ua_summary: None,
+            correlation_id: None,
+            signature_primary: None,
+            signature_title: None,
+            support_email: None,
+            show_powered_by: false,
+        }
+    }
+}
+
 /// Minimal HTML-text escape for the visible-text positions in the
 /// recovery template. Covers `&`, `<`, `>`, `"`, `'` — the five
 /// canonical entities.

@@ -89,17 +89,28 @@ enum Command {
 
 #[derive(Subcommand)]
 enum DoctorAction {
-    /// SMTP self-validation. Reads `SMTP_*` + `MAIL_FROM` from
-    /// the environment, opens a TLS + AUTH handshake against the
+    /// SMTP self-validation. Reads `SMTP_*` + `MAIL_FROM` (or
+    /// `MAIL_PROVIDER` for a preset host/port/TLS) from the
+    /// environment, opens a TLS + AUTH handshake against the
     /// configured server, and optionally sends a single test
     /// message when `--to <address>` is supplied. No credentials
     /// are echoed — the password is reported as `(set, N chars)`.
+    ///
+    /// `--html-preview` skips SMTP entirely and renders the
+    /// recovery-email template to /tmp + opens it in the
+    /// default browser. Useful for iterating on email design.
     Email {
         /// Optional recipient. When set, the doctor sends a tiny
         /// test message after the handshake passes. When omitted,
         /// the handshake is the deepest check (no email goes out).
+        /// 30-second cooldown between consecutive `--to` sends
+        /// (prevents accidental spam loops).
         #[arg(long)]
         to: Option<String>,
+        /// Render the recovery-email body to /tmp and open it
+        /// in your default browser. No SMTP traffic.
+        #[arg(long)]
+        html_preview: bool,
     },
 }
 
@@ -125,7 +136,9 @@ fn main() -> ExitCode {
                 Command::Perm { action } => perm::run(action).await,
                 Command::Doctor { action } => match action {
                     None => doctor::run().await,
-                    Some(DoctorAction::Email { to }) => doctor_email::run(to).await,
+                    Some(DoctorAction::Email { to, html_preview }) => {
+                        doctor_email::run(to, html_preview).await
+                    }
                 },
             }
         }),
