@@ -63,49 +63,88 @@ pub struct SmtpConfig {
     pub implicit_tls: bool,
 }
 
-/// Pulls `SMTP_*` + `MAIL_FROM` from the environment.
+/// Provider presets — keep in sync with the CLI's `doctor email`
+/// table. Operators set `MAIL_PROVIDER=gmail` (or `resend` /
+/// `postmark` / `mailgun` / `sendgrid` / `ethereal`) and the
+/// host / port / TLS / default-user fields are filled
+/// automatically. Explicit `SMTP_*` env vars always win.
+fn provider_preset(name: &str) -> Option<(&'static str, u16, bool, Option<&'static str>)> {
+    match name.trim().to_ascii_lowercase().as_str() {
+        "gmail" => Some(("smtp.gmail.com", 465, true, None)),
+        "resend" => Some(("smtp.resend.com", 465, true, Some("resend"))),
+        "postmark" => Some(("smtp.postmarkapp.com", 587, false, None)),
+        "mailgun" => Some(("smtp.mailgun.org", 587, false, None)),
+        "sendgrid" => Some(("smtp.sendgrid.net", 587, false, Some("apikey"))),
+        "ethereal" => Some(("smtp.ethereal.email", 587, false, None)),
+        _ => None,
+    }
+}
+
+/// Pulls `SMTP_*` + `MAIL_FROM` from the environment. When
+/// `MAIL_PROVIDER` is set to a known preset, host / port / TLS /
+/// default-user are filled in from the preset table; explicit
+/// SMTP_* env vars always override.
 ///
 /// Returns:
 ///   - `Ok(Some(cfg))` — all required vars present and parseable.
-///   - `Ok(None)`      — `SMTP_HOST` unset; the caller falls back
-///                       to `LogMailer`.
-///   - `Err(...)`      — `SMTP_HOST` set but required companions
+///   - `Ok(None)`      — no SMTP source resolved (neither
+///                       `MAIL_PROVIDER` nor `SMTP_HOST`); the
+///                       caller falls back to `LogMailer`.
+///   - `Err(...)`      — source resolved but required companions
 ///                       missing / malformed. Project misconfigured;
 ///                       refusing to boot is louder than silent
 ///                       fallback.
 pub fn smtp_config_from_env() -> Result<Option<SmtpConfig>, String> {
+    let provider = env::var("MAIL_PROVIDER").ok();
+    let preset = provider.as_deref().and_then(provider_preset);
+    if let Some(p) = provider.as_deref() {
+        if preset.is_none() {
+            log::warn!(
+                target: "library_circulation::mailer",
+                "MAIL_PROVIDER={p} is not a known preset; falling back to explicit SMTP_* vars. \
+                 Known presets: gmail, resend, postmark, mailgun, sendgrid, ethereal"
+            );
+        }
+    }
+
+    // Resolve host: explicit SMTP_HOST wins, else preset, else
+    // no SMTP source → caller falls back to LogMailer.
     let host = match env::var("SMTP_HOST") {
         Ok(h) if !h.trim().is_empty() => h.trim().to_string(),
-        _ => return Ok(None),
+        _ => match preset {
+            Some((h, _, _, _)) => h.to_string(),
+            None => return Ok(None),
+        },
     };
 
     let port: u16 = match env::var("SMTP_PORT") {
-        Ok(p) => p
+        Ok(p) if !p.trim().is_empty() => p
             .trim()
             .parse()
             .map_err(|e| format!("SMTP_PORT is not a valid port number: {e}"))?,
-        Err(_) => 465,
+        _ => preset.map(|(_, p, _, _)| p).unwrap_or(465),
     };
 
-    let username = env::var("SMTP_USER")
-        .map_err(|_| "SMTP_HOST is set but SMTP_USER is missing".to_string())?
-        .trim()
-        .to_string();
-    if username.is_empty() {
-        return Err("SMTP_USER must not be empty".into());
-    }
+    let username = match env::var("SMTP_USER") {
+        Ok(u) if !u.trim().is_empty() => u.trim().to_string(),
+        _ => match preset.and_then(|(_, _, _, hint)| hint.map(String::from)) {
+            Some(u) => u,
+            None => return Err("SMTP_USER missing (set explicitly or use a MAIL_PROVIDER preset that supplies a default user)".into()),
+        },
+    };
 
     let password = env::var("SMTP_PASSWORD")
-        .map_err(|_| "SMTP_HOST is set but SMTP_PASSWORD is missing".to_string())?;
+        .map_err(|_| "SMTP_PASSWORD is missing".to_string())?;
     if password.is_empty() {
         return Err("SMTP_PASSWORD must not be empty".into());
     }
 
-    let tls_mode = env::var("SMTP_TLS").unwrap_or_else(|_| "implicit".into());
-    let implicit_tls = match tls_mode.to_ascii_lowercase().as_str() {
-        "implicit" | "smtps" => true,
-        "starttls" => false,
-        other => return Err(format!("SMTP_TLS must be 'implicit' or 'starttls' (got {other:?})")),
+    let tls_mode = env::var("SMTP_TLS").ok().filter(|s| !s.trim().is_empty());
+    let implicit_tls = match tls_mode.as_deref() {
+        Some("implicit") | Some("smtps") => true,
+        Some("starttls") => false,
+        None => preset.map(|(_, _, tls, _)| tls).unwrap_or(true),
+        Some(other) => return Err(format!("SMTP_TLS must be 'implicit' or 'starttls' (got {other:?})")),
     };
 
     let from_raw = env::var("MAIL_FROM").unwrap_or_else(|_| username.clone());

@@ -18,41 +18,83 @@
 //!
 //! No credentials are echoed; SMTP_PASSWORD is reported as
 //! `(set, N chars)` only.
+//!
+//! Modes:
+//!   - default (handshake only)
+//!   - `--to <address>` (handshake + real send)
+//!   - `--html-preview` (renders the recovery email body to
+//!     `/tmp/rustio-email-preview.html` and opens it — no SMTP
+//!     traffic at all; useful for visual iteration without
+//!     burning a real send).
+//!
+//! Rate limiting: when `--to` is passed, the doctor writes a
+//! cooldown stamp to `/tmp/rustio-doctor-email-last-send` and
+//! refuses to repeat within 30 seconds. Cheap accidental-spam
+//! safety net for developers who hit ↑↑Enter in a loop.
 
 use std::env;
-use std::time::Duration;
+use std::path::PathBuf;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use lettre::message::{header::ContentType, Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::client::{Tls, TlsParameters};
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
-/// Run the email-doctor checks. `send_to`: when `Some(addr)`,
-/// dispatches a tiny test message after the handshake validates;
-/// when `None`, the handshake is the deepest check (no email
-/// goes out).
-pub async fn run(send_to: Option<String>) -> Result<(), String> {
+const SEND_COOLDOWN_SECS: u64 = 30;
+const COOLDOWN_PATH: &str = "/tmp/rustio-doctor-email-last-send";
+const PREVIEW_PATH: &str = "/tmp/rustio-email-preview.html";
+
+/// Provider preset table. Returns `(host, port, implicit_tls,
+/// default_user_hint)` for known keys. Operators set
+/// `MAIL_PROVIDER=gmail` (or `resend`, `postmark`, `mailgun`,
+/// `sendgrid`, `ethereal`) and the doctor + framework example
+/// fill the corresponding host / port / TLS fields automatically.
+/// Explicit `SMTP_HOST` / `SMTP_PORT` / `SMTP_TLS` always
+/// override the preset.
+fn provider_preset(name: &str) -> Option<(&'static str, u16, bool, Option<&'static str>)> {
+    match name.trim().to_ascii_lowercase().as_str() {
+        "gmail" => Some(("smtp.gmail.com", 465, true, None)),
+        "resend" => Some(("smtp.resend.com", 465, true, Some("resend"))),
+        "postmark" => Some(("smtp.postmarkapp.com", 587, false, None)),
+        "mailgun" => Some(("smtp.mailgun.org", 587, false, None)),
+        "sendgrid" => Some(("smtp.sendgrid.net", 587, false, Some("apikey"))),
+        "ethereal" => Some(("smtp.ethereal.email", 587, false, None)),
+        _ => None,
+    }
+}
+
+/// Run the email-doctor checks.
+///   `send_to`: when `Some`, dispatches a real test message
+///   after the handshake. Triggers cooldown enforcement.
+///   `html_preview`: when `true`, renders the recovery email
+///   body to `/tmp` and opens it — runs no SMTP traffic.
+pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), String> {
+    if html_preview {
+        return run_html_preview().await;
+    }
+
     println!("rustio doctor email — validating SMTP configuration");
     println!();
 
-    // ---- 1. Env-var presence ---------------------------------
-    let host = require_env("SMTP_HOST")?;
-    let user = require_env("SMTP_USER")?;
-    let pass = require_env("SMTP_PASSWORD")?;
-    let port_raw = env::var("SMTP_PORT").unwrap_or_else(|_| "465".into());
-    let port: u16 = port_raw
-        .trim()
-        .parse()
-        .map_err(|e| format!("✗ SMTP_PORT is not a valid port number ({e})"))?;
-    let tls_mode = env::var("SMTP_TLS").unwrap_or_else(|_| "implicit".into());
-    let implicit_tls = match tls_mode.to_ascii_lowercase().as_str() {
-        "implicit" | "smtps" => true,
-        "starttls" => false,
-        other => {
-            println!("✗ SMTP_TLS must be 'implicit' or 'starttls' (got {other:?})");
-            return Err("bad SMTP_TLS".into());
+    // ---- 1. Env-var presence + provider preset resolution ----
+    let provider = env::var("MAIL_PROVIDER").ok();
+    let preset = provider.as_deref().and_then(provider_preset);
+    if let Some(p) = provider.as_deref() {
+        if preset.is_some() {
+            println!("✓ MAIL_PROVIDER = {p} (preset applied)");
+        } else {
+            println!(
+                "⚠ MAIL_PROVIDER = {p} — unknown preset; falling back to explicit SMTP_* vars"
+            );
+            println!("  known presets: gmail, resend, postmark, mailgun, sendgrid, ethereal");
         }
-    };
+    }
+    let host = resolve_host(preset)?;
+    let user = resolve_user(preset)?;
+    let pass = require_env("SMTP_PASSWORD")?;
+    let port = resolve_port(preset)?;
+    let (tls_mode, implicit_tls) = resolve_tls(preset)?;
     let from_raw = env::var("MAIL_FROM").unwrap_or_else(|_| user.clone());
     let from: Mailbox = from_raw
         .parse()
@@ -129,6 +171,20 @@ pub async fn run(send_to: Option<String>) -> Result<(), String> {
             Ok(())
         }
         Some(to_raw) => {
+            // Rate-limit: refuse to repeat within the cooldown window.
+            // Prevents accidental-spam from a developer hammering the
+            // command. Stamp lives in /tmp; survives across CLI runs
+            // but not across reboots.
+            if let Some(remaining) = cooldown_remaining() {
+                println!("✗ Cooldown active — last `--to` send was {remaining}s ago.");
+                println!(
+                    "  Wait {wait}s before sending another (cooldown is {window}s; \
+                     prevents accidental loops).",
+                    wait = SEND_COOLDOWN_SECS.saturating_sub(remaining),
+                    window = SEND_COOLDOWN_SECS,
+                );
+                return Err("send cooldown".into());
+            }
             let to: Mailbox = to_raw
                 .parse()
                 .map_err(|e| format!("✗ --to is not a valid mailbox: {e}"))?;
@@ -191,6 +247,7 @@ pub async fn run(send_to: Option<String>) -> Result<(), String> {
                 .send(msg)
                 .await
                 .map_err(|e| format!("FAILED\n✗ {e}"))?;
+            stamp_cooldown();
             println!("OK");
             println!("✓ Test message accepted by remote (delivery in transit)");
             println!();
@@ -204,6 +261,160 @@ pub async fn run(send_to: Option<String>) -> Result<(), String> {
     }
 }
 
+// ============================================================
+// HTML preview mode — no SMTP traffic.
+//
+// Renders the framework's recovery email template with realistic
+// placeholder data and writes the HTML to /tmp, then opens it in
+// the operator's default browser. Useful for iterating on email
+// design without burning a real send through Gmail's first-time-
+// sender heuristics.
+// ============================================================
+
+async fn run_html_preview() -> Result<(), String> {
+    println!("rustio doctor email — rendering HTML preview");
+    println!();
+
+    let app_name =
+        env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
+    let app_tagline = env::var("MAIL_FOOTER_TEXT")
+        .ok()
+        .or_else(|| Some("Operational library management".to_string()));
+    let support_email = env::var("SUPPORT_EMAIL").ok();
+
+    let when = chrono::Utc::now();
+    let intro = format!(
+        "We received a request to reset the password for your \
+         {app_name} account. Choose a new password to continue."
+    );
+    let fine_print = "This link expires in 1 hour.".to_string();
+    let mut parts = rustio_admin::email::RecoveryEmailParts::new(
+        &app_name,
+        "Reset your password",
+        "Abdulwahed",
+        &intro,
+        "http://127.0.0.1:3000/admin/reset-password/preview-token-not-real",
+        &fine_print,
+        when,
+    );
+    parts.app_tagline = app_tagline.as_deref();
+    parts.request_ip = Some("127.0.0.1");
+    parts.ua_summary = Some(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+    );
+    parts.correlation_id = Some("019e2200-0000-7000-8000-000000abc123");
+    parts.signature_primary = Some("Abdulwahed Mansour");
+    parts.signature_title = Some("Principal Administrator");
+    parts.support_email = support_email.as_deref();
+    let html = rustio_admin::email::render_recovery_html(parts);
+
+    std::fs::write(PREVIEW_PATH, &html)
+        .map_err(|e| format!("✗ Failed to write {PREVIEW_PATH}: {e}"))?;
+    println!("✓ Rendered {} bytes", html.len());
+    println!("✓ Written to {PREVIEW_PATH}");
+
+    // Open in the default browser. On macOS use `open`, on Linux
+    // `xdg-open` if available; both are fire-and-forget — the
+    // doctor doesn't care if the open succeeded.
+    let opener = if cfg!(target_os = "macos") {
+        "open"
+    } else if cfg!(target_os = "linux") {
+        "xdg-open"
+    } else {
+        // Other platforms: print the path and let the operator
+        // open it themselves.
+        ""
+    };
+    if !opener.is_empty() {
+        match std::process::Command::new(opener).arg(PREVIEW_PATH).status() {
+            Ok(s) if s.success() => {
+                println!("✓ Opened in default browser");
+            }
+            Ok(_) | Err(_) => {
+                println!("⚠ Could not open browser automatically; open the path above manually");
+            }
+        }
+    } else {
+        println!("· Open the file path manually in your browser");
+    }
+    println!();
+    println!("Preview uses realistic placeholder data. Re-run with");
+    println!("APP_NAME=... / SUPPORT_EMAIL=... / MAIL_FOOTER_TEXT=... in your");
+    println!("environment to render with your project's identity.");
+    Ok(())
+}
+
+// ============================================================
+// Env-var resolvers — preset-aware.
+// Explicit SMTP_* env vars always override the preset values.
+// ============================================================
+
+type Preset = (&'static str, u16, bool, Option<&'static str>);
+
+fn resolve_host(preset: Option<Preset>) -> Result<String, String> {
+    if let Ok(v) = env::var("SMTP_HOST") {
+        if !v.trim().is_empty() {
+            return Ok(v);
+        }
+    }
+    if let Some((h, _, _, _)) = preset {
+        return Ok(h.to_string());
+    }
+    println!("✗ SMTP_HOST is not set and no MAIL_PROVIDER preset matches.");
+    println!("  Either set MAIL_PROVIDER=gmail|resend|postmark|mailgun|sendgrid|ethereal");
+    println!("  or set SMTP_HOST explicitly.");
+    Err("SMTP_HOST missing".into())
+}
+
+fn resolve_port(preset: Option<Preset>) -> Result<u16, String> {
+    if let Ok(v) = env::var("SMTP_PORT") {
+        if !v.trim().is_empty() {
+            return v
+                .trim()
+                .parse()
+                .map_err(|e| format!("✗ SMTP_PORT is not a valid port number ({e})"));
+        }
+    }
+    if let Some((_, p, _, _)) = preset {
+        return Ok(p);
+    }
+    Ok(465)
+}
+
+fn resolve_tls(preset: Option<Preset>) -> Result<(String, bool), String> {
+    if let Ok(v) = env::var("SMTP_TLS") {
+        if !v.trim().is_empty() {
+            let implicit = match v.to_ascii_lowercase().as_str() {
+                "implicit" | "smtps" => true,
+                "starttls" => false,
+                other => {
+                    println!("✗ SMTP_TLS must be 'implicit' or 'starttls' (got {other:?})");
+                    return Err("bad SMTP_TLS".into());
+                }
+            };
+            return Ok((v, implicit));
+        }
+    }
+    if let Some((_, _, tls, _)) = preset {
+        let label = if tls { "implicit" } else { "starttls" };
+        return Ok((label.to_string(), tls));
+    }
+    Ok(("implicit".to_string(), true))
+}
+
+fn resolve_user(preset: Option<Preset>) -> Result<String, String> {
+    if let Ok(v) = env::var("SMTP_USER") {
+        if !v.trim().is_empty() {
+            return Ok(v);
+        }
+    }
+    if let Some((_, _, _, Some(hint))) = preset {
+        return Ok(hint.to_string());
+    }
+    println!("✗ SMTP_USER is not set. Add it to .env or your shell environment.");
+    Err("SMTP_USER missing".into())
+}
+
 fn require_env(name: &str) -> Result<String, String> {
     match env::var(name) {
         Ok(v) if !v.trim().is_empty() => Ok(v),
@@ -212,4 +423,32 @@ fn require_env(name: &str) -> Result<String, String> {
             Err(format!("{name} missing"))
         }
     }
+}
+
+// ============================================================
+// Cooldown — minimal accidental-spam safety rail on `--to`.
+// Stamp lives in /tmp; the file mtime is the timestamp.
+// ============================================================
+
+fn cooldown_remaining() -> Option<u64> {
+    let p = PathBuf::from(COOLDOWN_PATH);
+    let meta = std::fs::metadata(&p).ok()?;
+    let modified = meta.modified().ok()?;
+    let now = SystemTime::now();
+    let elapsed = now.duration_since(modified).unwrap_or(Duration::ZERO).as_secs();
+    if elapsed < SEND_COOLDOWN_SECS {
+        Some(elapsed)
+    } else {
+        None
+    }
+}
+
+fn stamp_cooldown() {
+    let _ = std::fs::write(
+        COOLDOWN_PATH,
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs().to_string())
+            .unwrap_or_default(),
+    );
 }
