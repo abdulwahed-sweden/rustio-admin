@@ -351,6 +351,13 @@ fn build_persisted_metadata(
 // public:
 /// Write one row to the action log. Validates required fields before
 /// touching the DB so a broken audit pipeline becomes visible.
+///
+/// `object_id == 0` is reserved for bulk-dispatch rows
+/// (`POST /admin/:model/bulk/:name`): the affected ids live in
+/// `metadata.ids`, and the row's `metadata.kind` is `"bulk_action"`.
+/// The history page can render bulk rows distinctly from per-object
+/// rows by checking that pair. Negative `object_id` values remain
+/// invalid.
 pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
     if entry.user_id <= 0 {
         return Err(Error::Internal("admin audit: missing user_id".to_string()));
@@ -360,9 +367,9 @@ pub async fn record(db: &Db, entry: LogEntry<'_>) -> Result<()> {
             "admin audit: missing model_name".to_string(),
         ));
     }
-    if entry.object_id <= 0 {
+    if entry.object_id < 0 {
         return Err(Error::Internal(
-            "admin audit: missing object_id".to_string(),
+            "admin audit: object_id must be >= 0 (bulk rows use 0)".to_string(),
         ));
     }
 

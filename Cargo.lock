@@ -1304,6 +1304,7 @@ version = "0.0.0"
 dependencies = [
  "chrono",
  "rustio-admin",
+ "sqlx",
  "tokio",
 ]
 
