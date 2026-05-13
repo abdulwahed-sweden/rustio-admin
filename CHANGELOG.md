@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.10.1** | 2026-05-13 | Integration-pass bugfixes: `plural_snake` learns regular English rules (`-ch/-sh/-x/-z`, consonant+`y`); removed offensive defaulting that synthesised `draft/published` for any field named `status`. Canonical example declares `belongs_to` on its FK fields. |
 | **0.10.0** | 2026-05-13 | Flagship example replacement. `examples/minimal/` retired; `examples/library-circulation/` ships as the canonical demo (4 models, 3 FKs, 135-row deterministic seed). Macro learns `Option<DateTime<Utc>>`. Documentation topology consolidated into `docs/design/` + `docs/archive/`. Zero framework runtime change. |
 | **0.9.0** | 2026-05-12 | Surface declaration. Doctrine moved to `docs/`; cascade lockstep invariant CI-enforced; 419/419 pub items annotated `// public:` or `// internal:` (355 + 64); `docs/public-api.md` enumerates the public surface. Zero behavioural / visibility changes. |
 | **0.8.2** | 2026-05-12 | Admin stylesheet split into a Primer/Carbon-style multi-file source tree + `DESIGN_DOCTRINE.md`. Pure refactor — bundle byte-stream and visual output preserved; one HTTP request, baked into the binary. |
@@ -30,6 +31,85 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.10.1] — 2026-05-13
+
+Patch release covering two framework bugs and one example
+completeness gap, all surfaced by running
+`examples/library-circulation/` end-to-end against a fresh
+Postgres on the 0.10.0 tag. **No schema migration, no public API
+signature change.** Two observable behaviours change — see
+*Behavioural changes* below.
+
+### Migration from 0.10.0
+
+Bump `rustio-admin = "0.10.1"` and run
+`cargo update -p rustio-admin`.
+
+If your project has a `#[derive(RustioAdmin)]` struct whose name
+ends in `-ch`, `-sh`, `-x`, `-z`, or consonant + `y`, the
+auto-generated route slug will change in this release (see
+*Behavioural changes*). Pin the old slug with
+`#[rustio(admin_name = "old_slug")]` if URL stability matters more
+than correct grammar.
+
+If your project has a String field literally named `status` and
+relied on the (broken) `draft / published` dropdown that the
+renderer used to synthesise, set
+`AdminField.choices = Some(&["draft", "published"])` (or your
+real values) — or accept the new plain-text input.
+
+### Fixed
+
+- **`plural_snake` ignored English plural rules.** Every struct
+  name was pluralised by appending a bare `s`, so `Branch` routed
+  to `/admin/branchs` and rendered as "Branchs". The macro now
+  applies the regular cases: `-ch/-sh/-x/-z` take `-es`,
+  consonant + `y` becomes `-ies`, vowel + `y` keeps `-s`, and a
+  trailing `s` is left as-is. Irregular plurals (`Person` →
+  `People`) still need `#[rustio(admin_name = "...")]`. Four unit
+  tests added covering each rule
+  (`crates/rustio-admin-macros/src/lib.rs:549`).
+
+- **Form renderer hardcoded a `draft / published` dropdown for
+  any field named `status`.** The underlying field stayed a
+  `String`, so the synthesised `<select>` permanently shadowed
+  every domain state machine — a loan with
+  `active / returned / overdue` rendered as a select that only
+  let the user pick `draft` or `published`. The synth block is
+  removed; status fields without `choices` now render as plain
+  text inputs. Projects that want a constrained widget set
+  `AdminField.choices` explicitly
+  (`crates/rustio-admin/src/admin/render.rs:1447`).
+
+### Changed
+
+- **`examples/library-circulation/`** — `Item.branch_id`,
+  `Loan.patron_id`, and `Loan.item_id` now carry
+  `#[rustio(belongs_to = "...", display = "...")]`. The admin
+  renders proper FK dropdowns on create/edit forms and FK
+  navigation links in list views. The framework still leaves FK
+  detection explicit — `_id` suffix alone is not a signal — so
+  the canonical example must demonstrate the declaration.
+
+### Behavioural changes (downstream-visible)
+
+These are bugfixes, but they change observable behaviour:
+
+1. **Route slug for affected struct names changes.** Anything
+   ending in `-ch/-sh/-x/-z` gains an `-es` suffix; consonant +
+   `y` becomes `-ies`. Saved URLs / inbound links / hand-written
+   navigation that pointed at the old slug must update or pin
+   with `#[rustio(admin_name)]`.
+2. **`status` fields lose the bogus `draft / published`
+   dropdown.** They render as plain text inputs unless
+   `AdminField.choices` is set.
+
+### Internal
+
+- Workspace + CLI bumped to 0.10.1. "Releases at a glance" gains
+  a 0.10.1 row.
 
 
 ## [0.10.0] — 2026-05-13
