@@ -955,25 +955,41 @@ pub(crate) async fn issue_reset_token(
                 token,
             );
             let when = chrono::Utc::now();
+            let ttl_human = humanize_ttl(ttl);
+            let site_header = admin.branding().site_header.clone();
             let body = format!(
                 "We received a request to sign you back in to {site_header}.\n\n\
                  Click the link below to set a new password:\n\n\
                  {reset_link}\n\n\
                  The link expires {ttl_human}. If you didn't request this, you can \
                  safely ignore this email.\n",
-                site_header = admin.branding().site_header,
-                reset_link = reset_link,
-                ttl_human = humanize_ttl(ttl),
             );
+            let intro = format!(
+                "We received a request to sign you back in to {site_header}. \
+                 Click the button below to set a new password."
+            );
+            let fine_print = format!("This link expires {ttl_human}.");
+            let html = crate::email::render_recovery_html(crate::email::RecoveryEmailParts {
+                site_header: &site_header,
+                title: "Sign back in to your account",
+                intro: &intro,
+                cta_label: "Set a new password",
+                cta_url: &reset_link,
+                fine_print: &fine_print,
+                when,
+                request_ip: Some(&ip),
+                ua_summary: user_agent_owned.as_deref(),
+            });
             let mail = Mail::framework_envelope(
                 user.email.clone(),
-                format!("{} — sign-in link", admin.branding().site_header),
+                format!("{site_header} — sign-in link"),
                 body,
-                &admin.branding().site_header,
+                &site_header,
                 Some(&ip),
                 user_agent_owned.as_deref(),
                 when,
-            );
+            )
+            .with_html(html);
             match admin.active_mailer().send(mail).await {
                 Ok(()) => {
                     set_token_mail_status(db, token_id, "sent").await?;

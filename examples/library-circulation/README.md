@@ -42,6 +42,111 @@ rustio user create --email admin@example.test --role developer
 # 5. Open http://127.0.0.1:3000/admin/ and sign in.
 ```
 
+## Running locally with real email (Gmail SMTP)
+
+By default the example uses the framework's `LogMailer` — password-
+recovery emails print to stdout instead of being delivered. To send
+a real email to your own Gmail inbox, configure SMTP via the
+environment.
+
+### Generate a Gmail App Password (one-time, ~5 minutes)
+
+App Passwords are 16-character credentials Google issues to non-
+browser clients like SMTP libraries. They bypass interactive sign-in
+flow and 2FA.
+
+1. Sign in to <https://myaccount.google.com>.
+2. **Security → How you sign in → 2-Step Verification.** Enable it
+   if it isn't already. App Passwords require 2FA on the account.
+3. Open <https://myaccount.google.com/apppasswords>.
+4. Type a label (e.g. `rustio-admin local`) and click **Create**.
+5. Google shows a 16-character value formatted as four 4-letter
+   groups separated by spaces (e.g. `abcd efgh ijkl mnop`).
+   **Copy the value and remove the spaces** — SMTP_PASSWORD is the
+   16-char concatenation, no whitespace.
+6. Click **Done**. The App Password is shown only once. Store it
+   immediately in your `.env`.
+
+### Configure the SMTP env vars
+
+Copy the template and fill the Gmail block:
+
+```sh
+cp .env.example .env
+$EDITOR .env
+```
+
+The Gmail block in `.env.example` is already pre-shaped:
+
+```
+MAIL_FROM=RustIO Admin <your.address@gmail.com>
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your.address@gmail.com
+SMTP_PASSWORD=abcdEfghIjklMnop
+SMTP_TLS=implicit
+```
+
+`MAIL_FROM` accepts either a bare address (`you@gmail.com`) or the
+`Name <addr>` form. The display name is what your recipients see in
+their inbox sender row.
+
+### Boot with the env loaded
+
+The example reads env vars from the process environment, not from
+`.env` directly — load the file with your shell:
+
+```sh
+set -a; source .env; set +a
+cargo run -p library-circulation
+```
+
+On startup the log line should read:
+
+```
+mailer: SMTP via smtp.gmail.com:465 (TLS=implicit) from your.address@gmail.com
+```
+
+If you instead see `mailer: SMTP_HOST unset; using LogMailer`, the
+env vars didn't make it into the process — re-source the file.
+
+### Trigger a real reset email
+
+1. Sign in once as your superuser, then sign out (or open an
+   incognito window).
+2. Click **Forgot password** on `/admin/login`, or visit
+   `/admin/forgot-password` directly.
+3. Enter the email address that's registered on the account you
+   want to recover.
+4. The page returns a generic "if that email has an account, we
+   sent a sign-in link" response — same for known and unknown
+   addresses (anti-enumeration).
+5. Open your Gmail inbox. The reset email arrives within a few
+   seconds. Click **Set a new password** in the email body — that
+   opens `http://127.0.0.1:3000/admin/reset-password/<token>` in
+   your browser.
+6. Choose a new password. The framework enforces its password
+   policy (length, etc.) before persisting; failures show inline.
+7. On success, all existing sessions for that account are revoked
+   per Doctrine 22; sign in again with the new password.
+
+### Production-style alternative: Resend
+
+Same env-var contract, different credentials. Sign up at
+<https://resend.com>, generate an API key, then set:
+
+```
+MAIL_FROM=RustIO Admin <noreply@yourdomain.com>
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASSWORD=re_xxxxxxxxxxxxxxxxxxxx   # the API key
+SMTP_TLS=implicit
+```
+
+Resend requires a verified sending domain in production — for first
+test runs you can use the `onboarding@resend.dev` sandbox sender.
+
 ## What this example demonstrates
 
 - Relational modelling across four tables with three foreign keys.
