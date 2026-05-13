@@ -123,8 +123,15 @@ async fn main() -> Result<()> {
     };
 
     // 6. Register the four models on the admin builder + install the
-    //    resolved mailer.
+    //    resolved mailer + the user-facing identity. The app's
+    //    branding owns every customer-visible surface (emails, login
+    //    page, recovery flow, chrome). RustIO is intentionally
+    //    absent from these — projects pass their real product name.
     let admin = Admin::new()
+        .app_name("Library Circulation")
+        .app_tagline("Operational library management")
+        .support_email("support@library.example.com")
+        .public_url("http://127.0.0.1:3000")
         .mailer(mailer)
         .model::<Branch>()
         .model::<Patron>()

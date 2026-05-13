@@ -139,6 +139,23 @@
   font-feature-settings: "tnum" 1;
 }
 
+/* Opt-in framework credit. Lowest visual weight in the entire
+ * chrome — never competes with the project's identity. Off by
+ * default; enabled per SiteBranding.show_powered_by. */
+.rio-footer__powered {
+  color: var(--rio-text-subtle);
+  font-size: 11px;
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+.rio-footer__powered:hover,
+.rio-footer__powered:focus-visible {
+  opacity: 1;
+  text-decoration: none;
+  outline: none;
+}
+
 /* ---- Narrow viewport ----------------------------------------- *
  * Stack the three columns vertically below 720px. Separators
  * stay (still readable as inline punctuation when the column

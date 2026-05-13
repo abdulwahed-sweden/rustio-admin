@@ -56,6 +56,19 @@ pub(crate) struct BaseContext {
     pub site_header: String,
     pub index_title: String,
     pub footer_copyright: String,
+    /// User-facing application identity (e.g. "Library Circulation").
+    /// Sourced from [`SiteBranding::app_name`]. Templates render this
+    /// in the chrome footer brand slot, page titles where
+    /// appropriate, and auth-surface wordmarks. Framework name
+    /// `RustIO` is intentionally absent from this field.
+    pub app_name: String,
+    /// Optional brand tagline ("Operational library management",
+    /// "Account security notification" fallback for emails).
+    pub app_tagline: Option<String>,
+    /// `true` → templates render the small "Powered by RustIO" credit
+    /// in the chrome footer + email footer. Opt-in per
+    /// [`SiteBranding::show_powered_by`].
+    pub show_powered_by: bool,
     /// Framework SemVer (`env!("CARGO_PKG_VERSION")`). Surfaced in
     /// the footer's identity column and used to deep-link the
     /// "Documentation" entry at the matching `docs.rs/rustio-admin/X.Y.Z`.
@@ -160,6 +173,9 @@ impl BaseContext {
             site_header: b.site_header.clone(),
             index_title: b.index_title.clone(),
             footer_copyright: b.footer_copyright.clone(),
+            app_name: b.app_name.clone(),
+            app_tagline: b.app_tagline.clone(),
+            show_powered_by: b.show_powered_by,
             framework_version: env!("CARGO_PKG_VERSION"),
             environment_label: env_label,
             environment_kind: environment_kind(env_label),

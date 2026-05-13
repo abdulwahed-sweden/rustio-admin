@@ -96,6 +96,77 @@ pub struct StoredUser {
     /// the freshly-authenticated user to `/admin/mfa/verify`
     /// before allowing access to `/admin`.
     pub mfa_enabled: bool,
+    /// Profile identity columns. All nullable in the DB; consumers
+    /// pick the first non-empty entry following the
+    /// `display_name → first_name → email-local-part → "there"`
+    /// fallback chain when rendering greetings. Surface examples:
+    /// recovery-email greeting, signature block, future
+    /// security-alert emails, operator-facing chrome.
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub display_name: Option<String>,
+    pub job_title: Option<String>,
+}
+
+impl StoredUser {
+    // public:
+    /// Resolve the greeting label per the documented fallback:
+    /// `display_name → first_name → email-local-part → "there"`.
+    /// Always returns a non-empty string suitable for direct
+    /// interpolation into "Hello {x},".
+    pub fn greeting_name(&self) -> String {
+        if let Some(d) = self.display_name.as_deref() {
+            let t = d.trim();
+            if !t.is_empty() {
+                return t.to_string();
+            }
+        }
+        if let Some(f) = self.first_name.as_deref() {
+            let t = f.trim();
+            if !t.is_empty() {
+                return t.to_string();
+            }
+        }
+        if let Some((local, _)) = self.email.split_once('@') {
+            let t = local.trim();
+            if !t.is_empty() {
+                return t.to_string();
+            }
+        }
+        "there".to_string()
+    }
+
+    // public:
+    /// "Best display name + role" pair used by the recovery
+    /// email's signature block. Falls back gracefully when the
+    /// profile fields are unset.
+    pub fn signature_lines(&self) -> (String, Option<String>) {
+        // Line 1: full name preferred — `first last`, otherwise
+        // display_name, otherwise email-local-part.
+        let primary = match (
+            self.first_name.as_deref().map(str::trim).filter(|s| !s.is_empty()),
+            self.last_name.as_deref().map(str::trim).filter(|s| !s.is_empty()),
+        ) {
+            (Some(f), Some(l)) => format!("{f} {l}"),
+            (Some(f), None) => f.to_string(),
+            (None, Some(l)) => l.to_string(),
+            (None, None) => {
+                if let Some(d) = self.display_name.as_deref() {
+                    let t = d.trim();
+                    if !t.is_empty() {
+                        return (t.to_string(), self.job_title.clone());
+                    }
+                }
+                self.email
+                    .split('@')
+                    .next()
+                    .unwrap_or(self.email.as_str())
+                    .to_string()
+            }
+        };
+        let secondary = self.job_title.clone().filter(|s| !s.trim().is_empty());
+        (primary, secondary)
+    }
 }
 
 // public:
@@ -202,6 +273,21 @@ pub async fn migrate_user_schema(db: &Db) -> Result<()> {
         .execute(db.pool())
         .await?;
 
+    // Profile identity columns surfaced by recovery emails + chrome.
+    // All nullable — legacy installs continue to work without them.
+    sqlx::query("ALTER TABLE rustio_users ADD COLUMN IF NOT EXISTS first_name TEXT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_users ADD COLUMN IF NOT EXISTS last_name TEXT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_users ADD COLUMN IF NOT EXISTS display_name TEXT")
+        .execute(db.pool())
+        .await?;
+    sqlx::query("ALTER TABLE rustio_users ADD COLUMN IF NOT EXISTS job_title TEXT")
+        .execute(db.pool())
+        .await?;
+
     Ok(())
 }
 
@@ -260,7 +346,8 @@ pub async fn create_user(db: &Db, email: &str, password: &str, role: Role) -> Re
 pub async fn find_user_by_email(db: &Db, email: &str) -> Result<Option<StoredUser>> {
     let row = sqlx::query(
         "SELECT id, email, password_hash, role, is_active, is_demo, demo_label, \
-                must_change_password, mfa_enabled \
+                must_change_password, mfa_enabled, \
+                first_name, last_name, display_name, job_title \
            FROM rustio_users \
           WHERE email = $1",
     )
@@ -280,6 +367,10 @@ pub async fn find_user_by_email(db: &Db, email: &str) -> Result<Option<StoredUse
                 demo_label: r.get_optional_string("demo_label")?,
                 must_change_password: r.get_bool("must_change_password")?,
                 mfa_enabled: r.get_bool("mfa_enabled")?,
+                first_name: r.get_optional_string("first_name")?,
+                last_name: r.get_optional_string("last_name")?,
+                display_name: r.get_optional_string("display_name")?,
+                job_title: r.get_optional_string("job_title")?,
             }))
         }
         None => Ok(None),
