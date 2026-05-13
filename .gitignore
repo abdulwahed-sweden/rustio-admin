@@ -23,3 +23,11 @@ target/
 # tasks). Anything under .claude/ is an editor / agent artefact, not
 # source.
 .claude/
+
+# Project-local environment files. NEVER commit a real .env — they
+# carry credentials (SMTP_PASSWORD, RUSTIO_SECRET_KEY, DATABASE_URL,
+# etc.). `.env.example` is the developer contract and stays
+# tracked; everything else matching `.env*` is per-machine state.
+.env
+.env.*
+!.env.example

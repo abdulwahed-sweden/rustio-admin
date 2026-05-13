@@ -76,39 +76,57 @@ cp .env.example .env
 $EDITOR .env
 ```
 
-The Gmail block in `.env.example` is already pre-shaped:
-
-```
-MAIL_FROM=RustIO Admin <your.address@gmail.com>
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=465
-SMTP_USER=your.address@gmail.com
-SMTP_PASSWORD=abcdEfghIjklMnop
-SMTP_TLS=implicit
-```
+`.env` is gitignored — your password never enters source control.
+The Gmail block in `.env.example` already has the right defaults;
+you just paste your 16-char App Password into `SMTP_PASSWORD=` and
+set `MAIL_FROM` / `SMTP_USER` to your own address.
 
 `MAIL_FROM` accepts either a bare address (`you@gmail.com`) or the
 `Name <addr>` form. The display name is what your recipients see in
 their inbox sender row.
 
-### Boot with the env loaded
+### Validate the SMTP setup before booting the app
 
-The example reads env vars from the process environment, not from
-`.env` directly — load the file with your shell:
+The CLI ships a one-shot doctor that runs the same boot-time
+handshake the app does — TLS + AUTH against the configured server:
 
 ```sh
-set -a; source .env; set +a
+rustio doctor email
+```
+
+That's a read-only round-trip (no email is sent). If you want a
+full end-to-end test that lands a message in an inbox, add the
+`--to` flag:
+
+```sh
+rustio doctor email --to your.address@gmail.com
+```
+
+Either way you'll see ✓ / ⚠ / ✗ per check + a structured
+diagnostic on failure. Run this before `cargo run` and you'll
+never be surprised by a silent SMTP misconfiguration.
+
+### Boot with the env loaded
+
+The example's `main.rs` calls `dotenvy::dotenv()` at startup so
+`.env` is loaded automatically — no `source` ritual required:
+
+```sh
 cargo run -p library-circulation
 ```
 
-On startup the log line should read:
+On startup, the mailer log line should read:
 
 ```
-mailer: SMTP via smtp.gmail.com:465 (TLS=implicit) from your.address@gmail.com
+env: loaded /Users/you/.../examples/library-circulation/.env
+mailer: validating SMTP to smtp.gmail.com:465 (TLS=implicit)… OK
+mailer: SMTP authenticated; recovery emails will be delivered as Library Circulation <your.address@gmail.com>
 ```
 
-If you instead see `mailer: SMTP_HOST unset; using LogMailer`, the
-env vars didn't make it into the process — re-source the file.
+If you instead see `mailer: SMTP_HOST unset; using LogMailer`,
+`.env` either doesn't exist or doesn't contain `SMTP_HOST=`. The
+boot-time handshake refuses to start the app silently against a
+misconfigured SMTP — you'll always see exactly why.
 
 ### Trigger a real reset email
 

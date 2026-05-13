@@ -22,6 +22,7 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 
 mod doctor;
+mod doctor_email;
 mod emergency_ui;
 mod group;
 mod migrate;
@@ -80,7 +81,26 @@ enum Command {
         action: perm::Action,
     },
     /// Diagnose the local environment.
-    Doctor,
+    Doctor {
+        #[command(subcommand)]
+        action: Option<DoctorAction>,
+    },
+}
+
+#[derive(Subcommand)]
+enum DoctorAction {
+    /// SMTP self-validation. Reads `SMTP_*` + `MAIL_FROM` from
+    /// the environment, opens a TLS + AUTH handshake against the
+    /// configured server, and optionally sends a single test
+    /// message when `--to <address>` is supplied. No credentials
+    /// are echoed — the password is reported as `(set, N chars)`.
+    Email {
+        /// Optional recipient. When set, the doctor sends a tiny
+        /// test message after the handshake passes. When omitted,
+        /// the handshake is the deepest check (no email goes out).
+        #[arg(long)]
+        to: Option<String>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -103,7 +123,10 @@ fn main() -> ExitCode {
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,
                 Command::Perm { action } => perm::run(action).await,
-                Command::Doctor => doctor::run().await,
+                Command::Doctor { action } => match action {
+                    None => doctor::run().await,
+                    Some(DoctorAction::Email { to }) => doctor_email::run(to).await,
+                },
             }
         }),
     };
