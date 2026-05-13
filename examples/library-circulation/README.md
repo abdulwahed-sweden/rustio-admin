@@ -58,28 +58,27 @@ rustio user create --email admin@example.test --role developer
   - `items.status` ∈ `available | on_loan | lost | withdrawn`
   - `loans.status` ∈ `active | returned | overdue`
   - `items.kind`   ∈ `book | audiobook | dvd`
+- **Project-defined bulk actions** via the public
+  `ModelAdmin::execute_bulk_action` hook. `Loan` declares
+  `mark_overdue` and `mark_returned`; each runs a
+  SELECT-then-UPDATE round-trip, partitions the selection into
+  eligible vs. ineligible rows, and returns a `BulkActionResult`
+  with a per-id failure list + operator-facing summary line.
+  Partial-failure paths exercised (e.g. selecting an already-
+  returned loan for `mark_overdue` skips the row with a clear
+  reason). The framework emits one audit row per submission.
 - 135 rows of deterministic seeded data populate the admin to a
   clickable state on first boot.
 
-## What this example does not yet demonstrate
+## Out of this example's scope
 
-One framework capability is not exercised here because it needs
-follow-up framework work:
-
-- **Custom bulk actions.** Need a public project-side dispatch
-  hook; the existing `AdminOps` trait is `pub(crate)`.
-
-The deferral is also recorded in `migrations/0005_seed.sql`'s
-footer comment.
-
-(Permission-group seeding was previously listed here as a second
-gap. As of 0.10.2 `permissions::create_group` is idempotent —
-safe to call repeatedly from Rust seed code at boot. Groups are
-still not seeded in this example because SQL migrations run
-before `admin.seed_permissions()`, so the SQL file can't bind
-groups to permission rows that don't exist yet; group seeding
-belongs in Rust alongside the boot path. Left out to keep
-`main.rs` teaching-focused.)
+Permission-group seeding. As of 0.10.2
+`permissions::create_group` is idempotent and safe to call
+repeatedly from Rust seed code at boot, but SQL migrations run
+*before* `admin.seed_permissions()` — so the SQL seed file can't
+bind groups to permission rows that don't exist yet at migration
+time. Group seeding belongs in Rust alongside the boot path; left
+out here to keep `main.rs` linear and teaching-focused.
 
 ## File layout
 

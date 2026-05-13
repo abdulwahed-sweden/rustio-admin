@@ -734,28 +734,20 @@ VALUES (
 
 
 -- ============================================================
--- Framework gap surfaced during D.4 investigation (2026-05-13)
+-- Scope note
 -- ============================================================
--- One item intentionally NOT seeded here because the framework's
--- current public API does not expose a clean project-side hook:
+-- Permission groups + group→permission bindings are intentionally
+-- not seeded from this SQL file. SQL migrations run *before*
+-- `admin.seed_permissions()` (which is in Rust at boot), so the
+-- permission rows that groups would bind to don't exist at
+-- migration time. The framework's `permissions::create_group`
+-- has been idempotent since 0.10.2 and is safe to call from Rust
+-- seed code; this example just keeps `main.rs` linear and leaves
+-- the demonstration of group seeding to a future commit if the
+-- domain ever needs it.
 --
---   * Custom bulk-action implementations.
---     `AdminOps` is pub(crate) (types.rs:232); a project cannot
---     override `execute_bulk_action`. Declaring metadata via
---     `ModelAdmin::bulk_actions()` without an implementation
---     would create dead buttons in the admin UI.
---
--- This is a framework decision for a future commit, not an
--- example workaround. The example demonstrates the framework's
--- depth via relational data + audit emission + RBAC defaults
--- only.
---
--- Permission-group seeding (previously listed here as a second
--- gap) became viable in 0.10.2 when `permissions::create_group`
--- learned ON CONFLICT semantics. Group rows still aren't seeded
--- from this SQL file because SQL migrations run before
--- `admin.seed_permissions()` (in Rust at boot), so the
--- permission rows the groups would bind to don't exist yet at
--- migration time. Seeding groups + bindings belongs in Rust
--- alongside the boot path; left out of this example to keep
--- main.rs linear and teaching-focused.
+-- The D.4 investigation also flagged custom bulk-action dispatch
+-- as a framework gap. That gap closed when the public
+-- `ModelAdmin::execute_bulk_action` hook shipped; `Loan` now
+-- demonstrates it with two project-defined actions
+-- (mark_overdue, mark_returned). See `src/models/loan.rs`.

@@ -92,6 +92,44 @@ leaves the alpha track.
 - Doctest on `ModelAdmin::execute_bulk_action` demonstrates the
   override shape (project-side `match action` dispatch).
 
+### Changed
+
+- `audit::record` now accepts `object_id == 0` to represent the
+  bulk-dispatch row shape — the affected ids live in
+  `metadata.ids` and `metadata.kind == "bulk_action"`. Negative
+  values remain rejected. Per-object emissions (`object_id > 0`)
+  are unaffected. Pair fix for the bulk-action hook above; the
+  hook declares the `object_id = 0` convention and `audit::record`
+  was rejecting it.
+- `BulkAction` is now re-exported at the crate root
+  (`rustio_admin::BulkAction`) for surface symmetry with the
+  dispatch types (`BulkActionContext` / `BulkActionResult` /
+  `BulkActionFailure`). Still also available at
+  `rustio_admin::admin::BulkAction`.
+
+### Example
+
+- `examples/library-circulation/`'s `Loan` model demonstrates the
+  new dispatch hook with two project-defined actions:
+  - `mark_overdue` — flips `active` loans to `overdue`. Loans
+    already overdue or returned are reported as per-id failures
+    with explicit reasons.
+  - `mark_returned` — flips `active` and `overdue` loans to
+    `returned` and stamps `returned_at = NOW()`. Already-returned
+    loans report as failures.
+  Both actions use a SELECT-then-UPDATE round-trip pattern:
+  read each selected id's current status, partition into
+  eligible vs. ineligible, run one UPDATE for the eligibles,
+  return a `BulkActionResult` with the per-id failure list and
+  an operator-facing summary. No abstractions; explicit SQL.
+- `sqlx` added as a direct dependency on the example (matches
+  the `rustio startproject` scaffold template).
+- Example README "What this example demonstrates" lists the
+  bulk-action hook; "What this example does not yet demonstrate"
+  section retired (both D.4 documented gaps now closed).
+- `examples/library-circulation/migrations/0005_seed.sql` footer
+  trimmed accordingly.
+
 ### Deferred
 
 - Per-action permissions. `BulkActionContext.actor` is already in
@@ -99,11 +137,6 @@ leaves the alpha track.
   own `actor.role`/`actor.email`-based check today. A future
   commit may add an optional `permission: &'static str` field
   to `BulkAction` for framework-level enforcement.
-- Example integration. `examples/library-circulation` is
-  intentionally untouched in this commit — the second commit in
-  this Phase D wrap-up adds a `mark_overdue` /
-  `mark_returned` demonstration to `Loan` and closes the
-  example README's "does not yet demonstrate" list.
 
 
 ## [0.11.0] — 2026-05-13
