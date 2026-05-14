@@ -607,15 +607,18 @@ pub fn register_admin_routes(
         "/static/fonts/NotoSansDevanagari-Variable.woff2",
         |_req| async move { Ok(font_response(FONT_NOTO_DEVA)) },
     );
-    let router = router.get("/static/fonts/NotoSansJP-Regular.woff2", |_req| async move {
-        Ok(font_response(FONT_NOTO_JP))
-    });
-    let router = router.get("/static/fonts/NotoSansKR-Regular.woff2", |_req| async move {
-        Ok(font_response(FONT_NOTO_KR))
-    });
-    let router = router.get("/static/fonts/NotoSansSC-Regular.woff2", |_req| async move {
-        Ok(font_response(FONT_NOTO_SC))
-    });
+    let router = router.get(
+        "/static/fonts/NotoSansJP-Regular.woff2",
+        |_req| async move { Ok(font_response(FONT_NOTO_JP)) },
+    );
+    let router = router.get(
+        "/static/fonts/NotoSansKR-Regular.woff2",
+        |_req| async move { Ok(font_response(FONT_NOTO_KR)) },
+    );
+    let router = router.get(
+        "/static/fonts/NotoSansSC-Regular.woff2",
+        |_req| async move { Ok(font_response(FONT_NOTO_SC)) },
+    );
 
     // Public: login/logout.
     let c = ctx.clone();

@@ -303,10 +303,7 @@ async fn create(
     // Profile identity columns — populated post-create so the
     // existing `create_user` signature doesn't grow. All four are
     // optional; UPDATE sets only the columns the operator supplied.
-    if first_name.is_some()
-        || last_name.is_some()
-        || display_name.is_some()
-        || job_title.is_some()
+    if first_name.is_some() || last_name.is_some() || display_name.is_some() || job_title.is_some()
     {
         sqlx::query(
             "UPDATE rustio_users SET \

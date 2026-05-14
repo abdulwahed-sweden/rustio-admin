@@ -220,7 +220,7 @@ type HmacSha1 = Hmac<Sha1>;
 /// site.
 #[derive(Clone)]
 #[allow(dead_code)] // call sites land in R3 commit #6+ (enrol / verify runtime)
-pub(crate) struct MfaKey([u8; 32]);
+pub struct MfaKey([u8; 32]);
 
 #[allow(dead_code)] // see MfaKey type comment — light up in R3 commit #6+
 impl MfaKey {
@@ -268,7 +268,7 @@ impl MfaKey {
     /// Construct from raw 32 bytes. Used by tests and explicit
     /// project wiring (e.g. a project that derives the key from
     /// AWS KMS / HashiCorp Vault rather than an env var).
-    pub(crate) fn from_bytes(bytes: [u8; 32]) -> Self {
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
 
@@ -357,7 +357,7 @@ pub(crate) fn unwrap_secret(input: &[u8], key: &MfaKey) -> Result<Vec<u8>> {
 /// 8-16; 8 is enough for emergency use without bloating the
 /// post-enrolment confirmation page.
 #[allow(dead_code)] // call site lands in R3 commit #6 (enrolment runtime)
-pub(crate) const BACKUP_CODE_COUNT: usize = 8;
+pub const BACKUP_CODE_COUNT: usize = 8;
 
 // internal:
 /// Backup-code length in characters, excluding the visual
@@ -420,7 +420,7 @@ fn backup_code_argon2() -> Result<Argon2<'static>> {
 /// ```
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) +
                     // commit when regenerate_backup_codes lands
-// internal:
+                    // internal:
 pub(crate) fn generate_backup_codes(count: usize) -> Vec<String> {
     let mut rng = rand::thread_rng();
     let alphabet_len = BACKUP_CODE_ALPHABET.len();
@@ -540,7 +540,7 @@ pub(crate) fn verify_backup_code(plaintext: &str, hash: &str) -> bool {
 /// previously accepted by [`verify_totp`] for replay protection
 /// (D4).
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) + #7 (verify_totp)
-pub(crate) fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
+pub fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
     debug_assert!(step_seconds > 0, "step_seconds must be > 0");
     now_unix / step_seconds
 }
@@ -568,7 +568,7 @@ pub(crate) fn current_step(now_unix: u64, step_seconds: u64) -> u64 {
 /// length per the HMAC construction; the framework never
 /// produces an invalid secret length internally.
 #[allow(dead_code)] // call sites land in R3 commit #6 (enrolment) + #7 (verify_totp)
-pub(crate) fn generate_totp(secret: &[u8], step: u64) -> u32 {
+pub fn generate_totp(secret: &[u8], step: u64) -> u32 {
     // UFCS to disambiguate from `aes_gcm::aead::KeyInit` —
     // both traits define a `new_from_slice` method.
     let mut mac = <HmacSha1 as Mac>::new_from_slice(secret).expect("HMAC accepts any key length");
@@ -643,7 +643,7 @@ pub(crate) fn verify_totp(
 /// in process memory; the at-rest persistence contract (D1)
 /// is enforced inside `confirm_enrolment` via [`wrap_secret`].
 #[allow(dead_code)] // fields read by the enrolment GET handler in a later commit
-pub(crate) struct ProvisionedSecret {
+pub struct ProvisionedSecret {
     /// 20 random bytes from the OS RNG. RFC 6238 recommends
     /// HMAC-SHA1's block size (64 bytes) or output size
     /// (20 bytes); 20 is the universal authenticator-app
@@ -666,7 +666,7 @@ pub(crate) struct ProvisionedSecret {
 /// issuer name or the user's email; those concerns live at the
 /// HTTP layer.
 #[allow(dead_code)] // call site lands in the enrolment GET handler
-pub(crate) fn provision_secret() -> ProvisionedSecret {
+pub fn provision_secret() -> ProvisionedSecret {
     let mut bytes = vec![0u8; 20];
     rand::thread_rng().fill_bytes(&mut bytes);
     let base32 = base32_encode_no_pad(&bytes);
@@ -797,7 +797,7 @@ pub(crate) fn base32_decode_no_pad(input: &str) -> Option<Vec<u8>> {
 /// right page without embedding HTTP concerns in the runtime
 /// layer.
 #[allow(dead_code)] // variants light up at the HTTP handler in a later commit
-pub(crate) enum EnrolOutcome {
+pub enum EnrolOutcome {
     /// The user's first TOTP code matched the just-provisioned
     /// secret. The secret has been encrypted and persisted on
     /// the user row; the 8 backup codes have been hashed and
@@ -865,7 +865,7 @@ pub(crate) enum EnrolOutcome {
 /// existing sessions per `DESIGN_R3_MFA.md` §4.1.
 #[allow(dead_code)] // call site lands at the enrolment POST handler in a later commit
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn confirm_enrolment(
+pub async fn confirm_enrolment(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -977,7 +977,7 @@ pub(crate) async fn confirm_enrolment(
 /// exist for forensic logging, future audit emission, and
 /// internal debugging only.
 #[allow(dead_code)] // variants light up at the verify handler in a later commit
-pub(crate) enum VerifyOutcome {
+pub enum VerifyOutcome {
     /// The candidate code matched within the skew window AND
     /// the matched step is strictly greater than
     /// `mfa_last_used_step`. The runtime has stamped the new
@@ -1055,7 +1055,7 @@ pub(crate) enum VerifyOutcome {
 /// runs through `auth::sessions::invalidate_sessions` at the
 /// handler level — not here.
 #[allow(dead_code)] // call site lands at the verify POST handler in a later commit
-pub(crate) async fn verify_totp_for_user(
+pub async fn verify_totp_for_user(
     db: &Db,
     user_id: i64,
     candidate_code_str: &str,
@@ -1149,7 +1149,7 @@ pub(crate) async fn verify_totp_for_user(
 /// `NotEnrolled` in the rendered copy. The variant distinctions
 /// exist for forensic logging and internal debugging only.
 #[allow(dead_code)] // variants light up at the verify handler in a later commit
-pub(crate) enum BackupConsumeOutcome {
+pub enum BackupConsumeOutcome {
     /// The candidate matched an unused backup code. The row has
     /// been atomically marked `used_at = NOW()`; the audit row
     /// has been emitted. The caller proceeds with trust
@@ -1229,7 +1229,7 @@ pub(crate) enum BackupConsumeOutcome {
 /// consume is an out-of-band recovery event worth surfacing in
 /// the forensic chain.
 #[allow(dead_code)] // call site lands at the verify POST handler in a later commit
-pub(crate) async fn consume_backup_code(
+pub async fn consume_backup_code(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -1343,7 +1343,7 @@ pub(crate) async fn consume_backup_code(
 /// the right page without embedding HTTP concerns in the
 /// runtime layer.
 #[allow(dead_code)] // variants light up at the disable handler in a later commit
-pub(crate) enum DisableOutcome {
+pub enum DisableOutcome {
     /// MFA disabled successfully. The user row's four MFA
     /// columns are reset (`mfa_enabled = FALSE`, the secret +
     /// key id + last-used step all NULL). The backup-code rows
@@ -1411,7 +1411,7 @@ pub(crate) enum DisableOutcome {
 /// what actually happened; a partial success that fails
 /// invalidation never produces an audit row.
 #[allow(dead_code)] // call site lands at the disable POST handler in a later commit
-pub(crate) async fn disable_mfa(
+pub async fn disable_mfa(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -1504,7 +1504,7 @@ pub(crate) async fn disable_mfa(
 /// handler render the right page without embedding HTTP
 /// concerns in the runtime layer.
 #[allow(dead_code)] // variants light up at the regenerate handler in a later commit
-pub(crate) enum RegenOutcome {
+pub enum RegenOutcome {
     /// A fresh batch of `BACKUP_CODE_COUNT` codes was generated
     /// inside an atomic transaction (D3). The old batch — all
     /// rows for this user — was deleted in the same transaction
@@ -1577,7 +1577,7 @@ pub(crate) enum RegenOutcome {
 /// MVCC — both states (old batch intact / new batch active)
 /// are observable; no in-between is.
 #[allow(dead_code)] // call site lands at the regenerate POST handler in a later commit
-pub(crate) async fn regenerate_backup_codes(
+pub async fn regenerate_backup_codes(
     db: &Db,
     request: &Request,
     user_id: i64,
@@ -1716,7 +1716,7 @@ pub(crate) async fn regenerate_backup_codes(
 /// token ride into the elevated state; the rotation forbids
 /// that.
 #[allow(dead_code)] // call site lands at the verify POST handler in a later commit
-pub(crate) async fn promote_session_to_mfa_verified(
+pub async fn promote_session_to_mfa_verified(
     db: &Db,
     current_session_id: i64,
     user_id: i64,

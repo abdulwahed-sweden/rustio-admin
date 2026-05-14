@@ -25,7 +25,9 @@ fn between_quotes(line: &str) -> Option<&str> {
 }
 
 fn css_imports() -> Vec<String> {
-    fs::read_to_string(ADMIN_CSS).unwrap().lines()
+    fs::read_to_string(ADMIN_CSS)
+        .unwrap()
+        .lines()
         .filter(|l| l.trim_start().starts_with("@import url("))
         .filter_map(between_quotes)
         .map(String::from)
@@ -33,7 +35,9 @@ fn css_imports() -> Vec<String> {
 }
 
 fn rust_includes() -> Vec<String> {
-    fs::read_to_string(ROUTES_RS).unwrap().lines()
+    fs::read_to_string(ROUTES_RS)
+        .unwrap()
+        .lines()
         .filter(|l| l.contains("include_str!("))
         .filter_map(between_quotes)
         .filter_map(|p| p.strip_prefix(PREFIX).map(String::from))
@@ -44,7 +48,9 @@ fn rust_includes() -> Vec<String> {
 fn admin_css_import_order_matches_routes_concat_order() {
     let css = css_imports();
     let rs = rust_includes();
-    if css == rs { return; }
+    if css == rs {
+        return;
+    }
     let mut msg = String::from("\nCascade lockstep violation:\n");
     let n = css.len().max(rs.len());
     for i in 0..n {
