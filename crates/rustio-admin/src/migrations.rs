@@ -115,7 +115,7 @@ pub fn generate(dir: impl AsRef<Path>, name: &str) -> Result<PathBuf> {
     let next = existing.iter().map(|m| m.version).max().unwrap_or(0) + 1;
     let filename = format!("{:04}_{}.sql", next, slugify(name));
     let path = dir.join(filename);
-    fs::write(&path, format!("-- {}\n\n", name))?;
+    fs::write(&path, format!("-- {name}\n\n"))?;
     Ok(path)
 }
 

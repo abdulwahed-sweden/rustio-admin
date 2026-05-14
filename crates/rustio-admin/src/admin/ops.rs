@@ -62,7 +62,7 @@ where
                 // `::text` cast keeps the comparison string-shaped
                 // — bool / int / timestamp columns then match the
                 // form values produced by `display_values()`.
-                where_clauses.push(format!("{}::text = ${}", col, placeholder));
+                where_clauses.push(format!("{col}::text = ${placeholder}"));
                 where_bindings.push(val.clone());
                 placeholder += 1;
             }
@@ -76,10 +76,10 @@ where
                         let p = placeholder;
                         let or_clauses: Vec<String> = valid_cols
                             .iter()
-                            .map(|c| format!("{}::text ILIKE ${}", c, p))
+                            .map(|c| format!("{c}::text ILIKE ${p}"))
                             .collect();
                         where_clauses.push(format!("({})", or_clauses.join(" OR ")));
-                        where_bindings.push(format!("%{}%", term));
+                        where_bindings.push(format!("%{term}%"));
                         placeholder += 1;
                     }
                 }
@@ -137,10 +137,10 @@ where
                 i
             });
             if let Some(i) = limit_idx {
-                sql.push_str(&format!(" LIMIT ${}", i));
+                sql.push_str(&format!(" LIMIT ${i}"));
             }
             if let Some(i) = offset_idx {
-                sql.push_str(&format!(" OFFSET ${}", i));
+                sql.push_str(&format!(" OFFSET ${i}"));
             }
 
             let mut q = sqlx::query(&sql);

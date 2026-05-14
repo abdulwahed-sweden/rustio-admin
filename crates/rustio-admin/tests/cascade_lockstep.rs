@@ -57,7 +57,7 @@ fn admin_css_import_order_matches_routes_concat_order() {
         let c = css.get(i).map(String::as_str).unwrap_or("(missing)");
         let r = rs.get(i).map(String::as_str).unwrap_or("(missing)");
         let mark = if c == r { "  " } else { "**" };
-        msg.push_str(&format!("{} {:>2}  css={:35}  rust={}\n", mark, i, c, r));
+        msg.push_str(&format!("{mark} {i:>2}  css={c:35}  rust={r}\n"));
     }
     panic!("{}", msg);
 }

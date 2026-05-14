@@ -1657,8 +1657,7 @@ pub async fn regenerate_backup_codes(
     entry.metadata = Some(metadata);
     entry.summary = format!(
         "backup codes regenerated; {previous_count} previous invalidated; \
-         {} new codes issued",
-        BACKUP_CODE_COUNT
+         {BACKUP_CODE_COUNT} new codes issued"
     );
     audit_record(db, entry).await?;
 

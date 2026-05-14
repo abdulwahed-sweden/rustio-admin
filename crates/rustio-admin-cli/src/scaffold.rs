@@ -118,7 +118,7 @@ pub fn app(name: &str) -> Result<(), String> {
 
     let next_version = next_migration_version()?;
     let migration_path =
-        Path::new("migrations").join(format!("{:04}_create_{}.sql", next_version, table));
+        Path::new("migrations").join(format!("{next_version:04}_create_{table}.sql"));
     fs::create_dir_all("migrations").map_err(|e| format!("mkdir migrations: {e}"))?;
 
     let model_body = APP_MODEL_TEMPLATE

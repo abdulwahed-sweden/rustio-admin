@@ -919,13 +919,13 @@ fn build_list_url(
         );
     }
     if page > 1 {
-        parts.push(format!("page={}", page));
+        parts.push(format!("page={page}"));
     }
     if let Some(n) = per_page {
-        parts.push(format!("per_page={}", n));
+        parts.push(format!("per_page={n}"));
     }
     if parts.is_empty() {
-        format!("/admin/{}", admin_name)
+        format!("/admin/{admin_name}")
     } else {
         format!("/admin/{}?{}", admin_name, parts.join("&"))
     }

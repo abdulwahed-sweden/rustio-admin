@@ -871,9 +871,7 @@ pub(crate) async fn issue_reset_token(
     if !request_limiter.allow(&ip) {
         log::info!(
             target: "rustio_admin::recovery::issue",
-            "rate-limit exhausted ip={} correlation_id={:?}",
-            ip,
-            correlation_id,
+            "rate-limit exhausted ip={ip} correlation_id={correlation_id:?}",
         );
         return Ok(IssueOutcome::RateLimited);
     }
@@ -883,9 +881,7 @@ pub(crate) async fn issue_reset_token(
     if email_input.is_empty() {
         log::info!(
             target: "rustio_admin::recovery::issue",
-            "empty-email submission ip={} correlation_id={:?}",
-            ip,
-            correlation_id,
+            "empty-email submission ip={ip} correlation_id={correlation_id:?}",
         );
         return Ok(IssueOutcome::UnknownOrInactive);
     }
@@ -908,9 +904,7 @@ pub(crate) async fn issue_reset_token(
         None => {
             log::info!(
                 target: "rustio_admin::recovery::issue",
-                "unknown-email submission ip={} correlation_id={:?}",
-                ip,
-                correlation_id,
+                "unknown-email submission ip={ip} correlation_id={correlation_id:?}",
             );
             return Ok(IssueOutcome::UnknownOrInactive);
         }
@@ -1112,9 +1106,7 @@ pub(crate) async fn consume_reset_token(
     if !consume_limiter.allow(&ip) {
         log::info!(
             target: "rustio_admin::recovery::consume",
-            "rate-limit exhausted ip={} correlation_id={:?}",
-            ip,
-            correlation_id,
+            "rate-limit exhausted ip={ip} correlation_id={correlation_id:?}",
         );
         return Ok(ConsumeOutcome::RateLimited);
     }
