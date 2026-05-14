@@ -10,7 +10,7 @@ members = [
 [workspace.package]
 version = "0.13.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.88"
 license = "MIT"
 repository = "https://github.com/abdulwahed-sweden/rustio-admin"
 homepage = "https://github.com/abdulwahed-sweden/rustio-admin"

@@ -4,7 +4,7 @@ From an empty directory to a logged-in admin in under five minutes.
 
 ## Prerequisites
 
-- Rust 1.85+ (`rustup show` to check).
+- Rust 1.88+ (`rustup show` to check).
 - A reachable PostgreSQL. A native install is fine; the
   `docker run --name rio-pg -e POSTGRES_PASSWORD=dev -p 5432:5432 -d postgres:16`
   one-liner also works.
