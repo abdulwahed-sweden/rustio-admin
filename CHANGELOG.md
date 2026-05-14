@@ -34,7 +34,14 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-No changes yet.
+### MSRV
+
+- Bumped from **Rust 1.80** to **Rust 1.85**. Transitive deps
+  (`clap_lex 1.1.0` via `clap` in the CLI crate) now require the
+  `edition2024` Cargo feature, which is only stabilised in 1.85+.
+  Declaring 1.80 was no longer achievable from a fresh build.
+  `workspace.package.rust-version` and the CI pin (`dtolnay/rust-toolchain@1.85`)
+  now match.
 
 
 ## [0.13.0] — 2026-05-13
