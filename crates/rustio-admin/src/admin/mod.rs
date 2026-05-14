@@ -4,8 +4,8 @@ pub(crate) mod admin_recovery_handlers;
 // public:
 pub mod audit;
 // public:
-pub mod bulk;
 pub(crate) mod builtin;
+pub mod bulk;
 // public:
 pub mod filters;
 mod handlers;

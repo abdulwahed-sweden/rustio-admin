@@ -275,8 +275,7 @@ async fn run_html_preview() -> Result<(), String> {
     println!("rustio doctor email — rendering HTML preview");
     println!();
 
-    let app_name =
-        env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
+    let app_name = env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
     let app_tagline = env::var("MAIL_FOOTER_TEXT")
         .ok()
         .or_else(|| Some("Operational library management".to_string()));
@@ -299,9 +298,7 @@ async fn run_html_preview() -> Result<(), String> {
     );
     parts.app_tagline = app_tagline.as_deref();
     parts.request_ip = Some("127.0.0.1");
-    parts.ua_summary = Some(
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-    );
+    parts.ua_summary = Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15");
     parts.correlation_id = Some("019e2200-0000-7000-8000-000000abc123");
     parts.signature_primary = Some("Abdulwahed Mansour");
     parts.signature_title = Some("Principal Administrator");
@@ -326,7 +323,10 @@ async fn run_html_preview() -> Result<(), String> {
         ""
     };
     if !opener.is_empty() {
-        match std::process::Command::new(opener).arg(PREVIEW_PATH).status() {
+        match std::process::Command::new(opener)
+            .arg(PREVIEW_PATH)
+            .status()
+        {
             Ok(s) if s.success() => {
                 println!("✓ Opened in default browser");
             }
@@ -435,7 +435,10 @@ fn cooldown_remaining() -> Option<u64> {
     let meta = std::fs::metadata(&p).ok()?;
     let modified = meta.modified().ok()?;
     let now = SystemTime::now();
-    let elapsed = now.duration_since(modified).unwrap_or(Duration::ZERO).as_secs();
+    let elapsed = now
+        .duration_since(modified)
+        .unwrap_or(Duration::ZERO)
+        .as_secs();
     if elapsed < SEND_COOLDOWN_SECS {
         Some(elapsed)
     } else {

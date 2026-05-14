@@ -144,8 +144,14 @@ impl StoredUser {
         // Line 1: full name preferred — `first last`, otherwise
         // display_name, otherwise email-local-part.
         let primary = match (
-            self.first_name.as_deref().map(str::trim).filter(|s| !s.is_empty()),
-            self.last_name.as_deref().map(str::trim).filter(|s| !s.is_empty()),
+            self.first_name
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty()),
+            self.last_name
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty()),
         ) {
             (Some(f), Some(l)) => format!("{f} {l}"),
             (Some(f), None) => f.to_string(),

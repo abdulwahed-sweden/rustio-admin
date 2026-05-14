@@ -683,7 +683,7 @@ pub(crate) fn random_token() -> String {
 /// the hash function's work factor; SHA-256 is fast enough to keep
 /// the session-lookup path under 1ms even at high RPS. Argon2 would
 /// add latency without security benefit for this input distribution.
-pub(crate) fn hash_token_for_storage(token: &str) -> String {
+pub fn hash_token_for_storage(token: &str) -> String {
     let digest = Sha256::digest(token.as_bytes());
     URL_SAFE_NO_PAD.encode(digest)
 }

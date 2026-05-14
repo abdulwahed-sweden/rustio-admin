@@ -575,41 +575,6 @@ fn plural_snake(camel: &str) -> String {
     }
 }
 
-#[cfg(test)]
-mod plural_snake_tests {
-    use super::plural_snake;
-
-    #[test]
-    fn regular_plurals() {
-        assert_eq!(plural_snake("Post"), "posts");
-        assert_eq!(plural_snake("Loan"), "loans");
-        assert_eq!(plural_snake("BlogPost"), "blog_posts");
-        assert_eq!(plural_snake("CaseAction"), "case_actions");
-    }
-
-    #[test]
-    fn ch_sh_x_z_suffixes_take_es() {
-        assert_eq!(plural_snake("Branch"), "branches");
-        assert_eq!(plural_snake("Box"), "boxes");
-        assert_eq!(plural_snake("Dish"), "dishes");
-        assert_eq!(plural_snake("Buzz"), "buzzes");
-    }
-
-    #[test]
-    fn consonant_y_becomes_ies_vowel_y_keeps_s() {
-        assert_eq!(plural_snake("Category"), "categories");
-        assert_eq!(plural_snake("Story"), "stories");
-        assert_eq!(plural_snake("Toy"), "toys");
-        assert_eq!(plural_snake("Day"), "days");
-    }
-
-    #[test]
-    fn trailing_s_left_alone() {
-        assert_eq!(plural_snake("Posts"), "posts");
-        assert_eq!(plural_snake("Status"), "status");
-    }
-}
-
 fn camel_to_snake(s: &str) -> String {
     let mut out = String::new();
     for (i, c) in s.chars().enumerate() {
@@ -654,4 +619,39 @@ fn find_label_field(
         }
     }
     None
+}
+
+#[cfg(test)]
+mod plural_snake_tests {
+    use super::plural_snake;
+
+    #[test]
+    fn regular_plurals() {
+        assert_eq!(plural_snake("Post"), "posts");
+        assert_eq!(plural_snake("Loan"), "loans");
+        assert_eq!(plural_snake("BlogPost"), "blog_posts");
+        assert_eq!(plural_snake("CaseAction"), "case_actions");
+    }
+
+    #[test]
+    fn ch_sh_x_z_suffixes_take_es() {
+        assert_eq!(plural_snake("Branch"), "branches");
+        assert_eq!(plural_snake("Box"), "boxes");
+        assert_eq!(plural_snake("Dish"), "dishes");
+        assert_eq!(plural_snake("Buzz"), "buzzes");
+    }
+
+    #[test]
+    fn consonant_y_becomes_ies_vowel_y_keeps_s() {
+        assert_eq!(plural_snake("Category"), "categories");
+        assert_eq!(plural_snake("Story"), "stories");
+        assert_eq!(plural_snake("Toy"), "toys");
+        assert_eq!(plural_snake("Day"), "days");
+    }
+
+    #[test]
+    fn trailing_s_left_alone() {
+        assert_eq!(plural_snake("Posts"), "posts");
+        assert_eq!(plural_snake("Status"), "status");
+    }
 }

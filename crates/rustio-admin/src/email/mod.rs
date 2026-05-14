@@ -139,9 +139,7 @@ pub fn render_recovery_html(parts: RecoveryEmailParts<'_>) -> String {
     let cta_url_safe = html_attr_escape(cta_url);
     let cta_url_text = html_text_escape(cta_url);
     let app_name_text = html_text_escape(app_name);
-    let tagline_text = html_text_escape(
-        app_tagline.unwrap_or("Account security notification"),
-    );
+    let tagline_text = html_text_escape(app_tagline.unwrap_or("Account security notification"));
     let title_text = html_text_escape(title);
     let greeting_text = html_text_escape(greeting_name);
     let intro_text = html_text_escape(intro);
@@ -810,7 +808,7 @@ mod tests {
         assert!(html.starts_with("<!DOCTYPE html>"));
         assert!(html.contains("viewport"));
         assert!(!html.contains("multipart")); // not in HTML body
-        // App identity owns the surface — framework name absent.
+                                              // App identity owns the surface — framework name absent.
         assert!(html.contains("Library Circulation"));
         assert!(!html.contains("RustIO Admin"));
         // Tagline replaces the default descriptor when provided.

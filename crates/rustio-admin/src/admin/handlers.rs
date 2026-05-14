@@ -902,11 +902,7 @@ pub(crate) async fn handle_bulk_action(
         // distinctly by checking `object_id == 0` and reading the
         // structured metadata.
         let failed_ids: Vec<i64> = outcome.failed.iter().map(|f| f.id).collect();
-        let failure_reasons: Vec<&str> = outcome
-            .failed
-            .iter()
-            .map(|f| f.reason.as_str())
-            .collect();
+        let failure_reasons: Vec<&str> = outcome.failed.iter().map(|f| f.reason.as_str()).collect();
         let metadata = serde_json::json!({
             "kind": "bulk_action",
             "action": action.name,

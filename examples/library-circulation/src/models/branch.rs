@@ -14,10 +14,8 @@ pub struct Branch {
 // Manual Model impl kept explicit for teaching/readability.
 impl Model for Branch {
     const TABLE: &'static str = "branches";
-    const COLUMNS: &'static [&'static str] =
-        &["id", "name", "address", "is_open", "created_at"];
-    const INSERT_COLUMNS: &'static [&'static str] =
-        &["name", "address", "is_open", "created_at"];
+    const COLUMNS: &'static [&'static str] = &["id", "name", "address", "is_open", "created_at"];
+    const INSERT_COLUMNS: &'static [&'static str] = &["name", "address", "is_open", "created_at"];
 
     fn id(&self) -> i64 {
         self.id

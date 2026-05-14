@@ -86,14 +86,12 @@ fn provider_preset(name: &str) -> Option<(&'static str, u16, bool, Option<&'stat
 /// SMTP_* env vars always override.
 ///
 /// Returns:
-///   - `Ok(Some(cfg))` — all required vars present and parseable.
-///   - `Ok(None)`      — no SMTP source resolved (neither
-///                       `MAIL_PROVIDER` nor `SMTP_HOST`); the
-///                       caller falls back to `LogMailer`.
-///   - `Err(...)`      — source resolved but required companions
-///                       missing / malformed. Project misconfigured;
-///                       refusing to boot is louder than silent
-///                       fallback.
+/// - `Ok(Some(cfg))` — all required vars present and parseable.
+/// - `Ok(None)` — no SMTP source resolved (neither `MAIL_PROVIDER`
+///   nor `SMTP_HOST`); the caller falls back to `LogMailer`.
+/// - `Err(...)` — source resolved but required companions missing /
+///   malformed. Project misconfigured; refusing to boot is louder
+///   than silent fallback.
 pub fn smtp_config_from_env() -> Result<Option<SmtpConfig>, String> {
     let provider = env::var("MAIL_PROVIDER").ok();
     let preset = provider.as_deref().and_then(provider_preset);
@@ -133,8 +131,7 @@ pub fn smtp_config_from_env() -> Result<Option<SmtpConfig>, String> {
         },
     };
 
-    let password = env::var("SMTP_PASSWORD")
-        .map_err(|_| "SMTP_PASSWORD is missing".to_string())?;
+    let password = env::var("SMTP_PASSWORD").map_err(|_| "SMTP_PASSWORD is missing".to_string())?;
     if password.is_empty() {
         return Err("SMTP_PASSWORD must not be empty".into());
     }
@@ -144,7 +141,11 @@ pub fn smtp_config_from_env() -> Result<Option<SmtpConfig>, String> {
         Some("implicit") | Some("smtps") => true,
         Some("starttls") => false,
         None => preset.map(|(_, _, tls, _)| tls).unwrap_or(true),
-        Some(other) => return Err(format!("SMTP_TLS must be 'implicit' or 'starttls' (got {other:?})")),
+        Some(other) => {
+            return Err(format!(
+                "SMTP_TLS must be 'implicit' or 'starttls' (got {other:?})"
+            ))
+        }
     };
 
     let from_raw = env::var("MAIL_FROM").unwrap_or_else(|_| username.clone());
@@ -225,9 +226,8 @@ impl Mailer for LettreSmtpMailer {
     fn send<'a>(
         &'a self,
         msg: Mail,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<(), MailerError>> + Send + 'a>,
-    > {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), MailerError>> + Send + 'a>>
+    {
         Box::pin(async move {
             // Address parsing. Malformed recipient → permanent error.
             let to: Mailbox = msg

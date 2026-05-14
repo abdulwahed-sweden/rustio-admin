@@ -73,7 +73,11 @@ async fn main() -> Result<()> {
         Ok(Some(cfg)) => {
             let host = cfg.host.clone();
             let port = cfg.port;
-            let tls = if cfg.implicit_tls { "implicit" } else { "starttls" };
+            let tls = if cfg.implicit_tls {
+                "implicit"
+            } else {
+                "starttls"
+            };
             let from = cfg.from.to_string();
             let smtp_mailer = LettreSmtpMailer::new(cfg)
                 .map_err(|e| rustio_admin::Error::Internal(format!("mailer: {e}")))?;
@@ -88,7 +92,9 @@ async fn main() -> Result<()> {
             match smtp_mailer.smoke_test().await {
                 Ok(()) => {
                     println!("OK");
-                    println!("mailer: SMTP authenticated; recovery emails will be delivered as {from}");
+                    println!(
+                        "mailer: SMTP authenticated; recovery emails will be delivered as {from}"
+                    );
                 }
                 Err(e) => {
                     println!("FAILED");
@@ -99,7 +105,9 @@ async fn main() -> Result<()> {
                     eprintln!("Common causes:");
                     eprintln!("  • SMTP_PASSWORD is wrong (Gmail: must be a 16-char App Password, no spaces)");
                     eprintln!("  • 2-Step Verification is not enabled on the Google account");
-                    eprintln!("  • Wrong port for TLS mode (use 465 + implicit, or 587 + starttls)");
+                    eprintln!(
+                        "  • Wrong port for TLS mode (use 465 + implicit, or 587 + starttls)"
+                    );
                     eprintln!("  • Network egress to {host}:{port} is blocked");
                     eprintln!();
                     return Err(rustio_admin::Error::Internal(
@@ -112,13 +120,13 @@ async fn main() -> Result<()> {
         Ok(None) => {
             println!("mailer: SMTP_HOST not set — using LogMailer.");
             println!("        Recovery emails will be written to stdout, NOT delivered.");
-            println!("        To enable real delivery, see examples/library-circulation/.env.example.");
+            println!(
+                "        To enable real delivery, see examples/library-circulation/.env.example."
+            );
             Arc::new(LogMailer::new())
         }
         Err(e) => {
-            return Err(rustio_admin::Error::Internal(format!(
-                "mailer config: {e}"
-            )));
+            return Err(rustio_admin::Error::Internal(format!("mailer config: {e}")));
         }
     };
 
@@ -131,8 +139,7 @@ async fn main() -> Result<()> {
     //    `APP_NAME` and `SUPPORT_EMAIL` flow in from the env so a
     //    developer can fork this example without editing source —
     //    matches the `.env.example` developer contract.
-    let app_name =
-        std::env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
+    let app_name = std::env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
     let support_email = std::env::var("SUPPORT_EMAIL").ok();
     let mut admin_builder = Admin::new()
         .app_name(app_name)
