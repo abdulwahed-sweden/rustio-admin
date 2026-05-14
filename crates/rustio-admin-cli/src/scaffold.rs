@@ -269,6 +269,11 @@ mod tests {
         }
     }
 
+    // `const_is_empty` correctly notes the standalone-const checks
+    // below are compile-time constants — but that's the point.
+    // Catches a regression where a templates file gets emptied or
+    // include_str! points at the wrong path.
+    #[allow(clippy::const_is_empty)]
     #[test]
     fn every_template_carries_at_least_one_placeholder_or_fixed_content() {
         // Sanity check that the static slice is wired correctly.
