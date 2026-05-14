@@ -337,10 +337,8 @@ fn build_persisted_metadata(
                 Some(value)
             } else {
                 log::warn!(
-                    "audit::record: actor_user_id={} set but metadata is not a JSON object \
-                     ({:?}); writing row without merging actor — fix the call site",
-                    actor,
-                    value
+                    "audit::record: actor_user_id={actor} set but metadata is not a JSON object \
+                     ({value:?}); writing row without merging actor — fix the call site"
                 );
                 Some(value)
             }

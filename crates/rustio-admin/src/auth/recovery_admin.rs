@@ -779,9 +779,8 @@ pub async fn admin_set_temp_password(
         if let Err(e) = audit_record(db, entry).await {
             log::error!(
                 target: "rustio_admin::recovery_admin::temp_pw",
-                "audit::record (SessionsRevokedByOther) failed target_user_id={} \
-                 session_id={}: {}",
-                target_user_id, revoked_id, e,
+                "audit::record (SessionsRevokedByOther) failed target_user_id={target_user_id} \
+                 session_id={revoked_id}: {e}",
             );
         }
     }
@@ -966,9 +965,8 @@ pub async fn lock_user_account(
         if let Err(e) = audit_record(db, entry).await {
             log::error!(
                 target: "rustio_admin::recovery_admin::lock",
-                "audit::record (SessionsRevokedByOther) failed target_user_id={} \
-                 session_id={}: {}",
-                target_user_id, revoked_id, e,
+                "audit::record (SessionsRevokedByOther) failed target_user_id={target_user_id} \
+                 session_id={revoked_id}: {e}",
             );
         }
     }
@@ -1096,9 +1094,8 @@ pub async fn admin_revoke_sessions(
         if let Err(e) = audit_record(db, entry).await {
             log::error!(
                 target: "rustio_admin::recovery_admin::revoke",
-                "audit::record (SessionsRevokedByOther) failed target_user_id={} \
-                 session_id={}: {}",
-                target_user_id, revoked_id, e,
+                "audit::record (SessionsRevokedByOther) failed target_user_id={target_user_id} \
+                 session_id={revoked_id}: {e}",
             );
         }
     }
