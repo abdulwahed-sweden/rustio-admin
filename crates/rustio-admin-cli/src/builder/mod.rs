@@ -26,9 +26,11 @@
 #![allow(dead_code)]
 
 pub(crate) mod canonical;
+pub(crate) mod codegen;
 pub(crate) mod draft;
 pub(crate) mod hash;
 pub(crate) mod history;
+pub(crate) mod lifecycle;
 pub(crate) mod lockfile;
 pub(crate) mod redact;
 pub(crate) mod replay;
