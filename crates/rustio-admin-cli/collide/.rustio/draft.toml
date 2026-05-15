@@ -1,7 +1,0 @@
-schema_version = 1
-
-[project]
-builder_pinned = "0.13.0"
-created_at = "2026-05-15T18:02:34Z"
-name = "collide"
-rust_version = "1.88"

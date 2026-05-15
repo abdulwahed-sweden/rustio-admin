@@ -1,4 +1,0 @@
-builder = "0.13.0"
-chain_mode = false
-schema_version = 1
-toml_emitter = "rio-canon-1"
