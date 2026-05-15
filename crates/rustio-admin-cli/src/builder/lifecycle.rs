@@ -136,6 +136,11 @@ pub(crate) enum LifecycleError {
     NotInProject {
         cwd: PathBuf,
     },
+    /// `.rustio/` was found but is a symlink. Refused to avoid
+    /// silent escape from the project tree.
+    SymlinkedRustioDir {
+        path: PathBuf,
+    },
     /// `migrations/` already contains files but the draft diverges
     /// from the last commit. MVP refuses incremental migrations.
     IncrementalMigrationOutOfScope,
@@ -162,6 +167,12 @@ impl std::fmt::Display for LifecycleError {
                 f,
                 "no .rustio/ directory found at {} or any parent. Run `rustio new <name>` first.",
                 cwd.display()
+            ),
+            LifecycleError::SymlinkedRustioDir { path } => write!(
+                f,
+                "refused: {} is a symlink. The Builder will not follow a symlinked .rustio/ directory; \
+                 the link could redirect generator-owned state outside the project tree.",
+                path.display()
             ),
             LifecycleError::IncrementalMigrationOutOfScope => write!(
                 f,
@@ -220,11 +231,36 @@ impl From<LockError> for LifecycleError {
 
 /// Walk up from `start` looking for a directory that contains a
 /// `.rustio/` subdirectory. That directory is the project root.
+///
+/// The walk does **not** call `canonicalize` on `start` — symlinks
+/// are preserved as the developer experiences them. A `.rustio/`
+/// that is itself a symlink is rejected: doctrine §5.6's "no
+/// access outside project tree" rule would be silently violated
+/// if the Builder followed a symlinked metadata directory to a
+/// path outside the apparent project root.
 pub(crate) fn find_project_root(start: &Path) -> Result<PathBuf, LifecycleError> {
-    let mut cur = start.canonicalize().unwrap_or_else(|_| start.to_path_buf());
+    // Absolutise without resolving symlinks so a developer who
+    // ran `rustio` via a symlinked working directory sees the path
+    // they expect in errors and event payloads.
+    let mut cur = if start.is_absolute() {
+        start.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map(|c| c.join(start))
+            .unwrap_or_else(|_| start.to_path_buf())
+    };
     loop {
-        if cur.join(".rustio").is_dir() {
-            return Ok(cur);
+        let candidate = cur.join(".rustio");
+        if candidate.is_dir() {
+            // Refuse a symlinked .rustio: doctrine §5.6 reasoning
+            // extended — generator-owned paths must stay within
+            // the project tree the developer is in.
+            match std::fs::symlink_metadata(&candidate) {
+                Ok(md) if md.file_type().is_symlink() => {
+                    return Err(LifecycleError::SymlinkedRustioDir { path: candidate });
+                }
+                _ => return Ok(cur),
+            }
         }
         match cur.parent() {
             Some(p) if p != cur => cur = p.to_path_buf(),
@@ -344,19 +380,50 @@ fn classify(target: &Path, file: &GeneratedFile) -> FileVerdict {
     FileVerdict::Unowned
 }
 
+/// Parse the SchemaHash marker from a generator-emitted header.
+///
+/// The generator emits exactly one of two header shapes:
+///
+/// - Rust files: `// SPDX-SchemaHash: sha256:<64-hex>\n`
+/// - SQL files:  `-- SPDX-SchemaHash: sha256:<64-hex>\n`
+///
+/// The parser is strict by design — accepting nested prefixes
+/// (e.g., `// // SPDX-...`) or arbitrary whitespace before the
+/// marker would let a hand-crafted file claim a SchemaHash that
+/// the generator never produced. Only the two canonical prefixes
+/// are accepted; the hash itself must match `sha256:` followed by
+/// exactly 64 lowercase hex characters.
 fn parse_header_hash(content: &str) -> Option<String> {
     for line in content.lines().take(20) {
-        // Accept both `//` (Rust) and `--` (SQL) headers.
-        let stripped = line
-            .trim_start_matches("// ")
-            .trim_start_matches("-- ")
-            .trim_start_matches("//")
-            .trim_start_matches("--");
-        if let Some(rest) = stripped.strip_prefix("SPDX-SchemaHash:") {
-            return Some(rest.trim().to_string());
+        let payload = if let Some(rest) = line.strip_prefix("// ") {
+            rest
+        } else if let Some(rest) = line.strip_prefix("-- ") {
+            rest
+        } else {
+            continue;
+        };
+        let Some(hash) = payload.strip_prefix("SPDX-SchemaHash: ") else {
+            continue;
+        };
+        if is_valid_sha256_marker(hash) {
+            return Some(hash.to_string());
         }
+        // Marker found but malformed — refuse to treat as owned.
+        return None;
     }
     None
+}
+
+/// `sha256:` + exactly 64 lowercase hex characters. Anything else
+/// is a tampered or otherwise malformed marker.
+fn is_valid_sha256_marker(s: &str) -> bool {
+    let Some(hex) = s.strip_prefix("sha256:") else {
+        return false;
+    };
+    hex.len() == 64
+        && hex
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 fn list_existing_migrations(dir: &Path) -> Result<Vec<PathBuf>, LifecycleError> {
@@ -774,7 +841,12 @@ mod tests {
         let deep = root.join("src/_generated/models");
         std::fs::create_dir_all(&deep).unwrap();
         let found = find_project_root(&deep).unwrap();
-        assert_eq!(found, root.canonicalize().unwrap_or(root));
+        // The walk no longer calls `canonicalize`, so the returned
+        // path preserves the symlink layout the developer used to
+        // enter the project (see lifecycle.rs::find_project_root
+        // for the rationale). On macOS, `/var/...` paths previously
+        // resolved to `/private/var/...`; that no longer happens.
+        assert_eq!(found, root);
     }
 
     #[test]
@@ -782,6 +854,75 @@ mod tests {
         let dir = tempdir(); // no .rustio/ here
         let err = find_project_root(&dir).expect_err("must refuse");
         assert!(matches!(err, LifecycleError::NotInProject { .. }));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn find_project_root_refuses_symlinked_rustio() {
+        use std::os::unix::fs::symlink;
+        let dir = tempdir();
+        // Create a real .rustio elsewhere, then symlink into `dir`.
+        let real = tempdir();
+        std::fs::create_dir_all(real.join(".rustio")).unwrap();
+        symlink(real.join(".rustio"), dir.join(".rustio")).unwrap();
+
+        let err = find_project_root(&dir).expect_err("must refuse symlinked .rustio");
+        assert!(
+            matches!(err, LifecycleError::SymlinkedRustioDir { .. }),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn parse_header_hash_accepts_canonical_only() {
+        // Canonical Rust header.
+        let rust = "// @generated by rustio 0.13.0 from .rustio/draft.toml\n\
+                    // SPDX-SchemaHash: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n\
+                    // SPDX-EmitterVersion: rio-canon-1\n";
+        assert_eq!(
+            parse_header_hash(rust),
+            Some("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into())
+        );
+
+        // Canonical SQL header.
+        let sql = "-- @generated by rustio 0.13.0 from .rustio/draft.toml\n\
+                   -- SPDX-SchemaHash: sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210\n";
+        assert_eq!(
+            parse_header_hash(sql),
+            Some("sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210".into())
+        );
+    }
+
+    #[test]
+    fn parse_header_hash_refuses_nested_prefix() {
+        // Doc-comment style (`//!`) and tripled (`///`) must not
+        // be parsed as headers — only `// ` or `-- ` exactly.
+        let nested = "//! SPDX-SchemaHash: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n";
+        assert_eq!(parse_header_hash(nested), None);
+        let tripled = "/// SPDX-SchemaHash: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n";
+        assert_eq!(parse_header_hash(tripled), None);
+    }
+
+    #[test]
+    fn parse_header_hash_refuses_malformed_hash() {
+        // Right marker, wrong hash shape.
+        let bad_prefix = "// SPDX-SchemaHash: md5:abc\n";
+        assert_eq!(parse_header_hash(bad_prefix), None);
+        let bad_len = "// SPDX-SchemaHash: sha256:abc\n";
+        assert_eq!(parse_header_hash(bad_len), None);
+        let uppercase = "// SPDX-SchemaHash: sha256:ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef0123456789\n";
+        assert_eq!(parse_header_hash(uppercase), None, "case-sensitive hash");
+    }
+
+    #[test]
+    fn parse_header_hash_only_first_20_lines() {
+        // A claim past the header window must be ignored.
+        let mut lines = String::new();
+        for _ in 0..30 {
+            lines.push_str("// filler\n");
+        }
+        lines.push_str("// SPDX-SchemaHash: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n");
+        assert_eq!(parse_header_hash(&lines), None);
     }
 
     #[test]

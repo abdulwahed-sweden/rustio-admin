@@ -251,6 +251,14 @@ fn apply_add_model(
     if draft.models.iter().any(|m| m.name == name) {
         return Err(ReplayError::DuplicateModel { line_number, name });
     }
+    // Symmetric with Draft::from_toml: refuse two models pointing
+    // at the same SQL table.
+    if draft.models.iter().any(|m| m.table == table) {
+        return Err(ReplayError::DuplicateModel {
+            line_number,
+            name: format!("table `{table}` (declared by model `{name}`)"),
+        });
+    }
     draft.models.push(Model {
         name,
         table,
