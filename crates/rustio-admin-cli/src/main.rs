@@ -21,6 +21,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+mod builder;
 mod doctor;
 mod doctor_email;
 mod emergency_ui;
