@@ -19,6 +19,26 @@
 //! The append boundary lives here. Redaction of secret-bearing
 //! payloads happens in [`crate::builder::redact`] before reaching
 //! this module — `append` itself accepts an already-clean payload.
+//!
+//! ## Atomicity model
+//!
+//! POSIX guarantees that a write opened with `O_APPEND` and sized
+//! at or below `PIPE_BUF` is atomic — concurrent writers do not
+//! interleave bytes within a single write call. `OpenOptions::new()
+//! .append(true)` maps to `O_APPEND` on Unix. `PIPE_BUF` is at
+//! least 512 bytes (POSIX minimum) and is 4096 on every Linux /
+//! macOS we target. The serialized event lines this module emits
+//! are well below 1 KB in MVP usage (no large `args` payloads;
+//! actor strings bounded; redaction shortens any secret-bearing
+//! field to a 35-character fingerprint).
+//!
+//! On Windows the equivalent guarantee is not load-bearing in the
+//! current MVP; the doctrine review tracks this as a deferred
+//! concern. Single-process usage is unaffected.
+//!
+//! A defensive size assertion in [`append`] rejects any line over
+//! 4 KB so a future field that quietly grew the payload could not
+//! cross the atomicity bound without surfacing.
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -135,6 +155,22 @@ pub(crate) fn append(
     let mut json = serde_json::to_string(&line).map_err(std::io::Error::other)?;
     json.push('\n');
     let canonical = canonicalize(&json);
+
+    // Atomicity bound: POSIX `O_APPEND` writes are atomic up to
+    // `PIPE_BUF`, which is ≥ 512 bytes. We allow 4 KB to give
+    // headroom on Linux/macOS (`PIPE_BUF` = 4096) while still
+    // surfacing accidental payload growth. Lines beyond this risk
+    // interleaving under concurrent writers.
+    const MAX_ATOMIC_LINE_BYTES: usize = 4096;
+    if canonical.len() > MAX_ATOMIC_LINE_BYTES {
+        return Err(std::io::Error::other(format!(
+            "history.jsonl event line is {} bytes — exceeds the {}-byte atomic-write \
+             bound from `DESIGN_BUILDER.md` §4.2.1. Refusing to write a payload that \
+             could interleave under concurrent CLI invocations.",
+            canonical.len(),
+            MAX_ATOMIC_LINE_BYTES
+        )));
+    }
 
     let mut file = OpenOptions::new()
         .create(true)
@@ -343,6 +379,27 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn append_refuses_oversized_lines() {
+        let dir = tempdir();
+        let path = dir.join("history.jsonl");
+        // Inflate the args payload past the 4 KB atomic bound.
+        let big = "x".repeat(5000);
+        let err = append(
+            &path,
+            HistoryOp::AddModel,
+            "a",
+            json!({ "name": "X", "table": big }),
+        )
+        .expect_err("must refuse oversized line");
+        assert!(err.to_string().contains("atomic-write"), "{err}");
+        // And no partial line written.
+        assert!(
+            !path.exists() || std::fs::read_to_string(&path).unwrap().is_empty(),
+            "oversized refusal must not leave a partial line on disk"
+        );
     }
 
     fn tempdir() -> std::path::PathBuf {

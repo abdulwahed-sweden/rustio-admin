@@ -156,11 +156,22 @@ impl Draft {
 
         let mut models = Vec::new();
         let mut seen_models: BTreeSet<String> = BTreeSet::new();
+        let mut seen_tables: BTreeSet<String> = BTreeSet::new();
         if let Some(aot) = doc.get("models").and_then(Item::as_array_of_tables) {
             for entry in aot.iter() {
                 let model = parse_model(entry)?;
                 if !seen_models.insert(model.name.clone()) {
                     return Err(DraftError::DuplicateName(model.name));
+                }
+                // Two distinct CamelCase names can plural_snake to
+                // the same table (e.g. user types `Boxes` after
+                // `Box`). Doctrine §7.4 reasoning: silent table
+                // collision is a footgun; refuse at parse time.
+                if !seen_tables.insert(model.table.clone()) {
+                    return Err(DraftError::DuplicateName(format!(
+                        "table `{}` (declared by model `{}`)",
+                        model.table, model.name
+                    )));
                 }
                 models.push(model);
             }
@@ -412,6 +423,26 @@ mod tests {
         assert!(
             matches!(Draft::from_toml(&s), Err(DraftError::DuplicateName(n)) if n == "Patient")
         );
+    }
+
+    #[test]
+    fn duplicate_table_names_refused() {
+        let mut draft = sample_draft();
+        // Distinct model name, same table — the silent-collision
+        // footgun from §7.4.
+        draft.models.push(Model {
+            name: "Resident".into(),
+            table: "patients".into(),
+            fields: vec![],
+        });
+        let s = draft.to_toml();
+        match Draft::from_toml(&s) {
+            Err(DraftError::DuplicateName(msg)) => {
+                assert!(msg.contains("patients"), "{msg}");
+                assert!(msg.contains("Resident"), "{msg}");
+            }
+            other => panic!("expected DuplicateName for collision, got {other:?}"),
+        }
     }
 
     #[test]

@@ -20,16 +20,23 @@ use crate::builder::lifecycle::{
     FileVerdict, LifecycleError, PlanReport,
 };
 use crate::builder::lockfile::BuilderLock;
+use crate::builder::redact::is_secret_field_type;
 
 /// Resolve the actor identifier per §4.2.1: prefer
-/// `git config user.email`, fall back to `RUSTIO_AGENT_ID`, fall
-/// back to a literal `"unknown"`. Pure function modulo environment.
-pub(crate) fn resolve_actor() -> String {
+/// `RUSTIO_AGENT_ID`, fall back to `git config user.email`, fall
+/// back to a literal `"unknown"`.
+///
+/// When no real actor can be resolved, the caller surfaces a
+/// warning on stderr — an audit row with `actor = "unknown"` is
+/// honest (per `DESIGN_AUDIT.md` §2.2 the framework never invents
+/// an id) but degrades the trail. Set either env var or
+/// `git config user.email` to restore attribution.
+pub(crate) fn resolve_actor() -> (String, ActorSource) {
     if let Some(env) = std::env::var("RUSTIO_AGENT_ID")
         .ok()
         .filter(|s| !s.is_empty())
     {
-        return env;
+        return (env, ActorSource::AgentEnv);
     }
     if let Ok(out) = Command::new("git")
         .args(["config", "--get", "user.email"])
@@ -38,11 +45,36 @@ pub(crate) fn resolve_actor() -> String {
         if out.status.success() {
             let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
             if !text.is_empty() {
-                return text;
+                return (text, ActorSource::GitConfig);
             }
         }
     }
-    "unknown".to_string()
+    ("unknown".to_string(), ActorSource::Degraded)
+}
+
+/// Where the actor identifier came from. Callers that record an
+/// event use [`ActorSource::Degraded`] to decide whether to print
+/// a one-time warning.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ActorSource {
+    AgentEnv,
+    GitConfig,
+    Degraded,
+}
+
+/// Print a stderr warning when actor attribution has degraded.
+/// Idempotent within a single CLI invocation by gating on a static
+/// flag — multiple events in one command produce one warning.
+fn warn_if_degraded(source: ActorSource) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static WARNED: AtomicBool = AtomicBool::new(false);
+    if source == ActorSource::Degraded && !WARNED.swap(true, Ordering::SeqCst) {
+        eprintln!(
+            "warning: could not resolve an actor for history.jsonl. \
+             Set RUSTIO_AGENT_ID or `git config user.email`. \
+             Recording events as `actor = \"unknown\"`."
+        );
+    }
 }
 
 /// Singularize a CamelCase model name to a snake_case plural table.
@@ -179,7 +211,8 @@ pub(crate) fn run_new(name: &str) -> Result<String, String> {
     std::fs::write(root.join(".rustio/draft.toml"), draft.to_toml()).map_err(|e| e.to_string())?;
 
     // History — single project_init event.
-    let actor = resolve_actor();
+    let (actor, source) = resolve_actor();
+    warn_if_degraded(source);
     let history_path = root.join(".rustio/history.jsonl");
     append(
         &history_path,
@@ -247,7 +280,8 @@ pub(crate) fn run_add_model(start: &Path, model_name: &str) -> Result<String, St
     preflight(&root)?;
 
     let table = plural_snake(model_name);
-    let actor = resolve_actor();
+    let (actor, source) = resolve_actor();
+    warn_if_degraded(source);
     let id = append(
         &history_path,
         HistoryOp::AddModel,
@@ -281,6 +315,19 @@ pub(crate) fn run_add_field(
             "type '{type_name}' is not in the closed MVP type list {FIELD_TYPES:?}"
         ));
     }
+    // Doctrine B4: secret-category field types carry implicit
+    // redaction requirements (default values, log-redaction sigils
+    // at the CLI boundary). The MVP has no `--default` plumbing
+    // and no per-field `redact` modifier, so a secret-typed field
+    // cannot be handled safely. Refuse rather than ship code that
+    // would silently leak when those features land.
+    if is_secret_field_type(type_name) {
+        return Err(format!(
+            "field type '{type_name}' is a secret-category type (DESIGN_BUILDER.md §4.2.3). \
+             MVP refuses these until the `--default` and `redact = true` plumbing lands; the \
+             event log has no path to redact the future defaults safely."
+        ));
+    }
     let root = find_project_root(start).map_err(format_lifecycle_err)?;
     preflight(&root)?;
 
@@ -306,7 +353,8 @@ pub(crate) fn run_add_field(
         ));
     }
 
-    let actor = resolve_actor();
+    let (actor, source) = resolve_actor();
+    warn_if_degraded(source);
     let id = append(
         &history_path,
         HistoryOp::AddField,
@@ -336,7 +384,8 @@ pub(crate) fn run_plan(start: &Path) -> Result<String, String> {
 
 /// `rustio commit` — atomic write per §6.2.
 pub(crate) fn run_commit(start: &Path, force: bool) -> Result<String, String> {
-    let actor = resolve_actor();
+    let (actor, source) = resolve_actor();
+    warn_if_degraded(source);
     let result = lifecycle_commit(start, force, &actor).map_err(format_lifecycle_err)?;
     match result {
         CommitResult::NoOp => Ok("Nothing to do — project is in sync with draft.".to_string()),
@@ -559,6 +608,32 @@ mod tests {
         run_add_model(&root, "Item").unwrap();
         let err = run_add_field(&root, "Item", "weird", "geography", false).unwrap_err();
         assert!(err.contains("not in the closed MVP type list"), "{err}");
+    }
+
+    /// MVP refuses every secret-category field type. Today the
+    /// closed FIELD_TYPES check is what refuses them; the explicit
+    /// `is_secret_field_type` guard is a forward-defensive tripwire
+    /// for the day a secret type is added to FIELD_TYPES without
+    /// matching `--default` / `redact = true` infrastructure.
+    #[test]
+    fn add_field_refuses_secret_category_types() {
+        let root = tempdir();
+        bootstrap_project_at(&root);
+        run_add_model(&root, "User").unwrap();
+        for ty in [
+            "password",
+            "secret",
+            "token",
+            "api_key",
+            "private_key",
+            "encryption_key",
+        ] {
+            let err = run_add_field(&root, "User", "secret_field", ty, false)
+                .expect_err(&format!("type {ty} must be refused"));
+            assert!(
+                err.contains("not in the closed MVP type list") || err.contains("secret-category")
+            );
+        }
     }
 
     #[test]
