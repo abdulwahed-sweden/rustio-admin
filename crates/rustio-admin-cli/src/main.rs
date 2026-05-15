@@ -86,6 +86,60 @@ enum Command {
         #[command(subcommand)]
         action: Option<DoctorAction>,
     },
+
+    // ----- Builder verbs (DESIGN_BUILDER.md). All run synchronously
+    // and require no database — Doctrine B9 (network-free).
+    /// Bootstrap a new Builder-managed project at ./<name>.
+    ///
+    /// Writes `<name>/{Cargo.toml,src/main.rs,.rustio/{draft.toml,history.jsonl,builder.lock},migrations/}`.
+    /// See `docs/design/DESIGN_BUILDER.md`.
+    New {
+        /// Project name — also the cargo crate name. Letters,
+        /// digits, `-`, and `_` only; must start with a letter.
+        name: String,
+    },
+
+    /// Builder authoring verbs.
+    Add {
+        #[command(subcommand)]
+        action: BuilderAddAction,
+    },
+
+    /// Show the diff `commit` would apply. Read-only (Doctrine B8).
+    Plan,
+
+    /// Apply the plan atomically (Doctrine B8).
+    Commit {
+        /// Overwrite generator-owned files whose SchemaHash does
+        /// not match the current draft. Prior content is
+        /// quarantined to `.rustio/forced/<ts>/<path>` first
+        /// (DESIGN_BUILDER.md §5.4).
+        #[arg(long)]
+        force: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum BuilderAddAction {
+    /// Record an `add_model` event in `.rustio/history.jsonl`.
+    Model {
+        /// CamelCase model name (e.g. `Patient`).
+        name: String,
+    },
+    /// Record an `add_field` event in `.rustio/history.jsonl`.
+    Field {
+        /// CamelCase model name the field belongs to.
+        model: String,
+        /// snake_case field name (e.g. `full_name`).
+        name: String,
+        /// Declared field type. MVP closed list: text, integer,
+        /// boolean, timestamp.
+        #[arg(name = "type")]
+        type_name: String,
+        /// Add a UNIQUE constraint to this column.
+        #[arg(long)]
+        unique: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -122,15 +176,24 @@ fn main() -> ExitCode {
 
     let cli = Cli::parse();
     let result = match cli.command {
-        // Pure filesystem; no async / db needed.
+        // Pure filesystem; no async / db needed. Builder verbs also
+        // sit here — DESIGN_BUILDER.md Doctrine B9 forbids network
+        // calls in plan/commit, and `new` / `add` are even simpler.
         Command::Startproject { name } => scaffold::project(&name),
         Command::Startapp { name } => scaffold::app(&name),
+        Command::New { name } => builder_new(&name),
+        Command::Add { action } => builder_add(action),
+        Command::Plan => builder_plan(),
+        Command::Commit { force } => builder_commit(force),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
-                Command::Startproject { .. } | Command::Startapp { .. } => {
-                    unreachable!("handled above")
-                }
+                Command::Startproject { .. }
+                | Command::Startapp { .. }
+                | Command::New { .. }
+                | Command::Add { .. }
+                | Command::Plan
+                | Command::Commit { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,
@@ -151,6 +214,45 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// `rustio new <name>` dispatch — pure filesystem, no async.
+fn builder_new(name: &str) -> Result<(), String> {
+    let summary = builder::cmd::run_new(name)?;
+    println!("{summary}");
+    Ok(())
+}
+
+/// `rustio add ...` dispatch.
+fn builder_add(action: BuilderAddAction) -> Result<(), String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let msg = match action {
+        BuilderAddAction::Model { name } => builder::cmd::run_add_model(&cwd, &name)?,
+        BuilderAddAction::Field {
+            model,
+            name,
+            type_name,
+            unique,
+        } => builder::cmd::run_add_field(&cwd, &model, &name, &type_name, unique)?,
+    };
+    println!("{msg}");
+    Ok(())
+}
+
+/// `rustio plan` dispatch.
+fn builder_plan() -> Result<(), String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let out = builder::cmd::run_plan(&cwd)?;
+    print!("{out}");
+    Ok(())
+}
+
+/// `rustio commit` dispatch.
+fn builder_commit(force: bool) -> Result<(), String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let out = builder::cmd::run_commit(&cwd, force)?;
+    print!("{out}");
+    Ok(())
 }
 
 fn tokio_run<F>(fut: F) -> Result<(), String>

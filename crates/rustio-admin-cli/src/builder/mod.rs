@@ -15,17 +15,17 @@
 //! - [`history`] — `HistoryOp` enum + `append`, the sole writer of
 //!   `.rustio/history.jsonl` (Doctrine B3, §10.1).
 //!
-//! Later commits will add: schema types ([`draft`]), version pin
-//! ([`lockfile`]), [`hash`] projection, [`replay`], [`codegen`],
-//! [`plan`], [`commit`], and the [`cmd`] verb dispatchers.
+//! The [`cmd`] dispatchers translate `rustio` subcommands into
+//! primitive calls. Items that surface only in tests or in unrealised
+//! future verbs (e.g. `Undo`, the closed redaction category list)
+//! are kept here behind a narrow `#[allow(dead_code)]` rather than
+//! deleted — they pin doctrine references and CI checks would
+//! catch their loss.
 
-// The foundation modules below are dead code until the lifecycle
-// commits wire them up. Each primitive carries its own tests; the
-// dead-code allowance is removed when the verb dispatchers land
-// and start calling these functions.
 #![allow(dead_code)]
 
 pub(crate) mod canonical;
+pub(crate) mod cmd;
 pub(crate) mod codegen;
 pub(crate) mod draft;
 pub(crate) mod hash;
