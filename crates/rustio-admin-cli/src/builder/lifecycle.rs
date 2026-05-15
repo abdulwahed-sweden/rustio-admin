@@ -703,8 +703,7 @@ mod tests {
         let report = plan(&root).unwrap();
         assert!(
             report.is_no_op(),
-            "plan after commit should be no-op: {:?}",
-            report
+            "plan after commit should be no-op: {report:?}"
         );
     }
 
