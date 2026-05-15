@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.14.0** | 2026-05-15 | **Builder MVP** — first release of the deterministic project compiler under `crates/rustio-admin-cli`. New `rustio new / add model / add field / plan / commit` verbs with append-only `.rustio/history.jsonl`, canonical-TOML `.rustio/draft.toml`, version-pinned `.rustio/builder.lock`, and SchemaHash-protected `src/_generated/`. Implementation-grade `DESIGN_BUILDER.md` doctrine (13 numbered invariants, B1–B13) with five CI-enforced grep proofs. MSRV bumped 1.80 → 1.88 to track transitive deps. **Intentionally limited**: no Studio, no Advisory AI, no incremental migrations, no relations / themes / undo / import. |
 | **0.13.0** | 2026-05-13 | Phase G privatisation pass: 59 items annotated `// internal:` (since 0.9.0) flipped from `pub` to `pub(crate)`. Public surface narrowed by ~17% (419 → 360 items). Pairs with new `DESIGN_EMAIL.md` doctrine codifying the framework-emitted email conventions stabilised in 0.12.0. |
 | **0.12.0** | 2026-05-13 | Three substantial threads: public bulk-action dispatch hook (closes D.4); production password-recovery flow with real SMTP + polished HTML email + project-identity branding architecture (RustIO name no longer leaks to end users); operator-DX `rustio doctor email` with provider presets, `--html-preview`, send cooldown, and a formal `.env` developer contract. End-to-end verified against real Gmail delivery. |
 | **0.11.0** | 2026-05-13 | Multilingual typography (Inter + Thai + Devanagari + locale-gated CJK; Noto Naskh promoted to primary Arabic face) + production three-column admin footer with environment badge, render timestamp, real operational links. New `DESIGN_CHROME.md` doctrine. |
@@ -34,16 +35,210 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-### MSRV
+No changes yet.
 
-- Bumped from **Rust 1.80** to **Rust 1.88**. Transitive deps now
-  require it — the highest floor is `home@0.5.12` (via `cargo` →
-  `tame-index` → `clap_lex 1.1.0` etc.) which requires 1.88; the
-  ICU 2.2.x cluster requires 1.86; `clap_lex 1.1.0` itself uses
-  the `edition2024` Cargo feature stabilised in 1.85. Declaring
-  1.80 was no longer achievable from a fresh build.
+
+## [0.14.0] — 2026-05-15
+
+First release of the **Builder MVP** — a deterministic project
+compiler that emits Rust admin projects from a declarative
+`.rustio/draft.toml`. The Framework runtime is unchanged in this
+release; everything new lives under
+`crates/rustio-admin-cli/src/builder/` and the new design
+documents under `docs/design/`.
+
+Companion documents:
+[`docs/design/DESIGN_BUILDER.md`](docs/design/DESIGN_BUILDER.md)
+(authoritative doctrine, 13 numbered invariants),
+[`docs/design/REVIEW_BUILDER_DOCTRINE.md`](docs/design/REVIEW_BUILDER_DOCTRINE.md)
+(defensive review tracking resolved + residual findings),
+[`docs/design/VALIDATION_BUILDER_MVP.md`](docs/design/VALIDATION_BUILDER_MVP.md)
+(end-to-end smoke + generated artefacts + reproduction commands).
+
+### Builder MVP — new tooling layer
+
+- `rustio new <name>` scaffolds a Builder-managed project with
+  `Cargo.toml`, `src/main.rs`, `migrations/`, and `.rustio/{draft.toml,
+  history.jsonl, builder.lock}`.
+- `rustio add model <Name>` records an `add_model` event with
+  plural_snake table-name inference matching the proc-macro's
+  rule set.
+- `rustio add field <Model> <name> <type> [--unique]` records an
+  `add_field` event. Field types are the closed list `text`,
+  `integer`, `boolean`, `timestamp`. Modifiers limited to
+  `required` (implicit, always true in MVP) and `unique`.
+- `rustio plan` prints a structured diff of what `commit` would
+  apply. Read-only — Doctrine B8 forbids filesystem side effects.
+- `rustio commit [--force]` applies the plan atomically via
+  `.rustio/tmp/<txn>/` staging. Idempotent: a second `commit`
+  with no intervening changes is a true no-op (§6.4).
+- `rustio commit --force` quarantines prior content to
+  `.rustio/forced/<ULID>/<path>` before overwriting (§5.4 case 3).
+- `rustio startproject` (legacy template scaffolder) coexists
+  untouched. Adoption of the Builder is opt-in per project.
+
+### Implementation-grade Builder doctrine
+
+13 numbered invariants binding the Builder layer:
+
+| | |
+|---|---|
+| **B1** | `.rustio/draft.toml` is the sole input to the deterministic generator |
+| **B2** | `.rustio/history.jsonl` is append-only; reversal is a new compensating event |
+| **B3** | `cli::history::append` is the sole writer of `.rustio/history.jsonl` (analog of Doctrine 22) |
+| **B4** | `cli::redact` produces fingerprints, not values, for every secret-category field (analog of Doctrine 11) |
+| **B5** | Every file under `src/_generated/` carries a header + SchemaHash; overwrite requires `--force` + event |
+| **B6** | Migrations are append-only — no command edits an existing migration |
+| **B7** | Doctrine-bound features cannot be disabled via `draft.toml` (audit, auth, csrf, correlation_id, redaction, single-writer invalidation) |
+| **B8** | `rustio plan` has zero filesystem side effects; `rustio commit` is atomic |
+| **B9** | `rustio plan` and `rustio commit` open no network sockets |
+| **B10** | The Framework crate never reads Builder-emitted metadata at runtime |
+| **B11** | The Builder version is pinned in `.rustio/builder.lock`; mismatch refuses to run |
+| **B12** | Model / field renames performed only with a `rename_*` event; otherwise classified destructive |
+| **B13** | Advisory output is never source of truth (boundary contract only in this release) |
+
+### Deterministic project compiler foundation
+
+Foundational primitives proving the doctrine load-bearing:
+
+- **Canonical TOML emitter** (`builder::toml_canon`) — sole emitter,
+  alphabetical key sort within tables, LF + UTF-8 NFC + no
+  trailing whitespace, byte-stable across runs.
+- **Append-only event log** (`builder::history`) — `cli::history::append`
+  is the only function authorised to write `history.jsonl`. Lines
+  fixed-shape per §4.2.1; 4 KB atomic-write bound enforced.
+- **SchemaHash projections** (`builder::hash`) — distinct closed
+  projections per generated file (`models/<name>.rs`, `admin.rs`,
+  `mod.rs`, `migrations/0001_initial.sql`). Header text is NOT in
+  the projection — preserves Doctrine B10.
+- **Replay invariant** (`builder::replay`) — events replay against
+  an empty draft to reconstruct the current `draft.toml`
+  byte-for-byte (§4.2.2).
+- **ULID identifiers** (`builder::ulid_gen`) — Crockford base32,
+  monotonic within a process, second-precision timestamps in
+  events.
+- **Redactor** (`builder::redact`) — closed secret-category list
+  (`password`, `secret`, `token`, `api_key`, `private_key`,
+  `encryption_key`); property test asserts no 4-char input
+  substring leaks (symmetric to `DESIGN_AUDIT.md` §5.3).
+
+### CI-enforced doctrine invariants
+
+Five new grep proofs in `.github/workflows/ci.yml`. Each must
+produce no output; any match fails the build:
+
+- **B10** — Framework reads no Builder header markers.
+- **B3** — only `builder/history.rs` writes `history.jsonl`.
+- **B1** — only `builder/toml_canon.rs` emits TOML.
+- **B4** — only `builder/redact.rs` defines a Builder-side redactor.
+- **§5.6** — no Builder reference to `src/app/`.
+
+These are non-negotiable PR gates from this release onward.
+
+### Validation + hardening
+
+Pre-push defensive review surfaced 38 findings; 6 actionable
+issues fixed in a single hardening commit before the release tag:
+
+- Actor degradation no longer silent (`unknown` actor now emits
+  stderr warning).
+- `find_project_root` no longer follows symlinks; refuses
+  symlinked `.rustio/` (new `LifecycleError::SymlinkedRustioDir`).
+- `parse_header_hash` strict canonical-prefix match; sha256-hex
+  format check; rejects nested doc-comment prefixes (`//!`, `///`).
+- Secret-category field types refused at `rustio add field`
+  (forward-defensive tripwire for the future `--default` path).
+- Table-name uniqueness validated in both `Draft::from_toml` and
+  `replay::apply_add_model` (catches `Box` + `Boxes` →
+  `boxes` collision).
+- `history.jsonl` atomicity model documented + 4 KB line refusal
+  added (`MAX_ATOMIC_LINE_BYTES`).
+
+`docs/design/VALIDATION_BUILDER_MVP.md` records the manual smoke
+test, doctrine ↔ test map, refusal-path coverage, and
+reproduction commands.
+
+### Infrastructure
+
+- MSRV bumped from **Rust 1.80** to **Rust 1.88**. Transitive
+  deps now require it — `home@0.5.12` (via `cargo` → `tame-index`
+  → `clap_lex 1.1.0`) requires 1.88; the ICU 2.2.x cluster
+  requires 1.86; `clap_lex 1.1.0` uses the `edition2024` Cargo
+  feature stabilised in 1.85. Declaring 1.80 was no longer
+  achievable from a fresh build.
   `workspace.package.rust-version` and the CI pin
   (`dtolnay/rust-toolchain@1.88`) now match.
+- `actions/checkout` bumped v4 → v6 (Node.js 24 runtime; silences
+  the Node 20 deprecation annotation).
+- `dtolnay/rust-toolchain` pinned to `@1.88` (was rolling `@stable`).
+  CI now enforces the declared MSRV.
+- 20 sites updated for `clippy::uninlined_format_args` (lint
+  defaults differ between rustc 1.88 and 1.93).
+- `clippy::doc_overindented_list_items` fixes in the
+  library-circulation example.
+
+### Visibility recovery
+
+- `auth::recovery_admin`, `auth::mfa`, `auth::sessions::hash_token_for_storage`,
+  `auth::recovery::MailerEmailStatus`, and `MfaKey::from_bytes`
+  re-promoted to `pub` so the doc-hidden, feature-gated
+  `crate::__integration` test door can re-export them. The
+  parent modules stay `pub(crate)`, so the external API surface
+  is unchanged — `__integration` is still the only door for
+  `tests/integration_*.rs`.
+
+### Intentionally out of scope for v0.14.0
+
+The MVP exists to prove the doctrine load-bearing. The
+following are intentionally **not** part of this release; each is
+acknowledged in `REVIEW_BUILDER_DOCTRINE.md` §4 and
+`VALIDATION_BUILDER_MVP.md` §8:
+
+- **Studio** (web wizard) — future `DESIGN_STUDIO.md`.
+- **Advisory AI** (`rustio suggest` / `review`) — boundary
+  contract is in `DESIGN_BUILDER.md` §9.3; internal contract
+  pending in a future `DESIGN_ADVICE.md`. No LLM call sites
+  exist in this release.
+- **Incremental migrations.** Only the first migration
+  (`0001_initial.sql`) is supported. Subsequent `commit`
+  invocations against a diverged draft are refused with a
+  doctrine-cited error. The four primitives required for safe
+  incremental support — diff computation, destructive-op
+  classification, rename detection (Doctrine B12), and rollback-
+  hint generation — are spelled out in
+  `VALIDATION_BUILDER_MVP.md` §5; a `DESIGN_BUILDER.md`
+  amendment is required before this lands.
+- **`rustio import postgres://`** — future v0.17 milestone.
+- **`rustio undo` / `redo`** — event-log replay primitive exists
+  but no verb wiring.
+- **Theme / branding CLI** — future v0.18 milestone.
+- **`[features]` table in `draft.toml`** — doctrine-bound
+  features (§8.2) are always-on; toggleable features deferred
+  until first toggle is needed.
+- **Field relations** (`belongs_to`, `has_many`, `many_to_many`).
+  MVP type system covers only scalars.
+- **Optional / nullable fields.** All fields are `NOT NULL`.
+- **Rename verbs.** Requires `rename_model` / `rename_field`
+  events in `HistoryOp` first.
+- **`schema_version` migration of `draft.toml` itself.**
+  Schema version 1 is the only supported value.
+- **`rustio doctor builder`** — drift tests cover the
+  implementation-level checks; verb-level operator command
+  deferred.
+- **`rustio merge`** for git-merge reconciliation of
+  `history.jsonl`.
+- **Per-file `forced_overwrite` child events.** Parent `commit`
+  event records the operation in MVP.
+
+### Upgrade notes
+
+Bump `rustio-admin = "0.14.0"` and Rust toolchain to `≥ 1.88`.
+No runtime behaviour changes; existing projects compile
+unchanged.
+
+To start using the Builder on an existing project: not yet
+supported in v0.14.0 — the MVP scaffolds new projects from
+empty state. An import path lands in a future release.
 
 
 ## [0.13.0] — 2026-05-13

@@ -463,7 +463,7 @@ mod tests {
             json!({
                 "name": "x",
                 "rust_version": "1.88",
-                "builder_pinned": "0.13.0",
+                "builder_pinned": "0.14.0",
                 "created_at": "2026-05-15T10:30:00Z",
             }),
         )
@@ -497,7 +497,7 @@ mod tests {
             json!({
                 "name": "x",
                 "rust_version": "1.88",
-                "builder_pinned": "0.13.0",
+                "builder_pinned": "0.14.0",
                 "created_at": "2026-05-15T10:30:00Z",
             }),
         )
