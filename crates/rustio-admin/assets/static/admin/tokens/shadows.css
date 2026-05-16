@@ -3,16 +3,25 @@
  *
  *   === Tokens — shadows ===
  *
- * Shadows are deliberately quiet. Premium tooling prefers borders +
- * surface contrast over drop shadow. We only use shadow for a hint
- * of weight on cards, and a real lift on transient overlays.
- * Dark-mode equivalents live in themes/dark.css.
+ * Shadows remain deliberately quiet — premium tooling prefers
+ * borders + surface contrast over drop shadow. v0.15.0 bumps the
+ * default-shadow alpha so a card actually rises off the canvas at
+ * arm's length (the prior 0.05 was invisible on the new deeper
+ * `--rio-bg`). The shadow scale also gains a `--rio-shadow-inset`
+ * variant used by inputs and pressed states.
+ *
+ * The two-layer construction (one tight near-shadow, one wider
+ * far-shadow) follows the Stripe / Linear convention — crispness
+ * up close, lift from a distance. Dark-mode equivalents live in
+ * themes/dark.css.
  * ============================================================ */
 
 :root {
-  --rio-shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
-  --rio-shadow:    0 1px 3px rgba(17, 24, 39, 0.05),
-                   0 1px 2px rgba(17, 24, 39, 0.03);
-  --rio-shadow-lg: 0 16px 40px rgba(17, 24, 39, 0.10),
-                   0 2px 8px  rgba(17, 24, 39, 0.05);
+  --rio-shadow-xs:    0 1px 2px  rgba(15, 23, 42, 0.06),
+                      0 0 0 1px  rgba(15, 23, 42, 0.04);
+  --rio-shadow:       0 2px 8px  rgba(15, 23, 42, 0.10),
+                      0 1px 2px  rgba(15, 23, 42, 0.06);
+  --rio-shadow-lg:    0 12px 32px rgba(15, 23, 42, 0.14),
+                      0 4px 8px  rgba(15, 23, 42, 0.08);
+  --rio-shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }

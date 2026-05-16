@@ -230,6 +230,22 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
    16 px, the floor at 13 px, table cells at 16 px, line-height at 1.6.
    Density is achieved with `gap` and surface contrast, not by shrinking
    text.
+9. **Deeper surface ladder.** Adjacent surfaces sit ≥ 4 % apart so the
+   eye never squints to tell canvas from card from table-header from
+   row-hover. Added v0.15.0; details in
+   [`PLAN_VISUAL_v2.md`](design/PLAN_VISUAL_v2.md). The surface scale
+   carries six rungs (`--rio-bg` → `--rio-surface` → `--rio-surface-2` →
+   `--rio-surface-3` → `--rio-surface-chrome` → `--rio-surface-elevated`).
+10. **Chrome carries weight.** Topbar and sidebar render on
+    `--rio-surface-chrome` — distinctly deeper than the card surface,
+    distinctly lighter than the page canvas — so the operator skeleton
+    is visible without conscious attention. Added v0.15.0.
+11. **Typography hierarchy is a weight choice, not just a size.**
+    Display sizes (h1, h2, login title) declare gravity through weight
+    700–800 *and* tracking that reads as deliberate. Body and table
+    cells stay at 400 for ten-hour-shift legibility. The middle ground
+    at 600 is reserved for specific UI affordances (active nav, button
+    label, table-row primary cell). Added v0.15.0.
 
 ---
 

@@ -11,6 +11,14 @@
  * intentional override. If you add a new token here, document it
  * in CHANGELOG.md under "Tokens — colors" so feature branches can't
  * silently drift.
+ *
+ * v0.15.0 — surface ladder deepened to satisfy Principle 9 (adjacent
+ * surfaces ≥ 4% apart). Two internal surfaces added (`--rio-surface-
+ * chrome` for the topbar/sidebar — Principle 10; `--rio-surface-
+ * elevated` for transient overlays). Border scale firmed by one
+ * step so cards/tables actually register at arm's length. Text
+ * scale moved one stop darker so the chrome carries its weight.
+ * See docs/design/PLAN_VISUAL_v2.md for the rationale.
  * ============================================================ */
 
 :root {
@@ -25,24 +33,35 @@
   --rio-accent-hover: #0A6E62;
   --rio-accent-rgb: 15 140 126;
 
-  /* Surface ladder — five rungs, never pure white / pure black. Each
-   * step lifts ~2–4% so depth comes from layering, not shadows. */
-  --rio-bg: #EEF1F6;            /* page canvas */
-  --rio-surface: #FFFFFF;       /* cards, topbar, sidebar, table body */
-  --rio-surface-2: #F7F9FC;     /* table head, hovered row, panel base */
-  --rio-surface-3: #EFF2F7;     /* hover, pressed, secondary chip */
+  /* Surface ladder (Principle 9). Six rungs total, every adjacent
+   * pair ≥ 4% apart except surface ↔ surface-2 which is a
+   * deliberately quieter 3% so table headers feel subtle rather
+   * than pronounced. Never pure white (except for elevated overlays
+   * — the only surface reserved for popovers and dropdowns). */
+  --rio-bg:               #E4E8EE;  /* page canvas */
+  --rio-surface:          #FAFBFC;  /* cards, panels, table body */
+  --rio-surface-2:        #EFF2F6;  /* table head, hovered row, panel base */
+  --rio-surface-3:        #E5E9EE;  /* row hover, pressed state, secondary chip */
+  --rio-surface-chrome:   #DCE0E7;  /* topbar, sidebar — Principle 10 */
+  --rio-surface-elevated: #FFFFFF;  /* dropdowns, popovers — the only pure white */
 
-  /* Slate text scale — never pure black. `text-strong` is reserved for
-   * page titles + KPI numbers; `text` is body; muted/subtle drop down
-   * gradually so faint metadata still passes WCAG AA. */
-  --rio-text-strong: #111827;
-  --rio-text: #1F2937;
-  --rio-text-muted: #4B5563;
-  --rio-text-subtle: #6B7280;
+  /* Slate text scale — never pure black. Pushed one stop darker
+   * across the board in v0.15. `text-strong` is reserved for
+   * page titles + KPI numbers; `text` is body; muted/subtle drop
+   * down gradually so faint metadata still passes WCAG AA against
+   * every surface tier above. */
+  --rio-text-strong: #0A0D11;
+  --rio-text:        #14181D;
+  --rio-text-muted:  #3B4148;
+  --rio-text-subtle: #5C656F;
 
-  --rio-border-soft: #ECEFF4;   /* in-card row dividers — almost invisible */
-  --rio-border: #DEE3EC;        /* card outlines, default divider */
-  --rio-border-strong: #C5CCD9; /* hover state, focused control */
+  /* Border scale — firmer than 0.14 so cards/tables register at
+   * arm's length. `border-soft` is in-card row dividers; `border`
+   * is the default card/table outline; `border-strong` is hover
+   * and focus. */
+  --rio-border-soft:   #D8DDE4;
+  --rio-border:        #C9CFD7;
+  --rio-border-strong: #A8B0BA;
 
   /* Derived tokens — colors carry meaning across the UI. Info-bg reads
    * as a soft cool wash that harmonises with the teal accent. */

@@ -154,16 +154,26 @@
   --rio-lh-arabic: 1.95;              /* Arabic paragraph body */
 
   /* Weights — opt-in via tokens so the design system can tune
-   * regular/medium/semibold/bold without touching every site. */
+   * regular/medium/semibold/bold without touching every site.
+   * Principle 11 (v0.15): display sizes declare gravity through
+   * weight 700–800 *and* tracking. Body and table cells stay at
+   * 400 for legibility through a long shift. */
   --rio-fw-regular:  400;
   --rio-fw-medium:   500;
   --rio-fw-semibold: 600;
   --rio-fw-bold:     700;
+  --rio-fw-heavy:    800;
 
   /* Tracking (Latin only — Arabic resets to 0 in base/typography.css).
-   * Geist is drawn for slight negative tracking on display sizes. */
-  --rio-tracking-display: -0.022em;
-  --rio-tracking-heading: -0.012em;
+   * Geist is drawn for negative tracking on display sizes. The
+   * display + heading values were tightened in v0.15 so large
+   * type reads deliberate, not merely large. `allcaps` is the
+   * uppercase-label tracking used by table headers, kbd, and
+   * sidebar section labels. */
+  --rio-tracking-display: -0.035em;
+  --rio-tracking-heading: -0.018em;
   --rio-tracking-body:    -0.003em;
   --rio-tracking-tabular: 0;
+  --rio-tracking-mono:    0;
+  --rio-tracking-allcaps: 0.06em;
 }

@@ -12,19 +12,21 @@
  * ============================================================ */
 
 html[data-rio-theme="light"] {
-  --rio-bg: #EEF1F6;
-  --rio-surface: #FFFFFF;
-  --rio-surface-2: #F7F9FC;
-  --rio-surface-3: #EFF2F7;
+  --rio-bg:               #E4E8EE;
+  --rio-surface:          #FAFBFC;
+  --rio-surface-2:        #EFF2F6;
+  --rio-surface-3:        #E5E9EE;
+  --rio-surface-chrome:   #DCE0E7;
+  --rio-surface-elevated: #FFFFFF;
 
-  --rio-text-strong: #111827;
-  --rio-text: #1F2937;
-  --rio-text-muted: #4B5563;
-  --rio-text-subtle: #6B7280;
+  --rio-text-strong: #0A0D11;
+  --rio-text:        #14181D;
+  --rio-text-muted:  #3B4148;
+  --rio-text-subtle: #5C656F;
 
-  --rio-border-soft: #ECEFF4;
-  --rio-border: #DEE3EC;
-  --rio-border-strong: #C5CCD9;
+  --rio-border-soft:   #D8DDE4;
+  --rio-border:        #C9CFD7;
+  --rio-border-strong: #A8B0BA;
 
   --rio-success: #15803D;
   --rio-warning: #B45309;
@@ -34,9 +36,11 @@ html[data-rio-theme="light"] {
   --rio-danger-bg:  #FEF2F2;
   --rio-info-bg:    #FDF3EF;
 
-  --rio-shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
-  --rio-shadow:    0 1px 3px rgba(17, 24, 39, 0.05),
-                   0 1px 2px rgba(17, 24, 39, 0.03);
-  --rio-shadow-lg: 0 16px 40px rgba(17, 24, 39, 0.10),
-                   0 2px 8px  rgba(17, 24, 39, 0.05);
+  --rio-shadow-xs:    0 1px 2px  rgba(15, 23, 42, 0.06),
+                      0 0 0 1px  rgba(15, 23, 42, 0.04);
+  --rio-shadow:       0 2px 8px  rgba(15, 23, 42, 0.10),
+                      0 1px 2px  rgba(15, 23, 42, 0.06);
+  --rio-shadow-lg:    0 12px 32px rgba(15, 23, 42, 0.14),
+                      0 4px 8px  rgba(15, 23, 42, 0.08);
+  --rio-shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }
