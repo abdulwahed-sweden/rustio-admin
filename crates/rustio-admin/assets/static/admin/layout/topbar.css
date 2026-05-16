@@ -12,7 +12,11 @@
   gap: var(--rio-s4);
   padding: 0 var(--rio-s5);
   height: var(--rio-topbar-h);
-  background: var(--rio-surface);
+  /* v0.15: chrome tier (Principle 10). Topbar carries weight —
+   * deeper than card surface, lighter than page canvas, with a
+   * distinct bottom border so the seam between chrome and content
+   * is unambiguous. */
+  background: var(--rio-surface-chrome);
   border-bottom: 1px solid var(--rio-border);
   position: sticky;
   top: 0;
@@ -54,18 +58,23 @@
   cursor: pointer;
 }
 .rio-theme-toggle {
+  /* Sits on the chrome surface, so the button itself uses the
+   * card surface to feel slightly raised — gives an interactive
+   * element a "you can click me" affordance against the
+   * surrounding strip. */
   background: var(--rio-surface);
   border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
   padding: 0.5rem 0.85rem;
   font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-fw-semibold);
   color: var(--rio-text-muted);
   cursor: pointer;
+  box-shadow: var(--rio-shadow-xs);
   transition: background-color 0.12s, border-color 0.12s, color 0.12s;
 }
 .rio-theme-toggle:hover {
-  background: var(--rio-surface-3);
+  background: var(--rio-surface-elevated);
   border-color: var(--rio-border-strong);
   color: var(--rio-text-strong);
 }

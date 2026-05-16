@@ -27,7 +27,10 @@
   gap: var(--rio-s4);
   padding: var(--rio-s3) var(--rio-s5);
   border-top: 1px solid var(--rio-border);
-  background: var(--rio-surface);
+  /* v0.15: matches the topbar/sidebar chrome tier so the
+   * operator skeleton closes top + sides + bottom in one tone.
+   * (Principle 10.) */
+  background: var(--rio-surface-chrome);
   color: var(--rio-text-subtle);
   font-size: var(--rio-fs-xs);
   font-feature-settings: "tnum" 1, "kern" 1;
