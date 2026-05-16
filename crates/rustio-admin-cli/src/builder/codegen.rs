@@ -262,17 +262,39 @@ fn emit_initial_migration(draft: &Draft) -> GeneratedFile {
     body.push('\n');
     for m in &draft.models {
         body.push_str(&format!("CREATE TABLE {} (\n", m.table));
-        body.push_str("    id          BIGSERIAL    PRIMARY KEY,\n");
+        // Compute column-name width per table. The floor of 10
+        // preserves the layout for short-field tables (matches the
+        // hand-rolled width before this bug fix) and the dynamic
+        // upper bound prevents long names like
+        // `engine_displacement_cc` from collapsing against the
+        // type column.
+        let name_w = m
+            .fields
+            .iter()
+            .map(|f| f.name.len())
+            .max()
+            .unwrap_or(0)
+            .max(10);
+        body.push_str(&format!(
+            "    {:<width$}  BIGSERIAL    PRIMARY KEY,\n",
+            "id",
+            width = name_w
+        ));
         for f in &m.fields {
             let unique = if f.unique { " UNIQUE" } else { "" };
             body.push_str(&format!(
-                "    {:<12}{:<13} NOT NULL{},\n",
+                "    {:<width$}  {:<11} NOT NULL{},\n",
                 f.name,
                 sql_type(f),
-                unique
+                unique,
+                width = name_w
             ));
         }
-        body.push_str("    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()\n");
+        body.push_str(&format!(
+            "    {:<width$}  TIMESTAMPTZ  NOT NULL DEFAULT NOW()\n",
+            "created_at",
+            width = name_w
+        ));
         body.push_str(");\n\n");
     }
     GeneratedFile {
@@ -462,7 +484,20 @@ mod tests {
             .unwrap();
         assert!(mig.content.starts_with("-- @generated"));
         assert!(mig.content.contains("CREATE TABLE patients"));
-        assert!(mig.content.contains("full_name   TEXT          NOT NULL"));
+        // Layout-agnostic checks: the `full_name` line must have
+        // a positive gap between the identifier and the type token
+        // (the v0.14.0 bug regressed when the gap collapsed to 0).
+        let line = mig
+            .content
+            .lines()
+            .find(|l| l.trim_start().starts_with("full_name "))
+            .expect("full_name line emitted");
+        assert!(line.contains("TEXT"), "{line}");
+        assert!(line.contains("NOT NULL"), "{line}");
+        assert!(
+            !line.contains("full_nameTEXT"),
+            "identifier collapsed against type: {line}"
+        );
         assert!(mig.content.contains("CREATE TABLE doctors"));
         assert!(
             mig.content.contains("Rollback hint"),
@@ -475,6 +510,65 @@ mod tests {
         assert_eq!(snake("Patient"), "patient");
         assert_eq!(snake("BlogPost"), "blog_post");
         assert_eq!(snake("user"), "user");
+    }
+
+    /// Long field names must not collapse against the type
+    /// column. Regression for the v0.14.0 bug where the codegen
+    /// used hardcoded `{:<12}` and produced malformed SQL like
+    /// `engine_displacement_ccBIGINT` (no space).
+    #[test]
+    fn long_field_names_keep_separator_from_type_column() {
+        let d = Draft {
+            schema_version: 1,
+            project: Project {
+                name: "demo".into(),
+                rust_version: "1.88".into(),
+                builder_pinned: env!("CARGO_PKG_VERSION").into(),
+                created_at: "2026-05-15T10:30:00Z".into(),
+            },
+            models: vec![Model {
+                name: "Vehicle".into(),
+                table: "vehicles".into(),
+                fields: vec![
+                    Field {
+                        name: "vin".into(),
+                        r#type: "text".into(),
+                        required: true,
+                        unique: true,
+                    },
+                    Field {
+                        name: "engine_displacement_cc".into(),
+                        r#type: "integer".into(),
+                        required: true,
+                        unique: false,
+                    },
+                ],
+            }],
+        };
+        let files = generate_all(&d);
+        let mig = files
+            .iter()
+            .find(|f| f.path.ends_with("0001_initial.sql"))
+            .unwrap();
+        // Both identifiers must have at least one space before the
+        // type token. The short name gets padded; the long name
+        // gets only the 2 literal spaces, but it MUST get those.
+        assert!(
+            mig.content.contains("vin                     TEXT"),
+            "short vin should align to long-name width:\n{}",
+            mig.content
+        );
+        assert!(
+            mig.content.contains("engine_displacement_cc  BIGINT"),
+            "long field name must keep ≥2 spaces before its type:\n{}",
+            mig.content
+        );
+        // Forbid the regressed concatenation explicitly.
+        assert!(
+            !mig.content.contains("engine_displacement_ccBIGINT"),
+            "long field name collapsed into its type — v0.14.0 codegen bug regressed:\n{}",
+            mig.content
+        );
     }
 
     #[test]
