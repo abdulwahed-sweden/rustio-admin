@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.15.0** | 2026-05-16 | **Visual identity overhaul — calm with authority.** Three new doctrine principles (deeper surface ladder, chrome carries weight, typography hierarchy is a weight choice). Surface scale grows from four rungs to six (`--rio-bg`/`--rio-surface`/`--rio-surface-2`/`--rio-surface-3`/`--rio-surface-chrome`/`--rio-surface-elevated`); chrome (topbar/sidebar/footer) now sits on a distinct deeper tier so the operator skeleton has visible load-bearing weight. Buttons gain a subtle vertical gradient + inset highlight + proper focus-visible ring. Inputs ship with `--rio-shadow-inset` so fields read as "place to type" rather than "drawn rectangle". Table headers retuned to 600 + tracked-allcaps; primary cell in each row gets weight 500 + text-strong as a skim anchor. Topbar height 64 → 72 px. Pure CSS — no template HTML, no public API, no AdminTheme contract change. Existing `AdminTheme` overrides keep working unchanged. |
 | **0.14.1** | 2026-05-16 | Patch: Builder migration codegen used a hardcoded 12-char column-name width. Field names ≥ 12 chars (e.g. `engine_displacement_cc`, `detailed_description`) collapsed against the type column, producing malformed SQL like `engine_displacement_ccBIGINT` that Postgres rejected. Replaced with dynamic per-table width + two literal spaces of guaranteed separation. New regression test. No public API change; no SchemaHash input change. |
 | **0.14.0** | 2026-05-15 | **Builder MVP** — first release of the deterministic project compiler under `crates/rustio-admin-cli`. New `rustio new / add model / add field / plan / commit` verbs with append-only `.rustio/history.jsonl`, canonical-TOML `.rustio/draft.toml`, version-pinned `.rustio/builder.lock`, and SchemaHash-protected `src/_generated/`. Implementation-grade `DESIGN_BUILDER.md` doctrine (13 numbered invariants, B1–B13) with five CI-enforced grep proofs. MSRV bumped 1.80 → 1.88 to track transitive deps. **Intentionally limited**: no Studio, no Advisory AI, no incremental migrations, no relations / themes / undo / import. |
 | **0.13.0** | 2026-05-13 | Phase G privatisation pass: 59 items annotated `// internal:` (since 0.9.0) flipped from `pub` to `pub(crate)`. Public surface narrowed by ~17% (419 → 360 items). Pairs with new `DESIGN_EMAIL.md` doctrine codifying the framework-emitted email conventions stabilised in 0.12.0. |
@@ -37,6 +38,156 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.15.0] — 2026-05-16
+
+Visual identity overhaul — **calm with authority**. The framework's
+visual character has shifted from operator-bland (too much white,
+shallow surface ladder, transparent chrome) to operator-confident
+(Stripe / Linear / Bloomberg "professional financial software"
+aesthetic) without crossing into flashy territory the doctrine
+forbids. Pure CSS — no template HTML changes, no public API
+changes, no `AdminTheme` contract change. Existing `AdminTheme`
+overrides keep working unchanged; values that landed close to the
+new defaults (e.g. obddesk's text overrides) become redundant.
+
+The full design rationale, principles, and landing plan live in
+[`docs/design/PLAN_VISUAL_v2.md`](docs/design/PLAN_VISUAL_v2.md).
+
+### Three new doctrine principles
+
+Added to [`docs/DESIGN_DOCTRINE.md`](docs/DESIGN_DOCTRINE.md) §6:
+
+- **Principle 9 — Deeper surface ladder.** Adjacent surfaces are
+  ≥ 4% apart so the eye never squints to tell canvas from card
+  from table-header from row-hover.
+- **Principle 10 — Chrome carries weight.** Topbar and sidebar
+  render on a distinct chrome tier (`--rio-surface-chrome`),
+  deeper than card surface and lighter than page canvas.
+- **Principle 11 — Typography hierarchy is a weight choice, not
+  just a size.** Display sizes declare gravity through weight
+  700–800 *and* deliberate tracking. Body and table cells stay at
+  400 for ten-hour-shift legibility.
+
+### Tokens
+
+- **Surface scale** expanded from four rungs to six. Steps now
+  ≥ 4% apart (except surface → surface-2 which is a deliberately
+  quieter 3% so the table header reads subtle, not pronounced):
+
+  | Token | Light | Dark | Use |
+  |---|---|---|---|
+  | `--rio-bg` | `#E4E8EE` | `#1A1F28` | Page canvas |
+  | `--rio-surface` | `#FAFBFC` | `#262C36` | Cards, panels, table body |
+  | `--rio-surface-2` | `#EFF2F6` | `#2E3540` | Table head, hovered row |
+  | `--rio-surface-3` | `#E5E9EE` | `#363D49` | Row hover, pressed state |
+  | `--rio-surface-chrome` **(new)** | `#DCE0E7` | `#1E232C` | Topbar, sidebar, footer |
+  | `--rio-surface-elevated` **(new)** | `#FFFFFF` | `#363D49` | Dropdowns, popovers — the only pure white |
+
+- **Text scale** moved one stop darker across the board:
+
+  | Token | Light | Dark |
+  |---|---|---|
+  | `--rio-text-strong` | `#0A0D11` (was `#111827`) | `#FFFFFF` |
+  | `--rio-text` | `#14181D` (was `#1F2937`) | `#D8DBE0` |
+  | `--rio-text-muted` | `#3B4148` (was `#4B5563`) | `#9097A0` |
+  | `--rio-text-subtle` | `#5C656F` (was `#6B7280`) | `#6B7280` |
+
+  All combinations against every surface tier still clear WCAG AA.
+
+- **Border scale** firmed by one step:
+
+  | Token | Light | Dark |
+  |---|---|---|
+  | `--rio-border-soft` | `#D8DDE4` (was `#ECEFF4`) | `#3A4252` |
+  | `--rio-border` | `#C9CFD7` (was `#DEE3EC`) | `#4A5364` |
+  | `--rio-border-strong` | `#A8B0BA` (was `#C5CCD9`) | `#5E6878` |
+
+- **Shadow scale** converted to two-layer construction
+  (near-shadow + far-shadow, Stripe / Linear style) with bumped
+  alphas so cards actually rise off the new deeper canvas. New
+  `--rio-shadow-inset` used by inputs and pressed states.
+
+- **Typography tokens** add `--rio-fw-heavy: 800` (Geist Variable
+  supports it; no new `@font-face` declarations),
+  `--rio-tracking-allcaps: 0.06em`, and `--rio-tracking-mono: 0`.
+  Display tracking tightened to `-0.035em` (was `-0.022em`),
+  heading tracking to `-0.018em` (was `-0.012em`).
+
+- **Spacing token**: `--rio-topbar-h` 64 → 72 px so chrome carries
+  presence.
+
+- **Accent unchanged**. `#0F8C7E` light / `#3FAA9D` dark — the
+  project's brand colour is a stable invariant per principle 4.
+
+### Components
+
+- **Buttons** gain a Stripe / Linear-style vertical gradient on
+  primary (≈ 8% delta from accent-top to accent-bottom; invisible
+  at a glance, deliberate on inspection), an inset top highlight,
+  accent-coloured drop shadow, and a proper `:focus-visible` ring
+  for keyboard navigation. Fixed a stale crimson rgba (pre-0.3
+  artefact) on the primary shadow.
+
+- **Inputs / textareas / selects** ship with `--rio-shadow-inset`
+  by default — the single biggest UX delta in the overhaul.
+  Fields now read as "place to type" rather than "drawn
+  rectangle." Focus state stacks the inset with the accent ring
+  (bumped from 12% to 22% alpha).
+
+- **Tables**: header weight stepped from 700 to 600 (refined,
+  not shouty); hardcoded `letter-spacing` swapped for
+  `--rio-tracking-allcaps` token. **Primary-cell weight added** —
+  the first data cell in each row (the natural key: `code`,
+  `vin`, `email`, …) gets `font-weight: 500` + `color:
+  text-strong` so the eye has a column to skim against. Works on
+  tables with and without bulk-select checkboxes.
+
+### Chrome
+
+- **Topbar** background → `--rio-surface-chrome`; height bumped
+  to 72 px. Theme-toggle button sits raised on `--rio-surface`
+  with `--rio-shadow-xs` so the interactive affordance reads
+  distinctly against the surrounding chrome strip.
+
+- **Sidebar** background → `--rio-surface-chrome`. Section labels
+  (e.g. "AUTHENTICATION") moved to 11 px semibold tracked-allcaps
+  — quieter line height, more visual rhythm against long nav.
+  Hover lifts to `--rio-surface-2`; active link wash bumped from
+  10% to 12% accent alpha; 3 px inset stripe unchanged.
+
+- **Footer** background → `--rio-surface-chrome` matching topbar
+  and sidebar so the operator skeleton closes top + sides +
+  bottom in one tone.
+
+### Migration impact for downstream projects
+
+- Pure aesthetic upgrade — no `cargo update` action required
+  beyond bumping `rustio-admin = "0.15.0"`. The next page load
+  shows the new visual character.
+- Projects with custom `AdminTheme` overrides keep working
+  unchanged. Values that landed close to the new defaults can be
+  dropped:
+  - `text: "#0F1115"` → essentially the new default `#14181D`
+  - `text_muted: "#3B4148"` → identical to the new default
+  - `border: "#C9CFD5"` → essentially the new default `#C9CFD7`
+- `obddesk` and other consumers should drop their
+  `AdminTheme { text, text_muted, border, … }` block from
+  `main.rs`; the new framework defaults already deliver the
+  intended contrast.
+
+### Hard non-goals respected
+
+- No new font family. Geist Variable already supports weight 800.
+- No accent change. `#0F8C7E` stays.
+- No new JS. Every change is CSS-only.
+- No template HTML changes — the redesign rides on the existing
+  class structure. Zero risk of breaking generated projects.
+- No new build step. Hand-written CSS, baked via `include_str!`
+  per `DESIGN_DOCTRINE.md` §8.
+- No marketing surfaces. No hero gradients, no shimmer, no
+  illustration. The `DESIGN_DOCTRINE.md` §6.7 rule stands.
 
 
 ## [0.14.1] — 2026-05-16
