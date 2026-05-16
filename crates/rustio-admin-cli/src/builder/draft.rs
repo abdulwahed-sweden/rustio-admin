@@ -325,7 +325,7 @@ mod tests {
             project: Project {
                 name: "demo".into(),
                 rust_version: "1.88".into(),
-                builder_pinned: "0.14.1".into(),
+                builder_pinned: "0.15.0".into(),
                 created_at: "2026-05-15T10:30:00Z".into(),
             },
             models: vec![
@@ -370,7 +370,7 @@ mod tests {
         draft.project = Project {
             name: "x".into(),
             rust_version: "1.88".into(),
-            builder_pinned: "0.14.1".into(),
+            builder_pinned: "0.15.0".into(),
             created_at: "2026-05-15T10:30:00Z".into(),
         };
         let s = draft.to_toml();
@@ -384,7 +384,7 @@ mod tests {
         let mut doc = DocumentMut::new();
         doc["schema_version"] = value(99_i64);
         let mut p = Table::new();
-        p["builder_pinned"] = value("0.14.1");
+        p["builder_pinned"] = value("0.15.0");
         p["created_at"] = value("2026-05-15T10:30:00Z");
         p["name"] = value("x");
         p["rust_version"] = value("1.88");
