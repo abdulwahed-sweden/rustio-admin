@@ -101,6 +101,10 @@
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
   color: var(--rio-text-strong);
+  /* Inset shadow turns the field from "drawn rectangle" into
+   * "place to type." Premium-software detail — Principle 11
+   * supporting weight without flash. */
+  box-shadow: var(--rio-shadow-inset);
   font: inherit;
   font-size: var(--rio-fs-md);
   line-height: var(--rio-lh-ui);
@@ -116,7 +120,10 @@
 .rio-select:focus {
   outline: none;
   border-color: var(--rio-accent);
-  box-shadow: 0 0 0 3px rgb(var(--rio-accent-rgb) / 0.12);
+  /* Stack inset + focus ring: the inset stays so the field
+   * keeps its depth; the focus ring sits on top. */
+  box-shadow: var(--rio-shadow-inset),
+              0 0 0 3px rgb(var(--rio-accent-rgb) / 0.22);
 }
 .rio-input:disabled,
 .rio-textarea:disabled,
