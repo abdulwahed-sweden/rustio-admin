@@ -40,12 +40,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --rio-bg:               #1A1F28;
-    --rio-surface:          #262C36;
-    --rio-surface-2:        #2E3540;
-    --rio-surface-3:        #363D49;
-    --rio-surface-chrome:   #1E232C;
-    --rio-surface-elevated: #363D49;
+    --rio-bg:               #131820;
+    --rio-surface:          #1F262F;
+    --rio-surface-2:        #262E39;
+    --rio-surface-3:        #2E3742;
+    --rio-surface-chrome:   #0A0E14;
+    --rio-surface-elevated: #2E3742;
 
     --rio-accent:       #3FAA9D;
     --rio-accent-hover: #5FBFB3;
@@ -79,12 +79,12 @@
 }
 
 html[data-rio-theme="dark"] {
-  --rio-bg:               #1A1F28;
-  --rio-surface:          #262C36;
-  --rio-surface-2:        #2E3540;
-  --rio-surface-3:        #363D49;
-  --rio-surface-chrome:   #1E232C;
-  --rio-surface-elevated: #363D49;
+  --rio-bg:               #131820;
+  --rio-surface:          #1F262F;
+  --rio-surface-2:        #262E39;
+  --rio-surface-3:        #2E3742;
+  --rio-surface-chrome:   #0A0E14;
+  --rio-surface-elevated: #2E3742;
 
   --rio-accent:       #3FAA9D;
   --rio-accent-hover: #5FBFB3;

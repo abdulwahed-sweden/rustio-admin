@@ -58,11 +58,14 @@
   cursor: pointer;
 }
 .rio-theme-toggle {
-  /* Sits on the chrome surface, so the button itself uses the
-   * card surface to feel slightly raised — gives an interactive
-   * element a "you can click me" affordance against the
-   * surrounding strip. */
-  background: var(--rio-surface);
+  /* v0.15.1 — ghost button on the chrome surface. The previous
+   * "raised card" approach (light surface inside dark chrome)
+   * fought the new dark-chrome aesthetic; a transparent ghost
+   * with light borders + light text reads as native to the
+   * chrome strip. All tokens resolve through the chrome-scope
+   * cascade (layout/shell.css), so this rule needs no values
+   * hardcoded and works identically in dark mode. */
+  background: transparent;
   border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
   padding: 0.5rem 0.85rem;
@@ -70,11 +73,10 @@
   font-weight: var(--rio-fw-semibold);
   color: var(--rio-text-muted);
   cursor: pointer;
-  box-shadow: var(--rio-shadow-xs);
   transition: background-color 0.12s, border-color 0.12s, color 0.12s;
 }
 .rio-theme-toggle:hover {
-  background: var(--rio-surface-elevated);
+  background: var(--rio-surface-2);
   border-color: var(--rio-border-strong);
   color: var(--rio-text-strong);
 }
