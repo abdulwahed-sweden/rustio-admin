@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.14.1** | 2026-05-16 | Patch: Builder migration codegen used a hardcoded 12-char column-name width. Field names ≥ 12 chars (e.g. `engine_displacement_cc`, `detailed_description`) collapsed against the type column, producing malformed SQL like `engine_displacement_ccBIGINT` that Postgres rejected. Replaced with dynamic per-table width + two literal spaces of guaranteed separation. New regression test. No public API change; no SchemaHash input change. |
 | **0.14.0** | 2026-05-15 | **Builder MVP** — first release of the deterministic project compiler under `crates/rustio-admin-cli`. New `rustio new / add model / add field / plan / commit` verbs with append-only `.rustio/history.jsonl`, canonical-TOML `.rustio/draft.toml`, version-pinned `.rustio/builder.lock`, and SchemaHash-protected `src/_generated/`. Implementation-grade `DESIGN_BUILDER.md` doctrine (13 numbered invariants, B1–B13) with five CI-enforced grep proofs. MSRV bumped 1.80 → 1.88 to track transitive deps. **Intentionally limited**: no Studio, no Advisory AI, no incremental migrations, no relations / themes / undo / import. |
 | **0.13.0** | 2026-05-13 | Phase G privatisation pass: 59 items annotated `// internal:` (since 0.9.0) flipped from `pub` to `pub(crate)`. Public surface narrowed by ~17% (419 → 360 items). Pairs with new `DESIGN_EMAIL.md` doctrine codifying the framework-emitted email conventions stabilised in 0.12.0. |
 | **0.12.0** | 2026-05-13 | Three substantial threads: public bulk-action dispatch hook (closes D.4); production password-recovery flow with real SMTP + polished HTML email + project-identity branding architecture (RustIO name no longer leaks to end users); operator-DX `rustio doctor email` with provider presets, `--html-preview`, send cooldown, and a formal `.env` developer contract. End-to-end verified against real Gmail delivery. |
@@ -36,6 +37,54 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.14.1] — 2026-05-16
+
+A single-bug patch surfaced by the first external project to adopt
+the Builder MVP (`obddesk`, an OBD-II diagnostics admin) with
+realistic-length field names.
+
+### Fixed
+
+- **Builder migration codegen produced malformed SQL for long
+  field names.** v0.14.0 emitted CREATE TABLE rows using a
+  hardcoded `{:<12}` format width on the column-name slot. Field
+  names ≥ 12 characters consumed the entire padded slot, leaving
+  zero separator between the identifier and the next token —
+  Postgres rejected the resulting `engine_displacement_ccBIGINT`
+  as a syntax error before reaching the type lexer.
+
+  Fixed in
+  [`crates/rustio-admin-cli/src/builder/codegen.rs`](crates/rustio-admin-cli/src/builder/codegen.rs)
+  by computing the name-column width dynamically per table as
+  `max(longest_field_name, 10)` and inserting two literal spaces
+  between the identifier and type columns. Implicit `id` and
+  `created_at` columns are routed through the same dynamic format
+  so every row in a `CREATE TABLE` aligns internally.
+
+  Visible behaviour: short-field tables (longest name ≤ 10 chars)
+  shift one space in the type column compared to v0.14.0; long-
+  field tables now produce syntactically valid SQL. No SchemaHash
+  input change — projects regenerate cleanly on the next
+  `rustio commit`.
+
+  New regression test:
+  `codegen::tests::long_field_names_keep_separator_from_type_column`
+  exercises a Vehicle model with `vin` (3 chars) + `engine_displacement_cc`
+  (22 chars) and asserts the forbidden substring
+  `engine_displacement_ccBIGINT` does not appear in the emission.
+  The pre-existing `initial_migration_creates_each_table` was also
+  rewritten to use layout-agnostic assertions (no positional
+  whitespace check) so future format tweaks don't false-alarm.
+
+### Upgrade
+
+Pure patch — bump `rustio-admin = "0.14.1"` and re-run
+`rustio commit`. Existing migrations on disk that already applied
+their CREATE TABLE statements are unaffected; only future
+emissions change. The doctrine, public API, MSRV (1.88), and all
+13 numbered Builder invariants are unchanged from v0.14.0.
 
 
 ## [0.14.0] — 2026-05-15

@@ -131,7 +131,7 @@ mod tests {
             project: Project {
                 name: "demo".into(),
                 rust_version: "1.88".into(),
-                builder_pinned: "0.14.0".into(),
+                builder_pinned: "0.14.1".into(),
                 created_at: "2026-05-15T10:30:00Z".into(),
             },
             models: vec![Model {
