@@ -5,8 +5,13 @@
  *
  * RustIO's dark theme is a calm nighttime workspace, not a hacker
  * terminal. Page bg and surfaces sit on a desaturated blue-graphite
- * scale (~hsl 218°) that lifts in 4–5% steps; depth comes from
- * layering, not shadows. No #000, no #111 — the floor is #2B313C.
+ * scale (~hsl 218°) that lifts in 4–5% steps so the same Principle 9
+ * surface-ladder discipline that holds in light mode holds here too.
+ * v0.15.0 floored the canvas at `#1A1F28` (was `#2B313C`) so chrome
+ * has somewhere darker to sit; `--rio-surface-chrome` at `#1E232C`
+ * provides the Principle-10 chrome tier. `--rio-surface-elevated`
+ * (`#363D49`) is reserved for dropdowns / popovers — the only
+ * surface that ascends above the card tier.
  *
  * Tokens are duplicated under both `prefers-color-scheme: dark` (for
  * users who never touch the toggle) and `[data-rio-theme="dark"]`
@@ -35,23 +40,25 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --rio-bg:        #2B313C;
-    --rio-surface:   #343B48;
-    --rio-surface-2: #3B4352;
-    --rio-surface-3: #444D5E;
+    --rio-bg:               #1A1F28;
+    --rio-surface:          #262C36;
+    --rio-surface-2:        #2E3540;
+    --rio-surface-3:        #363D49;
+    --rio-surface-chrome:   #1E232C;
+    --rio-surface-elevated: #363D49;
 
     --rio-accent:       #3FAA9D;
     --rio-accent-hover: #5FBFB3;
     --rio-accent-rgb:   63 170 157;
 
     --rio-text-strong: #FFFFFF;
-    --rio-text:        #F3F4F6;
-    --rio-text-muted:  #D2D6DC;
-    --rio-text-subtle: #B2B8C2;
+    --rio-text:        #D8DBE0;
+    --rio-text-muted:  #9097A0;
+    --rio-text-subtle: #6B7280;
 
-    --rio-border-soft:   #404A5D;
-    --rio-border:        #4F5868;
-    --rio-border-strong: #626C7D;
+    --rio-border-soft:   #3A4252;
+    --rio-border:        #4A5364;
+    --rio-border-strong: #5E6878;
 
     --rio-success: #34D399;
     --rio-warning: #FBBF24;
@@ -61,32 +68,36 @@
     --rio-danger-bg:  #3D2226;
     --rio-info-bg:    #3A2A22;
 
-    --rio-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
-    --rio-shadow:    0 1px 3px rgba(0, 0, 0, 0.20),
-                     0 1px 2px rgba(0, 0, 0, 0.14);
-    --rio-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.32),
-                     0 2px 8px  rgba(0, 0, 0, 0.18);
+    --rio-shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.24),
+                        0 0 0 1px rgba(0, 0, 0, 0.18);
+    --rio-shadow:       0 2px 8px  rgba(0, 0, 0, 0.36),
+                        0 1px 2px  rgba(0, 0, 0, 0.22);
+    --rio-shadow-lg:    0 12px 32px rgba(0, 0, 0, 0.48),
+                        0 4px 8px  rgba(0, 0, 0, 0.28);
+    --rio-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.30);
   }
 }
 
 html[data-rio-theme="dark"] {
-  --rio-bg:        #2B313C;
-  --rio-surface:   #343B48;
-  --rio-surface-2: #3B4352;
-  --rio-surface-3: #444D5E;
+  --rio-bg:               #1A1F28;
+  --rio-surface:          #262C36;
+  --rio-surface-2:        #2E3540;
+  --rio-surface-3:        #363D49;
+  --rio-surface-chrome:   #1E232C;
+  --rio-surface-elevated: #363D49;
 
   --rio-accent:       #3FAA9D;
   --rio-accent-hover: #5FBFB3;
   --rio-accent-rgb:   63 170 157;
 
   --rio-text-strong: #FFFFFF;
-  --rio-text:        #F3F4F6;
-  --rio-text-muted:  #D2D6DC;
-  --rio-text-subtle: #B2B8C2;
+  --rio-text:        #D8DBE0;
+  --rio-text-muted:  #9097A0;
+  --rio-text-subtle: #6B7280;
 
-  --rio-border-soft:   #404A5D;
-  --rio-border:        #4F5868;
-  --rio-border-strong: #626C7D;
+  --rio-border-soft:   #3A4252;
+  --rio-border:        #4A5364;
+  --rio-border-strong: #5E6878;
 
   --rio-success: #34D399;
   --rio-warning: #FBBF24;
@@ -96,9 +107,11 @@ html[data-rio-theme="dark"] {
   --rio-danger-bg:  #3D2226;
   --rio-info-bg:    #3A2A22;
 
-  --rio-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
-  --rio-shadow:    0 1px 3px rgba(0, 0, 0, 0.20),
-                   0 1px 2px rgba(0, 0, 0, 0.14);
-  --rio-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.32),
-                   0 2px 8px  rgba(0, 0, 0, 0.18);
+  --rio-shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.24),
+                      0 0 0 1px rgba(0, 0, 0, 0.18);
+  --rio-shadow:       0 2px 8px  rgba(0, 0, 0, 0.36),
+                      0 1px 2px  rgba(0, 0, 0, 0.22);
+  --rio-shadow-lg:    0 12px 32px rgba(0, 0, 0, 0.48),
+                      0 4px 8px  rgba(0, 0, 0, 0.28);
+  --rio-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.30);
 }
