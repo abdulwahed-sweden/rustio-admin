@@ -12,11 +12,11 @@
  * ============================================================ */
 
 html[data-rio-theme="light"] {
-  --rio-bg:               #E4E8EE;
-  --rio-surface:          #FAFBFC;
-  --rio-surface-2:        #EFF2F6;
-  --rio-surface-3:        #E5E9EE;
-  --rio-surface-chrome:   #DCE0E7;
+  --rio-bg:               #E5E7EB;
+  --rio-surface:          #F9FAFB;
+  --rio-surface-2:        #EEF0F3;
+  --rio-surface-3:        #E3E6EA;
+  --rio-surface-chrome:   #1F2A37;
   --rio-surface-elevated: #FFFFFF;
 
   --rio-text-strong: #0A0D11;

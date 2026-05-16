@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.15.1** | 2026-05-16 | **Refined colour palette — dark-frame chrome.** Page canvas moved from blue-tinted slate to neutral cool grey (`#E5E7EB`); chrome (topbar / sidebar / footer) jumped to deep slate-blue (`#1F2A37`) so the operator skeleton reads as a confident dark frame around the lighter content area — the Linear / Vercel / Notion / Stripe-Dashboard pattern. Dark mode chrome deepened to near-black (`#0A0E14`) so both modes share the "chrome is darker than canvas" convention. A new chrome-scope CSS cascade in `layout/shell.css` flips `--rio-text-*`, `--rio-surface-2/3`, `--rio-border-*`, and `--rio-accent` (to the lifted `#3FAA9D` variant for contrast) within `.rio-topbar` / `.rio-sidebar` / `.rio-footer` — every component inherits light-on-dark automatically, no per-component edits. Theme-toggle button redesigned as a ghost on chrome. Principle 10 reframed to allow either chrome direction. |
 | **0.15.0** | 2026-05-16 | **Visual identity overhaul — calm with authority.** Three new doctrine principles (deeper surface ladder, chrome carries weight, typography hierarchy is a weight choice). Surface scale grows from four rungs to six (`--rio-bg`/`--rio-surface`/`--rio-surface-2`/`--rio-surface-3`/`--rio-surface-chrome`/`--rio-surface-elevated`); chrome (topbar/sidebar/footer) now sits on a distinct deeper tier so the operator skeleton has visible load-bearing weight. Buttons gain a subtle vertical gradient + inset highlight + proper focus-visible ring. Inputs ship with `--rio-shadow-inset` so fields read as "place to type" rather than "drawn rectangle". Table headers retuned to 600 + tracked-allcaps; primary cell in each row gets weight 500 + text-strong as a skim anchor. Topbar height 64 → 72 px. Pure CSS — no template HTML, no public API, no AdminTheme contract change. Existing `AdminTheme` overrides keep working unchanged. |
 | **0.14.1** | 2026-05-16 | Patch: Builder migration codegen used a hardcoded 12-char column-name width. Field names ≥ 12 chars (e.g. `engine_displacement_cc`, `detailed_description`) collapsed against the type column, producing malformed SQL like `engine_displacement_ccBIGINT` that Postgres rejected. Replaced with dynamic per-table width + two literal spaces of guaranteed separation. New regression test. No public API change; no SchemaHash input change. |
 | **0.14.0** | 2026-05-15 | **Builder MVP** — first release of the deterministic project compiler under `crates/rustio-admin-cli`. New `rustio new / add model / add field / plan / commit` verbs with append-only `.rustio/history.jsonl`, canonical-TOML `.rustio/draft.toml`, version-pinned `.rustio/builder.lock`, and SchemaHash-protected `src/_generated/`. Implementation-grade `DESIGN_BUILDER.md` doctrine (13 numbered invariants, B1–B13) with five CI-enforced grep proofs. MSRV bumped 1.80 → 1.88 to track transitive deps. **Intentionally limited**: no Studio, no Advisory AI, no incremental migrations, no relations / themes / undo / import. |
@@ -38,6 +39,110 @@ leaves the alpha track.
 ## [Unreleased]
 
 No changes yet.
+
+
+## [0.15.1] — 2026-05-16
+
+Refined colour palette — the v0.15.0 ladder was harmonious but the
+chrome tier sat between card and canvas (a *subtle* frame). External
+feedback was that pages still felt white-heavy and lacked
+"prestige." This patch makes chrome go **dark in light mode**
+(the Linear / Vercel / Notion / Stripe-Dashboard convention) and
+even darker than canvas in dark mode, so the operator skeleton
+reads as a confident frame in both directions. Page canvas is also
+retuned away from a blue-tinted slate toward a more neutral cool
+grey that pairs cleanly with the teal accent.
+
+Pure colour change — no token added or removed, no public API
+touched, no template HTML edits, no contract change. Projects with
+custom `AdminTheme` overrides keep working unchanged.
+
+### Tokens — light mode
+
+| Token | v0.15.0 | v0.15.1 | Why |
+|---|---|---|---|
+| `--rio-bg` | `#E4E8EE` | `#E5E7EB` | Page canvas drops its blue tint — more neutral cool grey |
+| `--rio-surface` | `#FAFBFC` | `#F9FAFB` | Card surface a hair cooler to harmonise with the new canvas |
+| `--rio-surface-2` | `#EFF2F6` | `#EEF0F3` | Table header tracks the card |
+| `--rio-surface-3` | `#E5E9EE` | `#E3E6EA` | Row hover deepens slightly |
+| `--rio-surface-chrome` | `#DCE0E7` | `#1F2A37` | **Topbar / sidebar / footer** — deep slate-blue, premium dashboard convention |
+| `--rio-surface-elevated` | `#FFFFFF` | `#FFFFFF` | Overlay surface unchanged |
+
+### Tokens — dark mode
+
+| Token | v0.15.0 | v0.15.1 | Why |
+|---|---|---|---|
+| `--rio-bg` | `#1A1F28` | `#131820` | Deeper canvas — needed because chrome moves to near-black |
+| `--rio-surface` | `#262C36` | `#1F262F` | Card stays clearly above canvas |
+| `--rio-surface-2` | `#2E3540` | `#262E39` | |
+| `--rio-surface-3` | `#363D49` | `#2E3742` | |
+| `--rio-surface-chrome` | `#1E232C` | `#0A0E14` | **Near-black chrome** — same "darker than canvas" direction as light mode |
+| `--rio-surface-elevated` | `#363D49` | `#2E3742` | Slightly lower so chrome stays the deepest tier |
+
+### Chrome-scope CSS cascade — new in `layout/shell.css`
+
+The single architectural move that makes the dark-chrome direction
+trivially adoptable. A small CSS block redefines the relevant
+custom properties locally for `.rio-topbar`, `.rio-sidebar`, and
+`.rio-footer`:
+
+```css
+.rio-topbar,
+.rio-sidebar,
+.rio-footer {
+  --rio-text-strong: #F5F6F8;
+  --rio-text:        #C9CFD8;
+  --rio-text-muted:  #8B919C;
+  --rio-text-subtle: #6E737D;
+  --rio-surface-2:   #2A3441;
+  --rio-surface-3:   #364150;
+  --rio-border-soft: #2A3441;
+  --rio-border:      #364150;
+  --rio-border-strong: #4A5364;
+  --rio-accent:      #3FAA9D;
+  --rio-accent-rgb:  63 170 157;
+}
+```
+
+CSS custom properties cascade through descendants. Every component
+inside chrome that consumes these tokens (sidebar links, hover
+states, dividers, active-nav wash, theme toggle…) automatically
+flips to a light-on-dark palette without per-component edits. The
+accent is lifted to `#3FAA9D` within chrome scope so the active
+sidebar item retains crisp ≥ 5:1 contrast against the deep slate
+— same logic the dark theme has used since v0.4.0.
+
+### Component refinements
+
+- **Theme-toggle button** redesigned as a transparent ghost on
+  chrome. The v0.15.0 "raised light card inside dark chrome"
+  fought the dark-frame aesthetic; ghost + chrome-cascade
+  borders/text reads as native.
+- **Active sidebar link** wash inherits the lifted accent
+  automatically, so the `is-active` row pops more than under
+  v0.15.0.
+
+### Doctrine
+
+`docs/DESIGN_DOCTRINE.md` Principle 10 reframed: chrome direction
+is a project-aesthetic choice. The framework default went from
+subtle frame (v0.15.0) to dark frame (v0.15.1); both satisfy the
+"chrome is visually distinct from canvas and card" rule. When the
+chrome direction goes dark in light mode, the `layout/shell.css`
+chrome-scope cascade handles every descendant in one place.
+
+### Upgrade
+
+```toml
+[dependencies]
+rustio-admin = "0.15.1"
+```
+
+Drop-in. No code changes, no `AdminTheme` adjustment required.
+Projects that overrode `bg` / `surface` / `text` / `text-muted` /
+`border` via `AdminTheme` may want to revisit those values against
+the new defaults — the framework now ships closer to what most
+projects were tuning toward.
 
 
 ## [0.15.0] — 2026-05-16

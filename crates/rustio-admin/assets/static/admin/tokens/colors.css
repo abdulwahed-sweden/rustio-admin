@@ -33,16 +33,20 @@
   --rio-accent-hover: #0A6E62;
   --rio-accent-rgb: 15 140 126;
 
-  /* Surface ladder (Principle 9). Six rungs total, every adjacent
-   * pair ≥ 4% apart except surface ↔ surface-2 which is a
-   * deliberately quieter 3% so table headers feel subtle rather
-   * than pronounced. Never pure white (except for elevated overlays
-   * — the only surface reserved for popovers and dropdowns). */
-  --rio-bg:               #E4E8EE;  /* page canvas */
-  --rio-surface:          #FAFBFC;  /* cards, panels, table body */
-  --rio-surface-2:        #EFF2F6;  /* table head, hovered row, panel base */
-  --rio-surface-3:        #E5E9EE;  /* row hover, pressed state, secondary chip */
-  --rio-surface-chrome:   #DCE0E7;  /* topbar, sidebar — Principle 10 */
+  /* Surface ladder (Principle 9). Six rungs total. v0.15.1 rebalanced
+   * the palette: page canvas moved to a neutral cool grey (was a
+   * blue-tinted slate); cards stay off-white; chrome jumped to a
+   * deep slate-blue so the operator skeleton reads as a confident
+   * dark frame around the lighter content. Never pure white except
+   * for elevated overlays (the only surface reserved for popovers
+   * and dropdowns). The bright dark chrome pairs cleanly with the
+   * teal accent — slate-on-teal is a long-standing premium-software
+   * combination (Linear, Vercel, Stripe Dashboard, Notion). */
+  --rio-bg:               #E5E7EB;  /* page canvas — neutral cool grey */
+  --rio-surface:          #F9FAFB;  /* cards, panels, table body */
+  --rio-surface-2:        #EEF0F3;  /* table head, hovered row, panel base */
+  --rio-surface-3:        #E3E6EA;  /* row hover, pressed state, secondary chip */
+  --rio-surface-chrome:   #1F2A37;  /* TOPBAR / SIDEBAR / FOOTER — deep slate */
   --rio-surface-elevated: #FFFFFF;  /* dropdowns, popovers — the only pure white */
 
   /* Slate text scale — never pure black. Pushed one stop darker

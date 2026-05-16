@@ -154,7 +154,7 @@ The library and the CLI ship as separate crates.
 
 ```toml
 [dependencies]
-rustio-admin = "0.15.0"
+rustio-admin = "0.15.1"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```

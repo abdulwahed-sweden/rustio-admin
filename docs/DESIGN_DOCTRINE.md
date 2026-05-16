@@ -236,10 +236,17 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
    [`PLAN_VISUAL_v2.md`](design/PLAN_VISUAL_v2.md). The surface scale
    carries six rungs (`--rio-bg` → `--rio-surface` → `--rio-surface-2` →
    `--rio-surface-3` → `--rio-surface-chrome` → `--rio-surface-elevated`).
-10. **Chrome carries weight.** Topbar and sidebar render on
-    `--rio-surface-chrome` — distinctly deeper than the card surface,
-    distinctly lighter than the page canvas — so the operator skeleton
-    is visible without conscious attention. Added v0.15.0.
+10. **Chrome carries weight.** Topbar, sidebar, and footer render on
+    `--rio-surface-chrome` — a surface that is visually distinct from
+    both card and canvas so the operator skeleton is visible without
+    conscious attention. Direction is a project-aesthetic choice:
+    chrome between card and canvas (subtle frame, v0.15.0 default) or
+    chrome darker than canvas (dark-frame, v0.15.1 default — preferred
+    for premium operator-software feel). When chrome goes dark in
+    light mode, a chrome-scope cascade in `layout/shell.css` flips
+    `--rio-text-*`, `--rio-surface-2/3`, `--rio-border-*`, and
+    `--rio-accent` to light-on-dark variants for every descendant —
+    no per-component edits needed. Added v0.15.0; reframed v0.15.1.
 11. **Typography hierarchy is a weight choice, not just a size.**
     Display sizes (h1, h2, login title) declare gravity through weight
     700–800 *and* tracking that reads as deliberate. Body and table
