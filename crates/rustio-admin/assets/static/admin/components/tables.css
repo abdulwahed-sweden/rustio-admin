@@ -26,17 +26,33 @@
   border-bottom: 1px solid var(--rio-border-soft);
 }
 .rio-table th {
-  font-weight: var(--rio-fw-bold);
+  /* v0.15: header weight stepped down from bold (700) to semibold
+   * (600). 700 reads shouty on 13px text; 600 + uppercase +
+   * tracked allcaps lands the right "professional financial
+   * software" tone (Bloomberg / Stripe / Linear) without
+   * dominating the cell content. */
+  font-weight: var(--rio-fw-semibold);
   font-size: var(--rio-fs-xs);                  /* 13px — quiet label */
   color: var(--rio-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--rio-tracking-allcaps);
   background: var(--rio-surface-2);
   border-bottom: 1px solid var(--rio-border);
   white-space: nowrap;
 }
 .rio-table tbody tr:last-child td { border-bottom: none; }
 .rio-table tbody tr { transition: background-color 0.1s; }
+
+/* Primary-cell weight (Principle 11). The first data cell in each
+ * row is the natural anchor — `code` for DTCs, `vin` for vehicles,
+ * `email` for users. Rendering it at weight 500 + text-strong
+ * gives the eye a column to skim against without changing layout.
+ * Works whether the row starts with a checkbox or not. */
+.rio-table tbody td:first-child:not(.rio-td--checkbox),
+.rio-table tbody .rio-td--checkbox + td {
+  font-weight: var(--rio-fw-medium);
+  color: var(--rio-text-strong);
+}
 
 .rio-th--number, .rio-td--number {
   text-align: right;
