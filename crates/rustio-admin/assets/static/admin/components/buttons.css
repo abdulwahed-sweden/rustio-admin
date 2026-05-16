@@ -21,11 +21,13 @@
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);                 /* 15px */
   font-weight: var(--rio-fw-semibold);
+  letter-spacing: 0.005em;
   line-height: var(--rio-lh-ui);
   cursor: pointer;
   text-decoration: none;
   box-shadow: var(--rio-shadow-xs);
-  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 0.06s;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s,
+              box-shadow 0.12s, transform 0.06s;
 }
 .rio-button:hover {
   background: var(--rio-surface-3);
@@ -33,19 +35,46 @@
   color: var(--rio-text-strong);
   text-decoration: none;
 }
+.rio-button:focus-visible {
+  outline: none;
+  border-color: var(--rio-accent);
+  box-shadow: var(--rio-shadow-xs),
+              0 0 0 3px rgb(var(--rio-accent-rgb) / 0.22);
+}
 .rio-button:active { transform: translateY(1px); }
 .rio-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Primary action — Stripe / Linear style: a subtle vertical
+ * gradient (≈ 8 % delta) for weight, an inset top highlight for
+ * the "lifted button" affordance, accent-coloured drop shadow.
+ * The gradient is invisible at a glance but the eye reads it as
+ * deliberate engineering. (Principle 11 — gravity, not flash.) */
 .rio-button--primary {
-  background: var(--rio-accent);
   color: #fff;
-  border-color: var(--rio-accent);
-  box-shadow: 0 1px 3px rgba(160, 52, 26, 0.25);
+  background-color: var(--rio-accent);
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--rio-accent) 92%, white) 0%,
+    var(--rio-accent) 100%
+  );
+  border-color: color-mix(in srgb, var(--rio-accent) 80%, black);
+  box-shadow: 0 1px 2px rgb(var(--rio-accent-rgb) / 0.30),
+              inset 0 1px 0 rgb(255 255 255 / 0.14);
 }
 .rio-button--primary:hover {
-  background: var(--rio-accent-hover);
+  background-image: linear-gradient(
+    to bottom,
+    var(--rio-accent) 0%,
+    var(--rio-accent-hover) 100%
+  );
   border-color: var(--rio-accent-hover);
   color: #fff;
+}
+.rio-button--primary:focus-visible {
+  border-color: color-mix(in srgb, var(--rio-accent) 80%, black);
+  box-shadow: 0 1px 2px rgb(var(--rio-accent-rgb) / 0.30),
+              inset 0 1px 0 rgb(255 255 255 / 0.14),
+              0 0 0 3px rgb(var(--rio-accent-rgb) / 0.30);
 }
 .rio-button--danger {
   background: var(--rio-danger);
