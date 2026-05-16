@@ -8,7 +8,10 @@
 
 .rio-sidebar {
   flex: 0 0 var(--rio-sidebar-w);
-  background: var(--rio-surface);
+  /* v0.15: chrome tier (Principle 10). Sidebar matches topbar
+   * so the operator skeleton reads as one continuous frame
+   * holding the content area. */
+  background: var(--rio-surface-chrome);
   border-right: 1px solid var(--rio-border);
   padding: var(--rio-s5) var(--rio-s3);
 }
@@ -21,10 +24,13 @@
   gap: 2px;
 }
 .rio-sidebar-section {
-  font-size: var(--rio-fs-xs);                 /* 13px */
-  font-weight: var(--rio-fw-bold);
+  /* 11px, semibold, tracked-allcaps — adds visual rhythm to a
+   * long nav. Matches the table-header convention so the same
+   * "uppercase label" pattern reads the same everywhere. */
+  font-size: 0.6875rem;                        /* 11px */
+  font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--rio-tracking-allcaps);
   color: var(--rio-text-subtle);
   margin: var(--rio-s5) 0 var(--rio-s2);
   padding: 0 var(--rio-s3);
@@ -43,12 +49,18 @@
   transition: background 0.12s, color 0.12s, box-shadow 0.12s;
 }
 .rio-sidebar-link:hover {
-  background: var(--rio-surface-3);
+  /* On the chrome surface, hover lifts to surface-2 (the table
+   * header tone) — visible but quieter than surface-3 which
+   * stayed the row-selection colour. */
+  background: var(--rio-surface-2);
   color: var(--rio-text-strong);
   text-decoration: none;
 }
 .rio-sidebar-link.is-active {
-  background: rgb(var(--rio-accent-rgb) / 0.10);
+  /* Active link: accent-tinted wash + an explicit 3px stripe.
+   * The stripe is the directional cue ("you are here ↓"); the
+   * wash gives the row weight against the new chrome surface. */
+  background: rgb(var(--rio-accent-rgb) / 0.12);
   color: var(--rio-accent);
   box-shadow: inset 3px 0 0 var(--rio-accent);
 }

@@ -18,5 +18,5 @@
   --rio-s7: 3rem;
 
   --rio-sidebar-w: 240px;
-  --rio-topbar-h: 64px;
+  --rio-topbar-h: 72px;            /* v0.15: was 64px — Principle 10 weight */
 }
