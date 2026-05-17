@@ -11,8 +11,18 @@
  * Print rules live in print/print.css.
  * ============================================================ */
 
-/* Tables overflow horizontally on narrow screens. */
-.rio-list, .rio-card { overflow-x: auto; }
+/* Tables overflow horizontally on narrow screens. The rule was
+ * previously applied unconditionally, which produced a horizontal
+ * scrollbar at the bottom of every list card on desktop even when
+ * the table fitted the content area (the always-on `overflow-x:
+ * auto` overrides `.rio-list { overflow: hidden }` from tables.css
+ * because this file loads last). Scoped to the mobile breakpoint
+ * where it is actually load-bearing — at ≥ 768 px the list card
+ * keeps its `overflow: hidden` and the table fits the content
+ * area without a vestigial scroll track. */
+@media (max-width: 767.98px) {
+  .rio-list, .rio-card { overflow-x: auto; }
+}
 
 /* Mobile: sidebar collapsed off-canvas behind a hamburger. The
  * `flex: 0 0 var(--rio-sidebar-w)` from layout/sidebar.css is
