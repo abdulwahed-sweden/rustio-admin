@@ -224,10 +224,38 @@
 
 .rio-list { padding: 0; overflow: hidden; }
 .rio-list .rio-table { margin: 0; }
+/* List-page cell padding is tighter than the base `.rio-table` value
+ * because list rows routinely carry 6–8 columns including monospace
+ * identifier fields (VIN, ISO timestamp, reference codes). The base
+ * 16px horizontal padding multiplied across the row pushed wide rows
+ * past the 1440px content area and clipped the trailing action cell;
+ * trimming to 12px buys back ~50px on a 7-column table while staying
+ * spacious by Bloomberg / Stripe / Linear standards. The first and
+ * last cells keep the larger gutter so the table edges still breathe
+ * against the surrounding card. Profile show-grid (`.rio-dl`) and the
+ * permissions matrix (their own component) inherit nothing from this
+ * scope. */
+.rio-list .rio-table th,
+.rio-list .rio-table td { padding-left: var(--rio-s3); padding-right: var(--rio-s3); }
 .rio-list .rio-table th:first-child,
-.rio-list .rio-table td:first-child { padding-left: var(--rio-s5); }
+.rio-list .rio-table td:first-child { padding-left: var(--rio-s4); }
 .rio-list .rio-table th:last-child,
-.rio-list .rio-table td:last-child { padding-right: var(--rio-s5); }
+.rio-list .rio-table td:last-child { padding-right: var(--rio-s4); }
+/* Action column packs Edit + Delete buttons; the two side-by-side
+ * ghost buttons used to push wide rows past the content area. The
+ * inter-button gap now sits at `--rio-s1` (4px) instead of the
+ * default `--rio-s2` (8px) — small, taut, and the icons keep their
+ * visual separation. */
+.rio-list .rio-table .rio-td--actions { white-space: nowrap; }
+.rio-list .rio-table .rio-td--actions .rio-button + .rio-button { margin-left: var(--rio-s1); }
+/* Allow multi-token list-page headers to wrap. The base `.rio-table th`
+ * rule applies `white-space: nowrap` so labels like
+ * `PERFORMED_BY_TECHNICIAN` set a hard column-width floor and push the
+ * row past the content area on 1440px viewports. Wrapping the header
+ * lets the column shrink to its data while keeping the label
+ * readable; the underscore offers a clean break point and the line-
+ * height stays comfortable thanks to the tracked-allcaps treatment. */
+.rio-list .rio-table th { white-space: normal; line-height: 1.25; }
 
 /* Definition lists for the user profile show-grid. */
 .rio-dl {
