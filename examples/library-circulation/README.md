@@ -230,6 +230,6 @@ examples/library-circulation/
 
 The framework's design contracts:
 
-- [`docs/DESIGN_DOCTRINE.md`](../../docs/DESIGN_DOCTRINE.md) — visual identity and token philosophy.
+- [`docs/design/DESIGN_DOCTRINE.md`](../../docs/design/DESIGN_DOCTRINE.md) — visual identity and token philosophy.
 - [`docs/design/`](../../docs/design/) — long-form design specs (audit, sessions, recovery, MFA, R2/R3/R4).
 - [`docs/public-api.md`](../../docs/public-api.md) — declared public API surface.

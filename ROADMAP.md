@@ -4,7 +4,7 @@ This document tracks the long-term direction of the RustIO ecosystem. It is writ
 
 The roadmap is **organised by topic, not by date.** RustIO does not promise calendar deadlines, and items are not labelled with version targets unless they are already in flight. Reorganisation is expected as the framework evolves.
 
-For the canonical record of what shipped in each release, read [`CHANGELOG.md`](./CHANGELOG.md). For the project's foundational design rules, read [`rustio-admin-strategic-reset-plan.md`](./rustio-admin-strategic-reset-plan.md).
+For the canonical record of what shipped in each release, read [`CHANGELOG.md`](./CHANGELOG.md). For the project's foundational design rules, read [`docs/archive/STRATEGIC_RESET_PLAN.md`](./docs/archive/STRATEGIC_RESET_PLAN.md).
 
 ---
 

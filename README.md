@@ -200,7 +200,7 @@ Where to start depends on the work.
 
 **Understanding scope and design history**
 → [`docs/architecture.md`](./docs/architecture.md)
-→ [`rustio-admin-strategic-reset-plan.md`](./docs/archive/rustio-admin-strategic-reset-plan.md)
+→ [`STRATEGIC_RESET_PLAN.md`](./docs/archive/STRATEGIC_RESET_PLAN.md)
 → [`CHANGELOG.md`](./CHANGELOG.md)
 
 

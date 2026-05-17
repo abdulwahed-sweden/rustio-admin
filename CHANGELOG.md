@@ -197,11 +197,11 @@ overrides keep working unchanged; values that landed close to the
 new defaults (e.g. obddesk's text overrides) become redundant.
 
 The full design rationale, principles, and landing plan live in
-[`docs/design/PLAN_VISUAL_v2.md`](docs/design/PLAN_VISUAL_v2.md).
+[`docs/archive/PLAN_VISUAL_v2.md`](docs/archive/PLAN_VISUAL_v2.md).
 
 ### Three new doctrine principles
 
-Added to [`docs/DESIGN_DOCTRINE.md`](docs/DESIGN_DOCTRINE.md) §6:
+Added to [`docs/design/DESIGN_DOCTRINE.md`](docs/design/DESIGN_DOCTRINE.md) §6:
 
 - **Principle 9 — Deeper surface ladder.** Adjacent surfaces are
   ≥ 4% apart so the eye never squints to tell canvas from card
@@ -394,9 +394,9 @@ documents under `docs/design/`.
 Companion documents:
 [`docs/design/DESIGN_BUILDER.md`](docs/design/DESIGN_BUILDER.md)
 (authoritative doctrine, 13 numbered invariants),
-[`docs/design/REVIEW_BUILDER_DOCTRINE.md`](docs/design/REVIEW_BUILDER_DOCTRINE.md)
+[`docs/archive/REVIEW_BUILDER_DOCTRINE.md`](docs/archive/REVIEW_BUILDER_DOCTRINE.md)
 (defensive review tracking resolved + residual findings),
-[`docs/design/VALIDATION_BUILDER_MVP.md`](docs/design/VALIDATION_BUILDER_MVP.md)
+[`docs/archive/VALIDATION_BUILDER_MVP.md`](docs/archive/VALIDATION_BUILDER_MVP.md)
 (end-to-end smoke + generated artefacts + reproduction commands).
 
 ### Builder MVP — new tooling layer
@@ -1291,8 +1291,8 @@ changes. No public-API signature changes.
   DESIGN_R2_ORGANISATIONAL.md §10.3`) remain grep-resolvable.
 
 - **`docs/archive/`** additions. The two superseded planning
-  documents (`rustio-admin-strategic-reset-plan.md`,
-  `rustio-admin-apis-and-docs-plan.md`) are archived alongside
+  documents (`STRATEGIC_RESET_PLAN.md`,
+  `APIS_AND_DOCS_PLAN.md`) are archived alongside
   `VISIBILITY_AUDIT.md`. Repo-root markdown is now exactly four
   files: `README.md`, `CHANGELOG.md`, `LICENSE`, `ROADMAP.md`.
 
@@ -2069,7 +2069,7 @@ session back to the R0 session model.
   `/admin/mfa/verify` (both methods) plus the three
   `/admin/account/mfa/*` route pairs.
 
-See [`DESIGN_R3_MFA.md`](./DESIGN_R3_MFA.md) for the state
+See [`DESIGN_R3_MFA.md`](./docs/design/DESIGN_R3_MFA.md) for the state
 machines, audit-metadata schemas, threat model, and locked
 decisions (TOTP step interval, skew tolerance, backup-code
 count and shape, Argon2id parameters, encryption algorithm).
@@ -2132,7 +2132,7 @@ table is unused.
 
 ### Documentation
 
-- [`DESIGN_R3_MFA.md`](./DESIGN_R3_MFA.md) added — the
+- [`DESIGN_R3_MFA.md`](./docs/design/DESIGN_R3_MFA.md) added — the
   canonical R3 contract under the doctrine-spec template.
   1300+ lines covering invariants, threat model, authority
   flows, guarantees, schema, audit emission, module layout,
@@ -2308,7 +2308,7 @@ re-auth wall on every destructive admin action.
   reset, lock, unlock, revoke-sessions, reauth,
   must-change-password.
 
-See [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+See [`DESIGN_R2_ORGANISATIONAL.md`](./docs/design/DESIGN_R2_ORGANISATIONAL.md)
 for the state machines, audit metadata schemas, and locked
 decisions.
 
@@ -2346,7 +2346,7 @@ year-9999 timestamp so the partial index continues to find them.
 
 ### Documentation
 
-- [`DESIGN_R2_ORGANISATIONAL.md`](./DESIGN_R2_ORGANISATIONAL.md)
+- [`DESIGN_R2_ORGANISATIONAL.md`](./docs/design/DESIGN_R2_ORGANISATIONAL.md)
   added — the canonical R2 contract.
 - README architecture-doctrine table updated with a row pointing
   to `DESIGN_R2_ORGANISATIONAL.md`.
@@ -2509,7 +2509,7 @@ Additive, idempotent:
 
 ### Documentation
 
-- [`DESIGN_RECOVERY.md`](./DESIGN_RECOVERY.md) added — the
+- [`DESIGN_RECOVERY.md`](./docs/design/DESIGN_RECOVERY.md) added — the
   canonical R1 contract.
 - README *Architecture doctrine* section listing the four
   contracts (`DESIGN_SYSTEM`, `DESIGN_SESSIONS`, `DESIGN_AUDIT`,
@@ -3055,7 +3055,7 @@ feature-complete.
 - **Tier 1, single-binary, Postgres-only.** Schema contracts,
   drift validation, AI planners, multi-database backends, and
   search backends are explicitly out of scope (see the
-  [strategic reset plan](./rustio-admin-strategic-reset-plan.md)
+  [strategic reset plan](./docs/archive/STRATEGIC_RESET_PLAN.md)
   §1, §3, §8).
 - **No Tailwind, no PostCSS, no build step.** The CI pipeline
   enforces the no-Tier-2-symbols invariant with a `git grep`

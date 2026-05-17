@@ -1,6 +1,6 @@
 # REVIEW_BUILDER_DOCTRINE.md — Critical review of DESIGN_BUILDER.md
 
-This document is a defensive review of [`DESIGN_BUILDER.md`](DESIGN_BUILDER.md).
+This document is a defensive review of [`DESIGN_BUILDER.md`](../design/DESIGN_BUILDER.md).
 It is written from the perspective of a reviewer who must defend the
 Builder's adoption inside regulated enterprise environments (bank,
 hospital, factory, payment processor), where a single doctrine gap

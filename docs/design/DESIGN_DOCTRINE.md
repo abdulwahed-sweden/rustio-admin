@@ -233,7 +233,7 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
 9. **Deeper surface ladder.** Adjacent surfaces sit ≥ 4 % apart so the
    eye never squints to tell canvas from card from table-header from
    row-hover. Added v0.15.0; details in
-   [`PLAN_VISUAL_v2.md`](design/PLAN_VISUAL_v2.md). The surface scale
+   [`PLAN_VISUAL_v2.md`](../archive/PLAN_VISUAL_v2.md). The surface scale
    carries six rungs (`--rio-bg` → `--rio-surface` → `--rio-surface-2` →
    `--rio-surface-3` → `--rio-surface-chrome` → `--rio-surface-elevated`).
 10. **Chrome carries weight.** Topbar, sidebar, and footer render on

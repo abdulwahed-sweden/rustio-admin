@@ -28,7 +28,7 @@ Pull request review runs against this document, not only the diff.
 | Framework dependency | Builder depends on Framework; Framework never depends on Builder |
 | Source of truth | This document |
 | Implementation status | Pre-MVP. Doctrine precedes implementation. |
-| Forward-looking vision | [`docs/ROADMAP_BUILDER.md`](../ROADMAP_BUILDER.md) |
+| Forward-looking vision | [`docs/archive/ROADMAP_BUILDER.md`](../archive/ROADMAP_BUILDER.md) |
 
 ---
 
@@ -944,7 +944,7 @@ git grep -nE 'src/app/' -- crates/rustio-admin-cli/src/
   responsibilities, not a frozen API. The CLI may rename, split, or
   merge verbs as long as every invariant in §2 continues to hold.
 - **Sequencing.** Version numbers, milestone ordering, and target
-  release dates live in `ROADMAP_BUILDER.md`. Doctrine outlives any
+  release dates live in `archive/ROADMAP_BUILDER.md`. Doctrine outlives any
   schedule.
 - **Runtime behaviour.** Nothing in this document changes how the
   framework binary serves requests, manages sessions, records audit
@@ -965,7 +965,7 @@ Builder at a contract level:
 | [`DESIGN_SESSIONS.md`](DESIGN_SESSIONS.md) | Doctrine 22 (single-writer for `revoked_at`) is the model for Doctrine B3 (single-writer for `history.jsonl`); Doctrine 22 itself is doctrine-bound in §8.2 (`single_writer_invalidation`) |
 | [`DESIGN_RECOVERY.md`](DESIGN_RECOVERY.md), [`DESIGN_R2_ORGANISATIONAL.md`](DESIGN_R2_ORGANISATIONAL.md), [`DESIGN_R3_MFA.md`](DESIGN_R3_MFA.md), [`DESIGN_R4_EMERGENCY.md`](DESIGN_R4_EMERGENCY.md) | The Builder may emit code that wires recovery / MFA / emergency flows; it cannot redefine their contracts |
 | [`DESIGN_EMAIL.md`](DESIGN_EMAIL.md) | `[features] email` toggles the Builder's wiring of the framework's email sender; the email contract itself is unaffected |
-| [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md), [`DESIGN_CHROME.md`](DESIGN_CHROME.md), [`DESIGN_DOCTRINE.md`](../DESIGN_DOCTRINE.md) | Theme tokens emitted by the Builder must respect token ownership rules; the Builder is one consumer of the design-system contract, not its author |
+| [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md), [`DESIGN_CHROME.md`](DESIGN_CHROME.md), [`DESIGN_DOCTRINE.md`](DESIGN_DOCTRINE.md) | Theme tokens emitted by the Builder must respect token ownership rules; the Builder is one consumer of the design-system contract, not its author |
 | `DESIGN_ADVICE.md` (future) | Specifies the Advisory AI's internal behaviour. This document specifies only its boundary |
 | `DESIGN_STUDIO.md` (future) | Specifies Studio's surface. This document specifies only its consumption rights |
 
@@ -985,7 +985,7 @@ same way framework runtime changes do.
 The doctrine is not closed. Significant gaps still exist —
 `main.rs` splice details, `rustio doctor builder` obligations, and
 the Advisory verdict-event field schema all remain undocumented. The
-companion review document [`REVIEW_BUILDER_DOCTRINE.md`](REVIEW_BUILDER_DOCTRINE.md)
+companion review document [`REVIEW_BUILDER_DOCTRINE.md`](../archive/REVIEW_BUILDER_DOCTRINE.md)
 tracks resolved and outstanding findings. Future doctrine revisions
 close those gaps; until they do, the doctrine is implementation-grade
 for the blockers listed in §2 but not yet complete for v1.0 freeze.
