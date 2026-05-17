@@ -38,7 +38,34 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-No changes yet.
+### Changed
+
+- **List-page tables no longer overflow horizontally on 1440 px viewports.**
+  Wide rows (≥ 6 columns with monospace identifier fields like VIN /
+  ISO timestamp / reference code) used to push the trailing `Delete`
+  action past the content area and force a horizontal scrollbar on
+  the list card. Three small CSS adjustments in
+  `components/tables.css`, scoped to `.rio-list .rio-table` so other
+  consumers (`.rio-dl` profile show-grid, permissions matrix) are
+  untouched: (1) middle-cell horizontal padding `var(--rio-s4)` →
+  `var(--rio-s3)`; (2) first/last gutter `var(--rio-s5)` →
+  `var(--rio-s4)`; (3) action-cell inter-button gap `var(--rio-s2)`
+  → `var(--rio-s1)`. List rows breathe a touch tighter — still
+  spacious by Bloomberg / Stripe / Linear standards.
+- **List-page headers render with real word boundaries.** The derive
+  macro now emits `AdminField.label` as the humanised label
+  (`"Performed by technician"`) instead of the raw snake-case
+  identifier (`"performed_by_technician"`). CSS uppercase + tracking
+  still applies — the header reads `PERFORMED BY TECHNICIAN` — but
+  the wrap behaviour and the column-width floor are governed by
+  individual words rather than one unbreakable underscore-joined
+  token, so headers can wrap on narrow rows. List-page header rule
+  in `components/tables.css` also gains `white-space: normal` to
+  let that wrap actually happen. Validation messages still use the
+  same humanised label.
+- **No public API change** — `AdminField.label` was already typed
+  `&'static str`. The literal emitted by the macro is now the
+  humanised form rather than the raw fname.
 
 
 ## [0.15.1] — 2026-05-16

@@ -94,10 +94,17 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             None => quote! { ::std::option::Option::None },
         };
 
+        // Humanised display label, computed once at expansion time:
+        // `performed_by_technician` → `"Performed by technician"`. The
+        // list page renders this through CSS uppercase+tracking as
+        // `PERFORMED BY TECHNICIAN` with real word boundaries, so the
+        // header can wrap on narrow rows instead of dictating a wide
+        // column floor. Also reused below for validation messages.
+        let humanised_label = humanise_field(&fname_str);
         field_metas.push(quote! {
             ::rustio_admin::admin::AdminField {
                 name: #fname_str,
-                label: #fname_str,
+                label: #humanised_label,
                 field_type: ::rustio_admin::admin::FieldType::#type_variant,
                 editable: #editable,
                 relation: #relation_tokens,
@@ -168,8 +175,8 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         // Precompute human-readable validation messages at expansion
         // time so the runtime error path doesn't repeat the same
         // `format!` work per request and so every model emits
-        // identically-styled copy.
-        let humanised_label = humanise_field(&fname_str);
+        // identically-styled copy. `humanised_label` was already
+        // computed above for `AdminField.label`.
         let required_msg = format!("{humanised_label} is required.");
         let number_msg = format!("{humanised_label} must be a number.");
         let date_invalid_msg = format!("{humanised_label} is not a valid date.");
