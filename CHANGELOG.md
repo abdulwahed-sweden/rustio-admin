@@ -38,6 +38,18 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Vestigial horizontal scroll track at the bottom of every list card on desktop.**
+  `layout/responsive.css` had `.rio-list, .rio-card { overflow-x: auto }`
+  applied unconditionally — the comment claimed it was for narrow
+  screens but the rule itself wasn't wrapped in a media query, and the
+  file loads last so it overrode `.rio-list { overflow: hidden }` from
+  `components/tables.css`. The rule rendered a scrollbar track at the
+  bottom of every list card regardless of whether the table actually
+  overflowed. Scoped to `@media (max-width: 767.98px)` so it applies
+  only at the mobile breakpoint where it is actually load-bearing.
+
 ### Changed
 
 - **List-page tables no longer overflow horizontally on 1440 px viewports.**

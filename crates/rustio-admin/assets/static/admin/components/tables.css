@@ -239,8 +239,14 @@
 .rio-list .rio-table td { padding-left: var(--rio-s3); padding-right: var(--rio-s3); }
 .rio-list .rio-table th:first-child,
 .rio-list .rio-table td:first-child { padding-left: var(--rio-s4); }
+/* Actions cell sits at the right edge with `width: 1%; white-space:
+ * nowrap`, so its content width is already minimal. Match the middle-
+ * cell gutter (`--rio-s3` = 12px) so the trailing button isn't bumped
+ * past the card width by a wider right gutter, which used to leave a
+ * residual ~4px overflow and surface a horizontal scrollbar on the
+ * list card even after every other cell was trimmed. */
 .rio-list .rio-table th:last-child,
-.rio-list .rio-table td:last-child { padding-right: var(--rio-s4); }
+.rio-list .rio-table td:last-child { padding-right: var(--rio-s3); }
 /* Action column packs Edit + Delete buttons; the two side-by-side
  * ghost buttons used to push wide rows past the content area. The
  * inter-button gap now sits at `--rio-s1` (4px) instead of the
