@@ -1,6 +1,6 @@
 # VALIDATION_BUILDER_MVP.md — Builder MVP implementation validation
 
-Companion to [`DESIGN_BUILDER.md`](DESIGN_BUILDER.md) and
+Companion to [`DESIGN_BUILDER.md`](../design/DESIGN_BUILDER.md) and
 [`REVIEW_BUILDER_DOCTRINE.md`](REVIEW_BUILDER_DOCTRINE.md). Records
 the exact manual verification performed against the MVP, the
 doctrine guarantees each step proves, and the residual risks left
@@ -18,7 +18,7 @@ is rewritten or retired.
 | Property | Value |
 |---|---|
 | Builder semver under test | `0.15.1` (`crates/rustio-admin-cli/Cargo.toml`) |
-| Doctrine revision validated | [`DESIGN_BUILDER.md`](DESIGN_BUILDER.md) at this commit |
+| Doctrine revision validated | [`DESIGN_BUILDER.md`](../design/DESIGN_BUILDER.md) at this commit |
 | Test count at validation | 390 passing, 0 failing (workspace) |
 | CI gate at validation | green — `1m31s`, all 11 steps incl. 5 grep proofs |
 | Manual smoke environment | macOS 21.6.0, Rust `1.93.0` local / `1.88` in CI |
@@ -564,7 +564,7 @@ fixings.
 
 ## 11. Verdict
 
-The Builder MVP delivers every guarantee its [`DESIGN_BUILDER.md`](DESIGN_BUILDER.md)
+The Builder MVP delivers every guarantee its [`DESIGN_BUILDER.md`](../design/DESIGN_BUILDER.md)
 doctrine binds (B1–B11 — with B7/B12/B13 N/A in this scope) and
 refuses cleanly every operation the doctrine forbids. 114 tests
 cover the doctrinal primitives. Five CI grep proofs lock the

@@ -1,6 +1,6 @@
 # Architecture
 
-Brief module map — read this before contributing or filing a structural bug. The full design rationale lives in [`rustio-admin-strategic-reset-plan.md`](../rustio-admin-strategic-reset-plan.md).
+Brief module map — read this before contributing or filing a structural bug. The full design rationale lives in [`STRATEGIC_RESET_PLAN.md`](./archive/STRATEGIC_RESET_PLAN.md).
 
 ## Workspace
 
@@ -135,7 +135,7 @@ Everything else (`ConcreteOps`, `AdminOps`, `ListOpts`, `BaseContext`, …) is `
 
 ## Hard architectural rules
 
-The full list lives in [§8 of the strategic reset plan](../rustio-admin-strategic-reset-plan.md#8-strict-architectural-rules). The CI pipeline enforces **rule #1** (no Tier 2 features) with a `git grep` guard on every PR:
+The full list lives in [§8 of the strategic reset plan](./archive/STRATEGIC_RESET_PLAN.md#8-strict-architectural-rules). The CI pipeline enforces **rule #1** (no Tier 2 features) with a `git grep` guard on every PR:
 
 ```yaml
 forbidden='HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel'

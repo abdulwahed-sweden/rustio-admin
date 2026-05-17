@@ -1,36 +1,96 @@
-# docs/
+# Documentation
 
-Index of human-readable documentation for rustio-admin.
+Every human-readable document for `rustio-admin` that does not live
+in the workspace `README.md`, `CLAUDE.md`, `CHANGELOG.md`, or
+`ROADMAP.md` at the repository root.
 
-## Doctrine
-
-- [DESIGN_DOCTRINE.md](DESIGN_DOCTRINE.md) — visual identity and token philosophy.
-- [RUSTIO_STRATEGY.md](RUSTIO_STRATEGY.md) — consolidation roadmap to 1.0.
+Three tiers — **guides** for hands-on use, **reference** for the
+public surface, and **design** for the doctrine that pull requests
+are reviewed against. Everything else lives in **archive**.
 
 ## Guides
 
-- [getting-started.md](getting-started.md) — first-project walkthrough.
-- [architecture.md](architecture.md) — framework architecture overview.
-- [modeladmin.md](modeladmin.md) — ModelAdmin authoring guide.
+User-facing entry points. Read these first.
+
+- [`getting-started.md`](getting-started.md) — from an empty
+  directory to a logged-in admin in under five minutes.
+- [`architecture.md`](architecture.md) — module map and how the
+  library, macros, and CLI crates compose.
+- [`modeladmin.md`](modeladmin.md) — authoring guide for
+  `ModelAdmin` (list pages, search, filters, ordering, bulk actions).
 
 ## Reference
 
-- [public-api.md](public-api.md) — enumerated public surface (generated; descriptive, not normative).
+- [`public-api.md`](public-api.md) — enumerated `pub` surface across
+  the workspace. Descriptive, not normative. Annotation does not
+  itself guarantee SemVer stability before 1.0.
 
-## Design specs
+## Design
 
-- [design/DESIGN_SYSTEM.md](design/DESIGN_SYSTEM.md) — overall system design.
-- [design/DESIGN_AUDIT.md](design/DESIGN_AUDIT.md) — audit architecture contract.
-- [design/DESIGN_SESSIONS.md](design/DESIGN_SESSIONS.md) — session lifecycle and invalidation.
-- [design/DESIGN_RECOVERY.md](design/DESIGN_RECOVERY.md) — R1 self-service password recovery.
-- [design/DESIGN_R2_ORGANISATIONAL.md](design/DESIGN_R2_ORGANISATIONAL.md) — R2 admin-driven recovery, lockout, re-auth, forced rotation.
-- [design/DESIGN_R3_MFA.md](design/DESIGN_R3_MFA.md) — R3 TOTP multi-factor authentication.
-- [design/DESIGN_R4_EMERGENCY.md](design/DESIGN_R4_EMERGENCY.md) — R4 CLI emergency-recovery primitives.
-- [design/DESIGN_CHROME.md](design/DESIGN_CHROME.md) — operational chrome conventions (footer, topbar, future bars).
-- [design/DESIGN_EMAIL.md](design/DESIGN_EMAIL.md) — framework-emitted email conventions (recovery, future MFA + security-alert surfaces).
+Doctrine for security-sensitive subsystems and the visual identity.
+Pull requests touching these areas are reviewed against the doctrine,
+not just the diff.
+
+### Visual identity
+
+- [`design/DESIGN_DOCTRINE.md`](design/DESIGN_DOCTRINE.md) — token
+  philosophy, surface ladder, typography conventions, and the eleven
+  numbered principles that govern every CSS change.
+- [`design/DESIGN_SYSTEM.md`](design/DESIGN_SYSTEM.md) — token
+  ownership, accent palette, authority vocabulary.
+- [`design/DESIGN_CHROME.md`](design/DESIGN_CHROME.md) — operational
+  chrome conventions (topbar, sidebar, footer, environment badge).
+
+### Authority and security
+
+- [`design/DESIGN_SESSIONS.md`](design/DESIGN_SESSIONS.md) — session
+  lifecycle and the single-writer invalidation contract (Doctrine 22).
+- [`design/DESIGN_AUDIT.md`](design/DESIGN_AUDIT.md) — audit-row
+  contract, correlation-ID threading, required middleware ordering.
+- [`design/DESIGN_RECOVERY.md`](design/DESIGN_RECOVERY.md) —
+  self-service password recovery (R1).
+- [`design/DESIGN_R2_ORGANISATIONAL.md`](design/DESIGN_R2_ORGANISATIONAL.md)
+  — admin-driven recovery, account lockout, re-auth wall, forced
+  rotation (R2).
+- [`design/DESIGN_R3_MFA.md`](design/DESIGN_R3_MFA.md) — TOTP
+  multi-factor authentication with single-use backup codes (R3).
+- [`design/DESIGN_R4_EMERGENCY.md`](design/DESIGN_R4_EMERGENCY.md)
+  — CLI emergency-recovery primitives (R4).
+
+### Framework conventions
+
+- [`design/DESIGN_EMAIL.md`](design/DESIGN_EMAIL.md) — every email
+  the framework dispatches on a project's behalf (recovery today,
+  MFA enrolment and security alerts tomorrow).
+- [`design/DESIGN_BUILDER.md`](design/DESIGN_BUILDER.md) — the
+  deterministic project compiler (`rustio new / add / commit`), its
+  thirteen numbered invariants, and the five CI-enforced grep proofs.
 
 ## Archive
 
-- [archive/VISIBILITY_AUDIT.md](archive/VISIBILITY_AUDIT.md) — 0.8.1 visibility recovery audit.
-- [archive/rustio-admin-strategic-reset-plan.md](archive/rustio-admin-strategic-reset-plan.md) — 2026-05-06 strategic reset record (shipped as v0.1.0).
-- [archive/rustio-admin-apis-and-docs-plan.md](archive/rustio-admin-apis-and-docs-plan.md) — pre-0.2 APIs / docs page design exercise; never shipped in this form.
+Historical artefacts kept for institutional memory. Not load-bearing;
+not linked from `CLAUDE.md`, the PR template, or source code.
+
+- [`archive/RUSTIO_STRATEGY.md`](archive/RUSTIO_STRATEGY.md) —
+  consolidation roadmap drafted pre-1.0; partially obsoleted by the
+  v0.13–v0.15 work.
+- [`archive/ROADMAP_BUILDER.md`](archive/ROADMAP_BUILDER.md) —
+  long-horizon Builder + Advisory AI vision. Explicitly *not yet*
+  doctrine; sibling to the workspace `ROADMAP.md`.
+- [`archive/PLAN_VISUAL_v2.md`](archive/PLAN_VISUAL_v2.md) — plan
+  for the v0.15.0 visual overhaul. The doctrine landed as Principles
+  9–11 in `design/DESIGN_DOCTRINE.md`.
+- [`archive/REVIEW_BUILDER_DOCTRINE.md`](archive/REVIEW_BUILDER_DOCTRINE.md)
+  — one-time critical review of `DESIGN_BUILDER.md` (38 findings).
+  Resolved findings tracked in the doctrine; outstanding ones
+  annotated in source comments.
+- [`archive/VALIDATION_BUILDER_MVP.md`](archive/VALIDATION_BUILDER_MVP.md)
+  — manual verification record for the Builder MVP (v0.14.0).
+- [`archive/VISIBILITY_AUDIT.md`](archive/VISIBILITY_AUDIT.md) —
+  0.8.0 framework-surface audit that drove the 0.8.1 visibility
+  recovery.
+- [`archive/STRATEGIC_RESET_PLAN.md`](archive/STRATEGIC_RESET_PLAN.md)
+  — the 2026-05-06 strategic reset record that shipped as v0.1.0.
+- [`archive/APIS_AND_DOCS_PLAN.md`](archive/APIS_AND_DOCS_PLAN.md)
+  — pre-0.2 APIs / docs page design exercise; never shipped in this
+  form.

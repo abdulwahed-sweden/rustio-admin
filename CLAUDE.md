@@ -71,7 +71,7 @@ The library layers cleanly — read in this order:
 
 - Templates live under `crates/rustio-admin/assets/templates/admin/`, baked at compile time. A disk-side `templates/admin/<page>.html` wins over the embedded copy if `RUSTIO_TEMPLATE_DIR` is set.
 - CSS lives under `crates/rustio-admin/assets/static/admin/`, organized as a Primer/Carbon-style multi-file architecture: `tokens/` → `themes/` → `base/` → `layout/` → `components/` → `pages/` → `print/`. The runtime concatenates fragments and serves one bundle at `/static/admin.css`. **The `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in lock-step** — order matters, and `responsive.css` is intentionally loaded last to override desktop layout.
-- The full token philosophy and dark-mode contract is `docs/DESIGN_DOCTRINE.md` (visual identity) and `docs/design/DESIGN_SYSTEM.md` (token ownership). Read both before changing CSS.
+- The full token philosophy and dark-mode contract is `docs/design/DESIGN_DOCTRINE.md` (visual identity) and `docs/design/DESIGN_SYSTEM.md` (token ownership). Read both before changing CSS.
 
 ## Hard rules this codebase refuses to break
 
@@ -92,9 +92,9 @@ The narrow surface is the point. If a feature feels like it wants schema-driven 
 ## Where to look first
 
 - Touching authority/sessions/recovery/MFA/emergency → read the matching `docs/design/DESIGN_*.md` *before* the code. Pull requests are reviewed against the doctrine, not only the diff.
-- Touching CSS, tokens, or templates → `docs/DESIGN_DOCTRINE.md` § 1 (tokens), § 7 (source layout), § 9 (adding a fragment). The PR template requires a token disclosure and a visual regression checklist (`.github/pull_request_template.md`).
+- Touching CSS, tokens, or templates → `docs/design/DESIGN_DOCTRINE.md` § 1 (tokens), § 7 (source layout), § 9 (adding a fragment). The PR template requires a token disclosure and a visual regression checklist (`.github/pull_request_template.md`).
 - Changing what's public → `docs/public-api.md` is generated/descriptive; the canonical `pub use` surface lives in `crates/rustio-admin/src/lib.rs`. Anything not re-exported there is `pub(crate)` or `pub` inside `admin::*` for testing only.
-- Understanding scope and history → `ROADMAP.md`, `CHANGELOG.md`, and `docs/archive/rustio-admin-strategic-reset-plan.md` § 8 (strict architectural rules).
+- Understanding scope and history → `ROADMAP.md`, `CHANGELOG.md`, and `docs/archive/STRATEGIC_RESET_PLAN.md` § 8 (strict architectural rules).
 - The canonical end-to-end consumer of the library lives at `examples/library-circulation/`.
 
 ## Workflow conventions
