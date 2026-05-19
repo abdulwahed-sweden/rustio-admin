@@ -190,6 +190,13 @@
     </div>
   </div>
   {% endif %}
+
+  {# CSV export — same filter/search/sort state as the list page,
+   # capped server-side at 10_000 rows. download attr nudges the
+   # browser to save rather than navigate. #}
+  <a class="rio-button" href="{{ csv_export_url }}" download>
+    {{ icon("download", class="rio-icon") }} CSV
+  </a>
 </div>
 
 {% if active_filter_pills %}

@@ -1445,6 +1445,23 @@ pub fn register_admin_routes(
         }
     });
 
+    // CSV export — must be registered before `/admin/:admin_name/:id/…`
+    // patterns so the literal `export.csv` second segment isn't
+    // shadowed by a numeric `:id` route. Same `view` permission gate
+    // as the list page; `find_project_entry` blocks core entries.
+    let c = ctx.clone();
+    let router = router.get("/admin/:admin_name/export.csv", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "view")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::export_model_csv(&c, ident, &name, req).await,
+            }
+        }
+    });
+
     // Create.
     let c = ctx.clone();
     let router = router.get("/admin/:admin_name/new", move |req| {
