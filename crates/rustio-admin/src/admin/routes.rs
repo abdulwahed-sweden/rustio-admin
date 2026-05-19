@@ -1234,6 +1234,31 @@ pub fn register_admin_routes(
         }
     });
 
+    // POST /admin/users/:id/sessions/:session_id/revoke — revoke
+    // ONE specific session (per-row affordance on the user_view
+    // sessions tab). Narrower than `revoke-sessions` above: no
+    // confirmation page, no reason field, no re-auth wall. Same
+    // Administrator role gate; the handler enforces cross-rank +
+    // session-ownership + same-actor-session refusal in-line.
+    let c = ctx.clone();
+    let router =
+        router.post("/admin/users/:id/sessions/:session_id/revoke", move |req| {
+            let c = c.clone();
+            async move {
+                match role_guard(&c, &req, Role::Administrator).await? {
+                    Guard::Redirect(r) => Ok(r),
+                    Guard::Allow(ident) => {
+                        let user_id = parse_id(req.param("id"))?;
+                        let session_id = parse_id(req.param("session_id"))?;
+                        super::admin_recovery_handlers::do_admin_revoke_one_session(
+                            &c, ident, user_id, session_id, req,
+                        )
+                        .await
+                    }
+                }
+            }
+        });
+
     // Read-only user profile view. MUST be registered AFTER
     // `/admin/users/new` and the `:id/edit` + `:id/delete` routes
     // above: the router matches in insertion order, and `:id` is a
@@ -1253,6 +1278,16 @@ pub fn register_admin_routes(
                     let q = req.query();
                     let tab = q.get("tab").map(|s| s.to_string());
                     let page: i64 = q.get("page").and_then(|s| s.parse().ok()).unwrap_or(1);
+                    let viewing_session_id = match req
+                        .header("cookie")
+                        .and_then(crate::auth::session_token_from_cookie)
+                    {
+                        Some(token) => crate::auth::current_session_id(&ac.db, &token)
+                            .await
+                            .ok()
+                            .flatten(),
+                        None => None,
+                    };
                     super::builtin::show_user_view(
                         &ac,
                         ident,
@@ -1260,6 +1295,7 @@ pub fn register_admin_routes(
                         handlers::csrf_token(&req),
                         tab,
                         page,
+                        viewing_session_id,
                     )
                     .await
                 }

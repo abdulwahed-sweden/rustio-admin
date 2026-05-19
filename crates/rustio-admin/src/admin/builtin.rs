@@ -464,6 +464,8 @@ struct PermissionItem {
 
 #[derive(Serialize)]
 struct SessionItem {
+    /// Stable BIGINT id, addressed by the per-session revoke URL.
+    session_id: i64,
     /// First 7 chars of the session token; the full token is never
     /// exposed in the rendered HTML.
     token_short: String,
@@ -471,12 +473,21 @@ struct SessionItem {
     last_seen_relative: String,
     ip: Option<String>,
     user_agent: Option<String>,
+    /// `true` when this row is the *viewing admin's* own session —
+    /// the template hides the per-session revoke button on that row.
+    /// (Admins should sign themselves out via the personal sessions
+    /// page so the cookie clears, not via this surface.)
+    is_current: bool,
 }
 
 const ACTIVITY_PER_PAGE: i64 = 50;
 const OVERVIEW_RECENT_LIMIT: i64 = 7;
 const LIST_PANE_LIMIT: i64 = 50;
 
+/// `viewing_session_id` is the *viewing admin's* own session id, if
+/// resolvable from the request cookie. Used to mark that row
+/// `is_current = true` so the sessions-tab template hides the
+/// per-session revoke button on it.
 pub(crate) async fn show_user_view(
     ctx: &AuthAdminCtx,
     identity: Identity,
@@ -484,6 +495,7 @@ pub(crate) async fn show_user_view(
     csrf: String,
     tab: Option<String>,
     page: i64,
+    viewing_session_id: Option<i64>,
 ) -> Result<Response> {
     let profile = auth::load_user_profile(&ctx.db, user_id)
         .await?
@@ -526,7 +538,7 @@ pub(crate) async fn show_user_view(
         Vec::new()
     };
     let sessions = if tab_str == "sessions" {
-        load_user_sessions(&ctx.db, user_id).await?
+        load_user_sessions(&ctx.db, user_id, viewing_session_id).await?
     } else {
         Vec::new()
     };
@@ -766,18 +778,28 @@ async fn load_user_permissions(db: &Db, user_id: i64) -> Result<Vec<PermissionIt
     Ok(out)
 }
 
-async fn load_user_sessions(db: &Db, user_id: i64) -> Result<Vec<SessionItem>> {
+async fn load_user_sessions(
+    db: &Db,
+    user_id: i64,
+    viewing_session_id: Option<i64>,
+) -> Result<Vec<SessionItem>> {
     type SessionRow = (
+        i64,
         String,
         chrono::DateTime<chrono::Utc>,
         chrono::DateTime<chrono::Utc>,
         Option<String>,
         Option<String>,
     );
+    // Active sessions only: `revoked_at IS NULL AND expires_at > NOW()`.
+    // A revoked or expired row can't be re-revoked through the UI; it
+    // would just confuse operators reviewing the active footprint.
     let rows: Vec<SessionRow> = sqlx::query_as(
-        "SELECT token, created_at, last_seen, ip, user_agent
+        "SELECT session_id, token, created_at, last_seen, ip, user_agent
          FROM rustio_sessions
          WHERE user_id = $1
+           AND revoked_at IS NULL
+           AND expires_at > NOW()
          ORDER BY created_at DESC",
     )
     .bind(user_id)
@@ -787,14 +809,16 @@ async fn load_user_sessions(db: &Db, user_id: i64) -> Result<Vec<SessionItem>> {
 
     Ok(rows
         .into_iter()
-        .map(|(token, created_at, last_seen, ip, user_agent)| {
+        .map(|(session_id, token, created_at, last_seen, ip, user_agent)| {
             let token_short: String = token.chars().take(7).collect();
             SessionItem {
+                session_id,
                 token_short,
                 created_at_iso: created_at.format("%Y-%m-%d %H:%M UTC").to_string(),
                 last_seen_relative: render::relative_time(last_seen),
                 ip,
                 user_agent,
+                is_current: viewing_session_id == Some(session_id),
             }
         })
         .collect())
