@@ -283,6 +283,28 @@ fn load_template(
     }))
 }
 
+// public:
+/// Every template baked into the framework binary, by canonical name
+/// (e.g. `"admin/list.html"`). Order is stable across builds so a
+/// CLI verb that lists them produces deterministic output. Used by
+/// `rustio override` to enumerate copy candidates; project code can
+/// also iterate this to build documentation pages.
+pub fn embedded_template_names() -> Vec<&'static str> {
+    EMBEDDED_TEMPLATES.iter().map(|(n, _)| *n).collect()
+}
+
+// public:
+/// Return the byte-for-byte source of an embedded template by name,
+/// or `None` when no such template exists. Used by `rustio override`
+/// to materialise a copy at `<RUSTIO_TEMPLATE_DIR>/<name>` so the
+/// operator can start editing without first having to find the
+/// framework source.
+pub fn embedded_template_source(name: &str) -> Option<&'static str> {
+    EMBEDDED_TEMPLATES
+        .iter()
+        .find_map(|(n, body)| if *n == name { Some(*body) } else { None })
+}
+
 /// Baked into the binary. Single-binary deploy is a hard constraint.
 const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
     // Shell + partials

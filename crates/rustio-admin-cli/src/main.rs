@@ -29,6 +29,7 @@ mod group;
 mod migrate;
 mod perm;
 mod scaffold;
+mod template_override;
 mod user;
 
 #[derive(Parser)]
@@ -85,6 +86,28 @@ enum Command {
     Doctor {
         #[command(subcommand)]
         action: Option<DoctorAction>,
+    },
+
+    /// Copy an embedded admin template into the project's
+    /// `templates/` directory so it can be edited. Pair with
+    /// `RUSTIO_TEMPLATE_DIR=./templates` at runtime to make the
+    /// override take effect. With no arguments, lists every
+    /// available template name.
+    #[command(name = "override")]
+    Override {
+        /// Canonical template name (e.g. `admin/list.html`). Omit
+        /// to list every available template.
+        name: Option<String>,
+        /// Overwrite an existing on-disk file with the framework
+        /// default. Off by default — the verb refuses to clobber so
+        /// in-progress edits stay safe.
+        #[arg(long)]
+        force: bool,
+        /// Destination root for the copy. Defaults to `./templates`
+        /// (matches the `RUSTIO_TEMPLATE_DIR=./templates` convention
+        /// from CLAUDE.md / `docs/architecture.md`).
+        #[arg(long, default_value = "templates")]
+        out: String,
     },
 
     // ----- Builder verbs (DESIGN_BUILDER.md). All run synchronously
@@ -185,6 +208,7 @@ fn main() -> ExitCode {
         Command::Add { action } => builder_add(action),
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
+        Command::Override { name, force, out } => template_override::run(name, force, &out),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
@@ -193,7 +217,8 @@ fn main() -> ExitCode {
                 | Command::New { .. }
                 | Command::Add { .. }
                 | Command::Plan
-                | Command::Commit { .. } => unreachable!("handled above"),
+                | Command::Commit { .. }
+                | Command::Override { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,

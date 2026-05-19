@@ -40,6 +40,28 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio override <template>` — copy an embedded admin template
+  to disk for editing.** Closes the roadmap entry "the operator
+  does this by hand today." The verb pairs with the existing
+  `RUSTIO_TEMPLATE_DIR=./templates` disk-loader path: running
+  `rustio override admin/list.html` drops the framework default at
+  `./templates/admin/list.html`, the operator edits it, and the
+  next run picks up the override. With no arguments the verb lists
+  every available template name (42 in this release). `--force`
+  overwrites an existing on-disk file; without it the verb refuses
+  to clobber so in-progress edits stay safe. `--out` overrides the
+  destination root (defaults to `./templates`).
+  - Two new public helpers in the library —
+    `embedded_template_names()` returning every canonical template
+    name in stable order, and `embedded_template_source(name)`
+    returning the byte-for-byte body. The CLI reads through these
+    so the embedded-templates list stays the single source of
+    truth across both crates.
+  - Four unit tests cover the unknown-template error path, the
+    path-traversal defense, the byte-for-byte copy, and the
+    refuse-to-clobber-without-force semantics; an end-to-end smoke
+    run against the built binary confirmed all three modes
+    (list / copy / refuse) work as advertised.
 - **List-view search-result highlighting.** When `?q=…` is in
   effect, every cell in a column the search clause actually scanned
   (`ModelAdmin::search_fields()`) gets its matched substring wrapped
