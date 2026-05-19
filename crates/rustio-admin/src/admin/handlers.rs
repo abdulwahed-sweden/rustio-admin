@@ -380,43 +380,77 @@ pub(crate) async fn list_model(
     let inferred = super::filters::infer_filters(entry.fields);
     let mut filter_groups: Vec<render::FilterGroupCtx> = Vec::new();
     let mut sql_filters: Vec<(String, String)> = Vec::new();
+    let mut sql_date_ranges: Vec<(String, Option<String>, Option<String>)> = Vec::new();
     for f in inferred {
-        let current = qs
-            .get(&f.field)
-            .map(str::to_string)
-            .filter(|s| !s.is_empty());
-        if let Some(ref val) = current {
-            sql_filters.push((f.field.clone(), val.clone()));
-        }
-        let options = match f.kind {
-            super::filters::FilterKind::BoolYesNo => vec![
-                render::FilterOptionCtx {
-                    value: "true".into(),
-                    label: "Yes".into(),
-                    selected: current.as_deref() == Some("true"),
-                    link: String::new(),
-                },
-                render::FilterOptionCtx {
-                    value: "false".into(),
-                    label: "No".into(),
-                    selected: current.as_deref() == Some("false"),
-                    link: String::new(),
-                },
-            ],
+        match f.kind {
+            super::filters::FilterKind::BoolYesNo => {
+                let current = qs
+                    .get(&f.field)
+                    .map(str::to_string)
+                    .filter(|s| !s.is_empty());
+                if let Some(ref val) = current {
+                    sql_filters.push((f.field.clone(), val.clone()));
+                }
+                let options = vec![
+                    render::FilterOptionCtx {
+                        value: "true".into(),
+                        label: "Yes".into(),
+                        selected: current.as_deref() == Some("true"),
+                        link: String::new(),
+                    },
+                    render::FilterOptionCtx {
+                        value: "false".into(),
+                        label: "No".into(),
+                        selected: current.as_deref() == Some("false"),
+                        link: String::new(),
+                    },
+                ];
+                filter_groups.push(render::FilterGroupCtx {
+                    field: f.field,
+                    label: f.label,
+                    kind: "chips",
+                    options,
+                    current,
+                    all_link: String::new(),
+                    date_from_name: String::new(),
+                    date_from_value: String::new(),
+                    date_to_name: String::new(),
+                    date_to_value: String::new(),
+                    hidden_pairs: Vec::new(),
+                    has_active_range: false,
+                });
+            }
+            super::filters::FilterKind::DateRange => {
+                // URL convention: `?<col>__gte=YYYY-MM-DD&<col>__lte=YYYY-MM-DD`.
+                // Both bounds optional. Anything that doesn't parse
+                // as a date is dropped silently — the input itself
+                // is a `<input type="date">`, so the only way to
+                // get garbage in is hand-edited URLs.
+                let gte_name = format!("{}__gte", f.field);
+                let lte_name = format!("{}__lte", f.field);
+                let gte = qs.get(&gte_name).and_then(parse_date_yyyy_mm_dd);
+                let lte = qs.get(&lte_name).and_then(parse_date_yyyy_mm_dd);
+                let has_active = gte.is_some() || lte.is_some();
+                if has_active {
+                    sql_date_ranges.push((f.field.clone(), gte.clone(), lte.clone()));
+                }
+                filter_groups.push(render::FilterGroupCtx {
+                    field: f.field.clone(),
+                    label: f.label,
+                    kind: "date_range",
+                    options: Vec::new(),
+                    current: None,
+                    all_link: String::new(),
+                    date_from_name: gte_name,
+                    date_from_value: gte.unwrap_or_default(),
+                    date_to_name: lte_name,
+                    date_to_value: lte.unwrap_or_default(),
+                    hidden_pairs: Vec::new(),
+                    has_active_range: has_active,
+                });
+            }
             // Other filter kinds need richer widgets — later phases.
-            _ => Vec::new(),
-        };
-        if !options.is_empty() {
-            // `all_link` and per-option `link` are populated downstream
-            // in `render::list_ctx` once the search query and active
-            // filter set are known.
-            filter_groups.push(render::FilterGroupCtx {
-                field: f.field,
-                label: f.label,
-                options,
-                current,
-                all_link: String::new(),
-            });
+            _ => {}
         }
     }
 
@@ -468,6 +502,7 @@ pub(crate) async fn list_model(
             super::types::ListOpts {
                 ordering: ordering.clone(),
                 filters: sql_filters.clone(),
+                date_ranges: sql_date_ranges.clone(),
                 search: search_opt.clone(),
                 limit: Some(per_page),
                 offset: Some(initial_offset),
@@ -487,6 +522,7 @@ pub(crate) async fn list_model(
                 super::types::ListOpts {
                     ordering: ordering.clone(),
                     filters: sql_filters,
+                    date_ranges: sql_date_ranges,
                     search: search_opt,
                     limit: Some(per_page),
                     offset: Some(clamped_offset),
@@ -516,6 +552,23 @@ pub(crate) async fn list_model(
     );
     let body = ctx.templates.render("admin/list.html", &list)?;
     Ok(Response::html(body))
+}
+
+/// Strict `YYYY-MM-DD` parse for the `DateRange` filter's URL
+/// parameters. Empty / whitespace / malformed input returns `None`
+/// so the filter falls back to "unbounded on this side" rather than
+/// throwing a 4xx — the `<input type="date">` widget itself prevents
+/// most bad input, and hand-edited URLs that don't parse simply lose
+/// the bound. Returns the canonical `YYYY-MM-DD` re-emission so
+/// Postgres' `::date` cast accepts it without ambiguity.
+fn parse_date_yyyy_mm_dd(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    chrono::NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
+        .ok()
+        .map(|d| d.format("%Y-%m-%d").to_string())
 }
 
 /// Parse `?sort=col&dir=desc` against the entry's static field set.
@@ -1512,6 +1565,52 @@ mod revoke_session_verdict_tests {
         assert!(
             msg.contains("Sign out everywhere"),
             "error must direct user to the right action: {msg}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod parse_date_yyyy_mm_dd_tests {
+    use super::parse_date_yyyy_mm_dd;
+
+    #[test]
+    fn accepts_canonical_form() {
+        assert_eq!(
+            parse_date_yyyy_mm_dd("2026-05-19"),
+            Some("2026-05-19".to_string()),
+        );
+    }
+
+    #[test]
+    fn trims_whitespace() {
+        assert_eq!(
+            parse_date_yyyy_mm_dd("  2026-01-01\t"),
+            Some("2026-01-01".to_string()),
+        );
+    }
+
+    #[test]
+    fn rejects_empty_and_garbage() {
+        assert_eq!(parse_date_yyyy_mm_dd(""), None);
+        assert_eq!(parse_date_yyyy_mm_dd("   "), None);
+        assert_eq!(parse_date_yyyy_mm_dd("not-a-date"), None);
+        // Wrong separator — the format spec is strict on hyphens.
+        assert_eq!(parse_date_yyyy_mm_dd("2026/05/19"), None);
+        // Impossible date — chrono rejects.
+        assert_eq!(parse_date_yyyy_mm_dd("2026-02-30"), None);
+        // No SQL-injection vector reaches the database — anything
+        // that's not a real date is None.
+        assert_eq!(parse_date_yyyy_mm_dd("2026-01-01' OR '1'='1"), None);
+    }
+
+    #[test]
+    fn normalises_unpadded_input_to_canonical_form() {
+        // chrono's `%Y-%m-%d` accepts unpadded month / day. We
+        // re-emit with `format("%Y-%m-%d")` so what gets bound to
+        // Postgres is always zero-padded.
+        assert_eq!(
+            parse_date_yyyy_mm_dd("2026-1-1"),
+            Some("2026-01-01".to_string()),
         );
     }
 }

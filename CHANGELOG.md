@@ -40,6 +40,27 @@ leaves the alpha track.
 
 ### Added
 
+- **`FilterKind::DateRange` is the first list-page widget to ship
+  beyond `BoolYesNo`.** Any `DateTime` / `Option<DateTime<Utc>>`
+  column on a registered model now surfaces a date-range filter
+  inside the Filters dropdown — two `<input type="date">` controls
+  and an Apply button. URL convention is Django-style:
+  `?<col>__gte=YYYY-MM-DD&<col>__lte=YYYY-MM-DD`. Either bound is
+  optional; an open-ended range applies only the side that's set.
+  `ListOpts` gains a `date_ranges:
+  Vec<(String, Option<String>, Option<String>)>` field
+  (column-name validated against `M::COLUMNS`); the runtime emits
+  `col::date >= $N::date` and / or `col::date <= $N::date` so both
+  `DATE` and `TIMESTAMP` columns compare cleanly. Hand-edited URL
+  values that don't parse as `YYYY-MM-DD` are silently dropped to
+  the unbounded side — Postgres never sees garbage. The active
+  range surfaces as one combined pill in the active-filter strip
+  (`Created: 2026-01-01 → 2026-05-19`, `Created: ≥ 2026-01-01`, or
+  `Created: ≤ 2026-05-19`) with one remove link that drops both
+  bounds. CSS for the in-dropdown form lives in
+  `components/dropdowns.css`; no new fragment, no `admin.css`
+  lock-step disturbance. Four parser tests pin the empty / trim /
+  garbage / unpadded paths.
 - **`ModelAdmin::fieldsets()` is honoured on the change form.**
   The trait method has shipped since 0.2 but `form_ctx` always ran
   the `Default` / `System` / `Advanced` name heuristic regardless
