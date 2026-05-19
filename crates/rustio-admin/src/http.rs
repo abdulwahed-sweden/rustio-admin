@@ -153,15 +153,31 @@ impl Request {
 // public:
 /// Parsed form body (application/x-www-form-urlencoded) or query string.
 /// Values are owned so handlers can move them into DB calls freely.
+///
+/// Duplicate keys (e.g. multi-checkbox forms posting `status=active`
+/// alongside `status=pending`) are preserved by [`get_all`] but
+/// collapsed to the last submitted value by [`get`] / [`as_map`] for
+/// backward compatibility with handlers that expect a single string
+/// per key.
 #[derive(Debug, Default, Clone)]
 pub struct FormData {
+    /// Single-value view: last write wins. Mirrors classic
+    /// `HashMap<String, String>` semantics so legacy handlers keep
+    /// working unchanged.
     fields: HashMap<String, String>,
+    /// Multi-value view: every submitted value for each key, in
+    /// submission order. Populated alongside `fields` by
+    /// [`from_urlencoded`]; consulted by [`get_all`]. Keys with a
+    /// single submission still get a one-element Vec here, so callers
+    /// can branch on `.len()` without consulting `fields`.
+    multi: HashMap<String, Vec<String>>,
 }
 
 impl FormData {
     // public:
     pub fn from_urlencoded(input: &str) -> Self {
         let mut fields = HashMap::new();
+        let mut multi: HashMap<String, Vec<String>> = HashMap::new();
         for pair in input.split('&') {
             if pair.is_empty() {
                 continue;
@@ -172,14 +188,23 @@ impl FormData {
             };
             let key = decode(raw_key);
             let val = decode(raw_val);
-            fields.insert(key, val);
+            fields.insert(key.clone(), val.clone());
+            multi.entry(key).or_default().push(val);
         }
-        Self { fields }
+        Self { fields, multi }
     }
 
     // public:
     pub fn get(&self, key: &str) -> Option<&str> {
         self.fields.get(key).map(|s| s.as_str())
+    }
+
+    /// All values submitted for `key`, in submission order. Returns
+    /// the empty slice when the key wasn't submitted at all. Used by
+    /// multi-select filters where the same field name appears once
+    /// per checked option (`?status=active&status=pending`).
+    pub fn get_all(&self, key: &str) -> &[String] {
+        self.multi.get(key).map(Vec::as_slice).unwrap_or(&[])
     }
 
     // public:
@@ -208,8 +233,13 @@ impl FormData {
     /// existing values for `readonly_fields` before passing the form
     /// to the model's `from_form` (the field is rendered `disabled` so
     /// the browser would otherwise omit it, breaking required parsing).
+    /// Resets the multi-value view to a single entry so `get_all`
+    /// stays consistent with `get`.
     pub fn set(&mut self, key: impl Into<String>, value: impl Into<String>) {
-        self.fields.insert(key.into(), value.into());
+        let key = key.into();
+        let value = value.into();
+        self.fields.insert(key.clone(), value.clone());
+        self.multi.insert(key, vec![value]);
     }
 }
 
@@ -303,5 +333,46 @@ pub(crate) fn response_from_error(err: &Error) -> Response {
         status,
         headers: vec![("content-type".into(), "text/plain; charset=utf-8".into())],
         body: Bytes::from(body),
+    }
+}
+
+#[cfg(test)]
+mod formdata_tests {
+    use super::FormData;
+
+    #[test]
+    fn duplicate_keys_collapse_for_get_but_preserved_in_get_all() {
+        let f = FormData::from_urlencoded("status=active&status=pending&status=resolved");
+        // `get` keeps the last write (mirrors classic HashMap insert
+        // semantics) — kept for back-compat with single-value callers.
+        assert_eq!(f.get("status"), Some("resolved"));
+        // `get_all` returns every submission in order — what
+        // multi-select filters parse from the URL.
+        assert_eq!(
+            f.get_all("status"),
+            &["active".to_string(), "pending".to_string(), "resolved".to_string()],
+        );
+    }
+
+    #[test]
+    fn get_all_returns_empty_slice_for_missing_key() {
+        let f = FormData::from_urlencoded("a=1");
+        assert!(f.get_all("not-a-key").is_empty());
+    }
+
+    #[test]
+    fn single_submission_is_visible_via_both_views() {
+        let f = FormData::from_urlencoded("a=1");
+        assert_eq!(f.get("a"), Some("1"));
+        assert_eq!(f.get_all("a"), &["1".to_string()]);
+    }
+
+    #[test]
+    fn set_resets_multi_view_to_single_entry() {
+        let mut f = FormData::from_urlencoded("status=active&status=pending");
+        f.set("status", "resolved");
+        // Both views agree after `set`.
+        assert_eq!(f.get("status"), Some("resolved"));
+        assert_eq!(f.get_all("status"), &["resolved".to_string()]);
     }
 }

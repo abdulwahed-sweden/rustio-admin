@@ -212,6 +212,15 @@ pub struct ListOpts {
     /// against `M::COLUMNS`; the date strings are passed through
     /// to Postgres which rejects malformed inputs.
     pub date_ranges: Vec<(String, Option<String>, Option<String>)>,
+    /// Multi-select filters surfaced from
+    /// [`super::filters::FilterKind::MultiSelect`]: each tuple is
+    /// `(column, values)` and renders as
+    /// `WHERE col::text IN ($N, $N+1, …)`. An empty `values` list is
+    /// silently skipped — "nothing selected" should not collapse the
+    /// query to an empty result. Column names are validated against
+    /// `M::COLUMNS`; the caller is responsible for restricting
+    /// values to the field's declared `choices`.
+    pub multi_filters: Vec<(String, Vec<String>)>,
     /// Free-text search: `(term, columns)`. The runtime emits
     /// `WHERE (col1::text ILIKE $N OR col2::text ILIKE $N OR …)`
     /// with `$N = '%term%'`. An empty `term` or empty `columns`

@@ -11,7 +11,7 @@
 
 #![allow(dead_code)]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use tokio::sync::OnceCell;
@@ -381,6 +381,7 @@ pub(crate) async fn list_model(
     let mut filter_groups: Vec<render::FilterGroupCtx> = Vec::new();
     let mut sql_filters: Vec<(String, String)> = Vec::new();
     let mut sql_date_ranges: Vec<(String, Option<String>, Option<String>)> = Vec::new();
+    let mut sql_multi_filters: Vec<(String, Vec<String>)> = Vec::new();
     for f in inferred {
         match f.kind {
             super::filters::FilterKind::BoolYesNo => {
@@ -418,6 +419,49 @@ pub(crate) async fn list_model(
                     date_to_value: String::new(),
                     hidden_pairs: Vec::new(),
                     has_active_range: false,
+                    multi_selected: Vec::new(),
+                });
+            }
+            super::filters::FilterKind::MultiSelect { values } => {
+                // URL convention: one repeated `?<col>=v` per
+                // checked option. Filter through the declared
+                // `values` slice so a hand-crafted URL can't smuggle
+                // a free-text comparison into the SQL — the runtime
+                // emits parameterised placeholders, but defense in
+                // depth keeps the value domain closed too.
+                let allowed: HashSet<&str> = values.iter().copied().collect();
+                let selected: Vec<String> = qs
+                    .get_all(&f.field)
+                    .iter()
+                    .filter(|s| !s.is_empty() && allowed.contains(s.as_str()))
+                    .cloned()
+                    .collect();
+                if !selected.is_empty() {
+                    sql_multi_filters.push((f.field.clone(), selected.clone()));
+                }
+                let options: Vec<render::FilterOptionCtx> = values
+                    .iter()
+                    .map(|v| render::FilterOptionCtx {
+                        value: (*v).to_string(),
+                        label: (*v).to_string(),
+                        selected: selected.iter().any(|s| s == v),
+                        link: String::new(),
+                    })
+                    .collect();
+                filter_groups.push(render::FilterGroupCtx {
+                    field: f.field.clone(),
+                    label: f.label,
+                    kind: "multi_select",
+                    options,
+                    current: None,
+                    all_link: String::new(),
+                    date_from_name: String::new(),
+                    date_from_value: String::new(),
+                    date_to_name: String::new(),
+                    date_to_value: String::new(),
+                    hidden_pairs: Vec::new(),
+                    has_active_range: false,
+                    multi_selected: selected,
                 });
             }
             super::filters::FilterKind::DateRange => {
@@ -447,6 +491,7 @@ pub(crate) async fn list_model(
                     date_to_value: lte.unwrap_or_default(),
                     hidden_pairs: Vec::new(),
                     has_active_range: has_active,
+                    multi_selected: Vec::new(),
                 });
             }
             // Other filter kinds need richer widgets — later phases.
@@ -503,6 +548,7 @@ pub(crate) async fn list_model(
                 ordering: ordering.clone(),
                 filters: sql_filters.clone(),
                 date_ranges: sql_date_ranges.clone(),
+                multi_filters: sql_multi_filters.clone(),
                 search: search_opt.clone(),
                 limit: Some(per_page),
                 offset: Some(initial_offset),
@@ -523,6 +569,7 @@ pub(crate) async fn list_model(
                     ordering: ordering.clone(),
                     filters: sql_filters,
                     date_ranges: sql_date_ranges,
+                    multi_filters: sql_multi_filters,
                     search: search_opt,
                     limit: Some(per_page),
                     offset: Some(clamped_offset),

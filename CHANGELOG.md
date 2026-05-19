@@ -40,6 +40,27 @@ leaves the alpha track.
 
 ### Added
 
+- **`FilterKind::MultiSelect` — the third list-page filter widget.**
+  Any `AdminField` that declares a non-empty `choices: &'static [&'static str]`
+  slice now surfaces a checkbox list inside the Filters dropdown
+  (`choices` was previously consulted only by the form view's
+  `<select>`). URL convention is the natural HTML one — one repeated
+  `?<col>=v` per checked option (`?status=active&status=pending`).
+  `ListOpts` gains a `multi_filters: Vec<(String, Vec<String>)>`
+  field; the runtime emits `WHERE col::text IN ($a, $b, …)` with one
+  bound parameter per value. Hand-edited URL values that aren't in
+  the field's declared `choices` are silently dropped — defense in
+  depth on top of the column-name validation that every filter
+  already does against `M::COLUMNS`. The combined active-filter
+  pill reads `"State: active, pending"` with one remove link that
+  drops every selection at once.
+- **`FormData` learns multi-value semantics via `get_all`.** Forms
+  and query strings with duplicate keys (`?status=active&status=pending`)
+  now keep every submission in order via `FormData::get_all(key) -> &[String]`,
+  while the existing `get` keeps last-write-wins semantics so legacy
+  single-value callers stay correct unchanged. `set` resets the
+  multi-value view in lock-step so the two views never disagree.
+  Four parser tests cover the new behaviour.
 - **`FilterKind::DateRange` is the first list-page widget to ship
   beyond `BoolYesNo`.** Any `DateTime` / `Option<DateTime<Utc>>`
   column on a registered model now surfaces a date-range filter
