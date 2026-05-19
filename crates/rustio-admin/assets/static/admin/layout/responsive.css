@@ -32,7 +32,12 @@
   display: none;
   flex: 0 0 auto;
   position: fixed;
-  inset: var(--rio-topbar-h) 0 0 0;
+  /* Logical inset so the drawer slides in from the start edge —
+   * left in LTR, right in RTL — instead of always anchoring to
+   * physical left. The block edges stay direction-neutral. */
+  top: var(--rio-topbar-h);
+  inset-inline-start: 0;
+  bottom: 0;
   z-index: 20;
   width: 80vw;
   max-width: 320px;

@@ -66,11 +66,20 @@ leaves the alpha track.
     pixels) couldn't catch regressions here — but the CSS reads
     identically when `dir=ltr` is in effect. The cascade-lockstep
     test passed unchanged; no `@import` order edits were needed.
-  - **What's still pending for full RTL.** Sidebar position and
-    icon directionality are not yet flipped via `[dir="rtl"]`
-    overrides — that's the next thread in this neighbourhood
-    (the chrome mirror is a separate change because the sidebar
-    sits in a `flex` row that doesn't auto-flip on direction).
+  - **Direction-aware positioning.** Followed up the bulk
+    margin/padding migration with five `position: absolute` /
+    `position: fixed` sites that hard-coded `left:` or `right:`
+    — search-icon glyph anchor inside the search input, dropdown
+    panel anchored to its toggle's end-side edge,
+    FK-autocomplete results panel, mobile sidebar drawer
+    position, and the login-aside bullet. All five now use
+    `inset-inline-start` / `inset-inline-end` so they flip on
+    `dir=rtl` without per-direction overrides.
+  - **Still pending for full RTL chrome.** The desktop sidebar
+    sits in a flex row that auto-flips, but icon directionality
+    (chevrons, back-arrows) and the topbar brand mark are not
+    yet mirrored. That's the next thread; this commit unlocks
+    every data-area layout to flip on its own.
 
 ### Added
 

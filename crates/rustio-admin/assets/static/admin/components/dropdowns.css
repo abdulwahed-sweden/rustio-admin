@@ -58,13 +58,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Floating panel — anchored to the toggle's right edge so it doesn't
- * push past the viewport on a wide toolbar. JS toggles `.is-open`. */
+/* Floating panel — anchored to the toggle's end-side edge so it
+ * doesn't push past the viewport on a wide toolbar. Under RTL the
+ * panel anchors to the left edge of the toggle (which is the
+ * inline-end in that direction), preserving the same "stays inside
+ * the toolbar" behaviour. JS toggles `.is-open`. */
 .rio-dropdown-panel {
   display: none;
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
+  inset-inline-end: 0;
   min-width: 320px;
   max-width: min(420px, calc(100vw - var(--rio-s5)));
   background: var(--rio-surface);
@@ -261,8 +264,8 @@
 .rio-fk-autocomplete-results {
   position: absolute;
   top: calc(100% + 0.2rem);
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   list-style: none;
   margin: 0;
   padding: 0.2rem;
