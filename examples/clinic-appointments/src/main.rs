@@ -142,10 +142,21 @@ async fn main() -> Result<()> {
     //    matches the `.env.example` developer contract.
     let app_name = std::env::var("APP_NAME").unwrap_or_else(|_| "Clinic Appointments".into());
     let support_email = std::env::var("SUPPORT_EMAIL").ok();
+    // `READ_ONLY=1` flips the whole admin into view-only mode. Useful
+    // when the example boots for a demo and you want browsers to
+    // poke at the UI without risking destructive clicks. Auth-flow
+    // POSTs still work (login / logout / password recovery / own
+    // sessions); project-data mutations get a 403 with a styled
+    // error page.
+    let read_only = matches!(
+        std::env::var("READ_ONLY").as_deref(),
+        Ok("1") | Ok("true") | Ok("yes")
+    );
     let mut admin_builder = Admin::new()
         .app_name(app_name)
         .app_tagline("Operational clinic management")
         .public_url("http://127.0.0.1:3000")
+        .read_only(read_only)
         .mailer(mailer);
     if let Some(s) = support_email {
         admin_builder = admin_builder.support_email(s);
