@@ -775,6 +775,12 @@ pub(crate) struct FilterGroupCtx {
     /// drives the "Clear" affordance.
     #[serde(default)]
     pub has_active_range: bool,
+    /// `multi_select` only: the currently-checked values, in their
+    /// declared order. Used both to render the active-filter pill
+    /// (`"active, pending"`) and to round-trip the same selections
+    /// as hidden inputs in every neighbouring widget's URL.
+    #[serde(default)]
+    pub multi_selected: Vec<String>,
 }
 
 fn default_filter_kind() -> &'static str {
@@ -1013,6 +1019,13 @@ pub(crate) fn list_ctx(
             if !g.date_to_value.is_empty() {
                 pairs.push((g.date_to_name.clone(), g.date_to_value.clone()));
             }
+            // Multi-select round-trips one repeated pair per checked
+            // value — `?status=active&status=pending`. Order matches
+            // the field's declared `choices` so the rendered URL is
+            // stable across reloads.
+            for v in &g.multi_selected {
+                pairs.push((g.field.clone(), v.clone()));
+            }
             pairs
         })
         .collect();
@@ -1030,10 +1043,11 @@ pub(crate) fn list_ctx(
             .iter()
             .filter(|(field, _)| {
                 // A chip group owns one key (`field`); a date-range
-                // group owns two (`field__gte`, `field__lte`). The
-                // "other" list excludes whichever keys this group
-                // controls so its own URLs replace rather than
-                // duplicate.
+                // group owns two (`field__gte`, `field__lte`); a
+                // multi-select group owns its field name (with
+                // repeated entries). The "other" list excludes
+                // whichever keys this group controls so its own
+                // URLs replace rather than duplicate.
                 if group.kind == "date_range" {
                     field != &group.date_from_name && field != &group.date_to_name
                 } else {
@@ -1050,23 +1064,29 @@ pub(crate) fn list_ctx(
             1,
             per_page_override,
         );
-        // Chip options: each chip composes a URL with this group's
-        // value replaced.
-        for opt in &mut group.options {
-            let mut combined = other.clone();
-            combined.push((group.field.clone(), opt.value.clone()));
-            opt.link = build_list_url(
-                entry.admin_name,
-                &search_query,
-                &combined,
-                active_sort_ref,
-                1,
-                per_page_override,
-            );
+        // Chip options (BoolYesNo): each chip composes a URL with
+        // this group's value replaced. Multi-select uses the same
+        // `options` slot, but the form handles state preservation
+        // via hidden inputs + checkboxes, so per-option links here
+        // would be misleading — leave them empty.
+        if group.kind == "chips" {
+            for opt in &mut group.options {
+                let mut combined = other.clone();
+                combined.push((group.field.clone(), opt.value.clone()));
+                opt.link = build_list_url(
+                    entry.admin_name,
+                    &search_query,
+                    &combined,
+                    active_sort_ref,
+                    1,
+                    per_page_override,
+                );
+            }
         }
-        // Date-range form: carry every other pair as hidden inputs;
-        // the form's own `__gte`/`__lte` inputs supply the new bounds.
-        if group.kind == "date_range" {
+        // Both date-range and multi-select forms carry every other
+        // pair as hidden inputs so submitting the form preserves
+        // unrelated filters / sort / per_page.
+        if group.kind == "date_range" || group.kind == "multi_select" {
             group.hidden_pairs = other;
         }
     }
@@ -1088,6 +1108,32 @@ pub(crate) fn list_ctx(
     let active_filter_pills: Vec<ActiveFilterPillCtx> = filters
         .iter()
         .filter_map(|g| {
+            if g.kind == "multi_select" {
+                if g.multi_selected.is_empty() {
+                    return None;
+                }
+                // One combined pill listing every checked value. The
+                // remove link drops every pair under this field name
+                // — search query, sort, every other filter survives.
+                let value_label = g.multi_selected.join(", ");
+                let other: Vec<(String, String)> = active_filter_pairs
+                    .iter()
+                    .filter(|(field, _)| field != &g.field)
+                    .cloned()
+                    .collect();
+                return Some(ActiveFilterPillCtx {
+                    label: g.label.clone(),
+                    value_label,
+                    remove_link: build_list_url(
+                        entry.admin_name,
+                        &search_query,
+                        &other,
+                        active_sort_ref,
+                        1,
+                        per_page_override,
+                    ),
+                });
+            }
             if g.kind == "date_range" {
                 if !g.has_active_range {
                     return None;
@@ -1353,7 +1399,9 @@ pub(crate) fn list_ctx(
         search_query,
         active_filter_count: filters
             .iter()
-            .filter(|g| g.current.is_some() || g.has_active_range)
+            .filter(|g| {
+                g.current.is_some() || g.has_active_range || !g.multi_selected.is_empty()
+            })
             .count(),
         active_filter_pairs,
         active_filter_pills,

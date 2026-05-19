@@ -88,6 +88,25 @@ where
                 }
             }
 
+            // Multi-select filters. Emit `col::text IN ($a, $b, …)`
+            // — one OR-joined predicate per filter, with each value
+            // bound as its own placeholder so Postgres does the
+            // string-comparison work. Empty value lists skip; the
+            // handler validates against the field's declared
+            // `choices` before binding.
+            for (col, values) in &opts.multi_filters {
+                if !valid.contains(col.as_str()) || values.is_empty() {
+                    continue;
+                }
+                let mut slots: Vec<String> = Vec::with_capacity(values.len());
+                for v in values {
+                    slots.push(format!("${placeholder}"));
+                    where_bindings.push(v.clone());
+                    placeholder += 1;
+                }
+                where_clauses.push(format!("{col}::text IN ({})", slots.join(", ")));
+            }
+
             if let Some((term, cols)) = &opts.search {
                 let term = term.trim();
                 if !term.is_empty() {

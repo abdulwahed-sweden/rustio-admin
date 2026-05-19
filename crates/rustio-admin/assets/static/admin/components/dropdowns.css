@@ -204,3 +204,38 @@
   padding-top: var(--rio-s1);
 }
 .rio-date-range-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
+
+/* Multi-select filter form. Lives inside `.rio-dropdown-section` for
+ * any FilterKind::MultiSelect field — a vertical checkbox list and a
+ * small button row. Each row hugs the label so the click target
+ * extends across the whole option. */
+.rio-multi-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+}
+.rio-multi-select-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.rio-multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--rio-radius-sm);
+  font-size: var(--rio-fs-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.rio-multi-select-option:hover { background: var(--rio-surface-3); }
+.rio-multi-select-actions {
+  display: flex;
+  gap: var(--rio-s2);
+  padding-top: var(--rio-s1);
+}
+.rio-multi-select-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }

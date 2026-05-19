@@ -100,6 +100,10 @@ pub enum FilterKind {
     NumericExact,
     /// Single-line input, compared exactly.
     ExactMatch,
+    /// Checkbox list joined with SQL `IN (...)`. The values come from
+    /// the field's `choices` slice; the URL carries one repeated
+    /// `?<col>=v1&<col>=v2` segment per checked option.
+    MultiSelect { values: &'static [&'static str] },
     /// `<select>` populated by the admin runtime from rows of the
     /// target model.
     RelationSelect { target_model: String },
@@ -271,6 +275,23 @@ where
         if f.name == "id" {
             continue;
         }
+        // Any field that declares a closed `choices` slice gets a
+        // multi-select filter, regardless of role — the list of
+        // possible values is already known statically, so the
+        // dropdown can render checkboxes without an extra DB query.
+        // This catches status enums declared via `#[rustio(choices)]`
+        // (when the macro learns the attribute) and any field a
+        // project hand-sets `choices` on today.
+        if let Some(values) = f.choices {
+            if !values.is_empty() {
+                out.push(FilterDef {
+                    field: f.name.to_string(),
+                    label: humanise(f.name),
+                    kind: FilterKind::MultiSelect { values },
+                });
+                continue;
+            }
+        }
         let role = classify_field(f);
         let kind = match role {
             FieldRole::Status => FilterKind::DropdownText,
@@ -410,6 +431,36 @@ mod tests {
         assert!(matches!(filters[0].kind, FilterKind::DropdownText));
         assert!(matches!(filters[1].kind, FilterKind::BoolYesNo));
         assert!(matches!(filters[2].kind, FilterKind::DateRange));
+    }
+
+    #[test]
+    fn declared_choices_promote_field_to_multi_select() {
+        // A field that carries a `choices` slice gets a multi-select
+        // filter regardless of its inferred role — `choices` is the
+        // strongest signal because it gives us a closed value set
+        // without an extra distinct-query.
+        const STATES: &[&str] = &["draft", "published", "archived"];
+        let mut f = field("state", FieldType::String);
+        f.choices = Some(STATES);
+        let filters = infer_filters(&[f]);
+        assert_eq!(filters.len(), 1);
+        match &filters[0].kind {
+            FilterKind::MultiSelect { values } => {
+                assert_eq!(*values, STATES);
+            }
+            other => panic!("expected MultiSelect, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn empty_choices_slice_falls_back_to_role_based_kind() {
+        // A `choices` of `&[]` shouldn't render an empty multi-select
+        // dropdown — fall back to whatever the role would pick.
+        let mut f = field("status", FieldType::String);
+        f.choices = Some(&[]);
+        let filters = infer_filters(&[f]);
+        assert_eq!(filters.len(), 1);
+        assert!(matches!(filters[0].kind, FilterKind::DropdownText));
     }
 
     #[test]
