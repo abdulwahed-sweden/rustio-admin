@@ -102,7 +102,7 @@
   <h2>Sessions</h2>
   {% if sessions %}
   <table class="rio-table">
-    <thead><tr><th>Token</th><th>Created</th><th>Last seen</th><th>IP</th><th>User agent</th></tr></thead>
+    <thead><tr><th>Token</th><th>Created</th><th>Last seen</th><th>IP</th><th>User agent</th><th class="rio-table__action-col"></th></tr></thead>
     <tbody>
       {% for s in sessions %}
       <tr>
@@ -111,6 +111,18 @@
         <td>{{ s.last_seen_relative }}</td>
         <td>{{ s.ip|default("—") }}</td>
         <td>{{ s.user_agent|default("—") }}</td>
+        <td class="rio-table__action-cell">
+          {% if s.is_current %}
+            <span class="rio-meta">Your session</span>
+          {% else %}
+            <form method="post"
+                  action="/admin/users/{{ user.id }}/sessions/{{ s.session_id }}/revoke"
+                  class="rio-form-inline">
+              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+              <button type="submit" class="rio-button rio-button--ghost rio-button--sm">Revoke</button>
+            </form>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>

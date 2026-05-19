@@ -40,6 +40,26 @@ leaves the alpha track.
 
 ### Added
 
+- **Per-session revoke affordance on the user-profile sessions
+  tab.** The roadmap entry "the `user_view.html` page already lists
+  active sessions; add a 'revoke this session' affordance" is now
+  closed. Each row in the Sessions tab gets a per-row `Revoke`
+  button that posts to `/admin/users/:id/sessions/:session_id/revoke`
+  (Administrator role-gated), narrower than the existing bulk
+  `revoke-sessions` admin action — no reason field, no re-auth wall,
+  no confirmation step. The handler enforces three orthogonal
+  guards: cross-rank (actor's role must dominate target's), session
+  ownership (the row must belong to the named user and be active),
+  and same-actor-session refusal (defense in depth — the template
+  hides the button on the actor's own row, but URL-crafting around
+  it still fails with a 400). Audit emits one
+  `SessionsRevokedByOther` per revoked session, carrying actor /
+  target / correlation_id / IP just like the bulk surface.
+  `load_user_sessions` now filters active rows only
+  (`revoked_at IS NULL AND expires_at > NOW()`) since a revoked
+  row can't be re-revoked through the UI, and threads the viewing
+  admin's session id down so the template knows which row to mark
+  `is_current`.
 - **Audit on authentication events.** Two new `AuditEvent`
   variants — `LoginSucceeded` and `LoginFailed` — close a real
   gap in the security trail: `do_login` previously emitted an

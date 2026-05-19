@@ -1244,6 +1244,126 @@ pub(crate) async fn do_admin_revoke_sessions(
     do_confirm_action(ctx, actor_identity, target_user_id, req, ActionKind::Revoke).await
 }
 
+/// `POST /admin/users/:target_user_id/sessions/:session_id/revoke` —
+/// revoke ONE specific active session of `target_user_id`. Backs
+/// the per-row "Revoke" button on the user_view sessions tab.
+///
+/// Distinguished from [`do_admin_revoke_sessions`] (the bulk
+/// counterpart, which sits behind the user-view "Revoke all
+/// sessions" admin action): no reason field, no re-auth wall, no
+/// confirmation step. The narrower scope of "revoke one suspect
+/// device" doesn't justify the friction of the bulk surface, and
+/// admins already have the bulk button next to it for the heavier
+/// case.
+///
+/// Order of checks:
+/// 1. Target user exists (404 if not).
+/// 2. Cross-rank: actor's role must dominate target's (same guard
+///    every admin-user action shares).
+/// 3. Session ownership: the session row exists, is active
+///    (`revoked_at IS NULL AND expires_at > NOW()`), and belongs to
+///    `target_user_id`. Mismatch / gone → 404.
+/// 4. Defense-in-depth: refuse if the session is the actor's
+///    *own* current session. The user_view template hides the
+///    button on that row; this is the security boundary.
+/// 5. Invalidate via the centralized API; emit one
+///    `SessionsRevokedByOther` audit row carrying the actor /
+///    target / correlation_id metadata.
+/// 6. Redirect back to the sessions tab.
+pub(crate) async fn do_admin_revoke_one_session(
+    ctx: &AdminCtx,
+    actor_identity: Identity,
+    target_user_id: i64,
+    session_id: i64,
+    req: Request,
+) -> Result<Response> {
+    let (target_email, _is_active, target_role) = match load_target(&ctx.db, target_user_id).await?
+    {
+        Some(t) => t,
+        None => return Err(Error::NotFound(format!("user #{target_user_id}"))),
+    };
+    enforce_cross_rank_safe(&actor_identity, target_user_id, target_role)?;
+
+    // Ownership + liveness check in a single query. A mismatched
+    // user_id, a revoked row, or an expired row all collapse to the
+    // same uniform 404 — no information leak about whether the
+    // session existed at all.
+    let owner: Option<i64> = sqlx::query_scalar(
+        "SELECT user_id FROM rustio_sessions
+         WHERE session_id = $1 AND revoked_at IS NULL AND expires_at > NOW()",
+    )
+    .bind(session_id)
+    .fetch_optional(ctx.db.pool())
+    .await
+    .map_err(|e| Error::Internal(format!("session ownership lookup: {e}")))?;
+    match owner {
+        Some(uid) if uid == target_user_id => {}
+        _ => {
+            return Err(Error::NotFound(format!(
+                "session #{session_id} for user #{target_user_id}"
+            )))
+        }
+    }
+
+    // The viewing admin's own session is excluded from this surface
+    // — the template hides the button on that row, and this check
+    // prevents URL-crafting around the template. Admins sign
+    // themselves out via `/admin/account/sessions`.
+    if let Some(actor_session_id) = current_session_id_for(ctx, &req).await? {
+        if actor_session_id == session_id {
+            return Err(Error::BadRequest(
+                "You can't revoke your own session from another user's profile. \
+                 Use Account → Sessions to manage your own devices."
+                    .into(),
+            ));
+        }
+    }
+
+    let outcome = auth::invalidate_sessions(
+        &ctx.db,
+        auth::SessionTarget::Single { session_id },
+        auth::SessionInvalidationReason::AdministrativeRevoke,
+    )
+    .await?;
+
+    let ip = client_ip(&req);
+    let cid = correlation_id_from(&req);
+    for revoked_id in &outcome.revoked_session_ids {
+        let metadata = serde_json::json!({
+            "session_id": revoked_id,
+            "reason": "administrative_revoke",
+            "via": "user_view_per_session",
+            "target_user_email": target_email,
+        });
+        let mut entry = audit::LogEntry::new(
+            target_user_id,
+            audit::ActionType::Update,
+            "user",
+            target_user_id,
+        )
+        .with_event(audit::AuditEvent::SessionsRevokedByOther);
+        entry.actor_user_id = Some(actor_identity.user_id);
+        entry.correlation_id = cid.as_deref();
+        entry.ip_address = ip.as_deref();
+        entry.metadata = Some(metadata);
+        entry.summary = format!(
+            "session {revoked_id} revoked by {} for {target_email}",
+            actor_identity.email,
+        );
+        if let Err(e) = audit::record(&ctx.db, entry).await {
+            log::error!(
+                target: "rustio_admin::sessions::admin_revoke_one",
+                "audit::record failed for session_id={} target_user_id={}: {}",
+                revoked_id, target_user_id, e,
+            );
+        }
+    }
+
+    Ok(Response::redirect(format!(
+        "/admin/users/{target_user_id}?tab=sessions"
+    )))
+}
+
 /// Discriminator for the shared confirm-action POST handler. Lock
 /// has its own POST (`do_lock_user`) because of the duration field.
 #[derive(Debug, Clone, Copy)]
