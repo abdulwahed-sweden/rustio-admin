@@ -40,6 +40,30 @@ leaves the alpha track.
 
 ### Added
 
+- **Audit on authentication events.** Two new `AuditEvent`
+  variants — `LoginSucceeded` and `LoginFailed` — close a real
+  gap in the security trail: `do_login` previously emitted an
+  `AccountLocked` row when the auto-throttle tripped but logged
+  nothing for the individual successful / failed attempts that led
+  there. The History page now shows every sign-in attempt against
+  a known account, including the `reason` discriminator
+  (`"wrong_password" | "inactive" | "locked"`) so an operator can
+  distinguish "brute force on a real account" from "someone is
+  poking the locked account waiting it out." `LoginSucceeded`
+  carries `metadata.mfa_pending = true` when the user has MFA
+  enrolled and the response redirects to the MFA-verify step, so
+  the History pill `"Signed in"` doesn't read as "fully
+  authenticated" before the second factor lands.
+  - **Known limitation, documented on the `LoginFailed` doc**:
+    attempts against an email with no matching `rustio_users` row
+    are *not* audited — `rustio_admin_actions.user_id` has a
+    `NOT NULL REFERENCES rustio_users(id)` FK, so there's nowhere
+    to anchor the row. Promoting that to audit needs a migration
+    loosening the FK and is out of scope here. The trace log still
+    captures the attempt at `info` level.
+  - The four existing drift tests (audit-string uniqueness +
+    snake-case + stable-strings; `action_label` coverage +
+    `action_pill_class` validity) ride the new variants for free.
 - **`FilterKind::FkAutocomplete` — the fourth list-page filter
   widget, closing out the list-view filter roadmap.** Any
   foreign-key column with a resolvable target in the

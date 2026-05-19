@@ -569,6 +569,10 @@ fn action_label(action_type: &str) -> &'static str {
         "sessions_revoked_by_other" => "Sessions revoked by admin",
         "session_logout" => "Logged out",
 
+        // Authentication events.
+        "login_succeeded" => "Signed in",
+        "login_failed" => "Failed sign-in",
+
         // R4 shell-tier emergency recovery (CLI-only emissions).
         "emergency_recovery" => "Emergency recovery",
 
@@ -590,7 +594,8 @@ fn action_pill_class(action_type: &str) -> &'static str {
         | "account_locked"
         | "mfa_disabled"
         | "mfa_reset_by_other"
-        | "sessions_revoked_by_other" => "badge-danger",
+        | "sessions_revoked_by_other"
+        | "login_failed" => "badge-danger",
 
         // Admin-initiated mutations on a user → warning amber. Same
         // visual weight as the "by other" R2 events; signals the
@@ -2869,6 +2874,9 @@ mod tests {
             "sessions_revoked_self",
             "sessions_revoked_by_other",
             "session_logout",
+            // Authentication events.
+            "login_succeeded",
+            "login_failed",
             // R4 emergency recovery.
             "emergency_recovery",
         ];
@@ -2918,6 +2926,8 @@ mod tests {
             "sessions_revoked_self",
             "sessions_revoked_by_other",
             "session_logout",
+            "login_succeeded",
+            "login_failed",
             "emergency_recovery",
         ];
         let known_classes = [
