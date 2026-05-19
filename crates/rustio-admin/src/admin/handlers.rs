@@ -845,6 +845,213 @@ fn parse_active_sort(
     Some((raw.to_string(), direction))
 }
 
+// ---- CSV export ----------------------------------------------------------
+
+/// Parsed shape of `?q=&sort=&dir=&<col>=&<col>__gte=…` etc.,
+/// reduced to just the SQL-side pieces needed for the export query.
+///
+/// Mirrors the filter-match arms inside `list_model` but skips the
+/// UI-context construction (chip options, hydrated pill labels,
+/// hidden-input plumbing) — none of which apply to a CSV. If a new
+/// `FilterKind` ever lights up over there, mirror its SQL arm
+/// here so the export keeps parity. The two surfaces are not yet
+/// unified behind a single walker because the UI side carries
+/// significantly more state per group; promoting one source of
+/// truth is a future refactor, called out on the
+/// `keep-in-lockstep` comment below.
+struct SqlFilterQuery {
+    filters: Vec<(String, String)>,
+    date_ranges: Vec<(String, Option<String>, Option<String>)>,
+    multi_filters: Vec<(String, Vec<String>)>,
+}
+
+/// keep-in-lockstep: any change to the filter-kind branches inside
+/// `list_model::list_ctx`'s assembly loop must mirror here.
+fn parse_sql_filter_query(
+    entry: &super::types::AdminEntry,
+    qs: &crate::http::FormData,
+    registry: &super::relations::RelationRegistry,
+) -> SqlFilterQuery {
+    let inferred = super::filters::infer_filters_with_registry(
+        entry.fields,
+        entry.singular_name,
+        registry,
+    );
+    let mut filters: Vec<(String, String)> = Vec::new();
+    let mut date_ranges: Vec<(String, Option<String>, Option<String>)> = Vec::new();
+    let mut multi_filters: Vec<(String, Vec<String>)> = Vec::new();
+    for f in inferred {
+        match f.kind {
+            super::filters::FilterKind::BoolYesNo => {
+                if let Some(val) = qs.get(&f.field).filter(|s| !s.is_empty()) {
+                    filters.push((f.field.clone(), val.to_string()));
+                }
+            }
+            super::filters::FilterKind::MultiSelect { values } => {
+                let allowed: HashSet<&str> = values.iter().copied().collect();
+                let selected: Vec<String> = qs
+                    .get_all(&f.field)
+                    .iter()
+                    .filter(|s| !s.is_empty() && allowed.contains(s.as_str()))
+                    .cloned()
+                    .collect();
+                if !selected.is_empty() {
+                    multi_filters.push((f.field.clone(), selected));
+                }
+            }
+            super::filters::FilterKind::DateRange => {
+                let gte_name = format!("{}__gte", f.field);
+                let lte_name = format!("{}__lte", f.field);
+                let gte = qs.get(&gte_name).and_then(parse_date_yyyy_mm_dd);
+                let lte = qs.get(&lte_name).and_then(parse_date_yyyy_mm_dd);
+                if gte.is_some() || lte.is_some() {
+                    date_ranges.push((f.field, gte, lte));
+                }
+            }
+            super::filters::FilterKind::FkAutocomplete { .. } => {
+                if let Some(id) = qs
+                    .get(&f.field)
+                    .and_then(|s| s.trim().parse::<i64>().ok())
+                    .filter(|n| *n > 0)
+                {
+                    filters.push((f.field, id.to_string()));
+                }
+            }
+            _ => {}
+        }
+    }
+    SqlFilterQuery {
+        filters,
+        date_ranges,
+        multi_filters,
+    }
+}
+
+/// Maximum rows a single CSV download will emit. Caps the memory
+/// footprint of the bulk `entry.ops.list(...)` call — the runtime
+/// fetches all matching rows into a `Vec<ListRow>` before iterating.
+/// Operators with bigger tables should pre-filter via the list-page
+/// widgets (search / filters / sort) before downloading.
+const CSV_EXPORT_MAX_ROWS: i64 = 10_000;
+
+/// `GET /admin/:admin_name/export.csv?<same filters as list page>` —
+/// stream a CSV of every row matching the current list-page query
+/// (search + filters + sort), capped at `CSV_EXPORT_MAX_ROWS`.
+///
+/// Header row uses each field's humanised label (same source as the
+/// list-page column header). Cell content comes from
+/// `AdminModel::display_values()` — same strings the list view
+/// shows. Each cell is RFC 4180-quoted via `csv_escape_field` so
+/// commas / quotes / newlines inside the data don't break the
+/// parser on the operator's spreadsheet.
+///
+/// Permission: same as the list page (`view`). Core entries (the
+/// synthetic `User`) are blocked by `find_project_entry`.
+pub(crate) async fn export_model_csv(
+    ctx: &AdminCtx,
+    _identity: Identity,
+    admin_name: &str,
+    req: Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let qs = req.query();
+
+    let active_sort = parse_active_sort(entry, qs.get("sort"), qs.get("dir"));
+    let ordering = match &active_sort {
+        Some((col, dir)) => vec![(col.clone(), *dir)],
+        None => entry
+            .ordering
+            .iter()
+            .map(|s| super::modeladmin::parse_order_spec(s))
+            .collect(),
+    };
+
+    let registry =
+        super::relations::RelationRegistry::from_admin_entries(ctx.admin.entries());
+    let parsed = parse_sql_filter_query(entry, &qs, &registry);
+
+    let search = qs.get("q").unwrap_or_default().to_string();
+    let search_opt: Option<(String, Vec<String>)> = if search.is_empty()
+        || entry.search_fields.is_empty()
+    {
+        None
+    } else {
+        Some((
+            search,
+            entry.search_fields.iter().map(|s| s.to_string()).collect(),
+        ))
+    };
+
+    let page = entry
+        .ops
+        .list(
+            &ctx.db,
+            super::types::ListOpts {
+                ordering,
+                filters: parsed.filters,
+                date_ranges: parsed.date_ranges,
+                multi_filters: parsed.multi_filters,
+                search: search_opt,
+                limit: Some(CSV_EXPORT_MAX_ROWS),
+                offset: None,
+            },
+        )
+        .await?;
+
+    // Header row: per-field humanised label, in the model's
+    // declared field order. We export every column on the model
+    // (including those omitted from `list_display`) — CSV is a
+    // data-fidelity surface, not a styled list, so the export
+    // surface is consciously wider than the on-screen view.
+    let mut body = String::with_capacity(1024);
+    for (i, f) in entry.fields.iter().enumerate() {
+        if i > 0 {
+            body.push(',');
+        }
+        body.push_str(&csv_escape_field(f.label));
+    }
+    body.push('\n');
+
+    for row in page.rows {
+        for (i, cell) in row.cells.iter().enumerate() {
+            if i > 0 {
+                body.push(',');
+            }
+            body.push_str(&csv_escape_field(cell));
+        }
+        body.push('\n');
+    }
+
+    let filename = format!("{}.csv", entry.admin_name);
+    Ok(Response::ok(body)
+        .with_header("content-type", "text/csv; charset=utf-8")
+        .with_header(
+            "content-disposition",
+            format!("attachment; filename=\"{filename}\""),
+        ))
+}
+
+/// RFC 4180-style field escape. Quotes the field when it contains
+/// any of `,`, `"`, `\r`, `\n`; doubles every internal `"`. Plain
+/// alphanumeric content is passed through unchanged.
+fn csv_escape_field(s: &str) -> String {
+    let needs_quote = s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r');
+    if !needs_quote {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        if c == '"' {
+            out.push_str("\"\"");
+        } else {
+            out.push(c);
+        }
+    }
+    out.push('"');
+    out
+}
+
 // ---- FK autocomplete lookup ----------------------------------------------
 
 /// JSON shape returned by [`lookup_model`]. Stable contract for the
@@ -2072,4 +2279,47 @@ async fn hydrate_fk_cells(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod csv_escape_tests {
+    use super::csv_escape_field;
+
+    #[test]
+    fn plain_text_passes_through_unquoted() {
+        assert_eq!(csv_escape_field("hello"), "hello");
+        assert_eq!(csv_escape_field("42"), "42");
+        assert_eq!(csv_escape_field("anna.lindqvist"), "anna.lindqvist");
+        assert_eq!(csv_escape_field(""), "");
+    }
+
+    #[test]
+    fn comma_triggers_quoting() {
+        assert_eq!(csv_escape_field("a,b"), "\"a,b\"");
+    }
+
+    #[test]
+    fn embedded_quote_is_doubled_inside_quoted_field() {
+        // RFC 4180: a `"` inside a quoted field is escaped by
+        // doubling it. The whole field is then wrapped in `"`.
+        assert_eq!(csv_escape_field("say \"hi\""), "\"say \"\"hi\"\"\"");
+    }
+
+    #[test]
+    fn newline_triggers_quoting() {
+        assert_eq!(csv_escape_field("line1\nline2"), "\"line1\nline2\"");
+        assert_eq!(csv_escape_field("crlf\r\nhere"), "\"crlf\r\nhere\"");
+    }
+
+    #[test]
+    fn no_quote_added_when_only_safe_punctuation() {
+        // Dots, semicolons, dashes, colons — none trigger quoting.
+        assert_eq!(csv_escape_field("a.b-c:d;e"), "a.b-c:d;e");
+    }
+
+    #[test]
+    fn unicode_passes_through_unchanged_when_no_special_chars() {
+        assert_eq!(csv_escape_field("Anna Wåhlin"), "Anna Wåhlin");
+        assert_eq!(csv_escape_field("日本語"), "日本語");
+    }
 }

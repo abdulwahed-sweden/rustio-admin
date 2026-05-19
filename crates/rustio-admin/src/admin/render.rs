@@ -673,6 +673,11 @@ pub(crate) struct ListCtx {
     /// URL the "Clear all" filters action navigates to: keeps the
     /// search query and sort, drops every filter.
     pub clear_all_filters_link: String,
+    /// URL the toolbar's "Download CSV" link navigates to. Preserves
+    /// the current search / filters / sort but drops `page` /
+    /// `per_page` (CSV is paginate-free). Routes to the bulk export
+    /// endpoint registered at `/admin/<name>/export.csv`.
+    pub csv_export_url: String,
     /// Sort dropdown options — every visible field × {asc, desc} plus
     /// a "Default order" reset link. Pre-baked into ready-to-render
     /// `(label, href, is_active)` triplets.
@@ -1064,6 +1069,45 @@ fn build_list_url(
     }
 }
 
+/// CSV export URL: `<list-page filter/search/sort state>` against
+/// `/admin/<name>/export.csv`. Mirrors `build_list_url` but drops
+/// pagination — CSV ignores it. Kept narrow so the toolbar link is
+/// guaranteed-distinct from any list-page link it sits next to.
+fn build_csv_export_url(
+    admin_name: &str,
+    q: &str,
+    filters: &[(String, String)],
+    sort: Option<(&str, super::modeladmin::SortDir)>,
+) -> String {
+    use super::modeladmin::SortDir;
+    let mut parts: Vec<String> = Vec::new();
+    if !q.is_empty() {
+        parts.push(format!("q={}", urlencoding::encode(q)));
+    }
+    for (field, value) in filters {
+        parts.push(format!(
+            "{}={}",
+            urlencoding::encode(field),
+            urlencoding::encode(value),
+        ));
+    }
+    if let Some((col, dir)) = sort {
+        parts.push(format!("sort={}", urlencoding::encode(col)));
+        parts.push(
+            match dir {
+                SortDir::Asc => "dir=asc",
+                SortDir::Desc => "dir=desc",
+            }
+            .to_string(),
+        );
+    }
+    if parts.is_empty() {
+        format!("/admin/{admin_name}/export.csv")
+    } else {
+        format!("/admin/{}/export.csv?{}", admin_name, parts.join("&"))
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn list_ctx(
     identity: &Identity,
@@ -1198,6 +1242,17 @@ pub(crate) fn list_ctx(
         active_sort_ref,
         1,
         per_page_override,
+    );
+
+    // CSV export URL: same filter/search/sort state as the list
+    // page but addressed to the export endpoint. Page / per_page
+    // are dropped — the CSV ignores pagination entirely, so
+    // carrying them would just clutter the link.
+    let csv_export_url = build_csv_export_url(
+        entry.admin_name,
+        &search_query,
+        &active_filter_pairs,
+        active_sort_ref,
     );
 
     // Display-ready pills for the "active filters" strip. Each pill
@@ -1569,6 +1624,7 @@ pub(crate) fn list_ctx(
         active_filter_pairs,
         active_filter_pills,
         clear_all_filters_link,
+        csv_export_url,
         filters,
         sort_options,
         current_sort_label,

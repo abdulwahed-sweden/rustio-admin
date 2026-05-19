@@ -40,6 +40,32 @@ leaves the alpha track.
 
 ### Added
 
+- **CSV export per model.** New
+  `GET /admin/:admin_name/export.csv` endpoint streams every row
+  matching the current list-page state (search + filters + sort) as
+  a UTF-8 CSV. The list-page toolbar gains a `Download CSV` button
+  that preserves the active query string so an operator's filtered
+  view rounds-trips into a filtered export. Capped at 10 000 rows
+  per download — operators with bigger tables should narrow the
+  filters first; the cap protects the worker from buffering the
+  full table into a `Vec<ListRow>`. Header row uses each field's
+  humanised label (same source as the on-screen column header);
+  cells come straight from `AdminModel::display_values()`, with
+  RFC 4180 quoting applied to any cell containing `,` / `"` / `\r`
+  / `\n` and internal `"` doubled. Same `view` permission gate as
+  the list page; core entries (the synthetic `User`) are blocked
+  by `find_project_entry` so `/admin/users/export.csv` 404s
+  cleanly. A small `parse_sql_filter_query` helper in `handlers.rs`
+  mirrors the SQL-side filter arms inside `list_model` so the CSV
+  honors `BoolYesNo`, `MultiSelect`, `DateRange`, and
+  `FkAutocomplete` URL parameters exactly the same way the on-
+  screen view does (the duplication is called out with a
+  `keep-in-lockstep` comment; promoting one source of truth is a
+  future refactor). Six unit tests pin the CSV escape function
+  against the four RFC 4180 corner cases (plain pass-through,
+  comma, embedded quote doubled, newline) plus safe-punctuation
+  and Unicode passthrough. New `download` lucide icon in the
+  shared catalogue.
 - **Per-model template overrides — finishing the partial wiring.**
   `Templates::render_for_model` shipped in an earlier release but
   carried `#[allow(dead_code)]` because no handler consumed it. The
