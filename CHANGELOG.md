@@ -118,6 +118,49 @@ leaves the alpha track.
 
 ### Added
 
+- **`ModelAdmin::inlines()` — related-children sections below the
+  parent edit form (read-only v1).** Closes a roadmap entry —
+  scoped as a defensible v1: project authors declare which child
+  models to surface inline on the parent edit page, the
+  framework fetches up to `max_rows` matching rows, and renders
+  each as a click-through table with Edit / Delete buttons +
+  "Add new …" and "View all …" affordances. **In-page editing
+  of inline rows is deferred** — Django-style nested formset
+  semantics need a new POST surface, transaction wrap, and JS
+  add/remove flow that didn't fit a single ship-quality commit.
+  The read-only display + click-through is a strict improvement
+  on "no inline display at all" and lays the surface for the
+  edit-in-place iteration.
+  - **New `Inline` struct** (re-exported at crate root) with
+    fields `target_model` (must match a registered admin
+    entry's `SINGULAR_NAME`), `fk_field` (column on the child
+    that points at the parent), `label` (optional section
+    title), `max_rows` (cap), and `display_field` (optional
+    column for the per-row click-through label; falls through
+    the framework's `name → title → full_name → email` ladder
+    when `None`).
+  - **New trait method** `ModelAdmin::inlines() -> &'static [Inline]`
+    with default `&[]`. `AdminEntry` captures the slice at
+    registration; `show_edit_form` + `do_update`'s error path
+    fetch the children via `target.ops.list(...)` filtered by
+    `(fk_field, parent_id)` — reuses the existing list-page
+    SQL builder, column-name validation, and parameterised
+    binding.
+  - **Template surface**: the `form.html` block below the action
+    bar iterates `inlines` and renders a `rio-inline-section`
+    per declared inline with row count ("Showing N of total"),
+    a table of click-through rows, and footer actions.
+    Read-only mode hides Edit / Delete / Add — rows become
+    "View" links instead.
+  - **Clinic example** demonstrates three Inlines:
+    `Patient → Appointment` by `patient_id` (display by
+    `scheduled_at`), `Practitioner → Appointment` by
+    `practitioner_id` (same display), `Clinic → Practitioner`
+    by `clinic_id` (display by `full_name`). Live-verified:
+    `/admin/patients/1/edit` shows Elizabeth Bennet's two
+    appointments labelled by timestamp; `/admin/clinics/1/edit`
+    lists all six on-staff practitioners by name.
+
 - **Saved filters — per-user bookmarkable list-page presets.**
   Closes the roadmap entry "Bookmarkable named filter presets per
   user. Stored on `rustio_users` or a new join table." A new

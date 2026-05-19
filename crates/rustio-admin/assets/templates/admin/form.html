@@ -51,5 +51,53 @@
   </div>
 </form>
 
+{# Related-children sections — declared via ModelAdmin::inlines().
+ # v1 is read-only: each row is a click-through to the child's own
+ # edit / delete pages, with an "Add new …" affordance that lands
+ # the operator on the child's normal new form. #}
+{% for inline in inlines %}
+<section class="rio-card rio-inline-section" aria-labelledby="inline-{{ inline.target_admin_name }}">
+  <header class="rio-inline-section__header">
+    <h2 id="inline-{{ inline.target_admin_name }}">{{ inline.label }}</h2>
+    <span class="rio-meta">
+      {% if inline.has_more %}
+        Showing {{ inline.rows|length }} of {{ inline.total }}
+      {% else %}
+        {{ inline.total }} {% if inline.total == 1 %}row{% else %}rows{% endif %}
+      {% endif %}
+    </span>
+  </header>
+  {% if inline.rows %}
+  <table class="rio-table rio-inline-table">
+    <tbody>
+      {% for r in inline.rows %}
+      <tr>
+        <td><a href="{{ r.edit_url }}">#{{ r.id }} — {{ r.label }}</a></td>
+        <td class="rio-td--actions">
+          {% if not read_only %}
+          <a class="rio-button rio-button--ghost rio-button--sm" href="{{ r.edit_url }}">{{ icon("pencil", class="rio-icon") }} Edit</a>
+          <a class="rio-button rio-button--danger-ghost rio-button--sm" href="{{ r.delete_url }}">{{ icon("trash", class="rio-icon") }} Delete</a>
+          {% else %}
+          <a class="rio-button rio-button--ghost rio-button--sm" href="{{ r.edit_url }}">View</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="rio-empty">No related {{ inline.target_display_name|lower }} yet.</p>
+  {% endif %}
+  <div class="rio-inline-section__actions">
+    {% if not read_only %}
+    <a class="rio-button rio-button--ghost rio-button--sm" href="{{ inline.add_url }}">{{ icon("plus", class="rio-icon") }} Add new {{ inline.target_display_name|lower }}</a>
+    {% endif %}
+    {% if inline.has_more %}
+    <a class="rio-button rio-button--ghost rio-button--sm" href="{{ inline.list_url }}">View all {{ inline.total }} →</a>
+    {% endif %}
+  </div>
+</section>
+{% endfor %}
+
 </div>
 {% endblock %}

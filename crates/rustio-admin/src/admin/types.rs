@@ -183,6 +183,10 @@ pub struct AdminEntry {
     /// `ModelAdmin::bulk_actions()`. Empty by default — the bulk bar
     /// only renders the framework's built-in Delete.
     pub bulk_actions: &'static [super::modeladmin::BulkAction],
+    /// `ModelAdmin::inlines()`. Empty by default — no related-
+    /// children section renders below the edit form. Project
+    /// authors opt in per parent model.
+    pub inlines: &'static [super::modeladmin::Inline],
     pub(crate) ops: Arc<dyn AdminOps>,
 }
 
@@ -925,6 +929,7 @@ impl Admin {
             readonly_fields: M::readonly_fields(),
             fieldsets: M::fieldsets(),
             bulk_actions: M::bulk_actions(),
+            inlines: M::inlines(),
             ops,
         });
         self
@@ -1070,6 +1075,7 @@ fn core_user_entry() -> AdminEntry {
         readonly_fields: &[],
         fieldsets: &[],
         bulk_actions: &[],
+        inlines: &[],
         ops: Arc::new(CoreUserOps),
     }
 }

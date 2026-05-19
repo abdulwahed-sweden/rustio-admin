@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};
+use rustio_admin::{Inline, Model, ModelAdmin, Result, Row, RustioAdmin, Value};
 
 #[derive(Debug, Clone, RustioAdmin)]
 pub struct Practitioner {
@@ -69,5 +69,18 @@ impl ModelAdmin for Practitioner {
         // mental model) and occasionally by license number for
         // credentialing audits.
         &["full_name", "license_no"]
+    }
+
+    fn inlines() -> &'static [Inline] {
+        // Provider's own appointment schedule rendered inline
+        // on their edit page — common operator workflow "what
+        // is Dr. X seeing this week."
+        &[Inline {
+            target_model: "Appointment",
+            fk_field: "practitioner_id",
+            label: Some("Scheduled appointments"),
+            max_rows: 50,
+            display_field: Some("scheduled_at"),
+        }]
     }
 }
