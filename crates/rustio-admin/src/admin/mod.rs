@@ -6,6 +6,7 @@ pub mod audit;
 // public:
 pub(crate) mod builtin;
 pub mod bulk;
+pub(crate) mod db_browser;
 // public:
 pub mod filters;
 mod handlers;

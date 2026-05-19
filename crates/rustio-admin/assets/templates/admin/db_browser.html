@@ -1,0 +1,99 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>Database</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-meta">
+    Read-only schema explorer for the <code>public</code> schema. Row counts are the planner's
+    estimate (<code>pg_class.reltuples</code>) — accurate after an <code>ANALYZE</code>,
+    approximate otherwise.
+  </p>
+</header>
+
+<section class="rio-card rio-db-summary">
+  <dl class="rio-db-stats">
+    <div class="rio-db-stat">
+      <dt>Tables</dt>
+      <dd>{{ tables|length }}</dd>
+    </div>
+    <div class="rio-db-stat">
+      <dt>Columns</dt>
+      <dd>{{ total_columns }}</dd>
+    </div>
+    <div class="rio-db-stat">
+      <dt>Rows (approx.)</dt>
+      <dd>~ {{ total_row_estimate }}</dd>
+    </div>
+  </dl>
+</section>
+
+{% if tables %}
+{% for t in tables %}
+<section class="rio-card rio-db-table" id="t-{{ t.name }}">
+  <header class="rio-db-table__header">
+    <h2><code>{{ t.name }}</code></h2>
+    <span class="rio-meta">
+      {{ t.column_count }} column{% if t.column_count != 1 %}s{% endif %} ·
+      ~ {{ t.row_estimate }} row{% if t.row_estimate != 1 %}s{% endif %}
+    </span>
+  </header>
+
+  <table class="rio-table rio-db-columns">
+    <thead>
+      <tr>
+        <th>Column</th>
+        <th>Type</th>
+        <th>Nullable</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in t.columns %}
+      <tr>
+        <td><code>{{ c.name }}</code></td>
+        <td>{{ c.data_type }}</td>
+        <td>{% if c.is_nullable %}YES{% else %}NO{% endif %}</td>
+        <td>{% if c.default_expr %}<code>{{ c.default_expr }}</code>{% else %}<span class="rio-meta">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if t.outgoing_fks or t.incoming_fks %}
+  <div class="rio-db-fks">
+    {% if t.outgoing_fks %}
+    <div class="rio-db-fks__group">
+      <h3>References (outgoing)</h3>
+      <ul class="rio-db-fk-list">
+        {% for fk in t.outgoing_fks %}
+        <li>
+          <code>{{ fk.source_column }}</code> →
+          <a href="#t-{{ fk.target_table }}"><code>{{ fk.target_table }}</code></a>.<code>{{ fk.target_column }}</code>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% if t.incoming_fks %}
+    <div class="rio-db-fks__group">
+      <h3>Referenced by (incoming)</h3>
+      <ul class="rio-db-fk-list">
+        {% for fk in t.incoming_fks %}
+        <li>
+          <a href="#t-{{ fk.source_table }}"><code>{{ fk.source_table }}</code></a>.<code>{{ fk.source_column }}</code>
+          → <code>{{ fk.target_column }}</code>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<section class="rio-card rio-empty">
+  <p>No tables in the <code>public</code> schema. Run your migrations to populate this view.</p>
+</section>
+{% endif %}
+{% endblock %}

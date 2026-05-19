@@ -14,6 +14,10 @@
         <li><a href="/admin/groups" class="rio-sidebar-link">{{ icon("users-2", class="rio-icon") }} Groups</a></li>
         <li><a href="/admin/history" class="rio-sidebar-link">{{ icon("clock", class="rio-icon") }} History</a></li>
       {% endif %}
+      {% if identity and identity.is_developer %}
+        <li class="rio-sidebar-section">Developer</li>
+        <li><a href="/admin/db" class="rio-sidebar-link">{{ icon("database", class="rio-icon") }} Database</a></li>
+      {% endif %}
     </ul>
   </nav>
 </aside>

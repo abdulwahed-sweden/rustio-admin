@@ -89,6 +89,7 @@
 /* ---- Pages — anything specific to one screen. */
 @import url("pages/auth.css");
 @import url("pages/dashboard.css");
+@import url("pages/db_browser.css");
 @import url("pages/permissions.css");
 @import url("pages/sessions.css");
 @import url("pages/errors.css");
