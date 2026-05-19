@@ -41,4 +41,11 @@ impl Model for Clinic {
     }
 }
 
-impl ModelAdmin for Clinic {}
+impl ModelAdmin for Clinic {
+    fn search_fields() -> &'static [&'static str] {
+        // Clinic lookup by location-friendly identifier. `name`
+        // is UNIQUE; `address` is a text scan but with five rows
+        // it's free.
+        &["name", "address"]
+    }
+}

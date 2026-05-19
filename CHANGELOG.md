@@ -89,6 +89,31 @@ leaves the alpha track.
     explicit class, directional + empty class, non-directional
     icons untouched, vertical chevrons excluded.
 
+### Fixed
+
+- **FK autocomplete labels resolved when the target has a
+  `full_name` column.** `pick_display_index`'s fallback ladder
+  previously checked only `name` / `title`, so a target like
+  `Patient` (which uses `full_name`) ended up rendering every
+  lookup result as `#<id>`. Extended the ladder to
+  `name → title → full_name → email`, covering both Library /
+  Catalogue / Article / Movie shapes and Person / Customer /
+  Patient / Employee shapes (the universal `full_name` column
+  across both shipped examples). Live-verified against the
+  clinic-appointments example: `?q=Anna` against
+  `/admin/_lookup/patients` now returns
+  `[{"id":9,"label":"Anna Karenina"}]` instead of the previous
+  `[{"id":9,"label":"#9"}, …]`-with-no-filter shape.
+- **Clinic example models declare `search_fields()`.** Without
+  this the FK autocomplete endpoint had nothing to ILIKE
+  against, so `?q=…` returned every row in the target table
+  (the dropdown still rendered, just unfiltered). Patient
+  searches now scan `chart_number` + `full_name` + `email`;
+  Practitioner scans `full_name` + `license_no`; Clinic scans
+  `name` + `address`. The framework's lookup handler already
+  knew how to honour this — only the example was missing the
+  declarations.
+
 ### Changed
 
 - **Canonical example replaced.** `examples/library-circulation/`
