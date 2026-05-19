@@ -91,6 +91,46 @@ leaves the alpha track.
 
 ### Added
 
+- **`ModelAdmin::validate` — project-driven business-rule
+  validation hook.** Closes the roadmap entry "Project closures
+  that return validation errors before the row hits the database,
+  surfaced in the same UI as the existing constraint-violation
+  flash." New trait method (default `Ok(())`) called by
+  `ConcreteOps::create` and `::update` AFTER `from_form` succeeds
+  but BEFORE the SQL fires. Project authors override to add cross-
+  field or domain rules:
+  ```rust
+  fn validate(model: &Self) -> Result<(), Vec<FieldValidationError>> {
+      let mut errs = Vec::new();
+      if model.start_date > model.end_date {
+          errs.push(FieldValidationError::field(
+              "end_date",
+              "End date must not be before the start date.",
+          ));
+      }
+      if errs.is_empty() { Ok(()) } else { Err(errs) }
+  }
+  ```
+  - New `FieldValidationError` struct (re-exported at crate root)
+    with two constructors: `::field(name, msg)` attaches the
+    error to one input (rendered inline with `aria-invalid`);
+    `::global(msg)` lands the message in the form-level banner
+    (appropriate for cross-field rules with no single owning
+    field). Plain `Send + Sync` owned struct so the result vec
+    can cross await points freely.
+  - Errors flatten through the existing `bucket_errors_by_label`
+    pipeline: field-attached entries get prefixed with the
+    field's `AdminField.label` so the bucketer routes them to
+    the right input; global entries pass through to the banner.
+    A typo'd field name falls through to the banner rather than
+    being dropped silently.
+  - Synchronous — validation can't query the DB. Database-shape
+    errors (UNIQUE violations, FK gone) flow through the
+    existing constraint-translation path automatically.
+  - Four unit tests cover the four flattening paths
+    (field-attached prefixing, global passthrough,
+    unknown-field-name fallback, mixed-order preservation)
+    against a `StubModel` that exposes a minimal `FIELDS` slice.
 - **Project-model CRUD audit + per-update diff view.** Generic
   `do_create` / `do_update` / `do_delete` now emit
   `rustio_admin_actions` rows so per-model history pages

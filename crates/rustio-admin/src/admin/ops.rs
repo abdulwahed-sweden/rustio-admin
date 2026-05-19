@@ -16,7 +16,7 @@ use crate::http::FormData;
 use crate::orm::{Db, Row};
 
 use super::bulk::{BulkActionContext, BulkActionResult};
-use super::modeladmin::ModelAdmin;
+use super::modeladmin::{FieldValidationError, ModelAdmin};
 use super::types::{
     AdminModel, AdminOps, CreateResult, EditRow, ListOpts, ListPage, ListRow, UpdateResult,
 };
@@ -31,6 +31,26 @@ impl<M> ConcreteOps<M> {
             _marker: std::marker::PhantomData,
         }
     }
+}
+
+/// Convert a project-validation error vec into the flat
+/// `Vec<String>` shape `bucket_errors_by_label` (handlers + render)
+/// already consumes. Field-attached errors get prefixed with the
+/// field's `AdminField.label` so the bucketer routes them to the
+/// right input; global errors pass through unchanged and land in
+/// the form banner. A field name that doesn't match any
+/// `M::FIELDS` entry falls through to the banner too — better
+/// than dropping the message.
+fn flatten_validation_errors<M: AdminModel>(errs: Vec<FieldValidationError>) -> Vec<String> {
+    errs.into_iter()
+        .map(|e| match e.field {
+            Some(name) => match M::FIELDS.iter().find(|f| f.name == name) {
+                Some(field) => format!("{} {}", field.label, e.message),
+                None => e.message,
+            },
+            None => e.message,
+        })
+        .collect()
 }
 
 impl<M> AdminOps for ConcreteOps<M>
@@ -240,20 +260,36 @@ where
     fn create<'a>(&'a self, db: &'a Db, form: &'a FormData) -> CreateResult<'a> {
         Box::pin(async move {
             match M::from_form(form) {
-                Ok(model) => match crate::orm::create(db, &model).await {
-                    Ok(id) => Ok(Ok(id)),
-                    // Postgres constraint violations route to
-                    // `Error::Conflict` via `From<sqlx::Error>`. Catch
-                    // them here so the user sees a re-rendered form
-                    // with an inline error instead of a 500.
-                    Err(crate::error::Error::Conflict(msg)) => {
-                        log::warn!("create rejected by DB constraint: {msg}");
-                        Ok(Err(vec!["Invalid value or constraint violation. \
-                             Please check the highlighted fields and try again."
-                            .into()]))
+                Ok(model) => {
+                    // Project-driven business-rule validation runs
+                    // AFTER from_form parses the row but BEFORE the
+                    // SQL fires. Default impl is `Ok(())`; projects
+                    // override `ModelAdmin::validate` to add cross-
+                    // field or domain rules. Errors are flattened
+                    // into the same `Vec<String>` shape the handler's
+                    // `bucket_errors_by_label` already consumes, with
+                    // field-attached entries prefixed by the field's
+                    // humanised label so the existing bucketer routes
+                    // them to the right input.
+                    if let Err(verrs) = M::validate(&model) {
+                        return Ok(Err(flatten_validation_errors::<M>(verrs)));
                     }
-                    Err(other) => Err(other),
-                },
+                    match crate::orm::create(db, &model).await {
+                        Ok(id) => Ok(Ok(id)),
+                        // Postgres constraint violations route to
+                        // `Error::Conflict` via `From<sqlx::Error>`.
+                        // Catch them here so the user sees a re-
+                        // rendered form with an inline error instead
+                        // of a 500.
+                        Err(crate::error::Error::Conflict(msg)) => {
+                            log::warn!("create rejected by DB constraint: {msg}");
+                            Ok(Err(vec!["Invalid value or constraint violation. \
+                                 Please check the highlighted fields and try again."
+                                .into()]))
+                        }
+                        Err(other) => Err(other),
+                    }
+                }
                 Err(errs) => Ok(Err(errs)),
             }
         })
@@ -262,16 +298,21 @@ where
     fn update<'a>(&'a self, db: &'a Db, id: i64, form: &'a FormData) -> UpdateResult<'a> {
         Box::pin(async move {
             match M::from_form(form) {
-                Ok(model) => match crate::orm::update(db, id, &model).await {
-                    Ok(()) => Ok(Ok(())),
-                    Err(crate::error::Error::Conflict(msg)) => {
-                        log::warn!("update rejected by DB constraint: {msg}");
-                        Ok(Err(vec!["Invalid value or constraint violation. \
-                             Please check the highlighted fields and try again."
-                            .into()]))
+                Ok(model) => {
+                    if let Err(verrs) = M::validate(&model) {
+                        return Ok(Err(flatten_validation_errors::<M>(verrs)));
                     }
-                    Err(other) => Err(other),
-                },
+                    match crate::orm::update(db, id, &model).await {
+                        Ok(()) => Ok(Ok(())),
+                        Err(crate::error::Error::Conflict(msg)) => {
+                            log::warn!("update rejected by DB constraint: {msg}");
+                            Ok(Err(vec!["Invalid value or constraint violation. \
+                                 Please check the highlighted fields and try again."
+                                .into()]))
+                        }
+                        Err(other) => Err(other),
+                    }
+                }
                 Err(errs) => Ok(Err(errs)),
             }
         })
@@ -309,5 +350,106 @@ where
         // structured BadRequest when the action name has no project
         // handler.
         M::execute_bulk_action(name, ids, db, ctx)
+    }
+}
+
+#[cfg(test)]
+mod flatten_validation_tests {
+    use super::*;
+    use crate::admin::types::{AdminField, FieldType};
+
+    /// A stub AdminModel that exposes a FIELDS slice — that's all
+    /// `flatten_validation_errors` reads. The remaining trait
+    /// methods aren't reached.
+    struct StubModel;
+
+    const STUB_FIELDS: &[AdminField] = &[
+        AdminField {
+            name: "title",
+            label: "Title",
+            field_type: FieldType::String,
+            editable: true,
+            relation: None,
+            choices: None,
+        },
+        AdminField {
+            name: "end_date",
+            label: "End date",
+            field_type: FieldType::DateTime,
+            editable: true,
+            relation: None,
+            choices: None,
+        },
+    ];
+
+    impl AdminModel for StubModel {
+        const ADMIN_NAME: &'static str = "stubs";
+        const DISPLAY_NAME: &'static str = "Stubs";
+        const SINGULAR_NAME: &'static str = "Stub";
+        const FIELDS: &'static [AdminField] = STUB_FIELDS;
+        fn id(&self) -> i64 {
+            0
+        }
+        fn from_form(_: &FormData) -> std::result::Result<Self, Vec<String>> {
+            Err(vec![])
+        }
+        fn display_values(&self) -> Vec<(String, String)> {
+            Vec::new()
+        }
+        fn object_label(&self) -> String {
+            String::new()
+        }
+        fn values_to_update(&self) -> Vec<(&'static str, crate::orm::Value)> {
+            Vec::new()
+        }
+    }
+
+    #[test]
+    fn field_attached_error_prefixes_with_field_label() {
+        let errs = vec![FieldValidationError::field(
+            "end_date",
+            "must not be before the start date.",
+        )];
+        let flat = flatten_validation_errors::<StubModel>(errs);
+        assert_eq!(flat, vec!["End date must not be before the start date."]);
+    }
+
+    #[test]
+    fn global_error_passes_through_unchanged() {
+        let errs = vec![FieldValidationError::global(
+            "This booking conflicts with another one.",
+        )];
+        let flat = flatten_validation_errors::<StubModel>(errs);
+        assert_eq!(flat, vec!["This booking conflicts with another one."]);
+    }
+
+    #[test]
+    fn unknown_field_name_falls_through_to_banner() {
+        // Project author typo'd a field name. Better to render the
+        // message in the banner than drop it silently.
+        let errs = vec![FieldValidationError::field(
+            "nonexistent",
+            "Something went wrong.",
+        )];
+        let flat = flatten_validation_errors::<StubModel>(errs);
+        assert_eq!(flat, vec!["Something went wrong."]);
+    }
+
+    #[test]
+    fn mixed_errors_preserve_order() {
+        let errs = vec![
+            FieldValidationError::field("title", "is required."),
+            FieldValidationError::global("Cross-field rule fired."),
+            FieldValidationError::field("end_date", "is invalid."),
+        ];
+        let flat = flatten_validation_errors::<StubModel>(errs);
+        assert_eq!(
+            flat,
+            vec![
+                "Title is required.",
+                "Cross-field rule fired.",
+                "End date is invalid.",
+            ]
+        );
     }
 }

@@ -36,7 +36,7 @@ pub use filters::{
     FilterKind,
 };
 // public:
-pub use modeladmin::{BulkAction, Fieldset, ModelAdmin, SortDir};
+pub use modeladmin::{BulkAction, FieldValidationError, Fieldset, ModelAdmin, SortDir};
 // public:
 pub use redact::{redact_backup_code, redact_mfa_secret, redact_password, redact_token};
 // public:
