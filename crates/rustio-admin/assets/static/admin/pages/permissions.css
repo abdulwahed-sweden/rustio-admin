@@ -27,10 +27,10 @@
   background: var(--rio-surface-2);
 }
 .rio-perm-matrix th.rio-perm-matrix__model {
-  text-align: left;
+  text-align: start;
 }
 .rio-perm-matrix tbody th {
-  text-align: left;
+  text-align: start;
   font-weight: var(--rio-fw-semibold);
   color: var(--rio-text-strong);
   padding: 10px 12px;

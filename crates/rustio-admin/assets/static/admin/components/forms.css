@@ -46,7 +46,7 @@
   letter-spacing: 0.06em;
   color: var(--rio-text-subtle);
   padding: 0 var(--rio-s2);
-  margin-left: calc(-1 * var(--rio-s2));
+  margin-inline-start: calc(-1 * var(--rio-s2));
 }
 /* Single-column field flow by default. Forms read better as a
  * vertical reading column than a 2-up grid that leaves gaps when a
@@ -76,7 +76,7 @@
   color: var(--rio-danger);
   font-size: var(--rio-fs-xs);
   font-weight: var(--rio-fw-bold);
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 .rio-field-hint {
   margin: 0;

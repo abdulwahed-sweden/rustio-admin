@@ -23,8 +23,8 @@
   position: relative;
 }
 .rio-session--current {
-  border-left: 3px solid var(--rio-accent);
-  padding-left: calc(var(--rio-s4) - 2px);
+  border-inline-start: 3px solid var(--rio-accent);
+  padding-inline-start: calc(var(--rio-s4) - 2px);
 }
 .rio-session__header {
   display: flex;
@@ -44,7 +44,7 @@
   color: var(--rio-text-strong);
 }
 .rio-session__trust {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: var(--rio-fs-xs);
   font-weight: var(--rio-fw-bold);
   text-transform: uppercase;

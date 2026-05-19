@@ -38,6 +38,40 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+
+- **CSS migrated to logical properties — RTL-ready layout.** Closes
+  the roadmap entry "Migrate `margin-left`/`padding-left` to
+  `margin-inline-start`/`padding-inline-start` so `[dir="rtl"]`
+  flips the layout automatically." 32 occurrences across 13 files
+  rewritten as the mechanical pair-up:
+  `margin-left` → `margin-inline-start`,
+  `margin-right` → `margin-inline-end`,
+  `padding-left` → `padding-inline-start`,
+  `padding-right` → `padding-inline-end`,
+  `border-left` → `border-inline-start`,
+  `border-right` → `border-inline-end`,
+  `text-align: left` → `text-align: start`,
+  `text-align: right` → `text-align: end`.
+  - **Timeline accent treated correctly under direction flip.** The
+    coloured `border-inline-start` bar mirrors to the right edge in
+    RTL — what an accent indicator should do. The shorthand
+    `border-radius: 0 X X 0` (which rounded only the right corners
+    in LTR) became the longhand pair `border-start-end-radius` +
+    `border-end-end-radius` so the rounded corners follow the
+    accent bar to the end side regardless of writing direction.
+  - **Visual identity preserved in LTR.** Every logical property is
+    a strict superset of its physical sibling for the
+    default-LTR case, so `cargo test` (which doesn't render
+    pixels) couldn't catch regressions here — but the CSS reads
+    identically when `dir=ltr` is in effect. The cascade-lockstep
+    test passed unchanged; no `@import` order edits were needed.
+  - **What's still pending for full RTL.** Sidebar position and
+    icon directionality are not yet flipped via `[dir="rtl"]`
+    overrides — that's the next thread in this neighbourhood
+    (the chrome mirror is a separate change because the sidebar
+    sits in a `flex` row that doesn't auto-flip on direction).
+
 ### Added
 
 - **CSV export per model.** New

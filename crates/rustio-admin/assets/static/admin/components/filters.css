@@ -48,7 +48,7 @@
 /* Make room for the leading glyph when the input lives inside a
  * `.rio-search-input-wrap`. Bare inputs (no wrap) keep the original
  * left padding. */
-.rio-search-input-wrap .rio-search-input { padding-left: 2.4rem; }
+.rio-search-input-wrap .rio-search-input { padding-inline-start: 2.4rem; }
 .rio-search-input::placeholder { color: var(--rio-text-subtle); }
 .rio-search-input:focus {
   outline: none;
@@ -156,7 +156,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-subtle);
-  margin-right: 0.2rem;
+  margin-inline-end: 0.2rem;
 }
 .rio-active-pill {
   display: inline-flex;
@@ -186,7 +186,7 @@
   text-decoration: none;
 }
 .rio-active-filters-clear {
-  margin-left: auto;
+  margin-inline-start: auto;
   background: transparent;
   border: none;
   color: var(--rio-text-muted);

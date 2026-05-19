@@ -16,13 +16,19 @@
 }
 .rio-timeline-item {
   padding: var(--rio-s3) var(--rio-s4);
-  border-left: 3px solid var(--rio-border);
+  /* Coloured accent on the inline-start edge — mirrors to the right
+   * side in RTL, which is what an accent indicator should do. The
+   * radius longhand keeps the rounded corners on the end side so
+   * the bar reads as a tab attached to the item, regardless of
+   * writing direction. */
+  border-inline-start: 3px solid var(--rio-border);
   background: var(--rio-surface-2);
-  border-radius: 0 var(--rio-radius-sm) var(--rio-radius-sm) 0;
+  border-start-end-radius: var(--rio-radius-sm);
+  border-end-end-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);
 }
-.rio-timeline-item--success { border-left-color: var(--rio-success); }
-.rio-timeline-item--info    { border-left-color: var(--rio-accent); }
-.rio-timeline-item--warning { border-left-color: var(--rio-warning); }
-.rio-timeline-item--error   { border-left-color: var(--rio-danger); }
-.rio-timeline-item--muted   { border-left-color: var(--rio-border); }
+.rio-timeline-item--success { border-inline-start-color: var(--rio-success); }
+.rio-timeline-item--info    { border-inline-start-color: var(--rio-accent); }
+.rio-timeline-item--warning { border-inline-start-color: var(--rio-warning); }
+.rio-timeline-item--error   { border-inline-start-color: var(--rio-danger); }
+.rio-timeline-item--muted   { border-inline-start-color: var(--rio-border); }

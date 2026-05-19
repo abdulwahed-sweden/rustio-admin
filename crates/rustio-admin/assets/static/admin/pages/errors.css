@@ -11,7 +11,7 @@
 .rio-confirm-section { margin-top: var(--rio-s4); }
 .rio-cascade-list {
   list-style: disc;
-  padding-left: var(--rio-s5);
+  padding-inline-start: var(--rio-s5);
   color: var(--rio-text-muted);
 }
 
