@@ -190,17 +190,120 @@
     refresh();
   }
 
+  // ---- FK autocomplete --------------------------------------------
+  // Each `[data-rio-fk-autocomplete]` form contains a visible search
+  // input (`[data-rio-fk-search]`), a hidden id field
+  // (`[data-rio-fk-id]`), and a results list (`[data-rio-fk-results]`).
+  // Typing in the search input debounces a fetch to the configured
+  // lookup endpoint; clicking a result writes the chosen id into the
+  // hidden field and the label into the visible one. Without JS the
+  // visible input stays empty and the operator can still type a
+  // numeric id into the search box — but since the hidden id field
+  // is the actual submitted name, free-text without JS won't filter.
+  // (The form's id field carries the previously-selected value so
+  // page reloads round-trip correctly.)
+  function initFkAutocomplete() {
+    const widgets = document.querySelectorAll("[data-rio-fk-autocomplete]");
+    widgets.forEach((widget) => {
+      const lookupUrl = widget.getAttribute("data-rio-fk-lookup-url");
+      if (!lookupUrl) return;
+      const search = widget.querySelector("[data-rio-fk-search]");
+      const idInput = widget.querySelector("[data-rio-fk-id]");
+      const results = widget.querySelector("[data-rio-fk-results]");
+      if (!search || !idInput || !results) return;
+
+      let debounce = 0;
+      let lastTerm = "";
+
+      function hideResults() {
+        results.setAttribute("hidden", "");
+        results.innerHTML = "";
+      }
+
+      function render(items) {
+        results.innerHTML = "";
+        if (!items.length) {
+          const empty = document.createElement("li");
+          empty.className = "rio-fk-autocomplete-empty";
+          empty.textContent = "No matches";
+          results.appendChild(empty);
+        } else {
+          items.forEach((item) => {
+            const li = document.createElement("li");
+            li.className = "rio-fk-autocomplete-result";
+            li.textContent = item.label;
+            li.setAttribute("role", "option");
+            li.setAttribute("data-id", String(item.id));
+            li.addEventListener("mousedown", (e) => {
+              // mousedown fires before the input's blur, so the
+              // click registers before the panel hides itself.
+              e.preventDefault();
+              idInput.value = String(item.id);
+              search.value = item.label;
+              hideResults();
+            });
+            results.appendChild(li);
+          });
+        }
+        results.removeAttribute("hidden");
+      }
+
+      async function fetchResults(term) {
+        try {
+          const url = lookupUrl + "?q=" + encodeURIComponent(term);
+          const resp = await fetch(url, {
+            headers: { Accept: "application/json" },
+            credentials: "same-origin",
+          });
+          if (!resp.ok) return;
+          const items = await resp.json();
+          if (Array.isArray(items)) render(items);
+        } catch (_e) {
+          // Network blip — leave the previous results visible.
+        }
+      }
+
+      search.addEventListener("input", () => {
+        // Typing into the search box clears the previously-chosen
+        // id; the operator must commit a new choice (click a result
+        // or leave it blank to mean "no filter").
+        if (search.value !== lastTerm) idInput.value = "";
+        lastTerm = search.value;
+        window.clearTimeout(debounce);
+        const term = search.value.trim();
+        debounce = window.setTimeout(() => fetchResults(term), 250);
+      });
+      search.addEventListener("focus", () => {
+        if (search.value.trim().length > 0) {
+          window.clearTimeout(debounce);
+          debounce = window.setTimeout(() => fetchResults(search.value.trim()), 50);
+        }
+      });
+      search.addEventListener("blur", () => {
+        // Defer so a mousedown on a result can finish first.
+        window.setTimeout(hideResults, 120);
+      });
+      search.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          hideResults();
+        }
+      });
+    });
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initTheme();
       initSidebar();
       initDropdowns();
       initBulkSelect();
+      initFkAutocomplete();
     });
   } else {
     initTheme();
     initSidebar();
     initDropdowns();
     initBulkSelect();
+    initFkAutocomplete();
   }
 })();

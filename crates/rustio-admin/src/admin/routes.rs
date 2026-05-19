@@ -1377,6 +1377,24 @@ pub fn register_admin_routes(
         }
     });
 
+    // FK autocomplete lookup. Registered before any generic
+    // `/admin/:admin_name/…` route so a literal `_lookup` segment
+    // can't be shadowed by a model named `_lookup`. The endpoint
+    // is gated on `view` permission for the target model — same
+    // surface as the user reading the target's list page.
+    let c = ctx.clone();
+    let router = router.get("/admin/_lookup/:admin_name", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "view")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::lookup_model(&c, ident, &name, req).await,
+            }
+        }
+    });
+
     // Per-model list — needs `view` permission.
     let c = ctx.clone();
     let router = router.get("/admin/:admin_name", move |req| {

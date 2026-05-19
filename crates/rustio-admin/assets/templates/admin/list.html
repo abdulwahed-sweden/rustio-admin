@@ -45,7 +45,44 @@
       {% for group in filters %}
       <div class="rio-dropdown-section">
         <span class="rio-dropdown-label">{{ group.label }}</span>
-        {% if group.kind == "multi_select" %}
+        {% if group.kind == "fk_autocomplete" %}
+        <form method="get" action="/admin/{{ admin_name }}" class="rio-fk-autocomplete"
+              data-rio-fk-autocomplete
+              data-rio-fk-lookup-url="{{ group.fk_lookup_url }}"
+              data-rio-fk-field-name="{{ group.field }}">
+          {% for pair in group.hidden_pairs %}
+          <input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">
+          {% endfor %}
+          {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+          {% if active_sort_field %}
+          <input type="hidden" name="sort" value="{{ active_sort_field }}">
+          <input type="hidden" name="dir" value="{{ active_sort_dir }}">
+          {% endif %}
+          {% if active_per_page_override %}
+          <input type="hidden" name="per_page" value="{{ active_per_page_override }}">
+          {% endif %}
+          {# The hidden id is the actual submitted value; the visible
+           # search input is JS-driven (typeahead). Without JS, the
+           # operator types a numeric id directly into the search box
+           # — same fallback as Django's `raw_id_fields`. #}
+          <input type="hidden" name="{{ group.field }}" value="{{ group.fk_selected_id }}" data-rio-fk-id>
+          <div class="rio-fk-autocomplete-wrap">
+            <input type="search"
+                   class="rio-input rio-fk-autocomplete-input"
+                   value="{{ group.fk_selected_label or group.fk_selected_id }}"
+                   placeholder="Search {{ group.fk_target_label }}…"
+                   autocomplete="off"
+                   data-rio-fk-search>
+            <ul class="rio-fk-autocomplete-results" data-rio-fk-results hidden></ul>
+          </div>
+          <div class="rio-fk-autocomplete-actions">
+            <button type="submit" class="rio-button rio-button--primary">Apply</button>
+            {% if group.fk_selected_id %}
+            <a href="{{ group.all_link }}" class="rio-button">Clear</a>
+            {% endif %}
+          </div>
+        </form>
+        {% elif group.kind == "multi_select" %}
         <form method="get" action="/admin/{{ admin_name }}" class="rio-multi-select">
           {% for pair in group.hidden_pairs %}
           <input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">

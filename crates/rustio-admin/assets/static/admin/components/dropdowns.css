@@ -239,3 +239,57 @@
   padding-top: var(--rio-s1);
 }
 .rio-multi-select-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
+
+/* FK-autocomplete filter form. A search input plus a JS-populated
+ * results list that floats just below the input. The wrapper is
+ * `position: relative` so the absolute-positioned results panel
+ * anchors to it. Without JS the input is inert as a search widget,
+ * but the form still submits whatever id the operator types. */
+.rio-fk-autocomplete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+}
+.rio-fk-autocomplete-wrap {
+  position: relative;
+}
+.rio-fk-autocomplete-input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  font-size: var(--rio-fs-sm);
+}
+.rio-fk-autocomplete-results {
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem;
+  background: var(--rio-surface-elevated, var(--rio-surface));
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-sm);
+  box-shadow: var(--rio-shadow-2, 0 4px 16px rgb(0 0 0 / 0.12));
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 50;
+}
+.rio-fk-autocomplete-results[hidden] { display: none; }
+.rio-fk-autocomplete-result {
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--rio-radius-sm);
+  font-size: var(--rio-fs-sm);
+  cursor: pointer;
+}
+.rio-fk-autocomplete-result:hover { background: var(--rio-surface-3); }
+.rio-fk-autocomplete-empty {
+  padding: 0.35rem 0.5rem;
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text-subtle);
+  font-style: italic;
+}
+.rio-fk-autocomplete-actions {
+  display: flex;
+  gap: var(--rio-s2);
+}
+.rio-fk-autocomplete-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }

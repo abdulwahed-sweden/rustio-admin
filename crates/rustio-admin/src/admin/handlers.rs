@@ -377,7 +377,17 @@ pub(crate) async fn list_model(
     // ---- Filters: build the chip group list (and the active
     // selections) up front so the same struct drives both the
     // SQL WHERE clause and the rendered sidebar.
-    let inferred = super::filters::infer_filters(entry.fields);
+    // FK filters need the registry to know the target's admin slug
+    // (the lookup endpoint URL bakes it in). Building the registry
+    // once per list render is cheap — pure-functional walk over the
+    // entries, no DB. The same registry hydrates FK cells below.
+    let registry =
+        super::relations::RelationRegistry::from_admin_entries(ctx.admin.entries());
+    let inferred = super::filters::infer_filters_with_registry(
+        entry.fields,
+        entry.singular_name,
+        &registry,
+    );
     let mut filter_groups: Vec<render::FilterGroupCtx> = Vec::new();
     let mut sql_filters: Vec<(String, String)> = Vec::new();
     let mut sql_date_ranges: Vec<(String, Option<String>, Option<String>)> = Vec::new();
@@ -420,6 +430,10 @@ pub(crate) async fn list_model(
                     hidden_pairs: Vec::new(),
                     has_active_range: false,
                     multi_selected: Vec::new(),
+                    fk_selected_id: String::new(),
+                    fk_selected_label: String::new(),
+                    fk_lookup_url: String::new(),
+                    fk_target_label: String::new(),
                 });
             }
             super::filters::FilterKind::MultiSelect { values } => {
@@ -462,6 +476,10 @@ pub(crate) async fn list_model(
                     hidden_pairs: Vec::new(),
                     has_active_range: false,
                     multi_selected: selected,
+                    fk_selected_id: String::new(),
+                    fk_selected_label: String::new(),
+                    fk_lookup_url: String::new(),
+                    fk_target_label: String::new(),
                 });
             }
             super::filters::FilterKind::DateRange => {
@@ -492,6 +510,81 @@ pub(crate) async fn list_model(
                     hidden_pairs: Vec::new(),
                     has_active_range: has_active,
                     multi_selected: Vec::new(),
+                    fk_selected_id: String::new(),
+                    fk_selected_label: String::new(),
+                    fk_lookup_url: String::new(),
+                    fk_target_label: String::new(),
+                });
+            }
+            super::filters::FilterKind::FkAutocomplete {
+                target_admin_name,
+                target_model,
+            } => {
+                // The user-submitted FK id parses as i64; anything
+                // else (empty, garbage, negative) drops silently.
+                let selected_id: Option<i64> = qs
+                    .get(&f.field)
+                    .and_then(|s| s.trim().parse::<i64>().ok())
+                    .filter(|n| *n > 0);
+                if let Some(id) = selected_id {
+                    // Reuse the equality path — `WHERE col::text =
+                    // $N` is the right shape for a single FK match.
+                    sql_filters.push((f.field.clone(), id.to_string()));
+                }
+                // Hydrate the chosen id into a human label so the
+                // active-filter pill and the typeahead input both
+                // render the row name, not just `#42`. A missing /
+                // deleted target row falls back to `#<id>` so the
+                // page never 500s on a stale URL.
+                let (selected_id_str, selected_label) = if let Some(id) = selected_id {
+                    let target = ctx.admin.entries().iter().find(|e| {
+                        e.singular_name == target_model
+                            || e.admin_name == target_model
+                            || e.display_name == target_model
+                            || e.admin_name == target_admin_name
+                    });
+                    let label = if let Some(t) = target {
+                        t.ops
+                            .object_label(&ctx.db, id)
+                            .await
+                            .ok()
+                            .flatten()
+                            .unwrap_or_else(|| format!("#{id}"))
+                    } else {
+                        format!("#{id}")
+                    };
+                    (id.to_string(), label)
+                } else {
+                    (String::new(), String::new())
+                };
+                let lookup_url = format!("/admin/_lookup/{target_admin_name}");
+                // `current` carries the FK id so active_filter_pairs
+                // round-trips it as `?<col>=<id>` automatically.
+                // Empty string means "nothing selected" and is
+                // filtered out one level up.
+                let current = if !selected_id_str.is_empty() {
+                    Some(selected_id_str.clone())
+                } else {
+                    None
+                };
+                filter_groups.push(render::FilterGroupCtx {
+                    field: f.field.clone(),
+                    label: f.label,
+                    kind: "fk_autocomplete",
+                    options: Vec::new(),
+                    current,
+                    all_link: String::new(),
+                    date_from_name: String::new(),
+                    date_from_value: String::new(),
+                    date_to_name: String::new(),
+                    date_to_value: String::new(),
+                    hidden_pairs: Vec::new(),
+                    has_active_range: false,
+                    multi_selected: Vec::new(),
+                    fk_selected_id: selected_id_str,
+                    fk_selected_label: selected_label,
+                    fk_lookup_url: lookup_url,
+                    fk_target_label: target_model.clone(),
                 });
             }
             // Other filter kinds need richer widgets — later phases.
@@ -639,6 +732,89 @@ fn parse_active_sort(
         _ => super::modeladmin::SortDir::Asc,
     };
     Some((raw.to_string(), direction))
+}
+
+// ---- FK autocomplete lookup ----------------------------------------------
+
+/// JSON shape returned by [`lookup_model`]. Stable contract for the
+/// admin's bundled JS — keep these field names in sync with
+/// `admin.js::initFkAutocomplete`.
+#[derive(serde::Serialize)]
+struct LookupItem {
+    id: i64,
+    label: String,
+}
+
+/// `GET /admin/_lookup/:admin_name?q=<term>&limit=<n>` —
+/// foreign-key autocomplete backend. Returns up to `limit` rows of
+/// the named admin model (1..=50) as JSON, search filtered through
+/// the target's `ModelAdmin::search_fields()`. The label per row
+/// resolves via the same ladder as the form view's
+/// `resolve_relation_options`. Identity is required (every other
+/// `/admin/*` route goes through the same guard), but the endpoint
+/// itself has no model-level permission gate beyond "the user can
+/// reach the admin" — the data leaked is the same the user can
+/// already see on the target's list page.
+pub(crate) async fn lookup_model(
+    ctx: &AdminCtx,
+    _identity: Identity,
+    admin_name: &str,
+    req: Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let qs = req.query();
+    let term = qs.get("q").unwrap_or_default().trim().to_string();
+    let limit: i64 = qs
+        .get("limit")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(20)
+        .clamp(1, 50);
+
+    // Empty term + no search_fields → just return the first N rows.
+    // Empty term + search_fields configured → still return first N
+    // (the ILIKE on `%%` is a full scan we'd rather avoid).
+    let search = if term.is_empty() || entry.search_fields.is_empty() {
+        None
+    } else {
+        Some((
+            term,
+            entry.search_fields.iter().map(|s| s.to_string()).collect(),
+        ))
+    };
+
+    let page = entry
+        .ops
+        .list(
+            &ctx.db,
+            super::types::ListOpts {
+                search,
+                limit: Some(limit),
+                ..Default::default()
+            },
+        )
+        .await?;
+
+    // The target model decides its own label column: a column named
+    // `name` or `title` if present, otherwise the row id. We don't
+    // honour `BelongsTo.display = "col"` here because the lookup is
+    // target-rooted (no source relation in play) — same convention
+    // the target's own list page uses for the first display column.
+    let display_idx = render::pick_display_index(entry.fields, None);
+    let items: Vec<LookupItem> = page
+        .rows
+        .into_iter()
+        .map(|r| {
+            let label = display_idx
+                .and_then(|i| r.cells.get(i).cloned())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| format!("#{}", r.id));
+            LookupItem { id: r.id, label }
+        })
+        .collect();
+
+    let body = serde_json::to_string(&items)
+        .map_err(|e| Error::Internal(format!("fk lookup serialize: {e}")))?;
+    Ok(Response::json_raw(body))
 }
 
 // ---- New / Create --------------------------------------------------------
