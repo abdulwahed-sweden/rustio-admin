@@ -63,4 +63,11 @@ impl Model for Practitioner {
     }
 }
 
-impl ModelAdmin for Practitioner {}
+impl ModelAdmin for Practitioner {
+    fn search_fields() -> &'static [&'static str] {
+        // Practitioners get looked up by name (the operator's
+        // mental model) and occasionally by license number for
+        // credentialing audits.
+        &["full_name", "license_no"]
+    }
+}

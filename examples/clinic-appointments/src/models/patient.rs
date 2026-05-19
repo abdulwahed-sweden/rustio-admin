@@ -57,4 +57,15 @@ impl Model for Patient {
     }
 }
 
-impl ModelAdmin for Patient {}
+impl ModelAdmin for Patient {
+    fn search_fields() -> &'static [&'static str] {
+        // `chart_number` + `full_name` + `email` cover the three
+        // ways an operator looks a patient up: by externally-known
+        // identifier (chart sticker), by the person's name (the
+        // common case), or by inbound-email correlation. Indexed
+        // by Postgres on chart_number + email (UNIQUE); full_name
+        // ILIKE is a sequential scan but the patient list stays
+        // small enough that it's not a hotspot.
+        &["chart_number", "full_name", "email"]
+    }
+}

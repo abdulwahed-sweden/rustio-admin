@@ -2185,7 +2185,14 @@ pub(crate) fn pick_display_index(
             return Some(i);
         }
     }
-    for fallback in ["name", "title"] {
+    // Fallback ladder — checked in order, first match wins. `name` and
+    // `title` cover Library / Catalogue / Article / Movie shapes;
+    // `full_name` covers Person / Customer / Patient / Employee
+    // shapes (the universal Patron / User column across both shipped
+    // examples); `email` is the last resort for user-like rows that
+    // skipped full_name. A row whose schema fits none of these
+    // patterns still renders as `#<id>` from the caller's fallback.
+    for fallback in ["name", "title", "full_name", "email"] {
         if let Some(i) = fields.iter().position(|f| f.name == fallback) {
             return Some(i);
         }
