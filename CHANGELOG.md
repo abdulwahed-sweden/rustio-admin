@@ -89,6 +89,26 @@ leaves the alpha track.
     explicit class, directional + empty class, non-directional
     icons untouched, vertical chevrons excluded.
 
+### Added
+
+- **Approximate row count per model on the dashboard.** The
+  per-app model index now carries an "~ N" cell between the
+  display name and the Add / View buttons, sourced from
+  `pg_class.reltuples` via a single batched
+  `WHERE relname = ANY(...)` query against every registered
+  project model's table. Refreshed by `ANALYZE` / autovacuum
+  (not every INSERT) so it reads as approximate by design — the
+  prefix `~` and a `title=…` tooltip make that explicit.
+  Operators get at-a-glance volume per model without paying the
+  cost of `COUNT(*)` per table on the most-visited page. Failures
+  (query error, schema not yet migrated) log a warning and
+  render `~ 0` rather than 500ing the dashboard. Cells use a
+  monospace + tabular-nums style so 5-digit counts line up
+  beneath 2-digit counts. Live-verified against
+  clinic-appointments: shows `~ 5` clinics, `~ 20` patients,
+  `~ 30` practitioners, `~ 30` appointments after a one-time
+  `ANALYZE`.
+
 ### Fixed
 
 - **FK autocomplete labels resolved when the target has a
