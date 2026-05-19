@@ -1774,7 +1774,51 @@ pub(crate) struct FormCtx {
     pub object_id: Option<i64>,
     pub sections: Vec<FormSection>,
     pub errors: Vec<String>,
+    /// Related-children sections rendered below the action bar
+    /// when `mode == "edit"`. Always empty on `"new"` (no parent
+    /// id yet to filter children on). Each entry is one
+    /// declared [`super::modeladmin::Inline`] resolved to a
+    /// concrete row list.
+    pub inlines: Vec<FormInlineCtx>,
     pub flash: Option<FlashCtx>,
+}
+
+/// One resolved [`super::modeladmin::Inline`] — a child-model
+/// section under the parent's edit form. Read-only in v1: a table
+/// of click-through rows plus an "Add new" affordance that lands
+/// the operator on the child's normal new-form.
+#[derive(Serialize)]
+pub(crate) struct FormInlineCtx {
+    pub label: String,
+    /// Pluralised display name of the child for empty-state copy.
+    pub target_display_name: String,
+    /// Child's admin slug. Drives the "Add new …" and "View all"
+    /// click-through URLs.
+    pub target_admin_name: String,
+    pub rows: Vec<FormInlineRowCtx>,
+    /// `true` when the child query was capped at `max_rows` —
+    /// drives the "…and N more" link to the child's list page
+    /// pre-filtered to this parent.
+    pub has_more: bool,
+    /// Total matching rows on the child table. Renders as
+    /// "Showing X of Y" when `has_more` is `true`.
+    pub total: i64,
+    /// `/admin/<child>/new` — link target for "Add new …". v1
+    /// doesn't prefill the parent FK; the operator picks it from
+    /// the child's normal relation widget.
+    pub add_url: String,
+    /// `/admin/<child>?<fk_field>=<parent_id>` — link target for
+    /// "View all …" so the operator can paginate / search beyond
+    /// the inline cap.
+    pub list_url: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct FormInlineRowCtx {
+    pub id: i64,
+    pub label: String,
+    pub edit_url: String,
+    pub delete_url: String,
 }
 
 /// One option in a `<select>` list. Both fields are `String` because
@@ -1897,6 +1941,7 @@ pub(crate) fn form_ctx(
     relation_options: HashMap<&'static str, (Vec<SelectOption>, bool)>,
     field_errors: HashMap<String, Vec<String>>,
     submitted: Option<&FormData>,
+    inlines: Vec<FormInlineCtx>,
 ) -> FormCtx {
     let fields = entry
         .fields
@@ -2027,6 +2072,7 @@ pub(crate) fn form_ctx(
         object_id,
         sections,
         errors,
+        inlines,
         flash: None,
     }
 }

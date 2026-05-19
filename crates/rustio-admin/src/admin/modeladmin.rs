@@ -54,6 +54,52 @@ pub struct Fieldset {
 }
 
 // public:
+/// One related-children section to render below a parent model's
+/// edit form. v1 surface: read-only listing of up to `max_rows`
+/// children matching `<target.fk_field> = <parent.id>`, each row
+/// a click-through to its own edit page, with an "Add new …"
+/// link that lands the operator on the child's new form (the
+/// operator fills the parent FK manually for now).
+///
+/// Project authors declare these on the parent via
+/// [`ModelAdmin::inlines`]:
+///
+/// ```ignore
+/// fn inlines() -> &'static [Inline] {
+///     &[Inline {
+///         target_model: "Appointment",
+///         fk_field: "patient_id",
+///         label: Some("Appointments"),
+///         max_rows: 50,
+///     }]
+/// }
+/// ```
+///
+/// `target_model` must match a registered admin entry's
+/// `SINGULAR_NAME`. `fk_field` is the column on the child that
+/// holds the parent's id. A typo in either name silently renders
+/// an empty section.
+#[derive(Debug, Clone)]
+pub struct Inline {
+    pub target_model: &'static str,
+    pub fk_field: &'static str,
+    /// Section title. `None` → fall back to the target model's
+    /// `display_name`.
+    pub label: Option<&'static str>,
+    /// Cap how many children are fetched + rendered. Operators
+    /// who need to see the rest follow a "…and N more" link to
+    /// the target's list page pre-filtered to this parent.
+    pub max_rows: usize,
+    /// Column on the target whose value is rendered as each
+    /// inline row's clickable label. `None` falls through the
+    /// framework's display-field ladder (`name → title →
+    /// full_name → email`) and finally to `#<id>`. Set this for
+    /// child models without a natural-name column (e.g.
+    /// `Appointment.status` or `Loan.borrowed_at`).
+    pub display_field: Option<&'static str>,
+}
+
+// public:
 /// One validation failure attached to a project-driven `validate`
 /// call on [`ModelAdmin`]. Either targets a specific field (rendered
 /// inline next to its input) or surfaces globally in the form's
@@ -147,6 +193,24 @@ pub trait ModelAdmin: AdminModel {
     /// listed fields stay editable so the project can supply their
     /// initial value. Default: none.
     fn readonly_fields() -> &'static [&'static str] {
+        &[]
+    }
+
+    /// Related-children sections rendered below the change form
+    /// (the parent edit page). Default: empty — no inlines.
+    /// Each entry references a registered child model by its
+    /// `SINGULAR_NAME` and names the FK column on the child that
+    /// points at the parent. The framework fetches up to
+    /// `max_rows` matching rows, renders them as a table of
+    /// click-through edit links + a per-row Delete link, and
+    /// appends "Add new {child}" / "View all" affordances.
+    ///
+    /// **v1 surface — read-only.** Inline rows are display +
+    /// click-through; in-page editing of inline rows is a future
+    /// iteration. Adding a child still routes through the
+    /// child's normal new-form; the parent FK is filled by the
+    /// operator. See [`Inline`].
+    fn inlines() -> &'static [Inline] {
         &[]
     }
 

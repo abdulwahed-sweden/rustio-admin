@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};
+use rustio_admin::{Inline, Model, ModelAdmin, Result, Row, RustioAdmin, Value};
 
 #[derive(Debug, Clone, RustioAdmin)]
 pub struct Patient {
@@ -67,5 +67,22 @@ impl ModelAdmin for Patient {
         // ILIKE is a sequential scan but the patient list stays
         // small enough that it's not a hotspot.
         &["chart_number", "full_name", "email"]
+    }
+
+    fn inlines() -> &'static [Inline] {
+        // The patient's appointments live one click away on the
+        // child model. Surfacing them on the patient edit page
+        // saves a navigation hop and gives operators "what does
+        // this patient have booked" context without leaving.
+        &[Inline {
+            target_model: "Appointment",
+            fk_field: "patient_id",
+            label: Some("Appointments"),
+            max_rows: 50,
+            // Appointments don't have a natural-name column;
+            // surface the scheduled time so operators can scan
+            // the patient's visit history at a glance.
+            display_field: Some("scheduled_at"),
+        }]
     }
 }

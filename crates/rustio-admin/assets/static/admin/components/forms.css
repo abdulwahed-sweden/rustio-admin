@@ -168,3 +168,29 @@
   border-top: 1px solid var(--rio-border-soft);
 }
 .rio-form-actions-spacer { flex: 1; min-width: var(--rio-s4); }
+
+/* Inline-children sections — rendered below the parent edit form
+ * when a model declares ModelAdmin::inlines(). v1 is read-only:
+ * each row is a click-through to the child's own edit page, with
+ * "Add new …" / "View all …" affordances in the footer. */
+.rio-inline-section {
+  margin-top: var(--rio-s5);
+}
+.rio-inline-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rio-s3);
+  margin-bottom: var(--rio-s3);
+}
+.rio-inline-section__header h2 {
+  margin: 0;
+  font-size: var(--rio-fs-lg);
+  font-weight: var(--rio-fw-semibold);
+}
+.rio-inline-table { margin-bottom: var(--rio-s3); }
+.rio-inline-section__actions {
+  display: flex;
+  gap: var(--rio-s2);
+  flex-wrap: wrap;
+}

@@ -1369,6 +1369,106 @@ fn compute_row_diff(
     changes
 }
 
+// ---- Inline-children fetch -----------------------------------------------
+
+/// Resolve every declared `Inline` on `parent_entry` against the
+/// current admin into a renderable list of child sections. v1 is
+/// read-only: each row is a click-through to the child's own
+/// edit / delete pages.
+///
+/// Reuses `target.ops.list(...)` with a single `(fk_field,
+/// parent_id::text)` filter so the runtime's existing column-name
+/// validation + parameterised binding apply automatically — no
+/// new SQL surface, no hand-built WHERE clause per inline.
+///
+/// A typo in the project's `Inline { target_model, fk_field }`
+/// silently renders an empty section (no panic, no 500) — a
+/// future startup-validation pass can warn early. `None` parent
+/// id (new-form mode) returns empty.
+async fn fetch_inline_sections(
+    ctx: &AdminCtx,
+    parent_entry: &super::types::AdminEntry,
+    parent_id: Option<i64>,
+) -> Vec<render::FormInlineCtx> {
+    let Some(pid) = parent_id else {
+        return Vec::new();
+    };
+    if parent_entry.inlines.is_empty() {
+        return Vec::new();
+    }
+    let mut out: Vec<render::FormInlineCtx> = Vec::with_capacity(parent_entry.inlines.len());
+    for inline in parent_entry.inlines {
+        let target = match ctx
+            .admin
+            .entries()
+            .iter()
+            .find(|e| e.singular_name == inline.target_model)
+        {
+            Some(e) => e,
+            None => {
+                log::warn!(
+                    "inline target `{}` not registered (declared on parent `{}`)",
+                    inline.target_model,
+                    parent_entry.admin_name,
+                );
+                continue;
+            }
+        };
+        let label = inline
+            .label
+            .map(str::to_string)
+            .unwrap_or_else(|| target.display_name.to_string());
+        let cap = inline.max_rows.max(1) as i64;
+        let opts = super::types::ListOpts {
+            filters: vec![(inline.fk_field.to_string(), pid.to_string())],
+            limit: Some(cap),
+            ..Default::default()
+        };
+        let page = match target.ops.list(&ctx.db, opts).await {
+            Ok(p) => p,
+            Err(e) => {
+                log::warn!(
+                    "inline fetch for `{}.{}=${pid}` failed: {e}",
+                    target.admin_name,
+                    inline.fk_field,
+                );
+                continue;
+            }
+        };
+        let display_idx = render::pick_display_index(target.fields, inline.display_field);
+        let rows: Vec<render::FormInlineRowCtx> = page
+            .rows
+            .iter()
+            .map(|r| {
+                let row_label = display_idx
+                    .and_then(|i| r.cells.get(i).cloned())
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or_else(|| format!("#{}", r.id));
+                render::FormInlineRowCtx {
+                    id: r.id,
+                    label: row_label,
+                    edit_url: format!("/admin/{}/{}/edit", target.admin_name, r.id),
+                    delete_url: format!("/admin/{}/{}/delete", target.admin_name, r.id),
+                }
+            })
+            .collect();
+        out.push(render::FormInlineCtx {
+            label,
+            target_display_name: target.display_name.to_string(),
+            target_admin_name: target.admin_name.to_string(),
+            has_more: page.total > cap,
+            total: page.total,
+            rows,
+            add_url: format!("/admin/{}/new", target.admin_name),
+            list_url: format!(
+                "/admin/{}?{}={}",
+                target.admin_name, inline.fk_field, pid
+            ),
+        });
+    }
+    out
+}
+
 // ---- New / Create --------------------------------------------------------
 
 pub(crate) async fn show_new_form(
@@ -1379,6 +1479,8 @@ pub(crate) async fn show_new_form(
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
     let relation_options = render::resolve_relation_options(&ctx.admin, entry, &ctx.db).await?;
+    // New-form mode has no parent id yet, so inlines are always
+    // empty here. The edit form is where they populate.
     let form = render::form_ctx(
         &identity,
         &ctx.admin,
@@ -1391,6 +1493,7 @@ pub(crate) async fn show_new_form(
         relation_options,
         HashMap::new(),
         None,
+        Vec::new(),
     );
     let body = ctx
         .templates
@@ -1453,6 +1556,7 @@ pub(crate) async fn do_create(
                 relation_options,
                 field_errors,
                 Some(&form),
+                Vec::new(),
             );
             let body = ctx
                 .templates
@@ -1506,6 +1610,7 @@ pub(crate) async fn show_edit_form(
         .await?
         .ok_or_else(|| Error::NotFound(format!("{admin_name}/{id}")))?;
     let relation_options = render::resolve_relation_options(&ctx.admin, entry, &ctx.db).await?;
+    let inlines = fetch_inline_sections(ctx, entry, Some(id)).await;
     let form = render::form_ctx(
         &identity,
         &ctx.admin,
@@ -1518,6 +1623,7 @@ pub(crate) async fn show_edit_form(
         relation_options,
         HashMap::new(),
         None,
+        inlines,
     );
     let body = ctx
         .templates
@@ -1606,6 +1712,10 @@ pub(crate) async fn do_update(
             let relation_options =
                 render::resolve_relation_options(&ctx.admin, entry, &ctx.db).await?;
             let (global_errors, field_errors) = render::bucket_errors_by_label(entry, errors);
+            // Re-fetch inlines on the error path so the operator
+            // doesn't lose context while correcting the parent's
+            // validation errors.
+            let inlines = fetch_inline_sections(ctx, entry, Some(id)).await;
             let ctx_view = render::form_ctx(
                 &identity,
                 &ctx.admin,
@@ -1618,6 +1728,7 @@ pub(crate) async fn do_update(
                 relation_options,
                 field_errors,
                 Some(&form),
+                inlines,
             );
             let body = ctx
                 .templates
@@ -2695,6 +2806,7 @@ mod compute_row_diff_tests {
             readonly_fields: &[],
             fieldsets: &[],
             bulk_actions: &[],
+            inlines: &[],
             ops: std::sync::Arc::new(StubOps),
         }
     }

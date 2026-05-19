@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};
+use rustio_admin::{Inline, Model, ModelAdmin, Result, Row, RustioAdmin, Value};
 
 #[derive(Debug, Clone, RustioAdmin)]
 pub struct Clinic {
@@ -47,5 +47,21 @@ impl ModelAdmin for Clinic {
         // is UNIQUE; `address` is a text scan but with five rows
         // it's free.
         &["name", "address"]
+    }
+
+    fn inlines() -> &'static [Inline] {
+        // Roster of practitioners attached to this clinic shown
+        // inline on the clinic's edit page — the common
+        // "who works here" question lands one click closer.
+        &[Inline {
+            target_model: "Practitioner",
+            fk_field: "clinic_id",
+            label: Some("Practitioners on staff"),
+            max_rows: 50,
+            // Practitioner has full_name — the framework's
+            // display-field ladder finds it automatically, so
+            // `display_field: None` would also work here.
+            display_field: Some("full_name"),
+        }]
     }
 }
