@@ -113,3 +113,16 @@
   gap: 0.3rem;
 }
 .rio-button--sm .rio-icon { width: 14px; height: 14px; }
+
+/* RTL icon directionality. The icons renderer
+ * (`admin::icons::render_inline`) appends
+ * `rio-icon--directional` to glyphs whose shape carries a
+ * left/right direction — currently `arrow-left` and `log-out`.
+ * Under `[dir="rtl"]` these flip horizontally so a "Back" arrow
+ * points the way the user reads from. Vertical chevrons
+ * (`chevron-down`) and symbol icons (`home`, `users`, `database`)
+ * are NOT marked directional and stay unchanged in either
+ * direction — mirroring them would produce wrong-handed glyphs. */
+[dir="rtl"] .rio-icon--directional {
+  transform: scaleX(-1);
+}

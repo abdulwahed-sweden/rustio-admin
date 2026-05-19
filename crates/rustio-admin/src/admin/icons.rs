@@ -81,6 +81,20 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     m
 });
 
+/// Icons whose shape carries a left/right direction — chevrons,
+/// arrows, "log out" arrow glyphs, etc. The renderer appends the
+/// `rio-icon--directional` class on these so the CSS rule under
+/// `[dir="rtl"]` flips them horizontally. Symbol-shaped icons
+/// (`home`, `users`, `database`, `key`, `clock`) and
+/// vertical-axis chevrons (`chevron-down`) stay unchanged in
+/// either direction — adding them to this list would mirror
+/// glyphs that shouldn't mirror.
+const DIRECTIONAL_ICONS: &[&str] = &["arrow-left", "log-out"];
+
+fn is_directional(name: &str) -> bool {
+    DIRECTIONAL_ICONS.contains(&name)
+}
+
 // internal:
 /// Render an icon inline. Returns an empty string if `name` is
 /// unknown (templates remain forgiving — a missing icon shouldn't
@@ -90,8 +104,23 @@ pub(crate) fn render_inline(name: &str, class: &str) -> String {
         log::warn!("icon({name:?}) not found — rendering empty");
         return String::new();
     };
+    // Directional icons get an extra class hook that the CSS picks
+    // up under `[dir="rtl"]` to flip the SVG horizontally. Composed
+    // here rather than at the call site so every template that
+    // emits an arrow / log-out / future-chevron-left mirrors
+    // automatically without per-template `rio-icon--directional`
+    // copy-paste.
+    let composed_class: String = if is_directional(name) {
+        if class.is_empty() {
+            "rio-icon--directional".to_string()
+        } else {
+            format!("{class} rio-icon--directional")
+        }
+    } else {
+        class.to_string()
+    };
     format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{class}" aria-hidden="true">{inner}</svg>"#
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{composed_class}" aria-hidden="true">{inner}</svg>"#
     )
 }
 
@@ -113,5 +142,48 @@ mod tests {
     fn unknown_icon_returns_empty_not_panic() {
         let svg = render_inline("not-a-real-icon", "");
         assert_eq!(svg, "");
+    }
+
+    /// Directional icons (`arrow-left`, `log-out`, …) carry the
+    /// `rio-icon--directional` class so the CSS rule under
+    /// `[dir="rtl"]` flips them horizontally without per-template
+    /// boilerplate.
+    #[test]
+    fn directional_icon_appends_marker_class() {
+        let svg = render_inline("arrow-left", "rio-icon");
+        assert!(
+            svg.contains(r#"class="rio-icon rio-icon--directional""#),
+            "rio-icon class chain wrong: {svg}"
+        );
+    }
+
+    /// Symbol-shaped icons keep the caller's class verbatim — no
+    /// `rio-icon--directional` smuggled in, because mirroring a
+    /// `home` glyph in RTL would produce a wrong-handed house.
+    #[test]
+    fn symbol_icon_does_not_get_directional_marker() {
+        let svg = render_inline("home", "rio-icon");
+        assert!(svg.contains(r#"class="rio-icon""#));
+        assert!(!svg.contains("rio-icon--directional"));
+    }
+
+    /// Vertical chevrons aren't directional in the LTR/RTL sense —
+    /// `down` stays `down` regardless of writing direction.
+    #[test]
+    fn vertical_chevron_is_not_directional() {
+        let svg = render_inline("chevron-down", "rio-chev");
+        assert!(!svg.contains("rio-icon--directional"));
+    }
+
+    /// Directional icon with no caller-supplied class still carries
+    /// the marker alone — protects the edge case where a template
+    /// emits `{{ icon("arrow-left") }}` without explicit styling.
+    #[test]
+    fn directional_icon_with_empty_class_still_marked() {
+        let svg = render_inline("arrow-left", "");
+        assert!(
+            svg.contains(r#"class="rio-icon--directional""#),
+            "missing marker with empty class: {svg}"
+        );
     }
 }

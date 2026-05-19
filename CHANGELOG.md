@@ -75,11 +75,19 @@ leaves the alpha track.
     position, and the login-aside bullet. All five now use
     `inset-inline-start` / `inset-inline-end` so they flip on
     `dir=rtl` without per-direction overrides.
-  - **Still pending for full RTL chrome.** The desktop sidebar
-    sits in a flex row that auto-flips, but icon directionality
-    (chevrons, back-arrows) and the topbar brand mark are not
-    yet mirrored. That's the next thread; this commit unlocks
-    every data-area layout to flip on its own.
+  - **Icon directionality.** The icons renderer
+    (`admin::icons::render_inline`) maintains a `DIRECTIONAL_ICONS`
+    list (currently `arrow-left` + `log-out`) and appends a
+    `rio-icon--directional` class to those glyphs on output. The
+    new CSS rule `[dir="rtl"] .rio-icon--directional
+    { transform: scaleX(-1); }` flips them horizontally so a "Back"
+    arrow follows the reading direction without per-template
+    boilerplate. Symbol-shaped icons (`home`, `users`, `database`,
+    `key`) and vertical-axis chevrons (`chevron-down`) stay
+    unchanged — mirroring those would produce wrong-handed glyphs.
+    Four unit tests pin the marker placement: directional +
+    explicit class, directional + empty class, non-directional
+    icons untouched, vertical chevrons excluded.
 
 ### Added
 
