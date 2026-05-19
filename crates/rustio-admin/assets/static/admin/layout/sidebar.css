@@ -12,7 +12,7 @@
    * so the operator skeleton reads as one continuous frame
    * holding the content area. */
   background: var(--rio-surface-chrome);
-  border-right: 1px solid var(--rio-border);
+  border-inline-end: 1px solid var(--rio-border);
   padding: var(--rio-s5) var(--rio-s3);
 }
 .rio-sidebar-list {

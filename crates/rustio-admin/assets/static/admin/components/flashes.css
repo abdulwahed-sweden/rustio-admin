@@ -34,4 +34,4 @@
   color: var(--rio-accent);
   border-color: rgb(var(--rio-accent-rgb) / 0.18);
 }
-.rio-flash ul { margin: var(--rio-s2) 0 0; padding-left: var(--rio-s5); }
+.rio-flash ul { margin: var(--rio-s2) 0 0; padding-inline-start: var(--rio-s5); }

@@ -15,7 +15,7 @@
   flex-wrap: wrap;
   font-size: var(--rio-fs-md);
 }
-.rio-pagination .rio-meta { margin-right: auto; }
+.rio-pagination .rio-meta { margin-inline-end: auto; }
 .rio-pagination-link,
 .rio-pagination-num {
   padding: 0.4rem 0.85rem;
