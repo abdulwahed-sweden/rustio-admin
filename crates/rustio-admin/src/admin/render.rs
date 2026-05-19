@@ -311,6 +311,13 @@ pub(crate) struct DashboardModel {
     pub admin_name: &'static str,
     pub display_name: &'static str,
     pub field_count: usize,
+    /// Approximate row count from `pg_class.reltuples`, surfaced
+    /// on the dashboard as "~ N". Refreshed by `ANALYZE` /
+    /// autovacuum, not by every INSERT — operators read it as
+    /// approximate, not ground truth. Zero when the table hasn't
+    /// been analysed yet (fresh DB) or when the lookup query
+    /// failed.
+    pub row_estimate: i64,
 }
 
 #[derive(Serialize)]
@@ -331,7 +338,14 @@ pub(crate) struct RecentActionCtx {
 /// label (`"tolkhuset.translators"` → label `"Tolkhuset"`); the
 /// remaining path is the model slug. Otherwise the whole `admin_name`
 /// becomes a single-app label, capitalised.
-pub(crate) fn group_entries_by_app(entries: &[AdminEntry]) -> Vec<DashboardApp> {
+///
+/// `row_estimates` is keyed by `entry.table`; missing entries default
+/// to `0` (fresh DB, never analysed, or query failed). Pass an empty
+/// map to skip the per-model count column.
+pub(crate) fn group_entries_by_app(
+    entries: &[AdminEntry],
+    row_estimates: &HashMap<&str, i64>,
+) -> Vec<DashboardApp> {
     let mut apps: Vec<DashboardApp> = Vec::new();
     for entry in entries {
         // Core entries (the synthetic User) have a bespoke admin page;
@@ -351,10 +365,12 @@ pub(crate) fn group_entries_by_app(entries: &[AdminEntry]) -> Vec<DashboardApp> 
                 apps.last_mut().unwrap()
             }
         };
+        let estimate = row_estimates.get(entry.table).copied().unwrap_or(0).max(0);
         app.models.push(DashboardModel {
             admin_name: entry.admin_name,
             display_name: entry.display_name,
             field_count: entry.fields.len(),
+            row_estimate: estimate,
         });
     }
     apps
@@ -378,6 +394,7 @@ pub(crate) fn dashboard_ctx(
     admin: &Admin,
     recent_actions: Vec<AdminAction>,
     csrf_token: String,
+    row_estimates: &HashMap<&str, i64>,
 ) -> DashboardCtx {
     let recent = recent_actions
         .into_iter()
@@ -401,7 +418,7 @@ pub(crate) fn dashboard_ctx(
             .filter(|e| !e.core)
             .map(SidebarEntry::from)
             .collect(),
-        apps: group_entries_by_app(admin.entries()),
+        apps: group_entries_by_app(admin.entries(), row_estimates),
         recent_actions: recent,
         flash: None,
     }

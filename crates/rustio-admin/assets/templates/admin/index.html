@@ -13,6 +13,7 @@
       {% for model in app.models %}
       <tr>
         <th scope="row"><a href="/admin/{{ model.admin_name }}">{{ model.display_name }}</a></th>
+        <td class="rio-app-models__count"><span class="rio-meta" title="Planner row estimate (pg_class.reltuples); refreshed by ANALYZE, not every INSERT.">~ {{ model.row_estimate }}</span></td>
         <td>{% if not read_only %}<a class="rio-button rio-button--ghost" href="/admin/{{ model.admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add</a>{% endif %}</td>
         <td><a class="rio-button rio-button--ghost" href="/admin/{{ model.admin_name }}">{{ icon("table", class="rio-icon") }} View</a></td>
       </tr>

@@ -456,9 +456,67 @@ pub(crate) async fn dashboard(
     let recent_actions = audit::recent(&ctx.db, 10, None, None)
         .await
         .unwrap_or_default();
-    let dash = render::dashboard_ctx(&identity, &ctx.admin, recent_actions, csrf_token(req));
+    // Approximate row counts via `pg_class.reltuples` — one batched
+    // query for every registered model. Failures are non-fatal: the
+    // dashboard renders with `~ 0` placeholders rather than 500ing.
+    let row_estimates = fetch_dashboard_row_estimates(ctx).await;
+    let dash = render::dashboard_ctx(
+        &identity,
+        &ctx.admin,
+        recent_actions,
+        csrf_token(req),
+        &row_estimates,
+    );
     let body = ctx.templates.render("admin/index.html", &dash)?;
     Ok(Response::html(body))
+}
+
+/// Fetch `pg_class.reltuples` for every registered project model's
+/// table in a single round-trip. Returns a `HashMap<&'static str,
+/// i64>` keyed by table name. Failures (DB hiccup, schema not yet
+/// migrated, etc.) log a warning and return an empty map — the
+/// dashboard then renders zero placeholders rather than failing
+/// the whole page.
+async fn fetch_dashboard_row_estimates(ctx: &AdminCtx) -> HashMap<&'static str, i64> {
+    let project_tables: Vec<&'static str> = ctx
+        .admin
+        .entries()
+        .iter()
+        .filter(|e| !e.core)
+        .map(|e| e.table)
+        .collect();
+    if project_tables.is_empty() {
+        return HashMap::new();
+    }
+    let table_strs: Vec<String> = project_tables.iter().map(|t| t.to_string()).collect();
+    let rows = match sqlx::query_as::<_, (String, i64)>(
+        "SELECT c.relname, c.reltuples::bigint
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public'
+           AND c.relkind = 'r'
+           AND c.relname = ANY($1)",
+    )
+    .bind(&table_strs)
+    .fetch_all(ctx.db.pool())
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            log::warn!("dashboard row estimates: {e}");
+            return HashMap::new();
+        }
+    };
+    let mut out: HashMap<&'static str, i64> = HashMap::with_capacity(rows.len());
+    for (name, estimate) in rows {
+        // Map the dynamic string back to the static `&str` from the
+        // entries slice so the helper output keys match the caller's
+        // expectations.
+        if let Some(static_name) = project_tables.iter().find(|t| **t == name) {
+            out.insert(*static_name, estimate.max(0));
+        }
+    }
+    out
 }
 
 // ---- List page -----------------------------------------------------------

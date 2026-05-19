@@ -22,3 +22,16 @@
 }
 .rio-app-models th a:hover { color: var(--rio-accent); text-decoration: none; }
 .rio-app-models td { padding: 0.85rem var(--rio-s4); border-bottom: 1px solid var(--rio-border-soft); }
+
+/* Per-model approximate row count column. Right-aligned, mono
+ * font with tabular nums so 5-digit counts line up with 2-digit
+ * counts under each other. Compact width so the trailing Add /
+ * View buttons keep their natural sizes. */
+.rio-app-models__count {
+  width: 1%;
+  white-space: nowrap;
+  text-align: end;
+  font-family: var(--rio-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--rio-fs-sm);
+}
