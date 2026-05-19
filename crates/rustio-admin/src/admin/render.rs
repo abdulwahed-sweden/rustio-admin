@@ -108,6 +108,11 @@ pub(crate) struct BaseContext {
     pub theme_text: Option<String>,
     pub theme_text_muted: Option<String>,
     pub theme_border: Option<String>,
+    /// `true` when the admin was constructed with
+    /// [`crate::admin::Admin::read_only`]. Drives the chrome
+    /// banner in `_base.html` and the suppression of top-level
+    /// "Add" buttons on the dashboard and list pages.
+    pub read_only: bool,
 }
 
 /// Convert an `#rrggbb` (or `rrggbb`) hex string into the
@@ -190,6 +195,7 @@ impl BaseContext {
             theme_text: theme.text.clone(),
             theme_text_muted: theme.text_muted.clone(),
             theme_border: theme.border.clone(),
+            read_only: admin.is_read_only(),
         }
     }
 }

@@ -192,6 +192,69 @@ fn is_must_change_whitelisted_path(path: &str) -> bool {
     MUST_CHANGE_WHITELIST.contains(&path)
 }
 
+/// Exact-path read-only-mode allowlist for mutating verbs
+/// (POST / PUT / DELETE). When [`Admin::read_only`] is on, every
+/// other mutating request under `/admin/*` is rejected with 403;
+/// the entries here keep auth-flow round-trips working so an
+/// operator can still sign in and out of a frozen admin.
+///
+/// Sub-paths under `/admin/account/sessions/`, `/admin/account/mfa/`,
+/// and `/admin/reset-password/` need prefix matching (variable
+/// `:id` / `:token` segments); [`is_read_only_writable_path`]
+/// handles those separately.
+const READ_ONLY_EXACT_ALLOW: &[&str] = &[
+    "/admin/login",
+    "/admin/logout",
+    "/admin/reauth",
+    "/admin/forgot-password",
+    "/admin/mfa/verify",
+    "/admin/must-change-password",
+    "/admin/password_change",
+];
+
+const READ_ONLY_PREFIX_ALLOW: &[&str] = &[
+    // Token-bearing self-recovery URL — operators must be able to
+    // consume a reset link even when project mutations are frozen.
+    "/admin/reset-password/",
+    // Own-session management — sign-out-everywhere, revoke this
+    // device, etc. Identity self-service is not "data mutation."
+    "/admin/account/sessions/",
+    // Own MFA management — enrolment, regeneration, disable. Same
+    // identity-self-service reasoning.
+    "/admin/account/mfa/",
+];
+
+/// `true` when the HTTP method writes to state — POST, PUT,
+/// PATCH, DELETE. GET / HEAD / OPTIONS pass through the read-only
+/// guard untouched. Idempotency isn't the discriminator (PUT/PATCH
+/// are mutating despite being idempotent) — the question is "does
+/// this typically mutate server state?"
+pub(crate) fn is_mutating_method(method: &hyper::Method) -> bool {
+    matches!(
+        *method,
+        hyper::Method::POST
+            | hyper::Method::PUT
+            | hyper::Method::PATCH
+            | hyper::Method::DELETE
+    )
+}
+
+/// Returns `true` when a mutating request to `path` should be
+/// allowed despite [`Admin::read_only`] being on. The narrow set
+/// of exceptions covers identity / auth flows so a read-only
+/// admin is still usable as a sign-in surface.
+///
+/// Pulled out as a free fn so the policy is unit-testable
+/// without a `Request`.
+pub(crate) fn is_read_only_writable_path(path: &str) -> bool {
+    if READ_ONLY_EXACT_ALLOW.contains(&path) {
+        return true;
+    }
+    READ_ONLY_PREFIX_ALLOW
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
+}
+
 /// Paths reachable when `MfaPolicy::Required` is active and the
 /// user has not yet enrolled (R3 commit #18). Forward-only
 /// enforcement per `DESIGN_R3_MFA.md` D6: existing sessions
@@ -543,6 +606,36 @@ pub fn register_admin_routes(
                 }
                 Err(err) => Err(err),
             }
+        })
+    });
+
+    // Read-only guard. When [`Admin::read_only`] is on, every
+    // mutating verb (POST / PUT / PATCH / DELETE) under `/admin/*`
+    // returns 403 — except a small allowlist for auth flows
+    // (login / logout / reauth / MFA verify / password recovery /
+    // own-session management). Mounted AFTER the error-renderer
+    // above so the 403 gets the styled HTML page treatment instead
+    // of plain text. Mounted BEFORE every route registration below
+    // so the chain runs early and the actual handler never sees a
+    // blocked mutation. Pass-through (`next.run(req)`) when the
+    // admin isn't read-only — zero overhead for non-frozen
+    // deployments.
+    let ro_flag = ctx.admin.is_read_only();
+    let router = router.middleware(move |req, next| {
+        Box::pin(async move {
+            if ro_flag
+                && req.path().starts_with("/admin")
+                && is_mutating_method(req.method())
+                && !is_read_only_writable_path(req.path())
+            {
+                return Err(Error::Forbidden(
+                    "This admin is currently in read-only mode. \
+                     Project-data mutations are disabled until the operator \
+                     turns read-only off."
+                        .into(),
+                ));
+            }
+            next.run(req).await
         })
     });
 
@@ -1816,6 +1909,96 @@ mod tests {
                 !super::is_must_change_whitelisted_path(path),
                 "expected reject for {path:?}"
             );
+        }
+    }
+
+    // ---- Read-only writable-path allowlist ----------------------
+
+    #[test]
+    fn read_only_allows_auth_flow_exact_paths() {
+        for path in [
+            "/admin/login",
+            "/admin/logout",
+            "/admin/reauth",
+            "/admin/forgot-password",
+            "/admin/mfa/verify",
+            "/admin/must-change-password",
+            "/admin/password_change",
+        ] {
+            assert!(
+                super::is_read_only_writable_path(path),
+                "auth path {path:?} must be writable in read-only mode"
+            );
+        }
+    }
+
+    #[test]
+    fn read_only_allows_prefix_paths() {
+        // Token-bearing recovery URL, own-session and own-MFA
+        // management — all carry dynamic segments, allowlisted by
+        // prefix not by exact match.
+        for path in [
+            "/admin/reset-password/abc123",
+            "/admin/reset-password/abc123/whatever",
+            "/admin/account/sessions/42/revoke",
+            "/admin/account/sessions/revoke-all",
+            "/admin/account/mfa/enroll",
+            "/admin/account/mfa/disable",
+        ] {
+            assert!(
+                super::is_read_only_writable_path(path),
+                "prefix-allowlisted path {path:?} must be writable"
+            );
+        }
+    }
+
+    #[test]
+    fn read_only_blocks_project_data_mutations() {
+        // Project CRUD, bulk actions, admin-driven user lifecycle
+        // — none of these should slip through.
+        for path in [
+            "/admin/posts/new",
+            "/admin/posts/42/edit",
+            "/admin/posts/42/delete",
+            "/admin/posts/bulk_delete",
+            "/admin/posts/bulk/archive",
+            "/admin/users/new",
+            "/admin/users/42/edit",
+            "/admin/users/42/reset-password",
+            "/admin/users/42/lock",
+            "/admin/users/42/sessions/99/revoke",
+            "/admin/groups/new",
+            "/admin/groups/42/delete",
+        ] {
+            assert!(
+                !super::is_read_only_writable_path(path),
+                "data-mutation path {path:?} must be blocked in read-only mode"
+            );
+        }
+    }
+
+    #[test]
+    fn read_only_blocks_random_paths_outside_admin_surface() {
+        // Paths outside /admin/* don't reach this helper in
+        // production (the middleware checks `starts_with("/admin")`
+        // first), but the helper itself must still say "not
+        // writable" so the policy is self-consistent.
+        for path in ["/", "/login", "/static/admin.css", "/api/v1/posts"] {
+            assert!(
+                !super::is_read_only_writable_path(path),
+                "non-admin path {path:?} must not be writable"
+            );
+        }
+    }
+
+    #[test]
+    fn is_mutating_method_recognises_write_verbs() {
+        use hyper::Method;
+        for m in [Method::POST, Method::PUT, Method::PATCH, Method::DELETE] {
+            assert!(super::is_mutating_method(&m), "{m} must be mutating");
+        }
+        for m in [Method::GET, Method::HEAD, Method::OPTIONS] {
+            assert!(!super::is_mutating_method(&m), "{m} must not be mutating");
         }
     }
 }

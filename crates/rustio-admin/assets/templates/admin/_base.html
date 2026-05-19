@@ -16,10 +16,15 @@
 {% include "admin/_theme.html" %}
 {% block extra_head %}{% endblock %}
 </head>
-<body class="rio-shell{% if is_demo_session %} rio-shell--demo{% endif %}">
+<body class="rio-shell{% if is_demo_session %} rio-shell--demo{% endif %}{% if read_only %} rio-shell--read-only{% endif %}">
 {% if is_demo_session %}
 <div class="rio-banner rio-banner--demo" role="status">
   DEMO USER{% if demo_label %} ({{ demo_label }}){% endif %} — actions are visible to other operators.
+</div>
+{% endif %}
+{% if read_only %}
+<div class="rio-banner rio-banner--read-only" role="status">
+  READ-ONLY — project-data mutations are disabled. Auth flows (sign-in, password change, session revoke) still work.
 </div>
 {% endif %}
 {% block topbar %}{% include "admin/_topbar.html" %}{% endblock %}

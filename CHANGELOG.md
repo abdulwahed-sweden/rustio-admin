@@ -91,6 +91,35 @@ leaves the alpha track.
 
 ### Added
 
+- **Whole-admin read-only mode.** New `Admin::read_only(bool)`
+  builder method puts the admin into a frozen, view-only state:
+  every mutating verb (`POST` / `PUT` / `PATCH` / `DELETE`) under
+  `/admin/*` returns 403 from a new `read_only_guard` middleware,
+  rendered through the existing styled error pipeline. Auth-flow
+  routes are explicitly allowlisted (login / logout / reauth / MFA
+  verify / forgot-password / reset-password / must-change-password
+  / password-change / own-session management / own-MFA management)
+  so operators can still sign in and out of a frozen admin —
+  useful for incident response (lock the system while
+  investigating) and demo environments (viewers without editors).
+  - **Security boundary is the middleware.** Templates that
+    surface mutating affordances consult the new
+    `BaseContext.read_only` flag to suppress the most prominent
+    top-level "Add" buttons on the dashboard and list pages, and
+    `_base.html` renders an info-tinted banner ("READ-ONLY —
+    project-data mutations are disabled…"). Per-row Edit / Delete
+    buttons and form Save buttons still render in v1 — clicking
+    through hits the 403 with a clear flash. Hiding every mutation
+    button per-template is a known follow-up, deliberately deferred
+    so v1 stays narrow.
+  - **Allowlist matcher pulled out as a free fn**
+    (`is_read_only_writable_path`) so the policy is unit-testable
+    without booting the router. Five tests cover the four exact
+    auth paths, the three prefix-allowlisted families
+    (`/admin/reset-password/`, `/admin/account/sessions/`,
+    `/admin/account/mfa/`), the project-data mutations that must
+    be blocked, the non-admin paths the middleware never reaches,
+    and the HTTP-method discriminator.
 - **CSV export per model.** New
   `GET /admin/:admin_name/export.csv` endpoint streams every row
   matching the current list-page state (search + filters + sort) as
