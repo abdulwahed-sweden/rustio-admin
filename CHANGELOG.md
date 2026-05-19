@@ -91,6 +91,36 @@ leaves the alpha track.
 
 ### Added
 
+- **Project-model CRUD audit + per-update diff view.** Generic
+  `do_create` / `do_update` / `do_delete` now emit
+  `rustio_admin_actions` rows so per-model history pages
+  (`/admin/<model>/<id>/history`) actually populate — pre-this-
+  release they always read as empty because the framework only
+  audited auth / identity / MFA / bulk flows. **Update events
+  capture a before/after diff** of every editable column whose
+  value changed; the metadata JSONB carries a `changes` array of
+  `{field, label, from, to}` objects, and the object-history
+  template renders a tight `<dl>` of changed columns under each
+  Update row with strike-through `from` and accent-coloured `to`.
+  - Non-editable fields (auto-touched `updated_at`, `password_hash`
+    etc.) are excluded from the diff — they aren't user-driven
+    changes and including them would bury the real signal.
+  - Empty-diff updates still emit an audit row (the human action
+    happened), with a summary that reads "Updated Post #42 (no
+    field changes)" so the timeline stays honest.
+  - `AdminAction` gains a `metadata: Option<serde_json::Value>`
+    field; `recent()` and `for_object()` SELECTs now pull the
+    JSONB column. The History page renderer extracts the
+    `changes` array via a new `extract_changes_from_metadata`
+    helper that defends against malformed metadata (missing
+    key, wrong type, entries missing `field`) by falling back to
+    an empty render rather than panicking.
+  - **10 new unit tests** cover the diff helper
+    (`compute_row_diff`: editable-only filter, unset→set
+    transition, no-change emits nothing, multi-field
+    ordering) and the metadata extractor (None, missing key,
+    non-array, full round-trip, label fallback, malformed-entry
+    skip). All pass against in-memory snapshots — no DB.
 - **Whole-admin read-only mode.** New `Admin::read_only(bool)`
   builder method puts the admin into a frozen, view-only state:
   every mutating verb (`POST` / `PUT` / `PATCH` / `DELETE`) under
