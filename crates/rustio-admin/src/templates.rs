@@ -365,6 +365,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/bulk_confirm_delete.html"),
     ),
     (
+        "admin/db_browser.html",
+        include_str!("../assets/templates/admin/db_browser.html"),
+    ),
+    (
         "admin/bulk_confirm_action.html",
         include_str!("../assets/templates/admin/bulk_confirm_action.html"),
     ),

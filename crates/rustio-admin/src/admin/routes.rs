@@ -112,6 +112,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/pages/dashboard.css"),
     "\n",
+    include_str!("../../assets/static/admin/pages/db_browser.css"),
+    "\n",
     include_str!("../../assets/static/admin/pages/permissions.css"),
     "\n",
     include_str!("../../assets/static/admin/pages/sessions.css"),
@@ -806,6 +808,24 @@ pub fn register_admin_routes(
             match role_guard(&c, &req, Role::Staff).await? {
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => handlers::dashboard(&c, ident, &req).await,
+            }
+        }
+    });
+
+    // Database browser — Developer-only schema explorer at
+    // `/admin/db`. Read-only `information_schema` / `pg_catalog`
+    // queries; no DDL, no row sampling. Registered before the
+    // generic `/admin/:admin_name` so a model coincidentally named
+    // `db` can't shadow it (also the static literal wins on tie).
+    let c = ctx.clone();
+    let router = router.get("/admin/db", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    super::db_browser::show_db_browser(&c, ident, &req).await
+                }
             }
         }
     });

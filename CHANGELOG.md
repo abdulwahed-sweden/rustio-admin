@@ -91,6 +91,31 @@ leaves the alpha track.
 
 ### Added
 
+- **`/admin/db` — read-only Postgres schema explorer.** Closes the
+  roadmap entry "Database browser. A read-only schema explorer at
+  `/admin/db` showing every table, its columns, foreign keys, and
+  row counts. Useful during development; hidden behind the
+  Developer role." Diagnostic surface for inspecting the `public`
+  schema without leaving the admin chrome or reaching for `psql`.
+  Three `information_schema` / `pg_catalog` queries pull every
+  table, its columns, and its foreign-key relationships; the
+  template composes a per-table card with column list (name /
+  type / nullable / default) and FK lists (outgoing + incoming
+  with anchor links between cards).
+  - **Approximate row counts.** Uses `pg_class.reltuples` rather
+    than `COUNT(*)` per table — cheap and batched. Surfaced as
+    "~ N" so operators read it as approximate; ground truth lives
+    on the list page where the existing accurate count runs under
+    the same WHERE.
+  - **Permission boundary.** Route gated by `role_guard(Role::Developer)`
+    in `routes.rs`; the sidebar surfaces a "Developer →
+    Database" entry only when `identity.is_developer`. No DDL,
+    no row sampling, no mutation surface.
+  - New `db_browser` module + `admin/db_browser.html` template
+    (43rd embedded template; `rustio override` now reports 43).
+    New `pages/db_browser.css` wired through both the
+    `admin.css` `@import` list and the `ADMIN_CSS` `concat!`
+    block in `routes.rs` (cascade-lockstep test still passes).
 - **`ModelAdmin::validate` — project-driven business-rule
   validation hook.** Closes the roadmap entry "Project closures
   that return validation errors before the row hits the database,
