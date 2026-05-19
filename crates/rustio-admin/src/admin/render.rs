@@ -2477,6 +2477,28 @@ pub(crate) struct HistoryEntryCtx {
     pub object_id: i64,
     pub summary: String,
     pub ip_address: String,
+    /// Per-field before/after diff extracted from
+    /// `audit_action.metadata.changes`. Empty when the row carries
+    /// no diff (create / delete / pre-diff-feature updates). The
+    /// object-history template iterates this to render a tight
+    /// `<dl>` of changed columns under the audit row.
+    pub changes: Vec<HistoryChangeCtx>,
+}
+
+#[derive(Serialize, Clone)]
+pub(crate) struct HistoryChangeCtx {
+    /// Snake-case field identifier (`title`, `published_at`).
+    /// Surfaced as a `<dt>`'s `data-field` attribute mostly so
+    /// downstream CSS can hook in if needed.
+    pub field: String,
+    /// Humanised label rendered as the row header (`Title`,
+    /// `Published at`).
+    pub label: String,
+    /// Stringified previous value. Empty string means "was unset"
+    /// (matches the column's display representation of NULL).
+    pub from: String,
+    /// Stringified new value. Same empty-means-unset convention.
+    pub to: String,
 }
 
 #[derive(Serialize)]
@@ -2505,20 +2527,71 @@ pub(crate) struct LogEntriesCtx {
 pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCtx> {
     actions
         .into_iter()
-        .map(|a| HistoryEntryCtx {
-            timestamp_iso: a.timestamp.to_rfc3339(),
-            when_relative: relative_time(a.timestamp),
-            user_email: a.user_email.unwrap_or_else(|| "—".to_string()),
-            label: action_label(&a.action_type),
-            pill_class: action_pill_class(&a.action_type),
-            model_name: a.model_name.clone(),
-            // The audit row's `model_name` IS the admin_name slug per
-            // the convention enforced at `audit::record` call sites.
-            model_admin_name: a.model_name,
-            action_type: a.action_type,
-            object_id: a.object_id,
-            summary: a.summary,
-            ip_address: a.ip_address.unwrap_or_default(),
+        .map(|a| {
+            let changes = extract_changes_from_metadata(a.metadata.as_ref());
+            HistoryEntryCtx {
+                timestamp_iso: a.timestamp.to_rfc3339(),
+                when_relative: relative_time(a.timestamp),
+                user_email: a.user_email.unwrap_or_else(|| "—".to_string()),
+                label: action_label(&a.action_type),
+                pill_class: action_pill_class(&a.action_type),
+                model_name: a.model_name.clone(),
+                // The audit row's `model_name` IS the admin_name slug per
+                // the convention enforced at `audit::record` call sites.
+                model_admin_name: a.model_name,
+                action_type: a.action_type,
+                object_id: a.object_id,
+                summary: a.summary,
+                ip_address: a.ip_address.unwrap_or_default(),
+                changes,
+            }
+        })
+        .collect()
+}
+
+/// Pull a `changes: [{field, label, from, to}, …]` array out of an
+/// audit row's `metadata` JSONB. Any structural mismatch (no key,
+/// not an array, entries missing fields) collapses to an empty
+/// vec — the History page renders the row without a diff and the
+/// caller never has to defend against malformed metadata.
+///
+/// The shape mirrors `handlers::FieldChange` so the JSON written
+/// by `do_update` round-trips losslessly through Postgres' JSONB
+/// column.
+fn extract_changes_from_metadata(
+    metadata: Option<&serde_json::Value>,
+) -> Vec<HistoryChangeCtx> {
+    let Some(obj) = metadata.and_then(|m| m.as_object()) else {
+        return Vec::new();
+    };
+    let Some(arr) = obj.get("changes").and_then(|v| v.as_array()) else {
+        return Vec::new();
+    };
+    arr.iter()
+        .filter_map(|entry| {
+            let o = entry.as_object()?;
+            let field = o.get("field")?.as_str()?.to_string();
+            let label = o
+                .get("label")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&field)
+                .to_string();
+            let from = o
+                .get("from")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let to = o
+                .get("to")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            Some(HistoryChangeCtx {
+                field,
+                label,
+                from,
+                to,
+            })
         })
         .collect()
 }
@@ -3385,5 +3458,77 @@ mod tests {
         let html = highlight_search_match("aaaa", "aa").unwrap();
         // Greedy non-overlapping match: positions 0..2 and 2..4.
         assert_eq!(html, "<mark>aa</mark><mark>aa</mark>");
+    }
+
+    // ---- extract_changes_from_metadata -----------------------------
+
+    #[test]
+    fn extract_changes_returns_empty_when_metadata_is_none() {
+        let r = extract_changes_from_metadata(None);
+        assert!(r.is_empty());
+    }
+
+    #[test]
+    fn extract_changes_returns_empty_when_changes_key_missing() {
+        let meta = serde_json::json!({ "actor_user_id": 42 });
+        let r = extract_changes_from_metadata(Some(&meta));
+        assert!(r.is_empty());
+    }
+
+    #[test]
+    fn extract_changes_returns_empty_when_changes_not_array() {
+        let meta = serde_json::json!({ "changes": "not-an-array" });
+        let r = extract_changes_from_metadata(Some(&meta));
+        assert!(r.is_empty());
+    }
+
+    #[test]
+    fn extract_changes_round_trips_full_entry() {
+        let meta = serde_json::json!({
+            "changes": [
+                { "field": "title", "label": "Title", "from": "Old", "to": "New" },
+                { "field": "body",  "label": "Body",  "from": "",    "to": "Filled in" },
+            ]
+        });
+        let r = extract_changes_from_metadata(Some(&meta));
+        assert_eq!(r.len(), 2);
+        assert_eq!(r[0].field, "title");
+        assert_eq!(r[0].label, "Title");
+        assert_eq!(r[0].from, "Old");
+        assert_eq!(r[0].to, "New");
+        // Empty `from` survives — represents "was unset."
+        assert_eq!(r[1].from, "");
+        assert_eq!(r[1].to, "Filled in");
+    }
+
+    #[test]
+    fn extract_changes_falls_back_to_field_when_label_missing() {
+        // Old audit rows (or hand-edited entries) might omit `label`.
+        // Fall back to the snake-case field name so the UI still
+        // renders something — better than blanking the row.
+        let meta = serde_json::json!({
+            "changes": [
+                { "field": "title", "from": "a", "to": "b" }
+            ]
+        });
+        let r = extract_changes_from_metadata(Some(&meta));
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].label, "title");
+    }
+
+    #[test]
+    fn extract_changes_skips_malformed_entries() {
+        // Entries missing `field` are dropped silently — the
+        // metadata is producer-controlled but we still defend.
+        let meta = serde_json::json!({
+            "changes": [
+                { "field": "title", "from": "a", "to": "b" },
+                { "label": "missing-field", "from": "x", "to": "y" },
+                "not-an-object",
+            ]
+        });
+        let r = extract_changes_from_metadata(Some(&meta));
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].field, "title");
     }
 }

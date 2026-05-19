@@ -171,6 +171,12 @@ pub struct AdminAction {
     pub timestamp: DateTime<Utc>,
     pub ip_address: Option<String>,
     pub summary: String,
+    /// Structured row attached to the audit entry. Producers attach
+    /// arbitrary JSONB (the column shape) — the History renderer
+    /// looks for a `changes` array (`[{field, label, from, to}, …]`)
+    /// to surface per-field diffs on Update rows. `None` when the
+    /// audit row has no metadata column.
+    pub metadata: Option<serde_json::Value>,
 }
 
 // public:
@@ -596,7 +602,8 @@ pub async fn recent(
 ) -> Result<Vec<AdminAction>> {
     let mut sql = String::from(
         "SELECT a.id, a.user_id, u.email AS user_email, a.action_type,
-                a.model_name, a.object_id, a.timestamp, a.ip_address, a.summary
+                a.model_name, a.object_id, a.timestamp, a.ip_address, a.summary,
+                a.metadata
          FROM rustio_admin_actions a
          LEFT JOIN rustio_users u ON u.id = a.user_id",
     );
@@ -636,7 +643,8 @@ pub async fn recent(
 pub async fn for_object(db: &Db, model_name: &str, object_id: i64) -> Result<Vec<AdminAction>> {
     let rows = sqlx::query(
         "SELECT a.id, a.user_id, u.email AS user_email, a.action_type,
-                a.model_name, a.object_id, a.timestamp, a.ip_address, a.summary
+                a.model_name, a.object_id, a.timestamp, a.ip_address, a.summary,
+                a.metadata
          FROM rustio_admin_actions a
          LEFT JOIN rustio_users u ON u.id = a.user_id
          WHERE a.model_name = $1 AND a.object_id = $2
@@ -660,6 +668,10 @@ fn row_to_action(r: &sqlx::postgres::PgRow) -> Result<AdminAction> {
         timestamp: r.try_get("timestamp")?,
         ip_address: r.try_get("ip_address")?,
         summary: r.try_get("summary")?,
+        // Metadata is a JSONB column; `try_get` decodes it as
+        // `serde_json::Value`. Rows written before the migration
+        // (no column yet) get `None` naturally via the option type.
+        metadata: r.try_get("metadata").ok(),
     })
 }
 

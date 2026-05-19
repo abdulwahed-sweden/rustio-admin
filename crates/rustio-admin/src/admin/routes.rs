@@ -1657,7 +1657,7 @@ pub fn register_admin_routes(
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => {
                     let id = parse_id(req.param("id"))?;
-                    handlers::do_delete(&c, ident, &name, id).await
+                    handlers::do_delete(&c, ident, &name, req, id).await
                 }
             }
         }

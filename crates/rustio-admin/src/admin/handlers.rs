@@ -1135,6 +1135,92 @@ pub(crate) async fn lookup_model(
     Ok(Response::json_raw(body))
 }
 
+// ---- CRUD audit emission -------------------------------------------------
+
+/// Fire-and-forget audit emission for a project-model CRUD event.
+/// Mirrors the conventional metadata shape used elsewhere (ip,
+/// correlation_id, summary, optional structured metadata). Audit-
+/// write failures log a warning but never block the user-facing
+/// redirect — same posture as every other CRUD-adjacent audit
+/// emission in the framework (e.g. the auto-lock branch).
+#[allow(clippy::too_many_arguments)]
+async fn record_crud_audit(
+    ctx: &AdminCtx,
+    identity: &Identity,
+    req: &Request,
+    entry: &super::types::AdminEntry,
+    action_type: audit::ActionType,
+    object_id: i64,
+    summary: String,
+    metadata: Option<serde_json::Value>,
+) {
+    let ip = super::builtin::client_ip(req);
+    let cid = super::builtin::correlation_id_from(req);
+    let mut log_entry =
+        audit::LogEntry::new(identity.user_id, action_type, entry.admin_name, object_id);
+    log_entry.summary = summary;
+    log_entry.ip_address = ip.as_deref();
+    log_entry.correlation_id = cid.as_deref();
+    log_entry.metadata = metadata;
+    if let Err(e) = audit::record(&ctx.db, log_entry).await {
+        log::warn!(
+            "audit::record (CRUD {at}) failed model={model} id={object_id}: {e}",
+            at = action_type.as_str(),
+            model = entry.admin_name,
+        );
+    }
+}
+
+/// One column's value transition between two row snapshots. Emitted
+/// as a `{field, label, from, to}` object inside the audit metadata's
+/// `changes` array.
+#[derive(serde::Serialize)]
+struct FieldChange {
+    field: String,
+    label: String,
+    from: String,
+    to: String,
+}
+
+/// Compute the per-column diff between two `EditRow` snapshots.
+/// Restricted to fields the model declares as editable — non-
+/// editable timestamps and hashes are excluded so the diff reads
+/// as "what did the human change," not "what side-effects did the
+/// SQL update have."
+fn compute_row_diff(
+    entry: &super::types::AdminEntry,
+    before: &super::types::EditRow,
+    after: &super::types::EditRow,
+) -> Vec<FieldChange> {
+    let before_map: HashMap<&str, &str> = before
+        .values
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
+    let after_map: HashMap<&str, &str> = after
+        .values
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
+    let mut changes: Vec<FieldChange> = Vec::new();
+    for f in entry.fields {
+        if !f.editable {
+            continue;
+        }
+        let before_val = before_map.get(f.name).copied().unwrap_or("");
+        let after_val = after_map.get(f.name).copied().unwrap_or("");
+        if before_val != after_val {
+            changes.push(FieldChange {
+                field: f.name.to_string(),
+                label: f.label.to_string(),
+                from: before_val.to_string(),
+                to: after_val.to_string(),
+            });
+        }
+    }
+    changes
+}
+
 // ---- New / Create --------------------------------------------------------
 
 pub(crate) async fn show_new_form(
@@ -1174,9 +1260,34 @@ pub(crate) async fn do_create(
     let form = req.form()?;
     let intent = submit_intent(&form);
     match entry.ops.create(&ctx.db, &form).await? {
-        Ok(id) => Ok(Response::redirect(redirect_after_save(
-            intent, admin_name, id,
-        ))),
+        Ok(id) => {
+            // Audit the create. `object_label` resolves the label
+            // via the same ladder the list view uses (display field
+            // → name → title → #id); a fallback to `#<id>` keeps the
+            // summary readable when no label column resolves.
+            let label = entry
+                .ops
+                .object_label(&ctx.db, id)
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| format!("#{id}"));
+            let summary = format!("Created {}: {label}", entry.singular_name);
+            record_crud_audit(
+                ctx,
+                &identity,
+                &req,
+                entry,
+                audit::ActionType::Create,
+                id,
+                summary,
+                None,
+            )
+            .await;
+            Ok(Response::redirect(redirect_after_save(
+                intent, admin_name, id,
+            )))
+        }
         Err(errors) => {
             let token = csrf_token(&req);
             let relation_options =
@@ -1275,12 +1386,17 @@ pub(crate) async fn do_update(
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
     let mut form = req.form()?;
+    // Snapshot the row BEFORE the update so the audit-emission
+    // branch below can diff before/after and persist the changed-
+    // columns set inside `metadata.changes`. Reused below for the
+    // readonly-field injection too — same query, single fetch.
+    let before_row = entry.ops.find_row(&ctx.db, id).await?;
     // Readonly fields render `disabled` and are not submitted by the
     // browser. Inject the existing values so `M::from_form` parses a
     // complete row — the generated parser doesn't know which columns
     // the project marked readonly.
     if !entry.readonly_fields.is_empty() {
-        if let Some(existing) = entry.ops.find_row(&ctx.db, id).await? {
+        if let Some(existing) = before_row.as_ref() {
             for name in entry.readonly_fields {
                 if form.contains(name) {
                     continue;
@@ -1293,9 +1409,49 @@ pub(crate) async fn do_update(
     }
     let intent = submit_intent(&form);
     match entry.ops.update(&ctx.db, id, &form).await? {
-        Ok(()) => Ok(Response::redirect(redirect_after_save(
-            intent, admin_name, id,
-        ))),
+        Ok(()) => {
+            // Audit the update. Diff before/after editable columns
+            // and persist the change set under `metadata.changes`
+            // so the object-history page can render a per-field
+            // before/after table. An empty diff (the form
+            // submitted identical values) still emits a row — the
+            // human action happened; metadata reflects "no fields
+            // changed."
+            let after_row = entry.ops.find_row(&ctx.db, id).await?;
+            let changes = match (before_row.as_ref(), after_row.as_ref()) {
+                (Some(b), Some(a)) => compute_row_diff(entry, b, a),
+                _ => Vec::new(),
+            };
+            let summary = if changes.is_empty() {
+                format!("Updated {} #{id} (no field changes)", entry.singular_name)
+            } else {
+                format!(
+                    "Updated {} #{id} ({} {} changed)",
+                    entry.singular_name,
+                    changes.len(),
+                    if changes.len() == 1 { "field" } else { "fields" },
+                )
+            };
+            let metadata = if changes.is_empty() {
+                None
+            } else {
+                Some(serde_json::json!({ "changes": changes }))
+            };
+            record_crud_audit(
+                ctx,
+                &identity,
+                &req,
+                entry,
+                audit::ActionType::Update,
+                id,
+                summary,
+                metadata,
+            )
+            .await;
+            Ok(Response::redirect(redirect_after_save(
+                intent, admin_name, id,
+            )))
+        }
         Err(errors) => {
             let existing = entry.ops.find_row(&ctx.db, id).await?;
             let token = csrf_token(&req);
@@ -1370,12 +1526,35 @@ pub(crate) async fn show_delete_confirm(
 
 pub(crate) async fn do_delete(
     ctx: &AdminCtx,
-    _identity: Identity,
+    identity: Identity,
     admin_name: &str,
+    req: Request,
     id: i64,
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
+    // Resolve the label BEFORE the delete so the audit summary
+    // ("Deleted Post: Hello world") survives the row going away.
+    // A row that's already gone falls back to `#<id>` — no 500.
+    let label = entry
+        .ops
+        .object_label(&ctx.db, id)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| format!("#{id}"));
     entry.ops.delete(&ctx.db, id).await?;
+    let summary = format!("Deleted {}: {label}", entry.singular_name);
+    record_crud_audit(
+        ctx,
+        &identity,
+        &req,
+        entry,
+        audit::ActionType::Delete,
+        id,
+        summary,
+        None,
+    )
+    .await;
     Ok(Response::redirect(format!("/admin/{admin_name}")))
 }
 
@@ -2321,5 +2500,176 @@ mod csv_escape_tests {
     fn unicode_passes_through_unchanged_when_no_special_chars() {
         assert_eq!(csv_escape_field("Anna Wåhlin"), "Anna Wåhlin");
         assert_eq!(csv_escape_field("日本語"), "日本語");
+    }
+}
+
+#[cfg(test)]
+mod compute_row_diff_tests {
+    use super::*;
+    use crate::admin::types::{AdminField, AdminEntry, EditRow, FieldType};
+
+    fn field(name: &'static str, label: &'static str, editable: bool) -> AdminField {
+        AdminField {
+            name,
+            label,
+            field_type: FieldType::String,
+            editable,
+            relation: None,
+            choices: None,
+        }
+    }
+
+    fn row(values: &[(&str, &str)]) -> EditRow {
+        EditRow {
+            id: 1,
+            values: values.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+        }
+    }
+
+    fn entry_with(fields: &'static [AdminField]) -> AdminEntry {
+        // Minimal stub — only `fields` matters for compute_row_diff.
+        // Other AdminEntry slots are read elsewhere; for this test
+        // we can leave them at default-shaped sentinels.
+        // Construct via the same `core_user_entry`-style literal:
+        // we only need a valid `fields` slice on it.
+        AdminEntry {
+            admin_name: "test",
+            display_name: "Test",
+            singular_name: "Test",
+            table: "test",
+            fields,
+            core: false,
+            list_display: &[],
+            list_filter: &[],
+            search_fields: &[],
+            ordering: &[],
+            list_per_page: 50,
+            readonly_fields: &[],
+            fieldsets: &[],
+            bulk_actions: &[],
+            ops: std::sync::Arc::new(StubOps),
+        }
+    }
+
+    /// Stub `AdminOps` used only by entry_with(); compute_row_diff
+    /// never calls into it.
+    struct StubOps;
+    impl crate::admin::types::AdminOps for StubOps {
+        fn list<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _opts: crate::admin::types::ListOpts,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<crate::admin::types::ListPage>> + Send + 'a>> {
+            Box::pin(async { Ok(crate::admin::types::ListPage::default()) })
+        }
+        fn find_row<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _id: i64,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<Option<EditRow>>> + Send + 'a>> {
+            Box::pin(async { Ok(None) })
+        }
+        fn create<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _form: &'a crate::http::FormData,
+        ) -> crate::admin::types::CreateResult<'a> {
+            Box::pin(async { Ok(Ok(0)) })
+        }
+        fn update<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _id: i64,
+            _form: &'a crate::http::FormData,
+        ) -> crate::admin::types::UpdateResult<'a> {
+            Box::pin(async { Ok(Ok(())) })
+        }
+        fn delete<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _id: i64,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<()>> + Send + 'a>> {
+            Box::pin(async { Ok(()) })
+        }
+        fn object_label<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _id: i64,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<Option<String>>> + Send + 'a>> {
+            Box::pin(async { Ok(None) })
+        }
+        fn execute_bulk_action<'a>(
+            &'a self,
+            _db: &'a crate::orm::Db,
+            _name: &'a str,
+            _ids: &'a [i64],
+            _ctx: &'a crate::admin::bulk::BulkActionContext<'a>,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<crate::admin::bulk::BulkActionResult>> + Send + 'a>> {
+            Box::pin(async { Ok(crate::admin::bulk::BulkActionResult::default()) })
+        }
+    }
+
+    #[test]
+    fn diff_reports_changed_fields_only() {
+        const FIELDS: &[AdminField] = &[
+            AdminField { name: "title", label: "Title", field_type: FieldType::String, editable: true, relation: None, choices: None },
+            AdminField { name: "body",  label: "Body",  field_type: FieldType::String, editable: true, relation: None, choices: None },
+            AdminField { name: "slug",  label: "Slug",  field_type: FieldType::String, editable: true, relation: None, choices: None },
+        ];
+        let entry = entry_with(FIELDS);
+        let before = row(&[("title", "Old"), ("body", "Same"), ("slug", "alpha")]);
+        let after  = row(&[("title", "New"), ("body", "Same"), ("slug", "beta")]);
+        let diff = compute_row_diff(&entry, &before, &after);
+        let names: Vec<&str> = diff.iter().map(|c| c.field.as_str()).collect();
+        assert_eq!(names, vec!["title", "slug"]);
+        // Labels and before/after pulled through verbatim.
+        assert_eq!(diff[0].label, "Title");
+        assert_eq!(diff[0].from, "Old");
+        assert_eq!(diff[0].to, "New");
+    }
+
+    #[test]
+    fn diff_skips_non_editable_fields() {
+        // Auto-touched columns (updated_at, password_hash) shouldn't
+        // surface in the diff — they aren't user-driven changes.
+        const FIELDS: &[AdminField] = &[
+            AdminField { name: "title",      label: "Title",      field_type: FieldType::String,   editable: true,  relation: None, choices: None },
+            AdminField { name: "updated_at", label: "Updated at", field_type: FieldType::DateTime, editable: false, relation: None, choices: None },
+        ];
+        let entry = entry_with(FIELDS);
+        let before = row(&[("title", "A"), ("updated_at", "2026-01-01T00:00:00Z")]);
+        let after  = row(&[("title", "B"), ("updated_at", "2026-05-19T12:34:56Z")]);
+        let diff = compute_row_diff(&entry, &before, &after);
+        let names: Vec<&str> = diff.iter().map(|c| c.field.as_str()).collect();
+        assert_eq!(names, vec!["title"]);
+    }
+
+    #[test]
+    fn diff_handles_unset_to_set_transition() {
+        // Missing-in-before == "" by the lookup contract. The diff
+        // reports it as a real change so "previously NULL → now
+        // X" surfaces clearly on the history page.
+        const FIELDS: &[AdminField] = &[
+            AdminField { name: "subtitle", label: "Subtitle", field_type: FieldType::OptionalString, editable: true, relation: None, choices: None },
+        ];
+        let entry = entry_with(FIELDS);
+        let before = row(&[("subtitle", "")]);
+        let after  = row(&[("subtitle", "Now set")]);
+        let diff = compute_row_diff(&entry, &before, &after);
+        assert_eq!(diff.len(), 1);
+        assert_eq!(diff[0].from, "");
+        assert_eq!(diff[0].to, "Now set");
+    }
+
+    #[test]
+    fn diff_empty_when_nothing_changed() {
+        const FIELDS: &[AdminField] = &[
+            AdminField { name: "title", label: "Title", field_type: FieldType::String, editable: true, relation: None, choices: None },
+        ];
+        let entry = entry_with(FIELDS);
+        let before = row(&[("title", "Same")]);
+        let after  = row(&[("title", "Same")]);
+        let diff = compute_row_diff(&entry, &before, &after);
+        assert!(diff.is_empty());
     }
 }
