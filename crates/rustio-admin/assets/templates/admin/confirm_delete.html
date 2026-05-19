@@ -24,12 +24,20 @@
   </ul>
   {% endif %}
 
+  {% if read_only %}
+  <div class="rio-form-actions">
+    <span class="rio-meta">Read-only mode — deletes are disabled.</span>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
+    <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-button rio-button--ghost">Back</a>
+  </div>
+  {% else %}
   <form method="post" action="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
   </form>
+  {% endif %}
 </section>
 
 </div>

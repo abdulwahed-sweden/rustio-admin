@@ -23,6 +23,13 @@
     {% endfor %}
   </ul>
 
+  {% if read_only %}
+  <div class="rio-form-actions">
+    <span class="rio-meta">Read-only mode — bulk actions are disabled.</span>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
+    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Back</a>
+  </div>
+  {% else %}
   <form method="post" action="/admin/{{ admin_name }}/bulk/{{ action_name }}" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <input type="hidden" name="_ids" value="{{ ids_csv }}">
@@ -34,6 +41,7 @@
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
   </form>
+  {% endif %}
 </section>
 
 </div>

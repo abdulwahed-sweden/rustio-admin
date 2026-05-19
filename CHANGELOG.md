@@ -89,6 +89,33 @@ leaves the alpha track.
     explicit class, directional + empty class, non-directional
     icons untouched, vertical chevrons excluded.
 
+### Changed
+
+- **Read-only mode now hides every mutation affordance, not just
+  the top-level Add buttons.** The previous release noted "per-row
+  Edit / Delete buttons and form Save buttons still render in v1 —
+  clicking through hits the middleware's 403 with a clear flash"
+  as a deliberate v1 scoping trade-off. This release closes that
+  gap: in read-only mode `list.html` drops its per-row Edit /
+  Delete anchors (replaced with a quiet "read-only" label), the
+  bulk-action form + bar + checkbox columns disappear entirely,
+  the empty-state copy drops the "Add the first one" link;
+  `form.html` drops the Save / Save-and-continue / Save-and-add-
+  another buttons and the per-row Delete link in the action bar
+  (replaced with "Read-only mode — saves are disabled.");
+  `confirm_delete.html` / `bulk_confirm_delete.html` /
+  `bulk_confirm_action.html` swap their destructive submit forms
+  for a quiet "deletes/bulk actions are disabled" message + a
+  Back link. Live-verified against the clinic-appointments
+  example with `READ_ONLY=1`: 0 Add / Edit / Delete buttons on
+  list pages, 0 Save inputs on edit forms, 1 read-only banner,
+  and any URL-crafted mutation POST still gets the middleware's
+  styled 403 (which was the security boundary all along; the
+  template hiding is UX polish on top).
+
+  The example crate gains a small `READ_ONLY={1,true,yes}` env
+  toggle so an operator can demo both modes without rebuilding.
+
 ### Added
 
 - **Approximate row count per model on the dashboard.** The

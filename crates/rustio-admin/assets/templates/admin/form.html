@@ -33,13 +33,19 @@
    # destructive (Delete) + Cancel are pushed right by the spacer.
    # On wrap (narrow viewports) the whole row stacks naturally. #}
   <div class="rio-form-actions">
+    {% if not read_only %}
     <button type="submit" name="_save" class="rio-button rio-button--primary">Save</button>
     <button type="submit" name="_continue" class="rio-button">Save and continue editing</button>
     <button type="submit" name="_addanother" class="rio-button">Save and add another</button>
+    {% else %}
+    <span class="rio-meta">Read-only mode — saves are disabled.</span>
+    {% endif %}
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     {% if mode == "edit" %}
     <a href="/admin/{{ admin_name }}/{{ object_id }}/history" class="rio-button rio-button--ghost">{{ icon("clock", class="rio-icon") }} History</a>
+    {% if not read_only %}
     <a href="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-button rio-button--danger-ghost">{{ icon("trash", class="rio-icon") }} Delete</a>
+    {% endif %}
     {% endif %}
     <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
   </div>
