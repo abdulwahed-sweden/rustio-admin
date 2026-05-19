@@ -203,6 +203,14 @@ impl FormData {
     pub fn as_map(&self) -> &HashMap<String, String> {
         &self.fields
     }
+
+    /// Insert or overwrite a key. Used by the admin handlers to inject
+    /// existing values for `readonly_fields` before passing the form
+    /// to the model's `from_form` (the field is rendered `disabled` so
+    /// the browser would otherwise omit it, breaking required parsing).
+    pub fn set(&mut self, key: impl Into<String>, value: impl Into<String>) {
+        self.fields.insert(key.into(), value.into());
+    }
 }
 
 fn decode(s: &str) -> String {

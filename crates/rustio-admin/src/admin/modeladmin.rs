@@ -93,7 +93,13 @@ pub trait ModelAdmin: AdminModel {
         50
     }
 
-    /// Read-only fields on the change form. Default: none.
+    /// Field names rendered as `disabled` on the change form. The
+    /// browser does not submit disabled fields, so the framework
+    /// transparently re-injects the existing row value into the form
+    /// before calling `from_form` — readonly columns are persisted
+    /// unchanged. Applies to **edit only**; on the add form the
+    /// listed fields stay editable so the project can supply their
+    /// initial value. Default: none.
     fn readonly_fields() -> &'static [&'static str] {
         &[]
     }

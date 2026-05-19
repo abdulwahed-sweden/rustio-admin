@@ -674,7 +674,23 @@ pub(crate) async fn do_update(
     req: Request,
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
-    let form = req.form()?;
+    let mut form = req.form()?;
+    // Readonly fields render `disabled` and are not submitted by the
+    // browser. Inject the existing values so `M::from_form` parses a
+    // complete row — the generated parser doesn't know which columns
+    // the project marked readonly.
+    if !entry.readonly_fields.is_empty() {
+        if let Some(existing) = entry.ops.find_row(&ctx.db, id).await? {
+            for name in entry.readonly_fields {
+                if form.contains(name) {
+                    continue;
+                }
+                if let Some((_, v)) = existing.values.iter().find(|(c, _)| c == name) {
+                    form.set(*name, v.clone());
+                }
+            }
+        }
+    }
     let intent = submit_intent(&form);
     match entry.ops.update(&ctx.db, id, &form).await? {
         Ok(()) => Ok(Response::redirect(redirect_after_save(

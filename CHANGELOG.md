@@ -38,6 +38,25 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added
+
+- **`ModelAdmin::readonly_fields()` is honoured on the change form.**
+  The trait method has shipped since 0.2 but `form_ctx` filtered only
+  on the macro's per-field `editable: false` flag, so any column the
+  project listed in `readonly_fields()` rendered as a normal editable
+  input. The renderer now consults `entry.readonly_fields` and emits
+  the field with `disabled: true` (asterisk dropped, value pinned to
+  the existing row). `do_update` re-injects those columns into the
+  parsed `FormData` before handing it to `M::from_form`, so the
+  generated parser still sees a complete row and the database write
+  leaves readonly columns untouched. Applies to **edit only** — on
+  the add form the listed fields stay editable so the project can
+  supply the initial value (matches the common "set on create, never
+  change after" usage). Documented on the trait method.
+- **`FormData::set`** — small public helper used by the handler
+  above to inject existing values for disabled-rendered fields.
+  Single insert/overwrite semantics; mirrors `HashMap::insert`.
+
 ### Fixed
 
 - **Vestigial horizontal scroll track at the bottom of every list card on desktop.**
