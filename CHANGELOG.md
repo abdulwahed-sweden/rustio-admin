@@ -40,6 +40,24 @@ leaves the alpha track.
 
 ### Added
 
+- **Per-model template overrides — finishing the partial wiring.**
+  `Templates::render_for_model` shipped in an earlier release but
+  carried `#[allow(dead_code)]` because no handler consumed it. The
+  generic CRUD render call sites (`list_model`, `show_new_form`,
+  `do_create`, `show_edit_form`, `do_update`, `show_delete_confirm`,
+  `show_object_history`) now all route through it, so a project can
+  drop `templates/admin/<admin_name>/list.html`,
+  `…/form.html`, `…/confirm_delete.html`, or
+  `…/object_history.html` to override just that one page for just
+  that one model. Lookup order is: per-model file →
+  framework-wide override → embedded default; the orphan-admin-file
+  validator was already non-recursive (only scans
+  `<disk_root>/admin/*.html`), so model subdirectories are
+  invisible to the warn-on-typo pass and don't surface false
+  positives. Two new unit tests pin the precedence: per-model wins
+  over framework-wide, and a model with no per-model file falls
+  through cleanly without bleeding another model's override into
+  the result.
 - **`rustio theme` — curated `AdminTheme` palette presets.** New
   CLI verb with two subcommands: `rustio theme list` enumerates the
   four out-of-the-box presets (ocean / forest / sunset / monochrome,

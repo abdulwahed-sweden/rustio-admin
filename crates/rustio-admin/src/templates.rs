@@ -130,7 +130,14 @@ impl Templates {
     ///
     /// Tries `admin/<model>/<page>` first (where `<page>` is `name`
     /// stripped of any leading `admin/`), falling back to `name`.
-    #[allow(dead_code)]
+    ///
+    /// Consumed by every generic-CRUD render in `admin::handlers` so
+    /// a project can drop `templates/admin/<admin_name>/list.html`,
+    /// `…/form.html`, `…/confirm_delete.html`, or
+    /// `…/object_history.html` to override just that one page for
+    /// just that one model. The per-model file wins; absent that the
+    /// loader falls back to the framework-wide override (the
+    /// path-without-model-prefix), then the embedded default.
     pub fn render_for_model<S: Serialize>(
         &self,
         model: &str,
@@ -540,6 +547,56 @@ mod tests {
         let body = t.render("hello.html", &Empty {}).unwrap();
         assert_eq!(body, "hi from disk");
 
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Per-model template override: a file at
+    /// `<disk_root>/admin/<model>/list.html` wins over a same-named
+    /// disk override AND over the embedded default, but only for
+    /// `render_for_model(model, ...)` calls. Other models still see
+    /// the framework default (or whatever shadow they have).
+    #[test]
+    fn render_for_model_prefers_per_model_override() {
+        let dir = tempdir();
+        std::fs::create_dir_all(dir.join("admin/books")).unwrap();
+        let mut f = std::fs::File::create(dir.join("admin/books/list.html")).unwrap();
+        f.write_all(b"books-specific list").unwrap();
+        drop(f);
+
+        let t = Templates::new(Some(dir.clone())).unwrap();
+        // Books model sees the override.
+        let body = t.render_for_model("books", "admin/list.html", &Empty {}).unwrap();
+        assert_eq!(body, "books-specific list");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A model with no per-model file falls through to the
+    /// framework-default lookup chain. Other models with overrides
+    /// don't bleed into this one.
+    #[test]
+    fn render_for_model_falls_through_to_framework_default() {
+        let dir = tempdir();
+        // Drop a books-only override; query for a different model.
+        std::fs::create_dir_all(dir.join("admin/books")).unwrap();
+        let mut f = std::fs::File::create(dir.join("admin/books/list.html")).unwrap();
+        f.write_all(b"books override").unwrap();
+        drop(f);
+        // Drop a framework-wide override too, to confirm the
+        // fall-through actually reaches it (and isn't accidentally
+        // picking up the books override for the other model).
+        std::fs::create_dir_all(dir.join("admin")).unwrap();
+        let mut f = std::fs::File::create(dir.join("admin/list.html")).unwrap();
+        f.write_all(b"framework-wide list").unwrap();
+        drop(f);
+
+        let t = Templates::new(Some(dir.clone())).unwrap();
+        // "authors" has no per-model file — falls through to
+        // framework-wide override.
+        let body = t.render_for_model("authors", "admin/list.html", &Empty {}).unwrap();
+        assert_eq!(body, "framework-wide list");
+        // "books" still sees its own override.
+        let body = t.render_for_model("books", "admin/list.html", &Empty {}).unwrap();
+        assert_eq!(body, "books override");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

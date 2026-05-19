@@ -799,7 +799,9 @@ pub(crate) async fn list_model(
         active_sort.as_ref().map(|(c, d)| (c.clone(), *d)),
         csrf_token(req),
     );
-    let body = ctx.templates.render("admin/list.html", &list)?;
+    let body = ctx
+        .templates
+        .render_for_model(entry.admin_name, "admin/list.html", &list)?;
     Ok(Response::html(body))
 }
 
@@ -949,7 +951,9 @@ pub(crate) async fn show_new_form(
         HashMap::new(),
         None,
     );
-    let body = ctx.templates.render("admin/form.html", &form)?;
+    let body = ctx
+        .templates
+        .render_for_model(admin_name, "admin/form.html", &form)?;
     Ok(Response::html(body))
 }
 
@@ -984,7 +988,9 @@ pub(crate) async fn do_create(
                 field_errors,
                 Some(&form),
             );
-            let body = ctx.templates.render("admin/form.html", &ctx_view)?;
+            let body = ctx
+                .templates
+                .render_for_model(admin_name, "admin/form.html", &ctx_view)?;
             Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
         }
     }
@@ -1047,7 +1053,9 @@ pub(crate) async fn show_edit_form(
         HashMap::new(),
         None,
     );
-    let body = ctx.templates.render("admin/form.html", &form)?;
+    let body = ctx
+        .templates
+        .render_for_model(admin_name, "admin/form.html", &form)?;
     Ok(Response::html(body))
 }
 
@@ -1100,7 +1108,9 @@ pub(crate) async fn do_update(
                 field_errors,
                 Some(&form),
             );
-            let body = ctx.templates.render("admin/form.html", &ctx_view)?;
+            let body = ctx
+                .templates
+                .render_for_model(admin_name, "admin/form.html", &ctx_view)?;
             Ok(Response::html(body).with_status(hyper::StatusCode::BAD_REQUEST))
         }
     }
@@ -1145,7 +1155,9 @@ pub(crate) async fn show_delete_confirm(
         cascading,
         csrf_token(req),
     );
-    let body = ctx.templates.render("admin/confirm_delete.html", &view)?;
+    let body = ctx
+        .templates
+        .render_for_model(entry.admin_name, "admin/confirm_delete.html", &view)?;
     Ok(Response::html(body))
 }
 
@@ -1406,7 +1418,9 @@ pub(crate) async fn show_object_history(
         entries: render::map_audit_actions(actions),
         flash: None,
     };
-    let body = ctx.templates.render("admin/object_history.html", &view)?;
+    let body = ctx
+        .templates
+        .render_for_model(admin_name, "admin/object_history.html", &view)?;
     Ok(Response::html(body))
 }
 
