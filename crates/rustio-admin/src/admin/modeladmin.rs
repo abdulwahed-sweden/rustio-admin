@@ -105,7 +105,14 @@ pub trait ModelAdmin: AdminModel {
     }
 
     /// Field grouping on the change form. Default: empty — fall back
-    /// to the framework heuristic (`Default` / `System` / `Advanced`).
+    /// to the framework's name heuristic (`Default` / `System` /
+    /// `Advanced`). A non-empty return replaces the heuristic
+    /// entirely: each [`Fieldset`] renders as one titled section in
+    /// the order returned, and the fields inside it render in the
+    /// order listed. Fields that exist on the model but are not
+    /// referenced by any fieldset get appended to a trailing "Other"
+    /// section so the form stays complete; misspelt names with no
+    /// matching field are silently dropped.
     fn fieldsets() -> &'static [Fieldset] {
         &[]
     }
