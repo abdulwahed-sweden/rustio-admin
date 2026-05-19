@@ -1780,6 +1780,13 @@ pub(crate) struct FormCtx {
     /// declared [`super::modeladmin::Inline`] resolved to a
     /// concrete row list.
     pub inlines: Vec<FormInlineCtx>,
+    /// `true` when at least one field on the form is a
+    /// `<input type="file">`. Drives
+    /// `enctype="multipart/form-data"` on the form open tag;
+    /// non-file forms keep the default urlencoded encoding so
+    /// the existing fast path on `Request::form()` stays in
+    /// effect.
+    pub has_file_field: bool,
     pub flash: Option<FlashCtx>,
 }
 
@@ -2073,6 +2080,12 @@ pub(crate) fn form_ctx(
         sections,
         errors,
         inlines,
+        has_file_field: entry.fields.iter().any(|f| {
+            matches!(
+                f.field_type,
+                crate::admin::FieldType::FilePath | crate::admin::FieldType::OptionalFilePath
+            )
+        }),
         flash: None,
     }
 }
@@ -2215,6 +2228,7 @@ fn map_field_to_ui(field: &super::types::AdminField) -> (&'static str, &'static 
         Bool => ("checkbox", "checkbox"),
         I32 | I64 | OptionalI64 => ("input", "number"),
         DateTime | OptionalDateTime => ("input", "datetime-local"),
+        FilePath | OptionalFilePath => ("file", "file"),
         String | OptionalString => ("input", "text"),
     }
 }

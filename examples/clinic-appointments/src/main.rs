@@ -152,11 +152,19 @@ async fn main() -> Result<()> {
         std::env::var("READ_ONLY").as_deref(),
         Ok("1") | Ok("true") | Ok("yes")
     );
+    // Storage root for `#[rustio(file)]` columns. The framework
+    // creates the directory lazily on first upload; for the
+    // example we just point at a project-local `uploads/` so the
+    // demo stays self-contained.
+    let uploads_dir = std::env::var("UPLOADS_DIR")
+        .unwrap_or_else(|_| "./uploads".into());
+    let _ = std::fs::create_dir_all(&uploads_dir);
     let mut admin_builder = Admin::new()
         .app_name(app_name)
         .app_tagline("Operational clinic management")
         .public_url("http://127.0.0.1:3000")
         .read_only(read_only)
+        .uploads_dir(&uploads_dir)
         .mailer(mailer);
     if let Some(s) = support_email {
         admin_builder = admin_builder.support_email(s);

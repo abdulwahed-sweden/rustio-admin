@@ -67,6 +67,27 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         } else {
             kind
         };
+        // `#[rustio(file)]` promotes String / Option<String> to the
+        // file-upload variants. Other base types reject the marker —
+        // the macro emits a compile error so a typo'd attribute on
+        // an i64 column doesn't silently render as a text input.
+        let kind = if parse_file_attr(&f.attrs)? {
+            match kind {
+                FieldKind::String => FieldKind::FilePath,
+                FieldKind::OptionalString => FieldKind::OptionalFilePath,
+                other => {
+                    return Err(syn::Error::new_spanned(
+                        f,
+                        format!(
+                            "#[rustio(file)] is only valid on String or Option<String> fields; \
+                             got {other:?} for `{fname_str}`"
+                        ),
+                    ));
+                }
+            }
+        } else {
+            kind
+        };
         let editable = fname_str != "id" && kind != FieldKind::DateTimeAuto;
 
         let type_variant = kind.field_type_ident();
@@ -119,10 +140,16 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
 
         // `display_values`: stringify the field for the list page.
         let display_arm = match kind {
-            FieldKind::String => quote! {
+            // FilePath / OptionalFilePath live in `String` /
+            // `Option<String>` Rust types but render in the form
+            // as `<input type="file">`. The display path is
+            // identical to the string variants — the stored value
+            // IS the relative path, surfaced as plain text on the
+            // list page.
+            FieldKind::String | FieldKind::FilePath => quote! {
                 out.push((#fname_str.to_string(), self.#fname.clone()));
             },
-            FieldKind::OptionalString => quote! {
+            FieldKind::OptionalString | FieldKind::OptionalFilePath => quote! {
                 // `Option<String>` does not implement `Display`, so we
                 // can't share the String arm. None → empty string,
                 // Some(v) → v.
@@ -182,11 +209,14 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         let date_invalid_msg = format!("{humanised_label} is not a valid date.");
 
         match kind {
-            FieldKind::String => {
+            FieldKind::String | FieldKind::FilePath => {
                 // Trim incoming whitespace so a `"   "` submission is
                 // treated as empty (and triggers the required-field
                 // error) instead of silently saving a whitespace-only
-                // string.
+                // string. FilePath uses the same trimming path: the
+                // multipart-form handler injects the saved relative
+                // path string into the form before `from_form` sees
+                // it, so the value lands here as a normal String.
                 from_form_parses.push(quote! {
                     let #fname = match form.get(#fname_str).map(str::trim) {
                         Some(v) if !v.is_empty() => v.to_string(),
@@ -195,9 +225,12 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 });
                 from_form_fields.push(quote! { #fname });
             }
-            FieldKind::OptionalString => {
+            FieldKind::OptionalString | FieldKind::OptionalFilePath => {
                 // Trim, then collapse trimmed-empty to None so the
-                // column stores NULL instead of `""`.
+                // column stores NULL instead of `""`. Optional
+                // FilePath shares the same path — the file-input
+                // widget can submit an empty string when the
+                // operator clears the field.
                 from_form_parses.push(quote! {
                     let #fname: Option<String> = form
                         .get(#fname_str)
@@ -378,6 +411,14 @@ enum FieldKind {
     OptionalString,
     OptionalI64,
     OptionalDateTime,
+    /// `String` column flagged with `#[rustio(file)]`. Renders as
+    /// `<input type="file">`; the multipart-form handler writes
+    /// the uploaded bytes under `Admin::uploads_dir` and injects
+    /// the relative path string back into the form before
+    /// `from_form` parses it as a normal String.
+    FilePath,
+    /// `Option<String>` counterpart.
+    OptionalFilePath,
 }
 
 impl FieldKind {
@@ -391,6 +432,8 @@ impl FieldKind {
             FieldKind::OptionalString => format_ident!("OptionalString"),
             FieldKind::OptionalI64 => format_ident!("OptionalI64"),
             FieldKind::OptionalDateTime => format_ident!("OptionalDateTime"),
+            FieldKind::FilePath => format_ident!("FilePath"),
+            FieldKind::OptionalFilePath => format_ident!("OptionalFilePath"),
         }
     }
 }
@@ -534,6 +577,12 @@ fn parse_relation_attr(
                     display = Some(s.value());
                 }
                 Ok(())
+            } else if m.path.is_ident("file") {
+                // Marker attribute — handled by `parse_file_attr`,
+                // ignored here so a field can carry both
+                // `belongs_to` and `file` without one parser
+                // erroring on the other's keyword.
+                Ok(())
             } else {
                 Err(m.error(format!("unknown rustio attribute for field `{field_name}`")))
             }
@@ -551,6 +600,44 @@ fn parse_relation_attr(
     // Suppress the unused warning for `Meta`.
     let _ = std::marker::PhantomData::<Meta>;
     Ok(None)
+}
+
+/// `#[rustio(file)]` marker — promotes a `String` /
+/// `Option<String>` field to `FieldKind::FilePath` /
+/// `FieldKind::OptionalFilePath`. The form renderer then emits
+/// `<input type="file">` and the runtime's multipart-form
+/// handler writes the uploaded bytes to `Admin::uploads_dir`
+/// before injecting the relative path back into the form's
+/// string slot.
+fn parse_file_attr(attrs: &[syn::Attribute]) -> syn::Result<bool> {
+    for attr in attrs {
+        if !attr.path().is_ident("rustio") {
+            continue;
+        }
+        let mut found = false;
+        attr.parse_nested_meta(|m| {
+            if m.path.is_ident("file") {
+                found = true;
+                Ok(())
+            } else if m.input.peek(syn::Token![=]) {
+                // Other keys (`belongs_to = "…"`, `display = "…"`)
+                // carry an `=` and a literal we must consume so the
+                // parser doesn't choke on the trailing `,`. We don't
+                // validate the value here — `parse_relation_attr`
+                // owns the surface; this is just lexer-level skip.
+                let _value = m.value()?;
+                let _: Lit = _value.parse()?;
+                Ok(())
+            } else {
+                // Marker key without `=` (future flags). Just skip.
+                Ok(())
+            }
+        })?;
+        if found {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn plural_snake(camel: &str) -> String {

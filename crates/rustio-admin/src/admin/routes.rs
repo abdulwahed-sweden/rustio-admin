@@ -1547,6 +1547,31 @@ pub fn register_admin_routes(
         }
     });
 
+    // Uploaded-file serve. `Admin::uploads_dir` is the storage
+    // root; the route resolves `<rel>` under it with a canonical-
+    // path guard so a hand-edited URL can't reach files outside.
+    // Identity-gated at Staff (anyone with admin access can see
+    // uploaded files in v1; per-row visibility checks are a
+    // future iteration). Registered before any generic
+    // `/admin/:admin_name/…` route so the literal `uploads`
+    // segment can't be shadowed by a model named `uploads`.
+    let c = ctx.clone();
+    let router = router.get("/admin/uploads/:filename", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let filename = req
+                        .param("filename")
+                        .map(str::to_string)
+                        .unwrap_or_default();
+                    handlers::serve_upload(&c, ident, &filename, req).await
+                }
+            }
+        }
+    });
+
     // FK autocomplete lookup. Registered before any generic
     // `/admin/:admin_name/…` route so a literal `_lookup` segment
     // can't be shadowed by a model named `_lookup`. The endpoint

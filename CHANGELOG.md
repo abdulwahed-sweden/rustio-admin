@@ -118,6 +118,69 @@ leaves the alpha track.
 
 ### Added
 
+- **File-upload widget — `#[rustio(file)]`, multipart parsing,
+  local-filesystem storage, served-back endpoint.** Closes the
+  roadmap entry "File / image upload widget." Scoped to a
+  single-process, local-filesystem v1 with end-to-end coverage:
+  - **New `FieldType::FilePath` / `OptionalFilePath`** in
+    `crate::admin::FieldType` — semantically a string column,
+    rendered as `<input type="file">`.
+  - **New macro attribute `#[rustio(file)]`** on `String` /
+    `Option<String>` fields promotes them to the new field
+    types. Compile-error on non-string types so a typo'd
+    attribute on an `i64` column doesn't silently render as a
+    text input.
+  - **Hand-rolled multipart parser** in a new internal module
+    (`crate::multipart`). Splits the body by the
+    `Content-Type` boundary, parses each part's headers
+    (`Content-Disposition` for `name` + `filename`, optional
+    `Content-Type`), and returns ordered `MultipartPart`s.
+    Header cap at 16 KB; whole-body cap at 16 MB; per-file cap
+    at 16 MB. Ten unit tests cover boundary extraction, text-
+    only parts, file parts, mixed forms, missing-opening-
+    boundary refusal, and unterminated-headers refusal.
+  - **`Admin::uploads_dir(path)`** builder + accessor. The
+    framework creates the directory lazily on first write;
+    leaving it unset makes file inputs render but silently
+    drop any uploaded bytes (project hasn't opted in yet).
+  - **`Request::form()` is now multipart-aware** — text-only,
+    file parts dropped. Lets the CSRF middleware (and any
+    other early consumer) read text fields out of a multipart
+    body without manually handling the parse.
+  - **Handler-side multipart write** in `do_create` /
+    `do_update`: `parse_form_with_uploads` writes each file
+    part to `<uploads_dir>/<uuid-v4>-<sanitised>` and injects
+    the resulting relative path string back into the
+    `FormData` slot under the part's `name`. The model's
+    generated `from_form` then sees a normal `String` column —
+    no special-case persistence path.
+  - **Filename sanitisation** strips path components on both
+    Unix and Windows separators, replaces all but
+    `[A-Za-z0-9._-]` with `_`, trims leading dots
+    (`.htaccess` → `htaccess`), and caps at 120 chars. Six
+    unit tests pin plain-pass, traversal strip, unsafe-char
+    replacement, leading-dot trim, length cap, and empty
+    fallback.
+  - **`GET /admin/uploads/:filename`** serve route, Staff-role
+    gated. Canonicalises the configured root, refuses any
+    resolved path that doesn't live inside it; rejected
+    lookups return 404. Defense-in-depth: also refuses raw
+    `..`, `/`, `\` in the path segment ahead of canonical
+    resolution. Per-extension `Content-Type` guesser for
+    common image / document MIME types.
+  - **Edit-form preview** — when an existing column carries a
+    relative path, the form renders a `Current: <link>` row
+    below the file input so the operator sees what's already
+    persisted before picking a replacement.
+  - **Clinic example** gains `Patient.photo_path:
+    Option<String>` with `#[rustio(file)]`. New migration
+    `0006_patient_photo.sql` adds the column; `main.rs` sets
+    `uploads_dir` to `./uploads` (gitignored). Live-verified
+    end-to-end: POST multipart upload → 303 redirect, DB row
+    carries `<uuid>-<sanitised>` path, on-disk file written,
+    `GET /admin/uploads/<rel>` returns the bytes verbatim,
+    `GET /admin/uploads/..%2Fetc%2Fpasswd` returns 404.
+
 - **`ModelAdmin::inlines()` — related-children sections below the
   parent edit form (read-only v1).** Closes a roadmap entry —
   scoped as a defensible v1: project authors declare which child

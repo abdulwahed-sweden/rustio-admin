@@ -18,7 +18,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="{% if mode == 'new' %}/admin/{{ admin_name }}/new{% else %}/admin/{{ admin_name }}/{{ object_id }}/edit{% endif %}" class="rio-form">
+<form method="post" action="{% if mode == 'new' %}/admin/{{ admin_name }}/new{% else %}/admin/{{ admin_name }}/{{ object_id }}/edit{% endif %}" class="rio-form"{% if has_file_field %} enctype="multipart/form-data"{% endif %}>
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for section in sections %}
   <fieldset class="rio-fieldset">

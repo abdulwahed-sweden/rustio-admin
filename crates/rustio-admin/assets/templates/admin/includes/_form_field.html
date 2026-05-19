@@ -47,6 +47,26 @@
         {% if field.disabled %}disabled{% endif %}>
       <span>{{ field.label }}</span>
     </label>
+  {% elif field.widget == "file" %}
+    {# Existing-value preview: when the column already holds a
+     # relative path (edit mode, previous upload), render a link
+     # to the served file alongside the file input. The input
+     # itself is empty by default; the multipart handler keeps
+     # the previous value if the operator submits without picking
+     # a new file. #}
+    {% if field.value %}
+    <p class="rio-field-hint rio-file-current">
+      Current: <a href="/admin/uploads/{{ field.value }}" target="_blank" rel="noopener">{{ field.value }}</a>
+    </p>
+    {% endif %}
+    <input
+      id="id_{{ field.name }}"
+      name="{{ field.name }}"
+      class="rio-input rio-input--file"
+      type="file"
+      {% if field.required and not field.value %}required{% endif %}
+      {% if field.disabled %}disabled{% endif %}
+      {% if field.autofocus %}autofocus{% endif %}>
   {% else %}
     <input
       id="id_{{ field.name }}"
