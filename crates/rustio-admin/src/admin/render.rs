@@ -1454,7 +1454,13 @@ pub(crate) fn form_ctx(
         .iter()
         .filter(|f| f.editable)
         .map(|f| {
-            let value = if let Some(form) = submitted {
+            // `ModelAdmin::readonly_fields()` flagged this column. The
+            // browser-side `disabled` attribute prevents submission, so
+            // the value always reflects the existing row (never the
+            // re-rendered submitted form). On `new` there is no row
+            // yet, so readonly has no effect until the row is saved.
+            let readonly = mode == "edit" && entry.readonly_fields.contains(&f.name);
+            let value = if let Some(form) = submitted.filter(|_| !readonly) {
                 form.get(f.name).map(str::to_string).unwrap_or_default()
             } else {
                 existing
@@ -1485,9 +1491,11 @@ pub(crate) fn form_ctx(
             };
             // Bools always submit (checked = true, absent = false), so
             // they never carry a required-asterisk; every other
-            // non-nullable field does.
-            let required =
-                !f.field_type.nullable() && !matches!(f.field_type, super::types::FieldType::Bool);
+            // non-nullable field does. Readonly drops the asterisk too
+            // — the user can't satisfy it from this form.
+            let required = !readonly
+                && !f.field_type.nullable()
+                && !matches!(f.field_type, super::types::FieldType::Bool);
             let (options, multiple, searchable, has_more) = if let Some(values) = f.choices {
                 let mut opts: Vec<SelectOption> = Vec::with_capacity(values.len() + 1);
                 if f.field_type.nullable() {
@@ -1533,7 +1541,7 @@ pub(crate) fn form_ctx(
                 span,
                 autocomplete: None,
                 autofocus: false,
-                disabled: false,
+                disabled: readonly,
                 maxlength: None,
                 searchable,
                 has_more,
