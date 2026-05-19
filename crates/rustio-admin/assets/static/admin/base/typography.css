@@ -220,6 +220,23 @@ pre code {
   border-radius: 0;
 }
 
+/* `<mark>` — emitted by the list-view search-highlight pass to wrap
+ * matched substrings inside scanned columns. Browser default is a
+ * harsh yellow that fights the design system; replace with a tinted
+ * accent background that reads as "this is what you searched for"
+ * without screaming. Inline-flex keeps the highlight tight to the
+ * glyphs even when the cell ellipsises.
+ *
+ * Inherits text colour from the cell so dark mode just works — the
+ * accent-tinted background sits behind whichever foreground the
+ * row-cell already chose. */
+mark {
+  background: rgb(var(--rio-accent-rgb) / 0.18);
+  color: inherit;
+  padding: 0 0.1em;
+  border-radius: 2px;
+}
+
 /* Mobile readability bump — push body up to 17px below 600px so
  * thumb-typing forms and reading copy stays comfortable. */
 @media (max-width: 600px) {

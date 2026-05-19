@@ -738,6 +738,13 @@ pub(crate) struct ListRowCtx {
     /// by `handlers::hydrate_fk_cells` for relation-bearing columns
     /// and consumed by the list template to wrap the cell in `<a>`.
     pub links: HashMap<String, String>,
+    /// Pre-escaped HTML fragments wrapping `?q=…` matches in `<mark>`
+    /// tags. Only populated for columns the search actually scanned
+    /// (`ModelAdmin::search_fields()`) and that contain at least one
+    /// match. Cells with no entry here render via the plain string
+    /// path in `values`; cells WITH an entry render the HTML fragment
+    /// via `|safe` in the template.
+    pub highlights: HashMap<String, String>,
 }
 
 #[derive(Serialize)]
@@ -943,6 +950,75 @@ fn sort_direction_label(
 ///     into the URL; `None` means "use the model default" (no
 ///     `&per_page=…` segment emitted)
 ///
+/// Append `c` to `out`, escaping the five HTML special chars.
+/// Smaller than pulling a crate for the same job — the list view's
+/// only escaping need is "treat this cell as plain text inside HTML."
+fn push_html_escaped(out: &mut String, c: char) {
+    match c {
+        '&' => out.push_str("&amp;"),
+        '<' => out.push_str("&lt;"),
+        '>' => out.push_str("&gt;"),
+        '"' => out.push_str("&quot;"),
+        '\'' => out.push_str("&#39;"),
+        other => out.push(other),
+    }
+}
+
+fn push_html_escaped_str(out: &mut String, s: &str) {
+    for c in s.chars() {
+        push_html_escaped(out, c);
+    }
+}
+
+/// Wrap every occurrence of `term` inside `text` with `<mark>…</mark>`,
+/// HTML-escaping the rest. Returns `None` when the term doesn't
+/// appear at all so the caller can keep using the plain-string
+/// render path (avoids both unnecessary `|safe` work and template
+/// branching cost for rows the search never touched).
+///
+/// **Matching semantics**: ASCII-case-insensitive — `"anna"` matches
+/// `"Anna Lindqvist"`. Non-ASCII characters compare exactly
+/// (`"Wåhlin"` matches the literal substring `"Wåhlin"` but not
+/// `"WÅHLIN"`). The byte-length invariant of `char::to_ascii_lowercase`
+/// means byte indices into the original `text` and its
+/// ASCII-lowercased twin line up perfectly, so we can slice the
+/// original by indices found in the lowercase. Full Unicode case
+/// folding is deliberately deferred — most admin search terms are
+/// ASCII, and the missed-non-ASCII case still renders the row
+/// correctly; only the highlight is absent.
+fn highlight_search_match(text: &str, term: &str) -> Option<String> {
+    if term.is_empty() {
+        return None;
+    }
+    // ASCII-lowercase both strings while preserving non-ASCII chars
+    // unchanged. `char::to_ascii_lowercase` is byte-length-preserving
+    // for both ASCII and non-ASCII inputs, so byte offsets carry over.
+    let text_lower: String = text.chars().map(|c| c.to_ascii_lowercase()).collect();
+    let term_lower: String = term.chars().map(|c| c.to_ascii_lowercase()).collect();
+    let term_bytes = term_lower.len();
+
+    let first = text_lower.find(&term_lower)?;
+    let mut out = String::with_capacity(text.len() + 16);
+    push_html_escaped_str(&mut out, &text[..first]);
+    let mut cursor = first;
+    loop {
+        out.push_str("<mark>");
+        push_html_escaped_str(&mut out, &text[cursor..cursor + term_bytes]);
+        out.push_str("</mark>");
+        cursor += term_bytes;
+        match text_lower[cursor..].find(&term_lower) {
+            Some(rel) => {
+                let next = cursor + rel;
+                push_html_escaped_str(&mut out, &text[cursor..next]);
+                cursor = next;
+            }
+            None => break,
+        }
+    }
+    push_html_escaped_str(&mut out, &text[cursor..]);
+    Some(out)
+}
+
 /// Values are URL-encoded so search strings with spaces or unicode
 /// don't break the link.
 fn build_list_url(
@@ -1401,6 +1477,20 @@ pub(crate) fn list_ctx(
     let field_names: Vec<&'static str> = entry.fields.iter().map(|f| f.name).collect();
     let field_types: Vec<crate::admin::FieldType> =
         entry.fields.iter().map(|f| f.field_type).collect();
+    // Pre-compute the lowercase search term once. Each row × column
+    // would otherwise redo the allocation; for a 100-row × 5-searched-
+    // column page that's 500 redundant lowercases.
+    let search_term_trimmed = search_query.trim();
+    let search_term_for_highlight: Option<String> = if search_term_trimmed.is_empty() {
+        None
+    } else {
+        Some(search_term_trimmed.to_string())
+    };
+    // Columns whose cells the highlighter should scan — only those
+    // the SQL search clause actually ILIKE'd. Highlighting a column
+    // that wasn't searched would be a lie.
+    let searched_columns: std::collections::HashSet<&str> =
+        entry.search_fields.iter().copied().collect();
     ListCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: entry.display_name.to_string(),
@@ -1420,6 +1510,7 @@ pub(crate) fn list_ctx(
                 let mut values: HashMap<String, serde_json::Value> =
                     HashMap::with_capacity(field_names.len().saturating_sub(1));
                 let mut links: HashMap<String, String> = HashMap::new();
+                let mut highlights: HashMap<String, String> = HashMap::new();
                 let cell_links = r.cell_links;
                 for (i, cell) in r.cells.into_iter().enumerate() {
                     if let Some(name) = field_names.get(i) {
@@ -1427,6 +1518,23 @@ pub(crate) fn list_ctx(
                         // wins on serialization.
                         if *name == "id" {
                             continue;
+                        }
+                        // Build the highlight HTML BEFORE moving `cell`
+                        // into the typed value below. Only emit a
+                        // fragment when the column was actually scanned
+                        // by the search clause AND at least one match
+                        // landed; otherwise the template falls back to
+                        // the plain string path.
+                        if let Some(term) = &search_term_for_highlight {
+                            let is_bool = matches!(
+                                field_types.get(i),
+                                Some(crate::admin::FieldType::Bool)
+                            );
+                            if !is_bool && searched_columns.contains(*name) {
+                                if let Some(html) = highlight_search_match(&cell, term) {
+                                    highlights.insert((*name).to_string(), html);
+                                }
+                            }
                         }
                         let typed = match field_types.get(i) {
                             Some(crate::admin::FieldType::Bool) => {
@@ -1447,6 +1555,7 @@ pub(crate) fn list_ctx(
                     id: r.id,
                     values,
                     links,
+                    highlights,
                 }
             })
             .collect(),
@@ -3151,5 +3260,68 @@ mod tests {
             target_model: None,
             checked: false,
         }
+    }
+
+    // ---- highlight_search_match -------------------------------------
+
+    #[test]
+    fn highlight_returns_none_when_no_match() {
+        assert_eq!(highlight_search_match("Anna Lindqvist", "zzz"), None);
+    }
+
+    #[test]
+    fn highlight_returns_none_for_empty_term() {
+        // The caller has already short-circuited on empty term, but
+        // make the function defensive anyway.
+        assert_eq!(highlight_search_match("anything", ""), None);
+    }
+
+    #[test]
+    fn highlight_wraps_ascii_case_insensitive() {
+        let html = highlight_search_match("Anna Lindqvist", "anna").unwrap();
+        assert_eq!(html, "<mark>Anna</mark> Lindqvist");
+    }
+
+    #[test]
+    fn highlight_wraps_every_occurrence() {
+        let html = highlight_search_match("abc ABC abC", "abc").unwrap();
+        assert_eq!(html, "<mark>abc</mark> <mark>ABC</mark> <mark>abC</mark>");
+    }
+
+    #[test]
+    fn highlight_escapes_html_around_marks() {
+        // A cell containing literal HTML special chars must not
+        // smuggle them into the rendered DOM. The mark wraps the
+        // matched substring; everything else is escaped.
+        let html = highlight_search_match("name<script>alert('x')</script>", "name").unwrap();
+        assert!(html.starts_with("<mark>name</mark>"));
+        assert!(html.contains("&lt;script&gt;"));
+        assert!(html.contains("&#39;x&#39;"));
+        assert!(!html.contains("<script>"));
+    }
+
+    #[test]
+    fn highlight_escapes_inside_mark_when_term_contains_specials() {
+        // Pathological but possible: an operator searches for a
+        // literal `<`. The mark wraps the match, and the match
+        // itself escapes the special char.
+        let html = highlight_search_match("a<b<c", "<").unwrap();
+        assert_eq!(html, "a<mark>&lt;</mark>b<mark>&lt;</mark>c");
+    }
+
+    #[test]
+    fn highlight_preserves_non_ascii_bytes_around_match() {
+        // `to_ascii_lowercase` leaves non-ASCII bytes untouched, so
+        // byte offsets line up. A Swedish name with a Latin search
+        // term should still highlight the ASCII portion that matched.
+        let html = highlight_search_match("Anna Wåhlin", "ann").unwrap();
+        assert_eq!(html, "<mark>Ann</mark>a Wåhlin");
+    }
+
+    #[test]
+    fn highlight_handles_adjacent_matches() {
+        let html = highlight_search_match("aaaa", "aa").unwrap();
+        // Greedy non-overlapping match: positions 0..2 and 2..4.
+        assert_eq!(html, "<mark>aa</mark><mark>aa</mark>");
     }
 }

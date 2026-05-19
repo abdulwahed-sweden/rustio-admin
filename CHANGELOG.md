@@ -40,6 +40,29 @@ leaves the alpha track.
 
 ### Added
 
+- **List-view search-result highlighting.** When `?q=…` is in
+  effect, every cell in a column the search clause actually scanned
+  (`ModelAdmin::search_fields()`) gets its matched substring wrapped
+  in `<mark>` tags — operators can see at a glance *which* part of
+  *which* column was hit, without having to re-scan the row. The
+  highlight HTML is built server-side in `render::list_ctx` (a new
+  pure helper `highlight_search_match` with eight unit tests pinning
+  the matching + HTML-escaping behaviour) and exposed through a new
+  `ListRowCtx.highlights: HashMap<String, String>` channel separate
+  from the plain `values` map; cells with no match render via the
+  existing string path unchanged. The mark element gets calm
+  styling in `base/typography.css` — accent-tinted background that
+  inherits the cell's foreground colour so dark mode just works.
+  - **Matching semantics**: ASCII-case-insensitive
+    (`"anna"` matches `"Anna Lindqvist"`); non-ASCII characters
+    compare exactly. Full Unicode case folding deferred — the
+    common case is ASCII, and the missed-non-ASCII case still
+    renders the row, just without highlight.
+  - **XSS-safe**: the cell text is HTML-escaped char-by-char inside
+    and outside the `<mark>` wrap; eight tests cover the escaping
+    around marks, escaping of HTML specials *inside* matched
+    substrings (operator searches for a literal `<`), adjacent
+    matches, multi-match, and non-ASCII passthrough.
 - **Per-session revoke affordance on the user-profile sessions
   tab.** The roadmap entry "the `user_view.html` page already lists
   active sessions; add a 'revoke this session' affordance" is now
