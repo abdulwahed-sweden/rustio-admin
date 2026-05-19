@@ -48,6 +48,8 @@ pub use crate::orm::{Db, DbOptions, Model, Row, Value};
 pub use crate::router::{Next, Router};
 // public:
 pub use crate::server::Server;
+// public:
+pub use crate::templates::{embedded_template_names, embedded_template_source};
 
 // public:
 pub use rustio_admin_macros::RustioAdmin;
