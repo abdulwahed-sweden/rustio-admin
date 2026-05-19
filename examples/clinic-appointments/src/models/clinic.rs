@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};
 
 #[derive(Debug, Clone, RustioAdmin)]
-pub struct Branch {
+pub struct Clinic {
     pub id: i64,
     pub name: String,
     pub address: String,
@@ -12,8 +12,8 @@ pub struct Branch {
 }
 
 // Manual Model impl kept explicit for teaching/readability.
-impl Model for Branch {
-    const TABLE: &'static str = "branches";
+impl Model for Clinic {
+    const TABLE: &'static str = "clinics";
     const COLUMNS: &'static [&'static str] = &["id", "name", "address", "is_open", "created_at"];
     const INSERT_COLUMNS: &'static [&'static str] = &["name", "address", "is_open", "created_at"];
 
@@ -22,7 +22,7 @@ impl Model for Branch {
     }
 
     fn from_row(row: Row<'_>) -> Result<Self> {
-        Ok(Branch {
+        Ok(Clinic {
             id: row.get_i64("id")?,
             name: row.get_string("name")?,
             address: row.get_string("address")?,
@@ -41,4 +41,4 @@ impl Model for Branch {
     }
 }
 
-impl ModelAdmin for Branch {}
+impl ModelAdmin for Clinic {}

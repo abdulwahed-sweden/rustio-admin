@@ -49,7 +49,7 @@ Governs:
 ### 1.2 What this document does not cover
 
 - SMTP transport choice — projects own the `Mailer` impl. See
-  `examples/library-circulation/src/mailer.rs` for the canonical
+  `examples/clinic-appointments/src/mailer.rs` for the canonical
   `LettreSmtpMailer` reference.
 - Admin chrome surfaces — `DESIGN_CHROME.md`.
 - Audit trail — `DESIGN_AUDIT.md`. Email-dispatch audit rows are

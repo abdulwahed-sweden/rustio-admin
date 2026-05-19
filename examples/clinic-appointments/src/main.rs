@@ -1,11 +1,12 @@
-//! library-circulation example — boots an admin panel for the
-//! 4-table library schema defined in D.2.
+//! clinic-appointments example — boots an admin panel for the
+//! 4-table clinic schema (clinics + patients + practitioners +
+//! appointments).
 //!
 //! Run:
 //!
-//!   createdb library_circulation_demo
-//!   DATABASE_URL=postgres://localhost/library_circulation_demo \
-//!     cargo run -p library-circulation
+//!   createdb clinic_appointments_demo
+//!   DATABASE_URL=postgres://localhost/clinic_appointments_demo \
+//!     cargo run -p clinic-appointments
 //!
 //! First-time admin superuser creation is out of scope for the
 //! example main.rs; use the framework CLI (`rustio user create`)
@@ -24,10 +25,10 @@ use rustio_admin::{
 };
 
 use crate::mailer::{smtp_config_from_env, LettreSmtpMailer};
-use crate::models::branch::Branch;
-use crate::models::item::Item;
-use crate::models::loan::Loan;
-use crate::models::patron::Patron;
+use crate::models::appointment::Appointment;
+use crate::models::clinic::Clinic;
+use crate::models::patient::Patient;
+use crate::models::practitioner::Practitioner;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -49,7 +50,7 @@ async fn main() -> Result<()> {
 
     // 1. Connection string — env override, localhost dev fallback.
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:postgres@127.0.0.1:5432/library_circulation_demo".into()
+        "postgres://postgres:postgres@127.0.0.1:5432/clinic_appointments_demo".into()
     });
 
     // 2. Connect; fails fast if URL or server is wrong.
@@ -58,9 +59,9 @@ async fn main() -> Result<()> {
     // 3. Framework's own auth / session / permission / audit tables.
     auth::init_tables(&db).await?;
 
-    // 4. Example domain migrations (branches, patrons, items, loans).
-    //    Run before route registration so admin queries never target
-    //    missing tables.
+    // 4. Example domain migrations (clinics, patients, practitioners,
+    //    appointments). Run before route registration so admin queries
+    //    never target missing tables.
     migrations::apply(&db, concat!(env!("CARGO_MANIFEST_DIR"), "/migrations")).await?;
 
     // 5. Resolve the mailer from env. `SMTP_HOST` present → real SMTP
@@ -121,7 +122,7 @@ async fn main() -> Result<()> {
             println!("mailer: SMTP_HOST not set — using LogMailer.");
             println!("        Recovery emails will be written to stdout, NOT delivered.");
             println!(
-                "        To enable real delivery, see examples/library-circulation/.env.example."
+                "        To enable real delivery, see examples/clinic-appointments/.env.example."
             );
             Arc::new(LogMailer::new())
         }
@@ -139,21 +140,21 @@ async fn main() -> Result<()> {
     //    `APP_NAME` and `SUPPORT_EMAIL` flow in from the env so a
     //    developer can fork this example without editing source —
     //    matches the `.env.example` developer contract.
-    let app_name = std::env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
+    let app_name = std::env::var("APP_NAME").unwrap_or_else(|_| "Clinic Appointments".into());
     let support_email = std::env::var("SUPPORT_EMAIL").ok();
     let mut admin_builder = Admin::new()
         .app_name(app_name)
-        .app_tagline("Operational library management")
+        .app_tagline("Operational clinic management")
         .public_url("http://127.0.0.1:3000")
         .mailer(mailer);
     if let Some(s) = support_email {
         admin_builder = admin_builder.support_email(s);
     }
     let admin = admin_builder
-        .model::<Branch>()
-        .model::<Patron>()
-        .model::<Item>()
-        .model::<Loan>();
+        .model::<Clinic>()
+        .model::<Patient>()
+        .model::<Practitioner>()
+        .model::<Appointment>();
 
     // 7. Materialise view / add / change / delete perms per model.
     admin.seed_permissions(&db).await?;
@@ -175,7 +176,7 @@ async fn main() -> Result<()> {
     let addr: SocketAddr = "127.0.0.1:3000"
         .parse()
         .expect("hard-coded bind address parses");
-    println!("library-circulation admin listening on http://{addr}/admin/");
+    println!("clinic-appointments admin listening on http://{addr}/admin/");
     Server::new(router, addr).run().await?;
 
     Ok(())

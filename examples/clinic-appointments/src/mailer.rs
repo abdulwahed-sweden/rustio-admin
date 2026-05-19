@@ -1,4 +1,4 @@
-//! Real SMTP `Mailer` implementation for the library-circulation
+//! Real SMTP `Mailer` implementation for the clinic-appointments
 //! example.
 //!
 //! The framework keeps `lettre` out of its dependency tree on
@@ -98,7 +98,7 @@ pub fn smtp_config_from_env() -> Result<Option<SmtpConfig>, String> {
     if let Some(p) = provider.as_deref() {
         if preset.is_none() {
             log::warn!(
-                target: "library_circulation::mailer",
+                target: "clinic_appointments::mailer",
                 "MAIL_PROVIDER={p} is not a known preset; falling back to explicit SMTP_* vars. \
                  Known presets: gmail, resend, postmark, mailgun, sendgrid, ethereal"
             );
@@ -251,7 +251,7 @@ impl Mailer for LettreSmtpMailer {
             // this is a deliberate gap, not a regression.
             if !msg.headers.is_empty() {
                 log::warn!(
-                    target: "library_circulation::mailer",
+                    target: "clinic_appointments::mailer",
                     "Mail.headers carried {} entries — custom header dispatch \
                      not yet wired in LettreSmtpMailer; dropping",
                     msg.headers.len()
