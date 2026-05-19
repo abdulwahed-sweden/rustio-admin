@@ -910,6 +910,21 @@ pub(crate) async fn list_model(
             .await?;
     }
 
+    // JSON content negotiation. When the client wants JSON (via
+    // `Accept` or `?format=json`), short-circuit ahead of the
+    // HTML rendering — including the FK cell hydration, which is
+    // a presentation concern (the JSON shape stores raw FK ids,
+    // not human labels).
+    if super::json_api::wants_json(req) {
+        let envelope = super::json_api::list_envelope(
+            entry,
+            page_result,
+            page as usize,
+            per_page as usize,
+        );
+        return super::json_api::json_response(envelope);
+    }
+
     // Resolve every FK cell on this page from raw id to the target
     // row's display label, and stash a click-through link for the
     // template. One batched query per FK column on the model — N+1-safe.
@@ -1367,6 +1382,38 @@ fn compute_row_diff(
         }
     }
     changes
+}
+
+// ---- JSON detail endpoint ------------------------------------------------
+
+/// `GET /admin/<model>/<id>` — JSON-only detail endpoint. Mirrors
+/// the row that `/admin/<model>/<id>/edit` renders as a form;
+/// returns the row as `{"id":N, "<field>":…, …}`. Refuses with a
+/// 406 if the client didn't request JSON — the HTML edit page is
+/// the dedicated UI surface at `.../edit`.
+pub(crate) async fn show_object_json(
+    ctx: &AdminCtx,
+    _identity: Identity,
+    admin_name: &str,
+    id: i64,
+    req: &Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    if !super::json_api::wants_json(req) {
+        // Send the caller to the form view. Browsers visiting
+        // `/admin/<model>/<id>` directly land where they expect.
+        return Ok(Response::redirect(format!(
+            "/admin/{}/{}/edit",
+            entry.admin_name, id
+        )));
+    }
+    let row = entry
+        .ops
+        .find_row(&ctx.db, id)
+        .await?
+        .ok_or_else(|| Error::NotFound(format!("{admin_name}/{id}")))?;
+    let obj = super::json_api::detail_envelope(entry, row);
+    super::json_api::json_response(obj)
 }
 
 // ---- Multipart form parsing (file uploads) -------------------------------
