@@ -739,6 +739,12 @@ pub(crate) struct ListRowCtx {
 pub(crate) struct FilterGroupCtx {
     pub field: String,
     pub label: String,
+    /// `"chips"` for the discrete-option dropdown (Yes/No, status, …).
+    /// `"date_range"` for the two-date-input form. Template branches
+    /// on this string. Defaults to `"chips"` so existing call sites
+    /// stay correct without touching them.
+    #[serde(default = "default_filter_kind")]
+    pub kind: &'static str,
     pub options: Vec<FilterOptionCtx>,
     pub current: Option<String>,
     /// URL for the "All" chip — clears this group while keeping every
@@ -748,6 +754,31 @@ pub(crate) struct FilterGroupCtx {
     /// patches it in (handlers don't construct this field directly).
     #[serde(default)]
     pub all_link: String,
+    /// `date_range` only: the currently-selected lower bound
+    /// (`YYYY-MM-DD`) and the URL-parameter name the form must
+    /// submit it under (`<field>__gte`).
+    #[serde(default)]
+    pub date_from_name: String,
+    #[serde(default)]
+    pub date_from_value: String,
+    /// Upper bound counterpart — `<field>__lte`.
+    #[serde(default)]
+    pub date_to_name: String,
+    #[serde(default)]
+    pub date_to_value: String,
+    /// `date_range` only: hidden inputs the form must carry to keep
+    /// every other filter / sort / per_page selection across an
+    /// Apply submit. Patched by `list_ctx`. Empty until then.
+    #[serde(default)]
+    pub hidden_pairs: Vec<(String, String)>,
+    /// `date_range` only: `true` when at least one bound is set —
+    /// drives the "Clear" affordance.
+    #[serde(default)]
+    pub has_active_range: bool,
+}
+
+fn default_filter_kind() -> &'static str {
+    "chips"
 }
 
 #[derive(Serialize)]
@@ -963,21 +994,52 @@ pub(crate) fn list_ctx(
     // the others. `active_filter_pairs` is the canonical view of
     // currently-set filters; widgets derive their override URLs from
     // a copy of it.
+    // Active filter pairs span both the chip groups (one pair) and
+    // the date-range groups (one pair per set bound, encoded under
+    // `<field>__gte` / `<field>__lte`). Every state-preserving link
+    // — chip All / chip option / sort / per-page / pagination — is
+    // built from this flat list, so a single source of truth means
+    // no widget can silently drop another widget's selection.
     let active_filter_pairs: Vec<(String, String)> = filters
         .iter()
-        .filter_map(|g| g.current.as_ref().map(|v| (g.field.clone(), v.clone())))
+        .flat_map(|g| {
+            let mut pairs: Vec<(String, String)> = Vec::new();
+            if let Some(v) = g.current.as_ref() {
+                pairs.push((g.field.clone(), v.clone()));
+            }
+            if !g.date_from_value.is_empty() {
+                pairs.push((g.date_from_name.clone(), g.date_from_value.clone()));
+            }
+            if !g.date_to_value.is_empty() {
+                pairs.push((g.date_to_name.clone(), g.date_to_value.clone()));
+            }
+            pairs
+        })
         .collect();
     let active_sort_ref: Option<(&str, super::modeladmin::SortDir)> =
         active_sort.as_ref().map(|(c, d)| (c.as_str(), *d));
 
-    // Patch each filter group's chip URLs in-place. "All" drops this
-    // group from the active set; an option link replaces the group's
-    // current value. Page resets to 1 — page N of one filter rarely
-    // matches up with page N of another.
+    // Patch each filter group's URLs in-place. "All" drops this
+    // group from the active set; chip options replace the group's
+    // current value; date-range forms keep every *other* pair as
+    // hidden inputs and submit with their own field names. Page
+    // resets to 1 — page N of one filter rarely matches up with
+    // page N of another.
     for group in &mut filters {
         let other: Vec<(String, String)> = active_filter_pairs
             .iter()
-            .filter(|(field, _)| field != &group.field)
+            .filter(|(field, _)| {
+                // A chip group owns one key (`field`); a date-range
+                // group owns two (`field__gte`, `field__lte`). The
+                // "other" list excludes whichever keys this group
+                // controls so its own URLs replace rather than
+                // duplicate.
+                if group.kind == "date_range" {
+                    field != &group.date_from_name && field != &group.date_to_name
+                } else {
+                    field != &group.field
+                }
+            })
             .cloned()
             .collect();
         group.all_link = build_list_url(
@@ -988,6 +1050,8 @@ pub(crate) fn list_ctx(
             1,
             per_page_override,
         );
+        // Chip options: each chip composes a URL with this group's
+        // value replaced.
         for opt in &mut group.options {
             let mut combined = other.clone();
             combined.push((group.field.clone(), opt.value.clone()));
@@ -999,6 +1063,11 @@ pub(crate) fn list_ctx(
                 1,
                 per_page_override,
             );
+        }
+        // Date-range form: carry every other pair as hidden inputs;
+        // the form's own `__gte`/`__lte` inputs supply the new bounds.
+        if group.kind == "date_range" {
+            group.hidden_pairs = other;
         }
     }
 
@@ -1019,30 +1088,66 @@ pub(crate) fn list_ctx(
     let active_filter_pills: Vec<ActiveFilterPillCtx> = filters
         .iter()
         .filter_map(|g| {
-            let v = g.current.as_ref()?;
-            let value_label = g
-                .options
-                .iter()
-                .find(|o| &o.value == v)
-                .map(|o| o.label.clone())
-                .unwrap_or_else(|| v.clone());
-            let other: Vec<(String, String)> = active_filter_pairs
-                .iter()
-                .filter(|(field, _)| field != &g.field)
-                .cloned()
-                .collect();
-            Some(ActiveFilterPillCtx {
-                label: g.label.clone(),
-                value_label,
-                remove_link: build_list_url(
-                    entry.admin_name,
-                    &search_query,
-                    &other,
-                    active_sort_ref,
-                    1,
-                    per_page_override,
-                ),
-            })
+            if g.kind == "date_range" {
+                if !g.has_active_range {
+                    return None;
+                }
+                // One combined pill — "from → to", "from only", or
+                // "≤ to". The remove link drops both bounds at once.
+                let value_label = match (
+                    g.date_from_value.as_str(),
+                    g.date_to_value.as_str(),
+                ) {
+                    ("", "") => return None,
+                    ("", to) => format!("≤ {to}"),
+                    (from, "") => format!("≥ {from}"),
+                    (from, to) => format!("{from} → {to}"),
+                };
+                let other: Vec<(String, String)> = active_filter_pairs
+                    .iter()
+                    .filter(|(field, _)| {
+                        field != &g.date_from_name && field != &g.date_to_name
+                    })
+                    .cloned()
+                    .collect();
+                Some(ActiveFilterPillCtx {
+                    label: g.label.clone(),
+                    value_label,
+                    remove_link: build_list_url(
+                        entry.admin_name,
+                        &search_query,
+                        &other,
+                        active_sort_ref,
+                        1,
+                        per_page_override,
+                    ),
+                })
+            } else {
+                let v = g.current.as_ref()?;
+                let value_label = g
+                    .options
+                    .iter()
+                    .find(|o| &o.value == v)
+                    .map(|o| o.label.clone())
+                    .unwrap_or_else(|| v.clone());
+                let other: Vec<(String, String)> = active_filter_pairs
+                    .iter()
+                    .filter(|(field, _)| field != &g.field)
+                    .cloned()
+                    .collect();
+                Some(ActiveFilterPillCtx {
+                    label: g.label.clone(),
+                    value_label,
+                    remove_link: build_list_url(
+                        entry.admin_name,
+                        &search_query,
+                        &other,
+                        active_sort_ref,
+                        1,
+                        per_page_override,
+                    ),
+                })
+            }
         })
         .collect();
 
@@ -1246,7 +1351,10 @@ pub(crate) fn list_ctx(
             })
             .collect(),
         search_query,
-        active_filter_count: filters.iter().filter(|g| g.current.is_some()).count(),
+        active_filter_count: filters
+            .iter()
+            .filter(|g| g.current.is_some() || g.has_active_range)
+            .count(),
         active_filter_pairs,
         active_filter_pills,
         clear_all_filters_link,

@@ -45,12 +45,42 @@
       {% for group in filters %}
       <div class="rio-dropdown-section">
         <span class="rio-dropdown-label">{{ group.label }}</span>
+        {% if group.kind == "date_range" %}
+        <form method="get" action="/admin/{{ admin_name }}" class="rio-date-range">
+          {% for pair in group.hidden_pairs %}
+          <input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">
+          {% endfor %}
+          {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+          {% if active_sort_field %}
+          <input type="hidden" name="sort" value="{{ active_sort_field }}">
+          <input type="hidden" name="dir" value="{{ active_sort_dir }}">
+          {% endif %}
+          {% if active_per_page_override %}
+          <input type="hidden" name="per_page" value="{{ active_per_page_override }}">
+          {% endif %}
+          <label class="rio-date-range-field">
+            <span class="rio-date-range-label-text">From</span>
+            <input type="date" name="{{ group.date_from_name }}" value="{{ group.date_from_value }}" class="rio-input rio-date-range-input">
+          </label>
+          <label class="rio-date-range-field">
+            <span class="rio-date-range-label-text">To</span>
+            <input type="date" name="{{ group.date_to_name }}" value="{{ group.date_to_value }}" class="rio-input rio-date-range-input">
+          </label>
+          <div class="rio-date-range-actions">
+            <button type="submit" class="rio-button rio-button--primary">Apply</button>
+            {% if group.has_active_range %}
+            <a href="{{ group.all_link }}" class="rio-button">Clear</a>
+            {% endif %}
+          </div>
+        </form>
+        {% else %}
         <div class="rio-dropdown-options">
           <a href="{{ group.all_link }}" class="rio-dropdown-chip{% if not group.current %} is-active{% endif %}">All</a>
           {% for opt in group.options %}
           <a href="{{ opt.link }}" class="rio-dropdown-chip{% if opt.selected %} is-active{% endif %}">{{ opt.label }}</a>
           {% endfor %}
         </div>
+        {% endif %}
       </div>
       {% endfor %}
       {% if active_filter_count > 0 %}

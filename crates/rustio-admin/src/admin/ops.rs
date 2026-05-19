@@ -67,6 +67,27 @@ where
                 placeholder += 1;
             }
 
+            // Date-range filters. Cast the column to `::date` so
+            // `TIMESTAMP` and `DATE` columns both compare cleanly
+            // against a `YYYY-MM-DD` parameter. Each bound may be
+            // open; the handler has already discarded empty
+            // strings, so a value here is always a real bound.
+            for (col, gte, lte) in &opts.date_ranges {
+                if !valid.contains(col.as_str()) {
+                    continue;
+                }
+                if let Some(v) = gte {
+                    where_clauses.push(format!("{col}::date >= ${placeholder}::date"));
+                    where_bindings.push(v.clone());
+                    placeholder += 1;
+                }
+                if let Some(v) = lte {
+                    where_clauses.push(format!("{col}::date <= ${placeholder}::date"));
+                    where_bindings.push(v.clone());
+                    placeholder += 1;
+                }
+            }
+
             if let Some((term, cols)) = &opts.search {
                 let term = term.trim();
                 if !term.is_empty() {

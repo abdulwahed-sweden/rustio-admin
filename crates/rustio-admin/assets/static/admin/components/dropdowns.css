@@ -175,3 +175,32 @@
   border-top: 1px solid var(--rio-border-soft);
 }
 .rio-dropdown-footer .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
+
+/* Date-range filter form. Lives inside `.rio-dropdown-section` for
+ * any FilterKind::DateRange field — two stacked `<input type=date>`
+ * labels and a small button row. The native date picker carries
+ * its own visual styling; the form just establishes spacing. */
+.rio-date-range {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+}
+.rio-date-range-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.rio-date-range-label-text {
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rio-date-range-input { padding: 0.35rem 0.5rem; font-size: var(--rio-fs-sm); }
+.rio-date-range-actions {
+  display: flex;
+  gap: var(--rio-s2);
+  padding-top: var(--rio-s1);
+}
+.rio-date-range-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }

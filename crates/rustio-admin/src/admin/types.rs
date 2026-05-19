@@ -203,6 +203,15 @@ pub struct ListOpts {
     /// semantics the in-memory pre-P10 filter used for bool / int /
     /// timestamp columns.
     pub filters: Vec<(String, String)>,
+    /// Date-range filters surfaced from
+    /// [`super::filters::FilterKind::DateRange`]: each tuple is
+    /// `(column, gte, lte)` with `YYYY-MM-DD` strings. Either bound
+    /// may be `None` (open-ended). The runtime renders
+    /// `WHERE col::date >= $N::date` and / or
+    /// `WHERE col::date <= $N::date`. Column names are validated
+    /// against `M::COLUMNS`; the date strings are passed through
+    /// to Postgres which rejects malformed inputs.
+    pub date_ranges: Vec<(String, Option<String>, Option<String>)>,
     /// Free-text search: `(term, columns)`. The runtime emits
     /// `WHERE (col1::text ILIKE $N OR col2::text ILIKE $N OR …)`
     /// with `$N = '%term%'`. An empty `term` or empty `columns`
