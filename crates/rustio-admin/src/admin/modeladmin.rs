@@ -54,6 +54,52 @@ pub struct Fieldset {
 }
 
 // public:
+/// One validation failure attached to a project-driven `validate`
+/// call on [`ModelAdmin`]. Either targets a specific field (rendered
+/// inline next to its input) or surfaces globally in the form's
+/// error banner.
+///
+/// Plain owned struct — `Send + Sync` so a `Vec<FieldValidationError>`
+/// can cross await points freely.
+#[derive(Debug, Clone)]
+pub struct FieldValidationError {
+    /// `Some(name)` routes the error to the matching field on the
+    /// form (rendered next to that input with the existing inline-
+    /// error styling). `None` lands the message in the form-level
+    /// banner — appropriate for cross-field rules ("end date must
+    /// not be before start date" could attach to either, but a
+    /// "this booking conflicts with another one" message has no
+    /// single owning field).
+    pub field: Option<&'static str>,
+    /// User-facing message, one sentence. Should not include the
+    /// field's own label — the renderer adds it.
+    pub message: String,
+}
+
+impl FieldValidationError {
+    // public:
+    /// Construct an error attached to one field. `field` must
+    /// match an `AdminField.name` on the model — otherwise the
+    /// renderer falls through to the global banner.
+    pub fn field(field: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            field: Some(field),
+            message: message.into(),
+        }
+    }
+
+    // public:
+    /// Construct a global / cross-field error. Renders in the form
+    /// banner without a field anchor.
+    pub fn global(message: impl Into<String>) -> Self {
+        Self {
+            field: None,
+            message: message.into(),
+        }
+    }
+}
+
+// public:
 /// Django-style customisation surface for a registered admin model.
 ///
 /// Every type that implements [`AdminModel`] gets a default impl via
@@ -115,6 +161,38 @@ pub trait ModelAdmin: AdminModel {
     /// matching field are silently dropped.
     fn fieldsets() -> &'static [Fieldset] {
         &[]
+    }
+
+    /// Per-row business-rule validation, called by the framework
+    /// after [`AdminModel::from_form`] succeeds but BEFORE the SQL
+    /// insert / update fires. Default is `Ok(())` — projects opt in
+    /// by overriding. Synchronous: validation can't query the DB;
+    /// database-shape errors (UNIQUE violations, FK gone) flow
+    /// through the existing constraint-translation path
+    /// automatically and aren't this hook's concern.
+    ///
+    /// Returning `Err` short-circuits both create and update — the
+    /// row never reaches Postgres. Each [`FieldValidationError`]
+    /// either attaches to a specific field (rendered inline next
+    /// to that input, with `aria-invalid`) or surfaces as a global
+    /// rule violation (rendered in the form's error banner).
+    ///
+    /// Common shape:
+    ///
+    /// ```ignore
+    /// fn validate(model: &Self) -> std::result::Result<(), Vec<FieldValidationError>> {
+    ///     let mut errs = Vec::new();
+    ///     if model.start_date > model.end_date {
+    ///         errs.push(FieldValidationError::field(
+    ///             "end_date",
+    ///             "End date must not be before the start date.",
+    ///         ));
+    ///     }
+    ///     if errs.is_empty() { Ok(()) } else { Err(errs) }
+    /// }
+    /// ```
+    fn validate(_model: &Self) -> std::result::Result<(), Vec<FieldValidationError>> {
+        Ok(())
     }
 
     /// Custom bulk actions surfaced as extra buttons in the list-view

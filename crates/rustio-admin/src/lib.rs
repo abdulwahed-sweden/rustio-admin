@@ -34,7 +34,7 @@ pub mod templates;
 // public:
 pub use crate::admin::{
     register_admin_routes, Admin, AdminField, AdminModel, BulkAction, BulkActionContext,
-    BulkActionFailure, BulkActionResult, FieldType, Fieldset, ModelAdmin,
+    BulkActionFailure, BulkActionResult, FieldType, FieldValidationError, Fieldset, ModelAdmin,
 };
 // public:
 pub use crate::auth::{Identity, Role};
