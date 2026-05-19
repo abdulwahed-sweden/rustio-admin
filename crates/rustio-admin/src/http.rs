@@ -113,6 +113,26 @@ impl Request {
 
     // public:
     pub fn form(&self) -> Result<FormData> {
+        // Multipart bodies need a different parser — `body_text()`
+        // would refuse binary file parts. We extract text fields
+        // only at this layer; the admin handler reruns the parser
+        // with its uploads-dir context to actually write file
+        // parts to disk.
+        let ct = self.header("content-type").unwrap_or("");
+        if let Some(boundary) = crate::multipart::boundary_from_content_type(ct) {
+            return crate::multipart::parse_multipart(&self.body, &boundary)
+                .map(|mp| {
+                    let mut form = FormData::default();
+                    for part in mp.parts {
+                        if part.filename.is_none() {
+                            let text = String::from_utf8_lossy(&part.body).into_owned();
+                            form.set(part.name, text);
+                        }
+                    }
+                    form
+                })
+                .map_err(|e| Error::BadRequest(format!("multipart: {e}")));
+        }
         let text = self.body_text()?;
         Ok(FormData::from_urlencoded(text))
     }

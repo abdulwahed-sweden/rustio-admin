@@ -73,6 +73,15 @@ pub enum FieldType {
     OptionalI64,
     OptionalString,
     OptionalDateTime,
+    /// Column persists a relative file path produced by the
+    /// framework's multipart-form path. Renders as
+    /// `<input type="file">`; on POST the framework writes the
+    /// uploaded bytes to `<Admin::uploads_dir>/<rel_path>` and
+    /// injects the resulting path string back into the form so
+    /// `from_form` sees a normal `String` column.
+    FilePath,
+    /// Nullable variant of [`Self::FilePath`].
+    OptionalFilePath,
 }
 
 impl FieldType {
@@ -82,6 +91,7 @@ impl FieldType {
             FieldType::Bool => "checkbox",
             FieldType::DateTime | FieldType::OptionalDateTime => "datetime",
             FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 => "number",
+            FieldType::FilePath | FieldType::OptionalFilePath => "file",
             FieldType::String | FieldType::OptionalString => "text",
         }
     }
@@ -90,7 +100,10 @@ impl FieldType {
     pub fn nullable(&self) -> bool {
         matches!(
             self,
-            FieldType::OptionalI64 | FieldType::OptionalString | FieldType::OptionalDateTime
+            FieldType::OptionalI64
+                | FieldType::OptionalString
+                | FieldType::OptionalDateTime
+                | FieldType::OptionalFilePath
         )
     }
 }
@@ -579,6 +592,17 @@ pub struct Admin {
     /// password verification (R3 commit #15); this commit lands
     /// the data, the routing follows.
     pub(crate) mfa_policy: MfaPolicy,
+    /// Storage root for uploaded files. `None` (default) disables
+    /// the file-upload code path entirely — any
+    /// `<input type="file">` widget on a model whose framework
+    /// was built without this set is treated as inert (the form
+    /// renders, but the multipart handler returns an empty
+    /// `Form::set` for that field). Projects with file-bearing
+    /// columns opt in via [`Admin::uploads_dir`]. The directory
+    /// is created lazily on first write; the framework
+    /// canonicalises it to refuse path-traversal on the serve
+    /// route.
+    pub(crate) uploads_dir: Option<std::path::PathBuf>,
     /// `true` puts the admin into whole-admin read-only mode: every
     /// mutating POST under `/admin/*` (project CRUD, bulk actions,
     /// admin-driven user lifecycle) returns 403 with a flash banner;
@@ -617,6 +641,7 @@ impl Admin {
             password_policy: Arc::new(DefaultPasswordPolicy::new()),
             recovery_policy: Arc::new(DefaultRecoveryPolicy::new()),
             mfa_policy: MfaPolicy::default(),
+            uploads_dir: None,
             read_only: false,
         }
     }
@@ -705,6 +730,31 @@ impl Admin {
     /// templates (suppress "Add" buttons).
     pub fn is_read_only(&self) -> bool {
         self.read_only
+    }
+
+    // public:
+    /// Set the storage root for uploaded files. Models declaring
+    /// `#[rustio(file)]` columns persist relative paths under this
+    /// directory; the framework serves the bytes back via
+    /// `GET /admin/uploads/<rel>`. The directory is created lazily
+    /// on first write. Leaving this unset (the default) makes any
+    /// file-input field inert at submit — the form renders, but
+    /// the multipart parse path skips file writes.
+    ///
+    /// **Path safety contract.** The framework canonicalises the
+    /// configured root once at builder time and refuses any
+    /// serve-route lookup whose resolved path lands outside the
+    /// canonical root; rejected lookups return 404 (no
+    /// information leak about whether the path could exist).
+    pub fn uploads_dir(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
+        self.uploads_dir = Some(dir.into());
+        self
+    }
+
+    // public:
+    /// Read-only access to the configured uploads root, if any.
+    pub fn uploads_dir_path(&self) -> Option<&std::path::Path> {
+        self.uploads_dir.as_deref()
     }
 
     // public:

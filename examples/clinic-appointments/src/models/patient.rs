@@ -10,6 +10,13 @@ pub struct Patient {
     pub email: String,
     pub is_active: bool,
     pub registered_at: DateTime<Utc>,
+    /// Optional patient photo. `#[rustio(file)]` promotes the
+    /// column to the framework's file-upload widget: form renders
+    /// `<input type="file">`, the multipart-form handler writes
+    /// the uploaded bytes under `Admin::uploads_dir`, and stores
+    /// the resulting relative path here.
+    #[rustio(file)]
+    pub photo_path: Option<String>,
 }
 
 // Manual Model impl kept explicit for teaching/readability.
@@ -22,6 +29,7 @@ impl Model for Patient {
         "email",
         "is_active",
         "registered_at",
+        "photo_path",
     ];
     const INSERT_COLUMNS: &'static [&'static str] = &[
         "chart_number",
@@ -29,6 +37,7 @@ impl Model for Patient {
         "email",
         "is_active",
         "registered_at",
+        "photo_path",
     ];
 
     fn id(&self) -> i64 {
@@ -43,6 +52,7 @@ impl Model for Patient {
             email: row.get_string("email")?,
             is_active: row.get_bool("is_active")?,
             registered_at: row.get_datetime("registered_at")?,
+            photo_path: row.get_optional_string("photo_path")?,
         })
     }
 
@@ -53,6 +63,7 @@ impl Model for Patient {
             Value::from(self.email.clone()),
             Value::from(self.is_active),
             Value::from(self.registered_at),
+            Value::from(self.photo_path.clone()),
         ]
     }
 }

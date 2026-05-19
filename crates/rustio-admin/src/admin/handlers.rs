@@ -1369,6 +1369,205 @@ fn compute_row_diff(
     changes
 }
 
+// ---- Multipart form parsing (file uploads) -------------------------------
+
+/// Maximum bytes the framework holds in memory while parsing a
+/// multipart body. Above this the request is refused. Sized
+/// conservatively for admin-form workloads — image uploads up to
+/// ~8 MB land cleanly; larger files want a streaming surface that
+/// v1 doesn't ship.
+const MULTIPART_MAX_BODY: usize = 16 * 1024 * 1024;
+
+/// Maximum per-file size after multipart parsing. Mirrors the
+/// whole-body cap above; refusing earlier than the round-trip
+/// catches the bad input one indirection sooner.
+const UPLOAD_FILE_MAX: usize = 16 * 1024 * 1024;
+
+/// Pick the right form parser based on the request's
+/// `Content-Type`. Multipart bodies → parse via
+/// `crate::multipart`, write file parts to `<uploads_dir>/<…>`,
+/// inject the resulting relative path back into the form's
+/// string slot under the part's `name`. Urlencoded bodies fall
+/// through to the existing `Request::form()` path.
+///
+/// `uploads_dir` is the canonical root from `Admin::uploads_dir`.
+/// When `None`, file parts are silently dropped — the framework
+/// renders the file input but won't write anything, which is the
+/// right default for projects that haven't opted into the upload
+/// surface yet.
+async fn parse_form_with_uploads(
+    req: &Request,
+    uploads_dir: Option<&std::path::Path>,
+) -> Result<crate::http::FormData> {
+    let ct = req.header("content-type").unwrap_or("");
+    let Some(boundary) = crate::multipart::boundary_from_content_type(ct) else {
+        return req.form();
+    };
+    if req.body().len() > MULTIPART_MAX_BODY {
+        return Err(Error::BadRequest(format!(
+            "multipart body exceeds the {MULTIPART_MAX_BODY}-byte cap"
+        )));
+    }
+    let parsed = crate::multipart::parse_multipart(req.body(), &boundary)
+        .map_err(|e| Error::BadRequest(format!("multipart: {e}")))?;
+    let mut form = crate::http::FormData::default();
+    for part in parsed.parts {
+        match (&part.filename, uploads_dir) {
+            (Some(filename), _) if filename.is_empty() || part.body.is_empty() => {
+                // File input left blank: preserve the existing
+                // column value (do nothing). The
+                // readonly-field-injection path inside `do_update`
+                // already re-injects existing values for any field
+                // the form omitted, so an empty upload leaves the
+                // column unchanged across both create + update.
+            }
+            (Some(filename), Some(root)) => {
+                if part.body.len() > UPLOAD_FILE_MAX {
+                    return Err(Error::BadRequest(format!(
+                        "uploaded file `{filename}` exceeds the {UPLOAD_FILE_MAX}-byte cap"
+                    )));
+                }
+                let rel = persist_upload(root, filename, &part.body).await?;
+                form.set(part.name, rel);
+            }
+            (Some(_), None) => {
+                // File received but Admin::uploads_dir is unset.
+                // Drop silently rather than 500ing — the project
+                // hasn't opted into the upload surface yet.
+                log::warn!(
+                    "received multipart file part `{}` but Admin::uploads_dir is unset; \
+                     dropping the upload",
+                    part.name,
+                );
+            }
+            (None, _) => {
+                let text = String::from_utf8_lossy(&part.body).into_owned();
+                form.set(part.name, text);
+            }
+        }
+    }
+    Ok(form)
+}
+
+/// Sanitise + UUID-prefix the user-supplied filename, write the
+/// bytes under `uploads_dir`, and return the relative path the
+/// model column stores.
+///
+/// File-name sanitisation rules:
+///   - Strip any path components — only the basename survives.
+///   - Replace all but `[A-Za-z0-9._-]` with `_`.
+///   - Trim leading dots so `.htaccess` lands as `htaccess`.
+///   - Cap the resulting basename to 120 chars.
+///
+/// The on-disk filename is `<uuid-v4>-<sanitised>` so two
+/// operators can upload `screenshot.png` simultaneously without
+/// collision. The serve route consults the same path-traversal
+/// guard before reading the file back.
+async fn persist_upload(
+    uploads_dir: &std::path::Path,
+    raw_filename: &str,
+    bytes: &[u8],
+) -> Result<String> {
+    let sanitised = sanitise_upload_filename(raw_filename);
+    let rel = format!("{}-{}", uuid::Uuid::new_v4(), sanitised);
+    let dest = uploads_dir.join(&rel);
+    // Create the directory lazily — projects that set
+    // `Admin::uploads_dir` to a non-existent path get it
+    // materialised on first upload rather than at boot.
+    if let Some(parent) = dest.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| Error::Internal(format!("create uploads dir: {e}")))?;
+        }
+    }
+    std::fs::write(&dest, bytes)
+        .map_err(|e| Error::Internal(format!("write upload {}: {e}", dest.display())))?;
+    Ok(rel)
+}
+
+/// Strip path components, replace unsafe chars, trim leading
+/// dots, cap length. Pure function; unit-tested below.
+pub(super) fn sanitise_upload_filename(raw: &str) -> String {
+    // Take only the last path component on either separator.
+    let basename = raw.rsplit(['/', '\\']).next().unwrap_or("file");
+    let trimmed = basename.trim_start_matches('.').trim();
+    let mapped: String = trimmed
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let bounded: String = mapped.chars().take(120).collect();
+    if bounded.is_empty() {
+        "file".into()
+    } else {
+        bounded
+    }
+}
+
+/// `GET /admin/uploads/:filename` — serve a previously-uploaded
+/// file. Identity-gated (Staff floor); the path-traversal guard
+/// ensures the resolved file lives inside the canonical
+/// `Admin::uploads_dir`. A rejected lookup returns 404 (no
+/// information leak about whether the file could exist).
+pub(crate) async fn serve_upload(
+    ctx: &AdminCtx,
+    _identity: Identity,
+    filename: &str,
+    _req: Request,
+) -> Result<Response> {
+    let Some(root) = ctx.admin.uploads_dir_path() else {
+        return Err(Error::NotFound("uploads dir not configured".into()));
+    };
+    // Canonicalise the root once so the per-request guard
+    // compares against a real on-disk path. Refuse if the
+    // configured root doesn't resolve (project misconfiguration).
+    let canonical_root = std::fs::canonicalize(root)
+        .map_err(|_| Error::NotFound("uploads root unresolved".into()))?;
+    // Defense-in-depth even though the route only binds one path
+    // segment: refuse anything containing `..` or absolute paths.
+    if filename.contains("..") || filename.contains('/') || filename.contains('\\') {
+        return Err(Error::NotFound("upload not found".into()));
+    }
+    let candidate = canonical_root.join(filename);
+    let resolved = std::fs::canonicalize(&candidate)
+        .map_err(|_| Error::NotFound("upload not found".into()))?;
+    if !resolved.starts_with(&canonical_root) {
+        return Err(Error::NotFound("upload not found".into()));
+    }
+    let bytes = std::fs::read(&resolved)
+        .map_err(|_| Error::NotFound("upload not found".into()))?;
+    let content_type = guess_content_type(filename);
+    Ok(Response::new(hyper::StatusCode::OK, bytes::Bytes::from(bytes))
+        .with_header("content-type", content_type)
+        .with_header("cache-control", "private, max-age=300"))
+}
+
+/// Trivial filename-extension → MIME guesser. Covers the common
+/// cases admins upload (images + PDFs + plain docs); falls
+/// through to `application/octet-stream` for everything else.
+/// Resists the urge to grow into a real `mime_guess` clone.
+fn guess_content_type(filename: &str) -> &'static str {
+    let lower = filename.to_ascii_lowercase();
+    let ext = lower.rsplit('.').next().unwrap_or("");
+    match ext {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        "pdf" => "application/pdf",
+        "txt" | "log" => "text/plain; charset=utf-8",
+        "csv" => "text/csv; charset=utf-8",
+        "json" => "application/json",
+        _ => "application/octet-stream",
+    }
+}
+
 // ---- Inline-children fetch -----------------------------------------------
 
 /// Resolve every declared `Inline` on `parent_entry` against the
@@ -1508,7 +1707,7 @@ pub(crate) async fn do_create(
     req: Request,
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
-    let form = req.form()?;
+    let form = parse_form_with_uploads(&req, ctx.admin.uploads_dir_path()).await?;
     let intent = submit_intent(&form);
     match entry.ops.create(&ctx.db, &form).await? {
         Ok(id) => {
@@ -1639,7 +1838,7 @@ pub(crate) async fn do_update(
     req: Request,
 ) -> Result<Response> {
     let entry = find_project_entry(&ctx.admin, admin_name)?;
-    let mut form = req.form()?;
+    let mut form = parse_form_with_uploads(&req, ctx.admin.uploads_dir_path()).await?;
     // Snapshot the row BEFORE the update so the audit-emission
     // branch below can diff before/after and persist the changed-
     // columns set inside `metadata.changes`. Reused below for the
@@ -2931,5 +3130,55 @@ mod compute_row_diff_tests {
         let after  = row(&[("title", "Same")]);
         let diff = compute_row_diff(&entry, &before, &after);
         assert!(diff.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod sanitise_upload_filename_tests {
+    use super::sanitise_upload_filename;
+
+    #[test]
+    fn plain_ascii_name_passes_through() {
+        assert_eq!(sanitise_upload_filename("photo.png"), "photo.png");
+        assert_eq!(sanitise_upload_filename("Report-2026_v2.pdf"), "Report-2026_v2.pdf");
+    }
+
+    #[test]
+    fn strips_unix_and_windows_path_components() {
+        assert_eq!(sanitise_upload_filename("/etc/passwd"), "passwd");
+        assert_eq!(sanitise_upload_filename("../../escape.png"), "escape.png");
+        assert_eq!(
+            sanitise_upload_filename("C:\\Users\\admin\\evil.exe"),
+            "evil.exe"
+        );
+    }
+
+    #[test]
+    fn replaces_unsafe_chars_with_underscore() {
+        assert_eq!(sanitise_upload_filename("hello world.png"), "hello_world.png");
+        assert_eq!(sanitise_upload_filename("a;b&c.txt"), "a_b_c.txt");
+        // Non-ASCII becomes `_` too — the goal is on-disk safety,
+        // not Unicode preservation.
+        assert_eq!(sanitise_upload_filename("résumé.pdf"), "r_sum_.pdf");
+    }
+
+    #[test]
+    fn trims_leading_dots() {
+        assert_eq!(sanitise_upload_filename(".htaccess"), "htaccess");
+        assert_eq!(sanitise_upload_filename("...secret"), "secret");
+    }
+
+    #[test]
+    fn caps_length() {
+        let long = "a".repeat(500);
+        let out = sanitise_upload_filename(&long);
+        assert_eq!(out.chars().count(), 120);
+    }
+
+    #[test]
+    fn empty_or_pathological_falls_back_to_file() {
+        assert_eq!(sanitise_upload_filename(""), "file");
+        assert_eq!(sanitise_upload_filename("///"), "file");
+        assert_eq!(sanitise_upload_filename("..."), "file");
     }
 }
