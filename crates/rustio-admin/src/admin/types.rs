@@ -575,6 +575,16 @@ pub struct Admin {
     /// password verification (R3 commit #15); this commit lands
     /// the data, the routing follows.
     pub(crate) mfa_policy: MfaPolicy,
+    /// `true` puts the admin into whole-admin read-only mode: every
+    /// mutating POST under `/admin/*` (project CRUD, bulk actions,
+    /// admin-driven user lifecycle) returns 403 with a flash banner;
+    /// auth-flow POSTs (login, logout, mfa verify, password recovery,
+    /// own-session management) are explicitly allowlisted so the
+    /// operator can still get in and out. Useful for incident
+    /// response (lock the admin while investigating) and demo
+    /// environments where you want viewers but not editors. Off by
+    /// default. Project authors opt in via [`Admin::read_only`].
+    pub(crate) read_only: bool,
 }
 
 impl Default for Admin {
@@ -603,6 +613,7 @@ impl Admin {
             password_policy: Arc::new(DefaultPasswordPolicy::new()),
             recovery_policy: Arc::new(DefaultRecoveryPolicy::new()),
             mfa_policy: MfaPolicy::default(),
+            read_only: false,
         }
     }
 
@@ -665,6 +676,31 @@ impl Admin {
     pub fn show_powered_by(mut self, show: bool) -> Self {
         self.site_branding.show_powered_by = show;
         self
+    }
+
+    // public:
+    /// Whole-admin read-only toggle. When `true` every mutating
+    /// `POST` / `PUT` / `DELETE` under `/admin/*` is rejected with
+    /// 403 by the `read_only_guard` middleware; auth-flow routes
+    /// (login, logout, MFA verify, password recovery, own-session
+    /// management, own MFA management) are explicitly allowlisted
+    /// so operators can still sign in / out and complete forced
+    /// rotations. Templates that read [`Self::is_read_only`]
+    /// surface a banner and hide top-level "Add" affordances; per-
+    /// row Edit / Delete buttons still render in v1 (clicking
+    /// through hits the middleware), documented as a known
+    /// scoping trade-off.
+    pub fn read_only(mut self, on: bool) -> Self {
+        self.read_only = on;
+        self
+    }
+
+    // public:
+    /// `true` when the admin was constructed with [`Self::read_only`].
+    /// Consumed by the chrome (banner) and the list/dashboard
+    /// templates (suppress "Add" buttons).
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
     }
 
     // public:

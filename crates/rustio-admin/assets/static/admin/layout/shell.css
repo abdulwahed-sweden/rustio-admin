@@ -26,6 +26,14 @@
   color: var(--rio-warning);
   border-bottom: 1px solid var(--rio-border);
 }
+/* Read-only mode banner — same shape as the demo banner but
+ * tinted to the info/accent family so operators can tell
+ * "read-only freeze" from "demo session" at a glance. */
+.rio-banner--read-only {
+  background: var(--rio-info-bg);
+  color: var(--rio-accent);
+  border-bottom: 1px solid var(--rio-border);
+}
 
 /* Layout uses flex, not grid, so an absent sidebar (login page,
  * forbidden, error, public chrome) doesn't leave a 240px ghost

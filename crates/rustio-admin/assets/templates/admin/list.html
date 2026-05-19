@@ -4,7 +4,9 @@
   <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ display_name }}</span></nav>
   <div class="rio-page-actions">
     <h1>{{ display_name }}</h1>
+    {% if not read_only %}
     <a class="rio-button rio-button--primary" href="/admin/{{ admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add {{ singular_name }}</a>
+    {% endif %}
   </div>
 </header>
 
