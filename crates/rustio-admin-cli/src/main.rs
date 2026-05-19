@@ -30,6 +30,7 @@ mod migrate;
 mod perm;
 mod scaffold;
 mod template_override;
+mod theme;
 mod user;
 
 #[derive(Parser)]
@@ -86,6 +87,15 @@ enum Command {
     Doctor {
         #[command(subcommand)]
         action: Option<DoctorAction>,
+    },
+
+    /// Curated `AdminTheme` palette presets. Subcommands print a
+    /// Rust snippet to stdout — the operator pastes it into their
+    /// `Admin::new()` builder chain. The verb never touches
+    /// `main.rs` or any other project file.
+    Theme {
+        #[command(subcommand)]
+        action: theme::Action,
     },
 
     /// Copy an embedded admin template into the project's
@@ -209,6 +219,7 @@ fn main() -> ExitCode {
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
         Command::Override { name, force, out } => template_override::run(name, force, &out),
+        Command::Theme { action } => theme::run(action),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
@@ -218,7 +229,8 @@ fn main() -> ExitCode {
                 | Command::Add { .. }
                 | Command::Plan
                 | Command::Commit { .. }
-                | Command::Override { .. } => unreachable!("handled above"),
+                | Command::Override { .. }
+                | Command::Theme { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,

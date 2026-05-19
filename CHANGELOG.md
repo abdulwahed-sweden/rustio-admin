@@ -40,6 +40,24 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio theme` — curated `AdminTheme` palette presets.** New
+  CLI verb with two subcommands: `rustio theme list` enumerates the
+  four out-of-the-box presets (ocean / forest / sunset / monochrome,
+  per the roadmap entry); `rustio theme show <name>` prints a
+  complete, ready-to-paste `.theme(...)` clause to stdout for the
+  operator's `Admin::new()` builder chain. No source mutation — the
+  verb never touches `main.rs` or any other project file, matching
+  the conservative posture `rustio override` established (copy a
+  template to disk, but never edit existing code). Each palette is
+  six normalised `#rrggbb` hex values (accent + bg + surface + text
+  + text_muted + border) tuned against `DESIGN_DOCTRINE.md`:
+  comfortable saturation, no neon, no OLED-black. `show` is
+  case-insensitive so `rustio theme show Ocean` works; an unknown
+  preset returns an error that lists the available names so
+  operators don't need a second `list` run to recover. Five unit
+  tests pin the preset count, the hex-form invariant, the
+  fluent-builder method coverage of the printed snippet, the
+  unknown-preset error path, and the case-insensitive lookup.
 - **`rustio override <template>` — copy an embedded admin template
   to disk for editing.** Closes the roadmap entry "the operator
   does this by hand today." The verb pairs with the existing
