@@ -519,6 +519,78 @@ async fn fetch_dashboard_row_estimates(ctx: &AdminCtx) -> HashMap<&'static str, 
     out
 }
 
+// ---- Saved filters -------------------------------------------------------
+
+/// `POST /admin/:admin_name/saved_filters` — persist the current
+/// list-page query string under a user-chosen name.
+///
+/// Form payload:
+///   `_name`  — operator-facing label, trimmed + capped via
+///              `saved_filters::sanitise_name`. Empty / whitespace
+///              rejected with a 400; over the cap, truncated.
+///   `_query` — raw query string to bookmark
+///              (e.g. `q=anna&status=active&sort=name&dir=asc`).
+///              May be empty (bookmarks "the default view").
+///
+/// Re-saving with the same name for the same user + model is an
+/// upsert — the row's `query_string` and `created_at` get refreshed,
+/// no duplicate is created. Redirects back to the list page with
+/// the saved query applied so the operator immediately sees what
+/// they just bookmarked.
+pub(crate) async fn do_save_filter(
+    ctx: &AdminCtx,
+    identity: Identity,
+    admin_name: &str,
+    req: Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let form = req.form()?;
+    let raw_name = form.get("_name").unwrap_or_default();
+    let name = match super::saved_filters::sanitise_name(raw_name) {
+        Some(n) => n,
+        None => {
+            return Err(Error::BadRequest(
+                "Saved-filter name can't be empty.".into(),
+            ))
+        }
+    };
+    let query = super::saved_filters::sanitise_query(form.get("_query").unwrap_or_default());
+
+    super::saved_filters::ensure_table(&ctx.db).await?;
+    super::saved_filters::save(&ctx.db, identity.user_id, entry.admin_name, &name, &query)
+        .await?;
+
+    // Redirect to the list with the saved query applied so the
+    // operator visually confirms what got bookmarked.
+    let target = if query.is_empty() {
+        format!("/admin/{}", entry.admin_name)
+    } else {
+        format!("/admin/{}?{}", entry.admin_name, query)
+    };
+    Ok(Response::redirect(target))
+}
+
+/// `POST /admin/:admin_name/saved_filters/:id/delete` — remove one
+/// of the operator's own saved filters by id. Scope-locked to
+/// `identity.user_id` inside the SQL so one operator can't drop
+/// another's bookmark by id-typing.
+pub(crate) async fn do_delete_filter(
+    ctx: &AdminCtx,
+    identity: Identity,
+    admin_name: &str,
+    id: i64,
+    _req: Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    super::saved_filters::ensure_table(&ctx.db).await?;
+    // The delete is scoped to `user_id` in the SQL; a missing row
+    // (either nonexistent or another user's) collapses to a no-op
+    // redirect — no information leak about whether the id exists
+    // for someone else.
+    let _ = super::saved_filters::delete(&ctx.db, identity.user_id, id).await?;
+    Ok(Response::redirect(format!("/admin/{}", entry.admin_name)))
+}
+
 // ---- List page -----------------------------------------------------------
 
 pub(crate) async fn list_model(
@@ -843,6 +915,22 @@ pub(crate) async fn list_model(
     // template. One batched query per FK column on the model — N+1-safe.
     hydrate_fk_cells(&ctx.db, &ctx.admin, entry, &mut page_result.rows).await?;
 
+    // Saved filters for this operator on this model. Lazy CREATE on
+    // first hit (parallels `ensure_audit_ready`); a fetch failure
+    // logs and falls through to an empty list — the page still
+    // renders, just without the bookmarks dropdown.
+    let _ = super::saved_filters::ensure_table(&ctx.db).await;
+    let saved_filters = super::saved_filters::list_for_user(
+        &ctx.db,
+        identity.user_id,
+        entry.admin_name,
+    )
+    .await
+    .unwrap_or_else(|e| {
+        log::warn!("saved_filters fetch failed for user={}: {e}", identity.user_id);
+        Vec::new()
+    });
+
     let list = render::list_ctx(
         &identity,
         &ctx.admin,
@@ -856,6 +944,8 @@ pub(crate) async fn list_model(
         total_rows as usize,
         active_sort.as_ref().map(|(c, d)| (c.clone(), *d)),
         csrf_token(req),
+        saved_filters,
+        req.query_string().to_string(),
     );
     let body = ctx
         .templates

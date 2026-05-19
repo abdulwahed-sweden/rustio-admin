@@ -742,7 +742,34 @@ pub(crate) struct ListCtx {
     /// the list-view bulk bar next to the framework's built-in
     /// Delete. Each button POSTs to `/admin/:model/bulk/:name`.
     pub bulk_action_buttons: Vec<BulkActionBtnCtx>,
+    /// Per-user bookmarkable filter presets for this model. Each
+    /// entry carries an `apply_url`, a `delete_url` (per-row form),
+    /// and an `is_current` flag set when its `query_string` matches
+    /// the current request's. Empty vec hides the Saved dropdown.
+    pub saved_filters: Vec<SavedFilterBtnCtx>,
+    /// Raw query string of the current request (without leading
+    /// `?`). The Saved dropdown's "Save current view" form posts
+    /// this verbatim so the bookmark captures the exact state the
+    /// operator is looking at.
+    pub current_query_string: String,
     pub flash: Option<FlashCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SavedFilterBtnCtx {
+    pub id: i64,
+    pub name: String,
+    /// `/admin/<model>?<saved query>` — the apply link. Empty
+    /// query collapses to `/admin/<model>` (the "default view"
+    /// bookmark).
+    pub apply_url: String,
+    /// `/admin/<model>/saved_filters/<id>/delete` — POST target
+    /// for the per-row delete form.
+    pub delete_url: String,
+    /// `true` when this saved filter's `query_string` matches the
+    /// current request. Drives a visual `is-active` marker so the
+    /// operator sees which preset they're looking at.
+    pub is_current: bool,
 }
 
 #[derive(Serialize)]
@@ -1153,6 +1180,8 @@ pub(crate) fn list_ctx(
     // header links still render, but no column gets the active arrow.
     active_sort: Option<(String, super::modeladmin::SortDir)>,
     csrf_token: String,
+    saved_filters: Vec<super::saved_filters::SavedFilter>,
+    current_query_string: String,
 ) -> ListCtx {
     let total_pages = total_rows.div_ceil(per_page.max(1)).max(1);
 
@@ -1674,6 +1703,28 @@ pub(crate) fn list_ctx(
                 form_action: format!("/admin/{}/bulk/{}", entry.admin_name, a.name),
             })
             .collect(),
+        saved_filters: saved_filters
+            .into_iter()
+            .map(|sf| {
+                let apply_url = if sf.query_string.is_empty() {
+                    format!("/admin/{}", entry.admin_name)
+                } else {
+                    format!("/admin/{}?{}", entry.admin_name, sf.query_string)
+                };
+                let is_current = sf.query_string == current_query_string;
+                SavedFilterBtnCtx {
+                    delete_url: format!(
+                        "/admin/{}/saved_filters/{}/delete",
+                        entry.admin_name, sf.id
+                    ),
+                    apply_url,
+                    name: sf.name,
+                    is_current,
+                    id: sf.id,
+                }
+            })
+            .collect(),
+        current_query_string,
         flash: None,
     }
 }

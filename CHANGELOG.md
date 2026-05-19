@@ -118,6 +118,53 @@ leaves the alpha track.
 
 ### Added
 
+- **Saved filters — per-user bookmarkable list-page presets.**
+  Closes the roadmap entry "Bookmarkable named filter presets per
+  user. Stored on `rustio_users` or a new join table." A new
+  `Saved` dropdown on every list-page toolbar lets the operator
+  bookmark the current filter + search + sort state under a
+  name, apply any of their saved presets in one click, and
+  delete the ones they no longer need.
+  - **New table** `rustio_admin_saved_filters` (lazy-created on
+    first list-page hit, like `audit::ensure_table`):
+    `(id, user_id, admin_name, name, query_string, created_at)`
+    with `UNIQUE (user_id, admin_name, name)` so re-saving the
+    same name upserts rather than duplicates.
+  - **Two new routes** under each model:
+    `POST /admin/:admin_name/saved_filters` (save / upsert) and
+    `POST /admin/:admin_name/saved_filters/:id/delete` (remove,
+    SQL-scoped to `identity.user_id` so an operator can only
+    delete their own bookmarks). Both gated at `Role::Staff` —
+    the same surface as the list page itself; no separate
+    permission to manage.
+  - **URL-payload contract.** The stored `query_string` is the
+    raw filter / search / sort segment (e.g.
+    `q=anna&status=active&sort=scheduled_at&dir=asc`); applying
+    a saved filter is `<a href="/admin/<name>?<query_string>">`,
+    no per-widget parser. New filter widgets ride for free —
+    they show up in saved filters the moment they ship.
+  - **Visual `is-active`** marker when the current request's
+    query string matches a saved preset, so the operator sees
+    which bookmark they're looking at.
+  - **Read-only allowlist.** Saved-filter create + delete are
+    per-operator UI state (bookmarks), not project-data
+    mutations — added to `is_read_only_writable_path` so they
+    remain usable when `Admin::read_only(true)` is on.
+  - **New `bookmark` icon** in the shared catalogue + new
+    `.rio-saved-list*` / `.rio-saved-form*` CSS in
+    `components/dropdowns.css`. No new fragment, no `admin.css`
+    lock-step disturbance.
+  - **Six sanitise-helper unit tests** cover empty / whitespace
+    rejection, whitespace trimming, character-count truncation
+    at the 120-char name cap, Unicode passthrough, empty-query
+    allowed (bookmarks "the default view"), and query truncation
+    at the 2048-char cap. Live-verified against the
+    clinic-appointments example: save returns 303, empty name
+    returns 400, DB carries the exact `(name, query_string)`
+    pair, list page renders the dropdown with the proper badge
+    count + `is-active` marker on the currently-applied preset,
+    delete returns 303 and the DB row count drops accordingly.
+
 - **Approximate row count per model on the dashboard.** The
   per-app model index now carries an "~ N" cell between the
   display name and the Add / View buttons, sourced from
