@@ -193,6 +193,49 @@
   </div>
   {% endif %}
 
+  {# Saved-filters dropdown — per-operator bookmarks for this
+   # model. Always renders the toggle (so the "Save current view"
+   # form is always reachable); the apply list is hidden when the
+   # operator has no saved filters yet. #}
+  <div class="rio-dropdown" data-rio-dropdown>
+    <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+      {{ icon("bookmark", class="rio-icon") }}
+      Saved
+      {% if saved_filters %}
+      <span class="rio-dropdown-badge" aria-label="{{ saved_filters|length }} saved view">{{ saved_filters|length }}</span>
+      {% endif %}
+      {{ icon("chevron-down", class="rio-chev") }}
+    </button>
+    <div class="rio-dropdown-panel" role="dialog" aria-label="Saved filters">
+      {% if saved_filters %}
+      <div class="rio-dropdown-section">
+        <span class="rio-dropdown-label">Apply</span>
+        <ul class="rio-saved-list">
+          {% for sf in saved_filters %}
+          <li class="rio-saved-list__row{% if sf.is_current %} is-active{% endif %}">
+            <a class="rio-saved-list__apply" href="{{ sf.apply_url }}">{{ sf.name }}</a>
+            <form method="post" action="{{ sf.delete_url }}" class="rio-saved-list__delete" aria-label="Delete saved filter {{ sf.name }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+              <button type="submit" class="rio-saved-list__delete-btn" title="Delete this saved view">×</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      <div class="rio-dropdown-section">
+        <span class="rio-dropdown-label">Save current view</span>
+        <form method="post" action="/admin/{{ admin_name }}/saved_filters" class="rio-saved-form">
+          <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+          <input type="hidden" name="_query" value="{{ current_query_string }}">
+          <input type="text" name="_name" class="rio-input rio-saved-form__name"
+                 placeholder="Name this view" maxlength="120" required>
+          <button type="submit" class="rio-button rio-button--primary rio-button--sm">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   {# CSV export — same filter/search/sort state as the list page,
    # capped server-side at 10_000 rows. download attr nudges the
    # browser to save rather than navigate. #}

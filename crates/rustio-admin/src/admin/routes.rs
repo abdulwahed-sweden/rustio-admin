@@ -226,6 +226,23 @@ const READ_ONLY_PREFIX_ALLOW: &[&str] = &[
     "/admin/account/mfa/",
 ];
 
+/// `/admin/<model>/saved_filters` and its
+/// `/admin/<model>/saved_filters/<id>/delete` sibling are
+/// per-operator UI state (bookmarks for the list page), not
+/// project-data mutations. Allowlist by suffix-match so they
+/// remain usable even in read-only mode.
+fn is_saved_filter_path(path: &str) -> bool {
+    if let Some(rest) = path.strip_prefix("/admin/") {
+        // Path shape: `<admin_name>/saved_filters` or
+        // `<admin_name>/saved_filters/<id>/delete`. Find the
+        // first `/saved_filters` segment after the model slug.
+        if let Some((_, after)) = rest.split_once('/') {
+            return after == "saved_filters" || after.starts_with("saved_filters/");
+        }
+    }
+    false
+}
+
 /// `true` when the HTTP method writes to state — POST, PUT,
 /// PATCH, DELETE. GET / HEAD / OPTIONS pass through the read-only
 /// guard untouched. Idempotency isn't the discriminator (PUT/PATCH
@@ -252,9 +269,13 @@ pub(crate) fn is_read_only_writable_path(path: &str) -> bool {
     if READ_ONLY_EXACT_ALLOW.contains(&path) {
         return true;
     }
-    READ_ONLY_PREFIX_ALLOW
+    if READ_ONLY_PREFIX_ALLOW
         .iter()
         .any(|prefix| path.starts_with(prefix))
+    {
+        return true;
+    }
+    is_saved_filter_path(path)
 }
 
 /// Paths reachable when `MfaPolicy::Required` is active and the
@@ -1574,6 +1595,46 @@ pub fn register_admin_routes(
             }
         }
     });
+
+    // Saved-filter create — POST /admin/:admin_name/saved_filters.
+    // Same `view` gate as the list page: any operator who can
+    // reach the list can bookmark its state. Registered before the
+    // generic /:admin_name/:id/edit route so the literal
+    // `saved_filters` segment isn't shadowed by a numeric `:id`.
+    let c = ctx.clone();
+    let router = router.post("/admin/:admin_name/saved_filters", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "view")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_save_filter(&c, ident, &name, req).await,
+            }
+        }
+    });
+
+    // Saved-filter delete — POST /admin/:admin_name/saved_filters/:id/delete.
+    // SQL scope-locks to identity.user_id so the route gate can
+    // stay `view`; an operator can only delete their own bookmarks.
+    let c = ctx.clone();
+    let router = router.post(
+        "/admin/:admin_name/saved_filters/:id/delete",
+        move |req| {
+            let c = c.clone();
+            async move {
+                let name = model_name_from_req(&req)?;
+                let id = parse_id(req.param("id"))?;
+                let perm = perm_for(&c, &name, "view")?;
+                match perm_guard(&c, &req, &perm).await? {
+                    Guard::Redirect(r) => Ok(r),
+                    Guard::Allow(ident) => {
+                        handlers::do_delete_filter(&c, ident, &name, id, req).await
+                    }
+                }
+            }
+        },
+    );
 
     // Create.
     let c = ctx.clone();
