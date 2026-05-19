@@ -40,6 +40,48 @@ leaves the alpha track.
 
 ### Added
 
+- **`FilterKind::FkAutocomplete` — the fourth list-page filter
+  widget, closing out the list-view filter roadmap.** Any
+  foreign-key column with a resolvable target in the
+  `RelationRegistry` (declared via `#[rustio(belongs_to = "…")]`)
+  now surfaces a type-ahead picker inside the Filters dropdown
+  instead of a raw numeric input.
+  - **New endpoint** `GET /admin/_lookup/:admin_name?q=&limit=` —
+    returns up to 50 (`limit` clamp 1..=50, default 20) rows of the
+    target model as `[{id, label}]` JSON, search-filtered through
+    the target's `ModelAdmin::search_fields()`. The label per row
+    follows the same resolution ladder as the form view's
+    `resolve_relation_options` (display field → `name` → `title` →
+    `#<id>`). Identity-gated; uses the target model's `view`
+    permission so the surface matches what the user can already
+    see on the target's list page.
+  - **URL convention**: a single `?<fk_col>=<id>` integer — same
+    shape the runtime's `WHERE col::text = $N` already handles, so
+    no SQL changes were needed.
+  - **Active-pill hydration**: the handler resolves the chosen id
+    to a display label via `AdminOps::object_label`, so the strip
+    reads `"Author: Anna Lindqvist"` rather than `"Author: 42"`.
+    A row that's been deleted falls back to `#<id>` — the page
+    never 500s on a stale URL.
+  - **JS-driven typeahead** (`initFkAutocomplete` in `admin.js`)
+    debounces 250 ms, hits `/admin/_lookup/…`, renders an absolute-
+    positioned results panel, and writes the chosen id into a
+    hidden input on click. Without JS the visible search input is
+    inert as a filter widget, but the hidden id input still carries
+    any previously-selected value, so reloads round-trip
+    correctly.
+  - **New `infer_filters_with_registry`** in `admin::filters`
+    extends the existing `infer_filters_with_relations` to consult
+    the registry so the lookup URL can bake in the target's admin
+    slug. `infer_filters_with_relations` keeps its existing role-
+    based behaviour for any caller that already passes a closure.
+  - Existing CSS file (`components/dropdowns.css`) gains the
+    `.rio-fk-autocomplete*` block — no new fragment, no
+    `admin.css` lock-step disturbance.
+  Two unit tests pin the two notable inference edge cases (FK
+  field without a resolvable target falls back to `NumericExact`;
+  declared `choices` on an FK-shaped column still wins as
+  `MultiSelect`).
 - **`FilterKind::MultiSelect` — the third list-page filter widget.**
   Any `AdminField` that declares a non-empty `choices: &'static [&'static str]`
   slice now surfaces a checkbox list inside the Filters dropdown

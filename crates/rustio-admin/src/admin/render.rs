@@ -781,6 +781,21 @@ pub(crate) struct FilterGroupCtx {
     /// as hidden inputs in every neighbouring widget's URL.
     #[serde(default)]
     pub multi_selected: Vec<String>,
+    /// `fk_autocomplete` only: the currently-selected FK id (as a
+    /// string for HTML attribute use) and the resolved display
+    /// label. Both empty when nothing is selected.
+    #[serde(default)]
+    pub fk_selected_id: String,
+    #[serde(default)]
+    pub fk_selected_label: String,
+    /// `fk_autocomplete` only: relative URL the JS typeahead fetches
+    /// for candidate rows (`/admin/_lookup/<target_admin_name>`).
+    #[serde(default)]
+    pub fk_lookup_url: String,
+    /// `fk_autocomplete` only: target model's display name, used
+    /// for the input placeholder ("Search Author…").
+    #[serde(default)]
+    pub fk_target_label: String,
 }
 
 fn default_filter_kind() -> &'static str {
@@ -1083,10 +1098,14 @@ pub(crate) fn list_ctx(
                 );
             }
         }
-        // Both date-range and multi-select forms carry every other
-        // pair as hidden inputs so submitting the form preserves
-        // unrelated filters / sort / per_page.
-        if group.kind == "date_range" || group.kind == "multi_select" {
+        // Date-range, multi-select, and FK-autocomplete all render
+        // as forms; each needs every *other* filter / sort / per_page
+        // pair as hidden inputs so submitting one widget preserves
+        // the rest of the list-view state.
+        if group.kind == "date_range"
+            || group.kind == "multi_select"
+            || group.kind == "fk_autocomplete"
+        {
             group.hidden_pairs = other;
         }
     }
@@ -1108,6 +1127,36 @@ pub(crate) fn list_ctx(
     let active_filter_pills: Vec<ActiveFilterPillCtx> = filters
         .iter()
         .filter_map(|g| {
+            if g.kind == "fk_autocomplete" {
+                if g.fk_selected_id.is_empty() {
+                    return None;
+                }
+                // Pill text uses the hydrated row label so the user
+                // sees "Author: Anna Lindqvist" rather than "Author:
+                // 42". A row that's been deleted falls back to
+                // `#<id>` (set during hydration in the handler).
+                let other: Vec<(String, String)> = active_filter_pairs
+                    .iter()
+                    .filter(|(field, _)| field != &g.field)
+                    .cloned()
+                    .collect();
+                return Some(ActiveFilterPillCtx {
+                    label: g.label.clone(),
+                    value_label: if g.fk_selected_label.is_empty() {
+                        format!("#{}", g.fk_selected_id)
+                    } else {
+                        g.fk_selected_label.clone()
+                    },
+                    remove_link: build_list_url(
+                        entry.admin_name,
+                        &search_query,
+                        &other,
+                        active_sort_ref,
+                        1,
+                        per_page_override,
+                    ),
+                });
+            }
             if g.kind == "multi_select" {
                 if g.multi_selected.is_empty() {
                     return None;
@@ -1951,7 +2000,10 @@ pub(crate) async fn resolve_relation_options(
     Ok(out)
 }
 
-fn pick_display_index(fields: &[AdminField], display_field: Option<&str>) -> Option<usize> {
+pub(crate) fn pick_display_index(
+    fields: &[AdminField],
+    display_field: Option<&str>,
+) -> Option<usize> {
     if let Some(preferred) = display_field {
         if let Some(i) = fields.iter().position(|f| f.name == preferred) {
             return Some(i);

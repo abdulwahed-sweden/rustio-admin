@@ -107,6 +107,20 @@ pub enum FilterKind {
     /// `<select>` populated by the admin runtime from rows of the
     /// target model.
     RelationSelect { target_model: String },
+    /// Type-ahead foreign-key picker. The list page renders a search
+    /// input that fetches candidates from
+    /// `/admin/_lookup/<target_admin_name>?q=…`; the chosen id is
+    /// submitted under the FK column name and applied as a plain
+    /// `WHERE col::text = $N` equality.
+    FkAutocomplete {
+        /// Admin slug of the FK target (`/admin/<slug>`). Drives both
+        /// the lookup endpoint URL and the click-through on the
+        /// active-filter pill.
+        target_admin_name: String,
+        /// Singular display name of the target — surfaces in the pill
+        /// fallback when no row label resolves.
+        target_model: String,
+    },
 }
 
 // public:
@@ -256,6 +270,66 @@ pub fn format_relation_cell(id: i64, target: Option<&str>) -> String {
 /// field that actually exists on the model.
 pub fn infer_filters(fields: &[AdminField]) -> Vec<FilterDef> {
     infer_filters_with_relations(fields, |_| None)
+}
+
+// public:
+/// Like [`infer_filters_with_relations`] but consults the
+/// [`super::relations::RelationRegistry`] so FK fields can be
+/// promoted to [`FilterKind::FkAutocomplete`] — the registry carries
+/// the target's admin slug, which the autocomplete endpoint URL
+/// depends on.
+pub fn infer_filters_with_registry(
+    fields: &[AdminField],
+    source_model: &str,
+    registry: &super::relations::RelationRegistry,
+) -> Vec<FilterDef> {
+    let mut out: Vec<FilterDef> = Vec::new();
+    for f in fields {
+        if f.name == "id" {
+            continue;
+        }
+        if let Some(values) = f.choices {
+            if !values.is_empty() {
+                out.push(FilterDef {
+                    field: f.name.to_string(),
+                    label: humanise(f.name),
+                    kind: FilterKind::MultiSelect { values },
+                });
+                continue;
+            }
+        }
+        let role = classify_field(f);
+        // FK fields get the registry-aware promotion. Everything else
+        // routes through the simpler `infer_filters_with_relations`
+        // path with a `None` callback — same role-based mapping.
+        if matches!(role, FieldRole::ForeignKey) {
+            if let Some(rel) = registry.belongs_to(source_model, f.name) {
+                out.push(FilterDef {
+                    field: f.name.to_string(),
+                    label: humanise(f.name),
+                    kind: FilterKind::FkAutocomplete {
+                        target_admin_name: rel.target_admin_name.clone(),
+                        target_model: rel.target_model.clone(),
+                    },
+                });
+                continue;
+            }
+        }
+        let kind = match role {
+            FieldRole::Status => FilterKind::DropdownText,
+            FieldRole::Bool => FilterKind::BoolYesNo,
+            FieldRole::Timestamp => FilterKind::DateRange,
+            FieldRole::NumericCount => FilterKind::NumericExact,
+            FieldRole::ForeignKey => FilterKind::NumericExact,
+            _ => continue,
+        };
+        out.push(FilterDef {
+            field: f.name.to_string(),
+            label: humanise(f.name),
+            kind,
+        });
+    }
+    out
 }
 
 // public:
@@ -450,6 +524,37 @@ mod tests {
             }
             other => panic!("expected MultiSelect, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn infer_with_registry_falls_back_to_numeric_when_no_relation_resolved() {
+        // FK column with no registered target → the registry
+        // returns `None` for the lookup, and we degrade to the same
+        // NumericExact fallback the non-registry path uses.
+        let fields = vec![
+            field("id", FieldType::I64),
+            field("author_id", FieldType::I64),
+        ];
+        let registry = super::super::relations::RelationRegistry::empty();
+        let filters = infer_filters_with_registry(&fields, "Post", &registry);
+        assert_eq!(filters.len(), 1);
+        assert_eq!(filters[0].field, "author_id");
+        assert!(matches!(filters[0].kind, FilterKind::NumericExact));
+    }
+
+    #[test]
+    fn infer_with_registry_choices_still_win_over_fk_promotion() {
+        // A field that is *both* FK-shaped (`_id` suffix, integer)
+        // AND carries an explicit `choices` slice should pick
+        // multi-select — the operator is opting in to a closed
+        // value set, which trumps the FK heuristic.
+        let mut f = field("workflow_id", FieldType::I64);
+        const STATES: &[&str] = &["draft", "ready", "shipped"];
+        f.choices = Some(STATES);
+        let registry = super::super::relations::RelationRegistry::empty();
+        let filters = infer_filters_with_registry(&[f], "Order", &registry);
+        assert_eq!(filters.len(), 1);
+        assert!(matches!(filters[0].kind, FilterKind::MultiSelect { .. }));
     }
 
     #[test]
