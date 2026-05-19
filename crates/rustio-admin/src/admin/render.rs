@@ -1553,7 +1553,11 @@ pub(crate) fn form_ctx(
         })
         .collect::<Vec<FormField>>();
 
-    let sections = group_fields_into_sections(fields);
+    let sections = if entry.fieldsets.is_empty() {
+        group_fields_into_sections(fields)
+    } else {
+        group_fields_by_fieldsets(fields, entry.fieldsets)
+    };
 
     FormCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
@@ -1592,6 +1596,46 @@ pub(crate) fn apply_field_errors(
             }
         }
     }
+}
+
+/// Group the rendered fields according to the project-supplied
+/// [`super::modeladmin::Fieldset`] slice. Each fieldset becomes a
+/// [`FormSection`] with the declared title; fields are emitted in
+/// the order the project listed them inside each fieldset. Names
+/// the project misspelt (no matching `FormField`) are silently
+/// skipped — they would otherwise force a runtime panic on
+/// production traffic, and the missing field is visible to the
+/// project by absence in the rendered form. Fields that the
+/// project owns (in `entry.fields`) but did not list in any
+/// fieldset are appended to a trailing untitled "Other" section so
+/// the form is never silently incomplete; the project promotes them
+/// into a real fieldset to take ownership of their placement.
+fn group_fields_by_fieldsets(
+    mut fields: Vec<FormField>,
+    fieldsets: &'static [super::modeladmin::Fieldset],
+) -> Vec<FormSection> {
+    let mut sections: Vec<FormSection> = Vec::with_capacity(fieldsets.len() + 1);
+    for fs in fieldsets {
+        let mut grouped = Vec::with_capacity(fs.fields.len());
+        for &name in fs.fields {
+            if let Some(pos) = fields.iter().position(|f| f.name == name) {
+                grouped.push(fields.remove(pos));
+            }
+        }
+        if !grouped.is_empty() {
+            sections.push(FormSection {
+                title: Some(fs.title),
+                fields: grouped,
+            });
+        }
+    }
+    if !fields.is_empty() {
+        sections.push(FormSection {
+            title: Some("Other"),
+            fields,
+        });
+    }
+    sections
 }
 
 /// Partition the form's flat field list into Default / System /
@@ -2790,5 +2834,104 @@ mod tests {
         assert!(fields[0].hint.is_none(), "old_password must have no hint");
         assert!(fields[1].hint.is_some(), "new_password1 must have the hint");
         assert!(fields[2].hint.is_none(), "new_password2 must have no hint");
+    }
+
+    /// `ModelAdmin::fieldsets()` honoured: each fieldset becomes a
+    /// titled section in declaration order, fields render in the
+    /// order the project listed them inside each fieldset.
+    #[test]
+    fn fieldsets_drive_section_order_and_titles() {
+        use super::super::modeladmin::Fieldset;
+        let fields = vec![
+            stub_form_field("title"),
+            stub_form_field("body"),
+            stub_form_field("created_at"),
+            stub_form_field("slug"),
+        ];
+        // Note: declare "body" before "title" so the section flips
+        // the in-flat order — proves we respect Fieldset.fields
+        // ordering, not the original Vec ordering.
+        let fieldsets: &'static [Fieldset] = &[
+            Fieldset {
+                title: "Content",
+                fields: &["body", "title"],
+            },
+            Fieldset {
+                title: "Metadata",
+                fields: &["created_at"],
+            },
+        ];
+        let sections = group_fields_by_fieldsets(fields, fieldsets);
+        // Two declared sections + trailing "Other" for `slug` (the
+        // model field nobody listed in a fieldset).
+        assert_eq!(sections.len(), 3);
+        assert_eq!(sections[0].title, Some("Content"));
+        assert_eq!(
+            sections[0].fields.iter().map(|f| f.name).collect::<Vec<_>>(),
+            vec!["body", "title"],
+        );
+        assert_eq!(sections[1].title, Some("Metadata"));
+        assert_eq!(
+            sections[1].fields.iter().map(|f| f.name).collect::<Vec<_>>(),
+            vec!["created_at"],
+        );
+        assert_eq!(sections[2].title, Some("Other"));
+        assert_eq!(
+            sections[2].fields.iter().map(|f| f.name).collect::<Vec<_>>(),
+            vec!["slug"],
+        );
+    }
+
+    /// Names in a `Fieldset` with no matching `FormField` are
+    /// silently skipped — a typo doesn't panic in production. An
+    /// empty section is also dropped so the form doesn't render a
+    /// titled blank.
+    #[test]
+    fn fieldsets_with_unknown_field_names_skip_silently() {
+        use super::super::modeladmin::Fieldset;
+        let fields = vec![stub_form_field("title")];
+        let fieldsets: &'static [Fieldset] = &[
+            Fieldset {
+                title: "Real",
+                fields: &["title", "typo_nonexistent"],
+            },
+            Fieldset {
+                title: "Empty",
+                fields: &["also_missing"],
+            },
+        ];
+        let sections = group_fields_by_fieldsets(fields, fieldsets);
+        // "Empty" is dropped (zero matches); "Real" stays with just
+        // the one real field.
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0].title, Some("Real"));
+        assert_eq!(sections[0].fields.len(), 1);
+        assert_eq!(sections[0].fields[0].name, "title");
+    }
+
+    fn stub_form_field(name: &'static str) -> FormField {
+        FormField {
+            name,
+            label: name.to_string(),
+            widget: "input",
+            input_type: "text",
+            value: String::new(),
+            hint: None,
+            placeholder: None,
+            required: false,
+            options: None,
+            multiple: false,
+            span: 1,
+            autocomplete: None,
+            autofocus: false,
+            disabled: false,
+            maxlength: None,
+            searchable: false,
+            has_more: false,
+            search_url: None,
+            errors: vec![],
+            target_model: None,
+            checked: false,
+        }
     }
 }

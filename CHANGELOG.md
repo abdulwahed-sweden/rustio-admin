@@ -40,6 +40,18 @@ leaves the alpha track.
 
 ### Added
 
+- **`ModelAdmin::fieldsets()` is honoured on the change form.**
+  The trait method has shipped since 0.2 but `form_ctx` always ran
+  the `Default` / `System` / `Advanced` name heuristic regardless
+  of what the project returned. A non-empty `fieldsets()` now
+  replaces the heuristic entirely: each `Fieldset` renders as one
+  titled section in declaration order, and the fields inside it
+  render in the order the project listed them. Names with no
+  matching `FormField` are silently dropped (a typo doesn't panic
+  in production); fields that exist on the model but aren't
+  referenced anywhere get appended to a trailing "Other" section so
+  the form is never silently incomplete. Two unit tests pin the
+  ordering and the typo-tolerance.
 - **`ModelAdmin::readonly_fields()` is honoured on the change form.**
   The trait method has shipped since 0.2 but `form_ctx` filtered only
   on the macro's per-field `editable: false` flag, so any column the
