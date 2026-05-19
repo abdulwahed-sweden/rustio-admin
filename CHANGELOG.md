@@ -118,6 +118,58 @@ leaves the alpha track.
 
 ### Added
 
+- **JSON API (read-only) on the existing list + detail routes.**
+  Closes the read-side half of the roadmap entry "CRUD API
+  generation. A `?format=json` URL switch (or
+  `Accept: application/json`) on existing list / detail /
+  create / update / delete routes." Write-side
+  (create / update / delete via JSON) is a deferred follow-up —
+  error-shape design and partial-success semantics on bulk
+  actions warrant a separate ship; the read-side surface here
+  doesn't lock in any decision that would constrain it.
+  - **Content negotiation** lives in a new `admin::json_api`
+    module. `wants_json(req)` returns `true` when the `Accept`
+    header carries `application/json` (or `application/*`)
+    ahead of any `text/html` preference, or when the URL
+    carries `?format=json`. Browser defaults (`Accept: text/html`)
+    keep returning HTML — no behaviour change for the
+    everyday admin UI.
+  - **List endpoint** (`GET /admin/<model>`) now short-circuits
+    ahead of the FK-hydration + UI-context assembly when the
+    client wants JSON. Returns
+    `{"rows":[…], "total":N, "page":N, "per_page":N, "pages":N}`
+    under the same filter / search / sort / pagination the
+    HTML page honours. Each row is a flat object keyed by
+    `AdminField.name` with per-cell type coercion (bool for
+    `Bool`, integer for `I32`/`I64`, string for everything
+    else; `null` for empty `Optional*` slots).
+  - **Detail endpoint** at the brand-new `GET /admin/<model>/<id>`
+    route returns the row as a flat JSON object with the same
+    typed shape. Browsers landing on the bare URL get a 303 to
+    `/admin/<model>/<id>/edit` so the form UI stays the
+    primary HTML surface. View permission, same gate as the
+    list page.
+  - **Authentication** piggybacks on the existing
+    session-cookie path; an API client signs in once via
+    `POST /admin/login` and reuses the cookie. Per-model
+    `view` permission still enforced; audit emission
+    unchanged. API-token-based auth for non-browser clients
+    is a separate follow-up.
+  - **Six unit tests** on the cell-typing helper: bool
+    round-trip, integer parse, garbage-in-int-column tolerant
+    fallback (renders the raw string rather than dropping the
+    row), nullable-string / nullable-int / nullable-filepath
+    null-on-empty, required-string keep, file-path
+    string-or-null. Live-verified against the
+    clinic-appointments example:
+    `GET /admin/clinics` + `Accept: application/json` →
+    `{"total":5, rows:[{name:"Downtown Family Health",
+    address:"120 Main Street", is_open:true, …}, …]}`;
+    `GET /admin/patients?format=json` → 20 rows with proper
+    typing of `is_active` (bool) and `photo_path` (null when
+    unset); `GET /admin/clinics/1` (browser, no Accept) → 303
+    to `/edit`; HTML list rendering unaffected.
+
 - **File-upload widget — `#[rustio(file)]`, multipart parsing,
   local-filesystem storage, served-back endpoint.** Closes the
   roadmap entry "File / image upload widget." Scoped to a

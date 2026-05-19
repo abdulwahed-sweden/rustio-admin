@@ -1687,6 +1687,28 @@ pub fn register_admin_routes(
         }
     });
 
+    // JSON detail. `GET /admin/:admin_name/:id` returns the row
+    // as JSON when the client asked for it (Accept header or
+    // `?format=json`); otherwise redirects to the HTML edit
+    // form so a browser landing on the bare URL ends up where
+    // it expects. View permission, same as the list endpoint
+    // which JSON-list is already gated on.
+    let c = ctx.clone();
+    let router = router.get("/admin/:admin_name/:id", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "view")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let id = parse_id(req.param("id"))?;
+                    handlers::show_object_json(&c, ident, &name, id, &req).await
+                }
+            }
+        }
+    });
+
     // Edit.
     let c = ctx.clone();
     let router = router.get("/admin/:admin_name/:id/edit", move |req| {

@@ -11,6 +11,7 @@ pub(crate) mod db_browser;
 pub mod filters;
 mod handlers;
 pub(crate) mod icons;
+pub(crate) mod json_api;
 pub(crate) mod mfa_handlers;
 // public:
 pub mod modeladmin;
