@@ -1,4 +1,4 @@
-CREATE TABLE branches (
+CREATE TABLE clinics (
     id         BIGSERIAL   PRIMARY KEY,
     name       TEXT        NOT NULL UNIQUE,
     address    TEXT        NOT NULL,

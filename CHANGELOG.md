@@ -89,6 +89,31 @@ leaves the alpha track.
     explicit class, directional + empty class, non-directional
     icons untouched, vertical chevrons excluded.
 
+### Changed
+
+- **Canonical example replaced.** `examples/library-circulation/`
+  (Branch + Patron + Item + Loan with circulation bulk actions)
+  retired in favour of `examples/clinic-appointments/`
+  (Clinic + Patient + Practitioner + Appointment with
+  appointment-lifecycle bulk actions). Same framework-feature
+  coverage — 4 models, 3 FKs, `CHECK`-constrained status enums,
+  `belongs_to` relation metadata, SELECT-then-UPDATE bulk
+  actions with partial-success semantics, the canonical
+  `LettreSmtpMailer` for project-side SMTP, project-identity
+  branding through `Admin::app_name` / `app_tagline` /
+  `support_email`. Workspace `Cargo.toml`, CLAUDE.md, and
+  `docs/design/DESIGN_EMAIL.md` updated to point at the new
+  path; the historical `docs/archive/RUSTIO_STRATEGY.md`
+  reference is preserved as it documents the strategy in flight
+  at the time. Seed dataset (5 clinics, 20 patients, 30
+  practitioners, 30 appointments) follows the same shape as the
+  retired library data: public-domain literary names,
+  `@example.test` emails, `NOW() - INTERVAL` timestamps so a
+  fresh seed always reads as recent, three appointments
+  deliberately seeded as `scheduled` with a past
+  `scheduled_at` so the `mark_no_show` bulk action has obvious
+  candidates the moment an operator clicks through.
+
 ### Added
 
 - **`/admin/db` — read-only Postgres schema explorer.** Closes the

@@ -1,20 +1,20 @@
 [package]
-name = "library-circulation"
+name = "clinic-appointments"
 version = "0.0.0"
 edition.workspace = true
 publish = false
 
 [[bin]]
-name = "library-circulation"
+name = "clinic-appointments"
 path = "src/main.rs"
 
 [dependencies]
 rustio-admin.workspace = true
 chrono = "0.4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-# Bulk actions on Loan run raw SQL through the framework's Db pool
-# (`db.pool()` returns a sqlx::PgPool). Matches the version + feature
-# set the rustio-admin-cli scaffold template ships.
+# Bulk actions on Appointment run raw SQL through the framework's Db
+# pool (`db.pool()` returns a sqlx::PgPool). Matches the version +
+# feature set the rustio-admin-cli scaffold template ships.
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "chrono"] }
 # Real SMTP transport for the recovery flow. `rustls-tls` keeps the
 # build pure-Rust (no OpenSSL system dep); the `smtp-transport` +
