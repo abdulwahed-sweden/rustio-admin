@@ -492,6 +492,31 @@ pub enum AuditEvent {
     SessionsRevokedSelf,
     SessionsRevokedByOther,
     SessionLogout,
+    /// A user successfully authenticated via `POST /admin/login` —
+    /// password verified, account active, not locked. Emitted once
+    /// per successful login (the MFA-verify step that may follow
+    /// rotates the existing session's trust level; that's not a
+    /// second login event). `metadata.mfa_pending` is `true` when
+    /// the user has MFA enrolled and the response redirects to
+    /// `/admin/mfa/verify`.
+    LoginSucceeded,
+    /// A login attempt against a *known* user failed: wrong password,
+    /// account inactive, or account currently locked. `metadata.reason`
+    /// is one of `"wrong_password" | "inactive" | "locked"`. The
+    /// uniform 401 the user sees collapses these three cases; the
+    /// audit row preserves the distinction so an operator can tell
+    /// "brute force on a real account" from "someone is poking the
+    /// locked account waiting it out."
+    ///
+    /// **Unknown-email limitation.** Attempts against an email that
+    /// doesn't match any `rustio_users` row are *not* audited —
+    /// `rustio_admin_actions.user_id` has a `NOT NULL REFERENCES
+    /// rustio_users(id)` constraint, so there's no place to attach
+    /// the row. The trace log captures the attempt at `info` level
+    /// via `auth::find_user_by_email`; promoting that to audit
+    /// requires a migration loosening the FK and is intentionally
+    /// out of scope for this iteration.
+    LoginFailed,
     // ---- Layer-3 CLI (R4+) ----
     /// Emergency-recovery operation initiated from the `rustio`
     /// CLI binary. Subsumes every `rustio user <op>` emergency
@@ -554,6 +579,8 @@ impl AuditEvent {
             Self::SessionsRevokedSelf => "sessions_revoked_self",
             Self::SessionsRevokedByOther => "sessions_revoked_by_other",
             Self::SessionLogout => "session_logout",
+            Self::LoginSucceeded => "login_succeeded",
+            Self::LoginFailed => "login_failed",
             Self::EmergencyRecovery => "emergency_recovery",
         }
     }
@@ -666,6 +693,8 @@ mod tests {
         AuditEvent::SessionsRevokedSelf,
         AuditEvent::SessionsRevokedByOther,
         AuditEvent::SessionLogout,
+        AuditEvent::LoginSucceeded,
+        AuditEvent::LoginFailed,
         AuditEvent::EmergencyRecovery,
     ];
 
@@ -762,6 +791,8 @@ mod tests {
             "sessions_revoked_by_other"
         );
         assert_eq!(AuditEvent::SessionLogout.as_str(), "session_logout");
+        assert_eq!(AuditEvent::LoginSucceeded.as_str(), "login_succeeded");
+        assert_eq!(AuditEvent::LoginFailed.as_str(), "login_failed");
         assert_eq!(AuditEvent::EmergencyRecovery.as_str(), "emergency_recovery");
     }
 

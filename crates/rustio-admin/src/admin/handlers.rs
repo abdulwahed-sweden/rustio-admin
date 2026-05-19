@@ -189,6 +189,66 @@ mod login_flash_tests {
     }
 }
 
+/// Fire-and-forget audit emission for a single login attempt. Wraps
+/// `audit::record` with the conventional metadata shape the History
+/// page expects (ip, correlation_id, optional `reason` discriminator).
+/// Errors during the audit write itself are logged but never block
+/// the login flow — same posture as every other auth-path audit
+/// emission (e.g. the auto-lock branch).
+async fn record_login_audit(
+    ctx: &AdminCtx,
+    req: &Request,
+    user_id: i64,
+    user_email: &str,
+    event: audit::AuditEvent,
+    reason: Option<&'static str>,
+    mfa_pending: bool,
+) {
+    let ip = super::builtin::client_ip(req);
+    let cid = super::builtin::correlation_id_from(req);
+    let mut metadata = serde_json::Map::new();
+    if let Some(r) = reason {
+        metadata.insert("reason".to_string(), serde_json::Value::String(r.into()));
+    }
+    if mfa_pending {
+        metadata.insert("mfa_pending".to_string(), serde_json::Value::Bool(true));
+    }
+    let summary = match event {
+        audit::AuditEvent::LoginSucceeded => format!("signed in: {user_email}"),
+        audit::AuditEvent::LoginFailed => match reason {
+            Some(r) => format!("failed sign-in ({r}): {user_email}"),
+            None => format!("failed sign-in: {user_email}"),
+        },
+        _ => format!("login audit: {user_email}"),
+    };
+    let res = audit::record(
+        &ctx.db,
+        audit::LogEntry {
+            user_id,
+            action_type: audit::ActionType::Update,
+            model_name: "users",
+            object_id: user_id,
+            ip_address: ip.as_deref(),
+            summary,
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: if metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::Value::Object(metadata))
+            },
+            // Login is self-driven: the actor IS the subject. Same
+            // convention as `PasswordChangedSelf` etc.
+            actor_user_id: None,
+            event: Some(event),
+        },
+    )
+    .await;
+    if let Err(e) = res {
+        log::warn!("audit::record (login event) failed user_id={user_id}: {e}");
+    }
+}
+
 pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
     let form = req.form()?;
     let email = form.required("email")?;
@@ -222,6 +282,16 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
     //    No throttle work — inactive is an admin-set flag, not a
     //    failure-rate signal.
     if !user.is_active {
+        record_login_audit(
+            ctx,
+            &req,
+            user.id,
+            &user.email,
+            audit::AuditEvent::LoginFailed,
+            Some("inactive"),
+            false,
+        )
+        .await;
         return uniform_unauthorized();
     }
 
@@ -233,6 +303,16 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
         ThrottleOutcome,
     };
     if let LockState::Locked { .. } = check_account_lockout(&ctx.db, user.id).await? {
+        record_login_audit(
+            ctx,
+            &req,
+            user.id,
+            &user.email,
+            audit::AuditEvent::LoginFailed,
+            Some("locked"),
+            false,
+        )
+        .await;
         return uniform_unauthorized();
     }
 
@@ -279,6 +359,20 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
             )
             .await;
         }
+        // Audit the individual failed attempt regardless of whether
+        // it tripped the throttle. The AccountLocked row (when
+        // emitted) captures the cumulative state; the LoginFailed
+        // row captures *this* attempt for the timeline view.
+        record_login_audit(
+            ctx,
+            &req,
+            user.id,
+            &user.email,
+            audit::AuditEvent::LoginFailed,
+            Some("wrong_password"),
+            false,
+        )
+        .await;
         return uniform_unauthorized();
     }
 
@@ -315,6 +409,21 @@ pub(crate) async fn do_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
     } else {
         "/admin"
     };
+    // Audit AFTER the session row + cookie are committed so a
+    // crash between the two leaves no orphan audit row claiming a
+    // session that doesn't exist. `mfa_pending = true` distinguishes
+    // "first factor cleared, MFA challenge pending" from "fully
+    // authenticated" in the History view.
+    record_login_audit(
+        ctx,
+        &req,
+        user.id,
+        &user.email,
+        audit::AuditEvent::LoginSucceeded,
+        None,
+        user.mfa_enabled,
+    )
+    .await;
     Ok(Response::redirect(redirect_to).with_header("set-cookie", cookie))
 }
 
