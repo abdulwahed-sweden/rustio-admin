@@ -118,6 +118,42 @@ leaves the alpha track.
 
 ### Added
 
+- **`GET /admin/healthz` — public liveness/readiness probe.**
+  Unauthenticated by design — load balancers, k8s probes, and
+  uptime checkers don't carry session cookies. Returns a small
+  typed JSON envelope and a meaningful HTTP status:
+  - **200 OK** with
+    `{"ok": true, "db": "up", "version": "<crate>"}` when the
+    framework can round-trip a `SELECT 1` against the Postgres
+    pool.
+  - **503 Service Unavailable** with
+    `{"ok": false, "db": "down", "version": "<crate>"}` when
+    the probe query fails. Readiness probes pull the pod out
+    of LB rotation on the 503 without having to parse the body.
+  - `version` carries `rustio-admin`'s `CARGO_PKG_VERSION` at
+    compile time so operators can debug "which pod is on which
+    framework version" without a separate `/version` route.
+  - `Cache-Control: no-store` keeps intermediaries from caching
+    a 200 across an outage.
+  - Registered ahead of the wildcard `/admin/:admin_name` so a
+    model literally named `healthz` can't shadow it.
+  - **Three unit tests** on the response shape (pure function
+    factored out from the handler so tests don't need a real
+    pool): `200 + db:up` on the happy path, `503 + db:down` on
+    failure, `Content-Type: application/json` and
+    `Cache-Control: no-store` headers present. Live-verified
+    against the clinic-appointments example:
+    `curl http://127.0.0.1:3000/admin/healthz` (no auth) → 200
+    `application/json` with body
+    `{"db":"up","ok":true,"version":"0.15.1"}`; no `Location`
+    redirect to `/admin/login` (probe is genuinely
+    unauthenticated).
+  - **Scope note:** route auto-`HEAD`-from-`GET` is not wired
+    in the framework's router, so `HEAD /admin/healthz` returns
+    405. Health-check tools that need HEAD support can do
+    `curl -X GET` instead; adding HEAD across the router is a
+    wider, separate change.
+
 - **JSON error envelopes on the JSON detail endpoint.** Closes
   a sharp edge in the read-only JSON API shipped two commits
   ago: a client hitting `GET /admin/<model>/<missing-id>` with
