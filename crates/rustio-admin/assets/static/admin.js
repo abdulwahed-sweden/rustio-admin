@@ -264,6 +264,13 @@
     let debounceTimer = 0;
     let selectedIndex = -1;
     let resultItems = [];
+    // Render-scoped id counters so each <a role="option"> gets a
+    // unique DOM id we can reference from `aria-activedescendant`
+    // on the input, and each group's <li role="group"> gets an
+    // `aria-labelledby` target. Reset on every render() so ids
+    // don't grow unbounded over the session.
+    let optionIdCounter = 0;
+    let groupIdCounter = 0;
 
     function open() {
       palette.setAttribute("aria-hidden", "false");
@@ -271,6 +278,7 @@
       list.innerHTML = "";
       selectedIndex = -1;
       resultItems = [];
+      input.removeAttribute("aria-activedescendant");
       // Defer focus so the click that opened us doesn't immediately
       // bubble and close us via the backdrop handler.
       setTimeout(() => input.focus(), 0);
@@ -280,6 +288,7 @@
       if (palette.getAttribute("aria-hidden") === "true") return;
       palette.setAttribute("aria-hidden", "true");
       window.clearTimeout(debounceTimer);
+      input.removeAttribute("aria-activedescendant");
       if (trigger) trigger.focus();
     }
 
@@ -290,6 +299,7 @@
     function setSelected(idx) {
       if (resultItems.length === 0) {
         selectedIndex = -1;
+        input.removeAttribute("aria-activedescendant");
         return;
       }
       // Wrap around both directions so ↑ from the first lands on
@@ -300,12 +310,18 @@
         el.classList.toggle("is-selected", i === selectedIndex);
       });
       resultItems[selectedIndex].scrollIntoView({ block: "nearest" });
+      // Screen-reader announcement of the visually-highlighted
+      // option — the ARIA-APG combobox/listbox pattern.
+      input.setAttribute("aria-activedescendant", resultItems[selectedIndex].id);
     }
 
     function render(results) {
       list.innerHTML = "";
       resultItems = [];
       selectedIndex = -1;
+      input.removeAttribute("aria-activedescendant");
+      optionIdCounter = 0;
+      groupIdCounter = 0;
       if (!results.length) {
         const empty = document.createElement("li");
         empty.className = "rio-search-palette__empty";
@@ -324,15 +340,27 @@
       groups.forEach((rows, label) => {
         const group = document.createElement("li");
         group.className = "rio-search-palette__group";
+        // role="group" + aria-labelledby pattern (ARIA 1.2 §6.7):
+        // valid child of role="listbox", with the heading span
+        // naming the group for screen readers.
+        const headingId = `rio-search-palette__group-${groupIdCounter++}`;
+        group.setAttribute("role", "group");
+        group.setAttribute("aria-labelledby", headingId);
         const heading = document.createElement("span");
         heading.className = "rio-search-palette__group-label";
+        heading.id = headingId;
         heading.textContent = label;
         group.appendChild(heading);
         rows.forEach((r) => {
           const a = document.createElement("a");
           a.className = "rio-search-palette__result";
           a.href = r.url;
+          a.id = `rio-search-palette__option-${optionIdCounter++}`;
           a.setAttribute("role", "option");
+          // Keep anchors out of the tab order — focus stays on the
+          // input; selection is tracked via aria-activedescendant.
+          // Stops Tab from escaping the dialog into the topbar/sidebar.
+          a.setAttribute("tabindex", "-1");
           const text = document.createElement("span");
           text.className = "rio-search-palette__result-label";
           text.textContent = r.label;
@@ -389,6 +417,15 @@
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelected(selectedIndex - 1);
+      } else if (e.key === "Tab") {
+        // Focus trap for aria-modal="true". Anchors carry
+        // tabindex="-1" so they're out of the natural Tab chain;
+        // Tab/Shift+Tab on the input cycle selection rather than
+        // letting focus escape into the topbar/sidebar.
+        e.preventDefault();
+        if (resultItems.length > 0) {
+          setSelected(selectedIndex + (e.shiftKey ? -1 : 1));
+        }
       } else if (e.key === "Enter") {
         if (selectedIndex >= 0 && resultItems[selectedIndex]) {
           e.preventDefault();
@@ -399,9 +436,18 @@
 
     // Global shortcuts. Esc closes the palette only when it's open
     // (so it doesn't fight other Esc handlers — dropdowns, FK
-    // autocomplete). ⌘K / Ctrl+K opens regardless, but stays inert
-    // when focus is in a text input on a per-list-page search to
-    // avoid stealing the operator's local search keystroke.
+    // autocomplete). ⌘K / Ctrl+K opens from anywhere, but stays
+    // inert when focus is already in a text input or contenteditable
+    // surface (e.g. the per-list-page search) so the operator's
+    // local keystroke isn't stolen mid-typing. The palette's own
+    // input is excepted so ⌘K still closes the palette when it's
+    // focused — that's the canonical "toggle" semantics.
+    function focusInOtherTextInput(target) {
+      if (!(target instanceof Element)) return false;
+      if (target === input) return false;
+      return target.matches("input, textarea, [contenteditable], [contenteditable='true']");
+    }
+
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && isOpen()) {
         e.preventDefault();
@@ -410,6 +456,7 @@
       }
       const isCmdK = (e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K");
       if (isCmdK) {
+        if (focusInOtherTextInput(e.target)) return;
         e.preventDefault();
         if (isOpen()) close();
         else open();
