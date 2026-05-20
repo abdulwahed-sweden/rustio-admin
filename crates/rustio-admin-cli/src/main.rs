@@ -21,6 +21,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+mod audit;
 mod builder;
 mod doctor;
 mod doctor_email;
@@ -82,6 +83,11 @@ enum Command {
     Perm {
         #[command(subcommand)]
         action: perm::Action,
+    },
+    /// Inspect the audit trail (rustio_admin_actions). Read-only.
+    Audit {
+        #[command(subcommand)]
+        action: audit::Action,
     },
     /// Diagnose the local environment.
     Doctor {
@@ -235,6 +241,7 @@ fn main() -> ExitCode {
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,
                 Command::Perm { action } => perm::run(action).await,
+                Command::Audit { action } => audit::run(action).await,
                 Command::Doctor { action } => match action {
                     None => doctor::run().await,
                     Some(DoctorAction::Email { to, html_preview }) => {

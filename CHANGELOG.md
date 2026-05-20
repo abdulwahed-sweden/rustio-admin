@@ -188,6 +188,61 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio audit tail` CLI subcommand.** Operator-facing
+  read surface for the `rustio_admin_actions` table —
+  sibling to the framework's HTML `/admin/history` page,
+  different consumer. Useful for shell-driven incident
+  response ("what did Alice do in the last hour?") and
+  pipe-into-grep workflows.
+  - **Usage:**
+    ```sh
+    rustio audit tail                          # newest 50 rows
+    rustio audit tail --limit 200
+    rustio audit tail --user alice@example.test
+    rustio audit tail --model patients
+    rustio audit tail --user alice@example.test --model patients
+    ```
+  - **Output:**
+    ```
+    TIMESTAMP            ACTION           TARGET    USER                SUMMARY
+    2026-05-20 12:09:53  login_succeeded  users/2   alice@example.test (id=2)  signed in: alice@example.test
+    2026-05-20 12:04:30  update           patients/12  alice@example.test (id=2)  Updated chart_number
+    …
+    ```
+    Columns auto-widen to the widest entry in the batch so
+    the table stays aligned regardless of email or model
+    length. The `SUMMARY` column is last and unbounded —
+    grep / awk on a row works against the structured prefix.
+  - **`--user <email>` filter** resolves through
+    `find_user_by_email` *before* the audit query, so an
+    unknown email hard-errors (`error: no user with email
+    nobody@example.test`) rather than silently returning
+    zero rows. Filters compose: `--user X --model Y`
+    intersects.
+  - **Orphan-resilient:** the underlying schema has
+    `ON DELETE CASCADE` on `user_id`, but a future relaxation
+    could leave audit rows whose `user_id` no longer
+    resolves. The formatter falls back to
+    `(user id=99 not found)` rather than crashing.
+  - **`--limit` is clamped to `[1, 10_000]`** so a typo
+    can't drag the whole table into memory; default 50 fits
+    a terminal screen.
+  - **Read-only by doctrine.** Write-side commands (manual
+    event injection, retention pruning) are deliberately
+    *not* part of this surface — audit data is append-only.
+  - **Pure formatter** `format_audit_tail` factored out so
+    the seven unit tests cover the rendering layer without a
+    Postgres pool: empty-input marker, header columns, input
+    order preservation (no client-side re-sort), user
+    "email (id=N)" suffix, orphan-id fallback, target
+    formatting (`model/id`), and auto-widening columns on
+    mixed-width batches. Live-verified against the
+    clinic-appointments DB: unfiltered tail prints 5 recent
+    events; `--user smoke@local` narrows to just that
+    user's; `--model users` returns the 3 most-recent
+    user-targeting rows; `--user nobody@example.test`
+    surfaces the clean `error:` line.
+
 - **`rustio user perms --email <email>` CLI subcommand.**
   Operational debugging surface for the question "why can't
   user X see model Y?" Without this command, the only way to
