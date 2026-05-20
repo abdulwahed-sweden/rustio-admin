@@ -39,6 +39,13 @@ pub enum Action {
         /// `rustio_users`).
         #[arg(long)]
         model: Option<String>,
+        /// Only print rows from the last `<duration>` window —
+        /// e.g. `30s`, `15m`, `2h`, `7d`. Useful for incident
+        /// response: "what happened in the last hour?" without
+        /// having to pick a row count. Composes with `--user`
+        /// and `--model`.
+        #[arg(long)]
+        since: Option<String>,
     },
 }
 
@@ -49,7 +56,8 @@ pub async fn run(action: Action) -> Result<(), String> {
             limit,
             user,
             model,
-        } => tail(db, limit, user, model).await,
+            since,
+        } => tail(db, limit, user, model, since).await,
     }
 }
 
@@ -72,6 +80,7 @@ async fn tail(
     limit: i64,
     user: Option<String>,
     model: Option<String>,
+    since: Option<String>,
 ) -> Result<(), String> {
     let limit = limit.clamp(1, 10_000);
 
@@ -89,22 +98,41 @@ async fn tail(
         None => None,
     };
 
-    // Build the WHERE clause conditionally. sqlx doesn't have
-    // a clean "optional bind" idiom so we build the SQL string
-    // up-front with $1, $2, $3... placeholders; only the
-    // parameters supplied get bound below.
-    let (where_clause, params): (String, Vec<&str>) = match (user_id, model.as_deref()) {
-        (Some(_), Some(_)) => ("WHERE a.user_id = $1 AND a.model_name = $2".into(), vec![]),
-        (Some(_), None) => ("WHERE a.user_id = $1".into(), vec![]),
-        (None, Some(_)) => ("WHERE a.model_name = $1".into(), vec![]),
-        (None, None) => ("".into(), vec![]),
+    // Resolve the optional --since duration into a concrete
+    // cut-off timestamp. Parsing errors hard-fail with a helpful
+    // message; the alternative (silently ignoring a malformed
+    // duration) would mask typos like `--since 1hr` and surface
+    // confusing "no rows" results.
+    let since_ts = match since {
+        Some(s) => Some(parse_since_cutoff(&s, chrono::Utc::now())?),
+        None => None,
     };
-    let _ = params; // placeholder for future param threading
-    let limit_pos = match (user_id, model.as_deref()) {
-        (Some(_), Some(_)) => "$3",
-        (Some(_), None) | (None, Some(_)) => "$2",
-        (None, None) => "$1",
+
+    // Build the WHERE clause iteratively so each filter binds
+    // exactly the $N placeholder for the position in which it
+    // gets appended. Scales cleanly to N optional filters; the
+    // previous fixed-combination match was already at the limit
+    // of what fits with three filters.
+    let mut conds: Vec<String> = Vec::new();
+    let mut idx: u8 = 1;
+    if user_id.is_some() {
+        conds.push(format!("a.user_id = ${idx}"));
+        idx += 1;
+    }
+    if model.is_some() {
+        conds.push(format!("a.model_name = ${idx}"));
+        idx += 1;
+    }
+    if since_ts.is_some() {
+        conds.push(format!("a.timestamp >= ${idx}"));
+        idx += 1;
+    }
+    let where_clause = if conds.is_empty() {
+        String::new()
+    } else {
+        format!("WHERE {}", conds.join(" AND "))
     };
+    let limit_pos = format!("${idx}");
 
     let sql = format!(
         "SELECT a.timestamp, a.action_type, a.model_name, a.object_id,
@@ -116,14 +144,18 @@ async fn tail(
            LIMIT {limit_pos}"
     );
 
-    // Bind the parameters in declaration order. The match in
-    // both `where_clause` and `limit_pos` keeps them in sync.
+    // Bind in the same order that the WHERE-clause builder
+    // walked the filters. The builder and the binder MUST stay
+    // in lock-step; if you add a new filter, add to both.
     let mut q = sqlx::query(&sql);
     if let Some(uid) = user_id {
         q = q.bind(uid);
     }
     if let Some(m) = model.as_deref() {
         q = q.bind(m);
+    }
+    if let Some(ts) = since_ts {
+        q = q.bind(ts);
     }
     q = q.bind(limit);
 
@@ -149,6 +181,48 @@ async fn tail(
 
     print!("{}", format_audit_tail(&entries));
     Ok(())
+}
+
+/// Parse a `--since` duration like `30s` / `15m` / `2h` / `7d`
+/// into a concrete UTC cutoff timestamp computed by subtracting
+/// the parsed window from `now`. Pure function — `now` is
+/// injected so the unit tests pin a fixed clock.
+///
+/// Accepted format: one or more ASCII digits followed by exactly
+/// one of `s`, `m`, `h`, `d`. Reject anything else with a
+/// human-readable message: silently treating a typo (`1hr`) as
+/// "no filter" would mask incident-response queries.
+fn parse_since_cutoff(
+    raw: &str,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<chrono::DateTime<chrono::Utc>, String> {
+    let s = raw.trim();
+    if s.is_empty() {
+        return Err("--since cannot be empty (expected e.g. 30s, 15m, 2h, 7d)".into());
+    }
+    let (num_part, unit) = s.split_at(s.len() - 1);
+    let unit_ch = unit.chars().next().unwrap_or(' ');
+    let n: i64 = num_part.parse().map_err(|_| {
+        format!(
+            "--since: cannot parse leading number from {raw:?} \
+             (expected e.g. 30s, 15m, 2h, 7d)"
+        )
+    })?;
+    if n < 0 {
+        return Err("--since: duration must be non-negative".into());
+    }
+    let seconds = match unit_ch {
+        's' => n,
+        'm' => n.checked_mul(60).ok_or("--since: minutes overflow")?,
+        'h' => n.checked_mul(3600).ok_or("--since: hours overflow")?,
+        'd' => n.checked_mul(86_400).ok_or("--since: days overflow")?,
+        other => {
+            return Err(format!(
+                "--since: unknown unit {other:?} (expected one of s/m/h/d)"
+            ));
+        }
+    };
+    Ok(now - chrono::Duration::seconds(seconds))
 }
 
 /// Render the rows as a fixed-width table, newest first.
@@ -316,6 +390,79 @@ mod tests {
         let rows = vec![mk("update", "clinics", 5, Some("a@x.test"), 1, "")];
         let out = format_audit_tail(&rows);
         assert!(out.contains("clinics/5"));
+    }
+
+    fn fixed_now() -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::parse_from_rfc3339("2026-05-20T12:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc)
+    }
+
+    #[test]
+    fn parse_since_accepts_seconds_minutes_hours_days() {
+        let now = fixed_now();
+        assert_eq!(
+            parse_since_cutoff("30s", now).unwrap(),
+            now - chrono::Duration::seconds(30),
+        );
+        assert_eq!(
+            parse_since_cutoff("15m", now).unwrap(),
+            now - chrono::Duration::minutes(15),
+        );
+        assert_eq!(
+            parse_since_cutoff("2h", now).unwrap(),
+            now - chrono::Duration::hours(2),
+        );
+        assert_eq!(
+            parse_since_cutoff("7d", now).unwrap(),
+            now - chrono::Duration::days(7),
+        );
+    }
+
+    #[test]
+    fn parse_since_rejects_empty_and_malformed() {
+        let now = fixed_now();
+        // Empty / whitespace.
+        assert!(parse_since_cutoff("", now).is_err());
+        assert!(parse_since_cutoff("   ", now).is_err());
+        // Bad unit. Surfacing the typo is the WHOLE POINT —
+        // silently dropping the filter would mask the operator's
+        // intent on an incident-response query.
+        assert!(parse_since_cutoff("1hr", now).is_err());
+        assert!(parse_since_cutoff("5x", now).is_err());
+        // Non-numeric leading part.
+        assert!(parse_since_cutoff("abc", now).is_err());
+        // Missing leading number.
+        assert!(parse_since_cutoff("h", now).is_err());
+    }
+
+    #[test]
+    fn parse_since_rejects_negative_numbers() {
+        // `-5h` parses as a number with a unit, but a negative
+        // window is operationally meaningless (would skip ahead
+        // of `now`). Reject loudly.
+        let now = fixed_now();
+        assert!(parse_since_cutoff("-5h", now).is_err());
+    }
+
+    #[test]
+    fn parse_since_trims_whitespace() {
+        let now = fixed_now();
+        assert_eq!(
+            parse_since_cutoff("  30s  ", now).unwrap(),
+            now - chrono::Duration::seconds(30),
+        );
+    }
+
+    #[test]
+    fn parse_since_zero_is_valid_and_equals_now() {
+        // 0s / 0m / 0h / 0d are all valid edge cases — they
+        // mean "no time window applied" (cutoff == now). Useful
+        // to keep the cutoff-binding path uniform without a
+        // special "0 means skip" rule.
+        let now = fixed_now();
+        assert_eq!(parse_since_cutoff("0s", now).unwrap(), now);
+        assert_eq!(parse_since_cutoff("0d", now).unwrap(), now);
     }
 
     #[test]
