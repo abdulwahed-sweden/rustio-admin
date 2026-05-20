@@ -55,8 +55,10 @@ fn build_response(db_ok: bool) -> Response {
     let s = serde_json::to_string(&body).unwrap_or_else(|_| {
         // Two static-shaped strings, can only fail under OOM —
         // hand-build the fallback so the contract still holds.
-        format!(r#"{{"ok":{db_ok},"db":"{}","version":"unknown"}}"#,
-            if db_ok { "up" } else { "down" })
+        format!(
+            r#"{{"ok":{db_ok},"db":"{}","version":"unknown"}}"#,
+            if db_ok { "up" } else { "down" }
+        )
     });
     Response::new(status, s)
         .with_header("content-type", "application/json")

@@ -238,7 +238,11 @@ fn format_group_show(r: &GroupReport) -> String {
     }
     out.push('\n');
 
-    let _ = writeln!(out, "Permissions granted via this group ({}):", r.permissions.len());
+    let _ = writeln!(
+        out,
+        "Permissions granted via this group ({}):",
+        r.permissions.len()
+    );
     if r.permissions.is_empty() {
         let _ = writeln!(out, "  (none)");
     } else {

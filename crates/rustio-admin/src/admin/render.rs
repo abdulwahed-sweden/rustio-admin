@@ -1384,10 +1384,7 @@ pub(crate) fn list_ctx(
                 }
                 // One combined pill — "from → to", "from only", or
                 // "≤ to". The remove link drops both bounds at once.
-                let value_label = match (
-                    g.date_from_value.as_str(),
-                    g.date_to_value.as_str(),
-                ) {
+                let value_label = match (g.date_from_value.as_str(), g.date_to_value.as_str()) {
                     ("", "") => return None,
                     ("", to) => format!("≤ {to}"),
                     (from, "") => format!("≥ {from}"),
@@ -1395,9 +1392,7 @@ pub(crate) fn list_ctx(
                 };
                 let other: Vec<(String, String)> = active_filter_pairs
                     .iter()
-                    .filter(|(field, _)| {
-                        field != &g.date_from_name && field != &g.date_to_name
-                    })
+                    .filter(|(field, _)| field != &g.date_from_name && field != &g.date_to_name)
                     .cloned()
                     .collect();
                 Some(ActiveFilterPillCtx {
@@ -1640,10 +1635,8 @@ pub(crate) fn list_ctx(
                         // landed; otherwise the template falls back to
                         // the plain string path.
                         if let Some(term) = &search_term_for_highlight {
-                            let is_bool = matches!(
-                                field_types.get(i),
-                                Some(crate::admin::FieldType::Bool)
-                            );
+                            let is_bool =
+                                matches!(field_types.get(i), Some(crate::admin::FieldType::Bool));
                             if !is_bool && searched_columns.contains(*name) {
                                 if let Some(html) = highlight_search_match(&cell, term) {
                                     highlights.insert((*name).to_string(), html);
@@ -1676,9 +1669,7 @@ pub(crate) fn list_ctx(
         search_query,
         active_filter_count: filters
             .iter()
-            .filter(|g| {
-                g.current.is_some() || g.has_active_range || !g.multi_selected.is_empty()
-            })
+            .filter(|g| g.current.is_some() || g.has_active_range || !g.multi_selected.is_empty())
             .count(),
         active_filter_pairs,
         active_filter_pills,
@@ -1935,8 +1926,8 @@ fn humanise_field(s: &str) -> String {
 /// macros crate cannot depend on this crate (proc-macro cycle), so
 /// the two lists are intentionally duplicated.
 pub(crate) const HUMANISE_ACRONYMS: &[&str] = &[
-    "id", "ip", "url", "uri", "api", "uuid", "mfa", "csv", "sql",
-    "html", "http", "https", "json", "tls", "ssl", "smtp", "xml",
+    "id", "ip", "url", "uri", "api", "uuid", "mfa", "csv", "sql", "html", "http", "https", "json",
+    "tls", "ssl", "smtp", "xml",
 ];
 
 /// Split a flat `Vec<String>` from `AdminOps::create / update` into a
@@ -2733,9 +2724,7 @@ pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCt
 /// The shape mirrors `handlers::FieldChange` so the JSON written
 /// by `do_update` round-trips losslessly through Postgres' JSONB
 /// column.
-fn extract_changes_from_metadata(
-    metadata: Option<&serde_json::Value>,
-) -> Vec<HistoryChangeCtx> {
+fn extract_changes_from_metadata(metadata: Option<&serde_json::Value>) -> Vec<HistoryChangeCtx> {
     let Some(obj) = metadata.and_then(|m| m.as_object()) else {
         return Vec::new();
     };
@@ -3318,8 +3307,14 @@ mod tests {
         use super::super::types::FieldType::*;
         assert_eq!(sort_direction_label(FilePath, SortDir::Asc), "A → Z");
         assert_eq!(sort_direction_label(FilePath, SortDir::Desc), "Z → A");
-        assert_eq!(sort_direction_label(OptionalFilePath, SortDir::Asc), "A → Z");
-        assert_eq!(sort_direction_label(OptionalFilePath, SortDir::Desc), "Z → A");
+        assert_eq!(
+            sort_direction_label(OptionalFilePath, SortDir::Asc),
+            "A → Z"
+        );
+        assert_eq!(
+            sort_direction_label(OptionalFilePath, SortDir::Desc),
+            "Z → A"
+        );
     }
 
     #[test]
@@ -3327,7 +3322,10 @@ mod tests {
         use super::super::modeladmin::SortDir;
         use super::super::types::FieldType::*;
         assert_eq!(sort_direction_label(DateTime, SortDir::Asc), "oldest first");
-        assert_eq!(sort_direction_label(DateTime, SortDir::Desc), "newest first");
+        assert_eq!(
+            sort_direction_label(DateTime, SortDir::Desc),
+            "newest first"
+        );
         assert_eq!(
             sort_direction_label(OptionalDateTime, SortDir::Asc),
             "oldest first",
@@ -3356,7 +3354,10 @@ mod tests {
         use super::super::types::FieldType::*;
         assert_eq!(sort_direction_label(I32, SortDir::Asc), "ascending");
         assert_eq!(sort_direction_label(I64, SortDir::Asc), "ascending");
-        assert_eq!(sort_direction_label(OptionalI64, SortDir::Desc), "descending");
+        assert_eq!(
+            sort_direction_label(OptionalI64, SortDir::Desc),
+            "descending"
+        );
     }
 
     /// `VISIBILITY_AUDIT.md` finding B3 enforcement.
@@ -3621,17 +3622,29 @@ mod tests {
         assert_eq!(sections.len(), 3);
         assert_eq!(sections[0].title, Some("Content"));
         assert_eq!(
-            sections[0].fields.iter().map(|f| f.name).collect::<Vec<_>>(),
+            sections[0]
+                .fields
+                .iter()
+                .map(|f| f.name)
+                .collect::<Vec<_>>(),
             vec!["body", "title"],
         );
         assert_eq!(sections[1].title, Some("Metadata"));
         assert_eq!(
-            sections[1].fields.iter().map(|f| f.name).collect::<Vec<_>>(),
+            sections[1]
+                .fields
+                .iter()
+                .map(|f| f.name)
+                .collect::<Vec<_>>(),
             vec!["created_at"],
         );
         assert_eq!(sections[2].title, Some("Other"));
         assert_eq!(
-            sections[2].fields.iter().map(|f| f.name).collect::<Vec<_>>(),
+            sections[2]
+                .fields
+                .iter()
+                .map(|f| f.name)
+                .collect::<Vec<_>>(),
             vec!["slug"],
         );
     }

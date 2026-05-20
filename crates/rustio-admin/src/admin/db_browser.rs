@@ -161,15 +161,20 @@ pub(crate) async fn show_db_browser(
     // Index by table name for O(1) attachment of columns + FKs.
     // The vec ordering (alphabetic) is preserved on the final
     // serialised side; we just need to write into the right slot.
-    let mut by_name: std::collections::HashMap<String, usize> =
-        tables.iter().enumerate().map(|(i, t)| (t.name.clone(), i)).collect();
+    let mut by_name: std::collections::HashMap<String, usize> = tables
+        .iter()
+        .enumerate()
+        .map(|(i, t)| (t.name.clone(), i))
+        .collect();
 
     for r in columns_rows {
         let table: String = r.try_get("table_name").unwrap_or_default();
         let Some(idx) = by_name.get(&table).copied() else {
             continue;
         };
-        let is_nullable_str: String = r.try_get("is_nullable").unwrap_or_else(|_| "NO".to_string());
+        let is_nullable_str: String = r
+            .try_get("is_nullable")
+            .unwrap_or_else(|_| "NO".to_string());
         tables[idx].columns.push(ColumnInfo {
             name: r.try_get("column_name").unwrap_or_default(),
             data_type: r.try_get("data_type").unwrap_or_default(),

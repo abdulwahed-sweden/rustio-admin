@@ -54,7 +54,8 @@ const PRESETS: &[Preset] = &[
     },
     Preset {
         name: "forest",
-        description: "Muted moss-green accent on a warm paper neutral. Reads as editorial, not corporate.",
+        description:
+            "Muted moss-green accent on a warm paper neutral. Reads as editorial, not corporate.",
         accent: "#2E7D5B",
         bg: "#F4F1EA",
         surface: "#FFFFFF",
@@ -64,7 +65,8 @@ const PRESETS: &[Preset] = &[
     },
     Preset {
         name: "sunset",
-        description: "Warm terracotta accent on cream. Sits in the same family as the default crimson.",
+        description:
+            "Warm terracotta accent on cream. Sits in the same family as the default crimson.",
         accent: "#C9572E",
         bg: "#FAF5EE",
         surface: "#FFFFFF",
@@ -109,19 +111,16 @@ fn print_list() {
 
 fn print_show(name: &str) -> Result<(), String> {
     let lowered = name.to_ascii_lowercase();
-    let preset = PRESETS
-        .iter()
-        .find(|p| p.name == lowered)
-        .ok_or_else(|| {
-            let names: Vec<&str> = PRESETS.iter().map(|p| p.name).collect();
-            format!(
-                "unknown preset `{name}`. Available: {}",
-                names.join(", ")
-            )
-        })?;
+    let preset = PRESETS.iter().find(|p| p.name == lowered).ok_or_else(|| {
+        let names: Vec<&str> = PRESETS.iter().map(|p| p.name).collect();
+        format!("unknown preset `{name}`. Available: {}", names.join(", "))
+    })?;
 
     let snippet = render_snippet(preset);
-    println!("// rustio theme preset: {} — {}", preset.name, preset.description);
+    println!(
+        "// rustio theme preset: {} — {}",
+        preset.name, preset.description
+    );
     println!("//");
     println!("// Paste this clause into your `Admin::new()` builder chain.");
     println!("// Trailing fluent calls (e.g. `.app_name(...)`) can come after.");

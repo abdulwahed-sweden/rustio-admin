@@ -104,14 +104,16 @@ pub(crate) async fn list_for_user(
     .await?;
     Ok(rows
         .into_iter()
-        .map(|(id, user_id, admin_name, name, query_string, created_at)| SavedFilter {
-            id,
-            user_id,
-            admin_name,
-            name,
-            query_string,
-            created_at,
-        })
+        .map(
+            |(id, user_id, admin_name, name, query_string, created_at)| SavedFilter {
+                id,
+                user_id,
+                admin_name,
+                name,
+                query_string,
+                created_at,
+            },
+        )
         .collect())
 }
 
@@ -205,7 +207,10 @@ mod tests {
 
     #[test]
     fn sanitise_name_trims_surrounding_whitespace() {
-        assert_eq!(sanitise_name("  Active patients  "), Some("Active patients".into()));
+        assert_eq!(
+            sanitise_name("  Active patients  "),
+            Some("Active patients".into())
+        );
     }
 
     #[test]

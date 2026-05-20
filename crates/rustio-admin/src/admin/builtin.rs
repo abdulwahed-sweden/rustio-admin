@@ -809,18 +809,20 @@ async fn load_user_sessions(
 
     Ok(rows
         .into_iter()
-        .map(|(session_id, token, created_at, last_seen, ip, user_agent)| {
-            let token_short: String = token.chars().take(7).collect();
-            SessionItem {
-                session_id,
-                token_short,
-                created_at_iso: created_at.format("%Y-%m-%d %H:%M UTC").to_string(),
-                last_seen_relative: render::relative_time(last_seen),
-                ip,
-                user_agent,
-                is_current: viewing_session_id == Some(session_id),
-            }
-        })
+        .map(
+            |(session_id, token, created_at, last_seen, ip, user_agent)| {
+                let token_short: String = token.chars().take(7).collect();
+                SessionItem {
+                    session_id,
+                    token_short,
+                    created_at_iso: created_at.format("%Y-%m-%d %H:%M UTC").to_string(),
+                    last_seen_relative: render::relative_time(last_seen),
+                    ip,
+                    user_agent,
+                    is_current: viewing_session_id == Some(session_id),
+                }
+            },
+        )
         .collect())
 }
 

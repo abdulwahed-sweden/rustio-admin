@@ -246,10 +246,7 @@ fn is_saved_filter_path(path: &str) -> bool {
 pub(crate) fn is_mutating_method(method: &hyper::Method) -> bool {
     matches!(
         *method,
-        hyper::Method::POST
-            | hyper::Method::PUT
-            | hyper::Method::PATCH
-            | hyper::Method::DELETE
+        hyper::Method::POST | hyper::Method::PUT | hyper::Method::PATCH | hyper::Method::DELETE
     )
 }
 
@@ -849,9 +846,7 @@ pub fn register_admin_routes(
         async move {
             match role_guard(&c, &req, Role::Developer).await? {
                 Guard::Redirect(r) => Ok(r),
-                Guard::Allow(ident) => {
-                    super::db_browser::show_db_browser(&c, ident, &req).await
-                }
+                Guard::Allow(ident) => super::db_browser::show_db_browser(&c, ident, &req).await,
             }
         }
     });
@@ -1380,23 +1375,22 @@ pub fn register_admin_routes(
     // Administrator role gate; the handler enforces cross-rank +
     // session-ownership + same-actor-session refusal in-line.
     let c = ctx.clone();
-    let router =
-        router.post("/admin/users/:id/sessions/:session_id/revoke", move |req| {
-            let c = c.clone();
-            async move {
-                match role_guard(&c, &req, Role::Administrator).await? {
-                    Guard::Redirect(r) => Ok(r),
-                    Guard::Allow(ident) => {
-                        let user_id = parse_id(req.param("id"))?;
-                        let session_id = parse_id(req.param("session_id"))?;
-                        super::admin_recovery_handlers::do_admin_revoke_one_session(
-                            &c, ident, user_id, session_id, req,
-                        )
-                        .await
-                    }
+    let router = router.post("/admin/users/:id/sessions/:session_id/revoke", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    let user_id = parse_id(req.param("id"))?;
+                    let session_id = parse_id(req.param("session_id"))?;
+                    super::admin_recovery_handlers::do_admin_revoke_one_session(
+                        &c, ident, user_id, session_id, req,
+                    )
+                    .await
                 }
             }
-        });
+        }
+    });
 
     // Read-only user profile view. MUST be registered AFTER
     // `/admin/users/new` and the `:id/edit` + `:id/delete` routes
@@ -1648,23 +1642,18 @@ pub fn register_admin_routes(
     // SQL scope-locks to identity.user_id so the route gate can
     // stay `view`; an operator can only delete their own bookmarks.
     let c = ctx.clone();
-    let router = router.post(
-        "/admin/:admin_name/saved_filters/:id/delete",
-        move |req| {
-            let c = c.clone();
-            async move {
-                let name = model_name_from_req(&req)?;
-                let id = parse_id(req.param("id"))?;
-                let perm = perm_for(&c, &name, "view")?;
-                match perm_guard(&c, &req, &perm).await? {
-                    Guard::Redirect(r) => Ok(r),
-                    Guard::Allow(ident) => {
-                        handlers::do_delete_filter(&c, ident, &name, id, req).await
-                    }
-                }
+    let router = router.post("/admin/:admin_name/saved_filters/:id/delete", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let id = parse_id(req.param("id"))?;
+            let perm = perm_for(&c, &name, "view")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_delete_filter(&c, ident, &name, id, req).await,
             }
-        },
-    );
+        }
+    });
 
     // Create.
     let c = ctx.clone();

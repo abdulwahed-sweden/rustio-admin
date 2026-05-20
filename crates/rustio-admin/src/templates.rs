@@ -569,7 +569,9 @@ mod tests {
 
         let t = Templates::new(Some(dir.clone())).unwrap();
         // Books model sees the override.
-        let body = t.render_for_model("books", "admin/list.html", &Empty {}).unwrap();
+        let body = t
+            .render_for_model("books", "admin/list.html", &Empty {})
+            .unwrap();
         assert_eq!(body, "books-specific list");
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -596,10 +598,14 @@ mod tests {
         let t = Templates::new(Some(dir.clone())).unwrap();
         // "authors" has no per-model file — falls through to
         // framework-wide override.
-        let body = t.render_for_model("authors", "admin/list.html", &Empty {}).unwrap();
+        let body = t
+            .render_for_model("authors", "admin/list.html", &Empty {})
+            .unwrap();
         assert_eq!(body, "framework-wide list");
         // "books" still sees its own override.
-        let body = t.render_for_model("books", "admin/list.html", &Empty {}).unwrap();
+        let body = t
+            .render_for_model("books", "admin/list.html", &Empty {})
+            .unwrap();
         assert_eq!(body, "books override");
         let _ = std::fs::remove_dir_all(&dir);
     }
