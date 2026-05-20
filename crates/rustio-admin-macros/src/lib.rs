@@ -451,22 +451,51 @@ fn is_auto_timestamp_name(name: &str) -> bool {
 /// readable validation errors emitted by `from_form`. Mirrors the
 /// runtime humanise helper so error labels and rendered form labels
 /// use identical capitalisation.
+///
+/// Whole-word acronym recognition: each underscore-separated segment
+/// is checked against [`HUMANISE_ACRONYMS`] before being
+/// title-cased, so `id` → `ID`, `email_id` → `Email ID`,
+/// `mfa_secret_key_id` → `MFA Secret Key ID`. Words *containing* but
+/// not *being* an acronym (`video` is not `vIDeo`) are left to the
+/// default first-letter-uppercase rule.
 fn humanise_field(s: &str) -> String {
+    if s.is_empty() {
+        return String::new();
+    }
     let mut out = String::with_capacity(s.len());
-    let mut next_upper = true;
-    for ch in s.chars() {
-        if ch == '_' {
+    let mut first_segment = true;
+    for segment in s.split('_') {
+        if !first_segment {
             out.push(' ');
-            next_upper = true;
-        } else if next_upper {
-            out.push(ch.to_ascii_uppercase());
-            next_upper = false;
+        }
+        first_segment = false;
+        let lower = segment.to_ascii_lowercase();
+        if HUMANISE_ACRONYMS.contains(&lower.as_str()) {
+            out.push_str(&lower.to_ascii_uppercase());
         } else {
-            out.push(ch);
+            let mut chars = segment.chars();
+            if let Some(first) = chars.next() {
+                out.push(first.to_ascii_uppercase());
+                for c in chars {
+                    out.push(c);
+                }
+            }
         }
     }
     out
 }
+
+/// Acronyms that should be fully uppercase in humanised labels.
+///
+/// Byte-for-byte mirror of
+/// `rustio_admin::admin::render::HUMANISE_ACRONYMS` — the macros
+/// crate cannot depend on the main crate (proc-macro cycle), so
+/// the two lists are intentionally duplicated. Update both
+/// together.
+const HUMANISE_ACRONYMS: &[&str] = &[
+    "id", "ip", "url", "uri", "api", "uuid", "mfa", "csv", "sql",
+    "html", "http", "https", "json", "tls", "ssl", "smtp", "xml",
+];
 
 fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
     let as_string = quote! { #ty }.to_string().replace(' ', "");
@@ -747,5 +776,64 @@ mod plural_snake_tests {
     fn trailing_s_left_alone() {
         assert_eq!(plural_snake("Posts"), "posts");
         assert_eq!(plural_snake("Status"), "status");
+    }
+}
+
+#[cfg(test)]
+mod humanise_field_tests {
+    use super::humanise_field;
+
+    #[test]
+    fn snake_case_to_title_case() {
+        assert_eq!(humanise_field("title"), "Title");
+        assert_eq!(humanise_field("chart_number"), "Chart Number");
+        assert_eq!(humanise_field("full_name"), "Full Name");
+        assert_eq!(humanise_field("performed_by_technician"), "Performed By Technician");
+    }
+
+    #[test]
+    fn standalone_acronyms_are_uppercased() {
+        // The shipped fix: `id` no longer humanises to `Id`.
+        assert_eq!(humanise_field("id"), "ID");
+        assert_eq!(humanise_field("ip"), "IP");
+        assert_eq!(humanise_field("url"), "URL");
+        assert_eq!(humanise_field("uuid"), "UUID");
+        assert_eq!(humanise_field("mfa"), "MFA");
+    }
+
+    #[test]
+    fn acronyms_inside_compound_names_are_uppercased() {
+        assert_eq!(humanise_field("email_id"), "Email ID");
+        assert_eq!(humanise_field("id_card"), "ID Card");
+        assert_eq!(humanise_field("user_ip"), "User IP");
+        assert_eq!(humanise_field("api_token"), "API Token");
+        assert_eq!(humanise_field("mfa_secret_key_id"), "MFA Secret Key ID");
+        assert_eq!(humanise_field("csv_export_path"), "CSV Export Path");
+    }
+
+    #[test]
+    fn acronym_substrings_are_not_uppercased() {
+        // `id` appears inside `video` — the WORD is the unit, not
+        // any embedded substring. Without this guarantee a field
+        // named `video_url` would render as `vIDeo URL`.
+        assert_eq!(humanise_field("video"), "Video");
+        assert_eq!(humanise_field("video_url"), "Video URL");
+        assert_eq!(humanise_field("hidden_field"), "Hidden Field");
+        assert_eq!(humanise_field("idle_seconds"), "Idle Seconds");
+    }
+
+    #[test]
+    fn empty_and_trivial_inputs_are_safe() {
+        assert_eq!(humanise_field(""), "");
+        assert_eq!(humanise_field("a"), "A");
+    }
+
+    #[test]
+    fn datetime_suffixes_preserved() {
+        // `at` / `to` / `by` are prepositions, not acronyms —
+        // they stay sentence-case.
+        assert_eq!(humanise_field("created_at"), "Created At");
+        assert_eq!(humanise_field("revoked_by"), "Revoked By");
+        assert_eq!(humanise_field("expires_at"), "Expires At");
     }
 }
