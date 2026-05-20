@@ -3,7 +3,7 @@
  *  - Sidebar drawer toggle on mobile. Adds `data-sidebar="open"` to
  *    the .rio-shell so the CSS reveals the off-canvas panel.
  *  - Generic dropdown wiring, bulk-select form helper,
- *    foreign-key autocomplete.
+ *    foreign-key autocomplete, global ⌘K search palette.
  *
  * Sortable column headers and remote filter widgets land in P9/P10.
  */
@@ -241,17 +241,195 @@
     });
   }
 
+  // ---- Global ⌘K search palette ----------------------------------
+  // Backed by GET /admin/_search?q=<term> which returns
+  //   { results: [{ admin_name, model_label, label, url }, ...] }
+  // Capped server-side at 5 per model + 20 total; the palette UI
+  // groups results by `model_label`.
+  //
+  // Keyboard surface:
+  //   ⌘K / Ctrl+K   open the palette (anywhere outside an input)
+  //   Esc           close, restoring focus to the trigger
+  //   ↑ / ↓         move selection between results (with wrap)
+  //   Enter         navigate to the selected result
+  function initSearchPalette() {
+    const trigger = document.querySelector("[data-rio-search-trigger]");
+    const palette = document.querySelector("[data-rio-search-palette]");
+    if (!palette) return;
+    const dialog = palette.querySelector("[data-rio-search-palette-dialog]");
+    const input = palette.querySelector("[data-rio-search-palette-input]");
+    const list = palette.querySelector("[data-rio-search-palette-results]");
+    if (!dialog || !input || !list) return;
+
+    let debounceTimer = 0;
+    let selectedIndex = -1;
+    let resultItems = [];
+
+    function open() {
+      palette.setAttribute("aria-hidden", "false");
+      input.value = "";
+      list.innerHTML = "";
+      selectedIndex = -1;
+      resultItems = [];
+      // Defer focus so the click that opened us doesn't immediately
+      // bubble and close us via the backdrop handler.
+      setTimeout(() => input.focus(), 0);
+    }
+
+    function close() {
+      if (palette.getAttribute("aria-hidden") === "true") return;
+      palette.setAttribute("aria-hidden", "true");
+      window.clearTimeout(debounceTimer);
+      if (trigger) trigger.focus();
+    }
+
+    function isOpen() {
+      return palette.getAttribute("aria-hidden") === "false";
+    }
+
+    function setSelected(idx) {
+      if (resultItems.length === 0) {
+        selectedIndex = -1;
+        return;
+      }
+      // Wrap around both directions so ↑ from the first lands on
+      // the last, and ↓ from the last lands on the first.
+      const n = resultItems.length;
+      selectedIndex = ((idx % n) + n) % n;
+      resultItems.forEach((el, i) => {
+        el.classList.toggle("is-selected", i === selectedIndex);
+      });
+      resultItems[selectedIndex].scrollIntoView({ block: "nearest" });
+    }
+
+    function render(results) {
+      list.innerHTML = "";
+      resultItems = [];
+      selectedIndex = -1;
+      if (!results.length) {
+        const empty = document.createElement("li");
+        empty.className = "rio-search-palette__empty";
+        empty.textContent = "No results.";
+        list.appendChild(empty);
+        return;
+      }
+      // Group by model_label preserving server-side order. The
+      // server already orders entries by admin registration order,
+      // so two passes give us stable section headings.
+      const groups = new Map();
+      results.forEach((r) => {
+        if (!groups.has(r.model_label)) groups.set(r.model_label, []);
+        groups.get(r.model_label).push(r);
+      });
+      groups.forEach((rows, label) => {
+        const group = document.createElement("li");
+        group.className = "rio-search-palette__group";
+        const heading = document.createElement("span");
+        heading.className = "rio-search-palette__group-label";
+        heading.textContent = label;
+        group.appendChild(heading);
+        rows.forEach((r) => {
+          const a = document.createElement("a");
+          a.className = "rio-search-palette__result";
+          a.href = r.url;
+          a.setAttribute("role", "option");
+          const text = document.createElement("span");
+          text.className = "rio-search-palette__result-label";
+          text.textContent = r.label;
+          a.appendChild(text);
+          group.appendChild(a);
+          resultItems.push(a);
+        });
+        list.appendChild(group);
+      });
+      // Default the highlight to the first result so Enter has an
+      // unambiguous target right away.
+      setSelected(0);
+    }
+
+    async function fetchResults(term) {
+      try {
+        const url = "/admin/_search?q=" + encodeURIComponent(term);
+        const resp = await fetch(url, {
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        });
+        if (!resp.ok) return;
+        const body = await resp.json();
+        if (body && Array.isArray(body.results)) render(body.results);
+      } catch (_e) {
+        // Network blip — leave the previous results visible.
+      }
+    }
+
+    // ---- wire it up
+    if (trigger) trigger.addEventListener("click", open);
+
+    palette.addEventListener("click", (e) => {
+      // Backdrop click closes; clicks inside the dialog don't.
+      if (e.target === palette) close();
+    });
+
+    input.addEventListener("input", () => {
+      window.clearTimeout(debounceTimer);
+      const term = input.value.trim();
+      if (term.length < 2) {
+        list.innerHTML = "";
+        resultItems = [];
+        selectedIndex = -1;
+        return;
+      }
+      debounceTimer = window.setTimeout(() => fetchResults(term), 200);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelected(selectedIndex + 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelected(selectedIndex - 1);
+      } else if (e.key === "Enter") {
+        if (selectedIndex >= 0 && resultItems[selectedIndex]) {
+          e.preventDefault();
+          window.location.href = resultItems[selectedIndex].href;
+        }
+      }
+    });
+
+    // Global shortcuts. Esc closes the palette only when it's open
+    // (so it doesn't fight other Esc handlers — dropdowns, FK
+    // autocomplete). ⌘K / Ctrl+K opens regardless, but stays inert
+    // when focus is in a text input on a per-list-page search to
+    // avoid stealing the operator's local search keystroke.
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && isOpen()) {
+        e.preventDefault();
+        close();
+        return;
+      }
+      const isCmdK = (e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K");
+      if (isCmdK) {
+        e.preventDefault();
+        if (isOpen()) close();
+        else open();
+      }
+    });
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initSidebar();
       initDropdowns();
       initBulkSelect();
       initFkAutocomplete();
+      initSearchPalette();
     });
   } else {
     initSidebar();
     initDropdowns();
     initBulkSelect();
     initFkAutocomplete();
+    initSearchPalette();
   }
 })();

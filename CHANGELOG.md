@@ -259,6 +259,64 @@ leaves the alpha track.
 
 ### Added
 
+- **Global `⌘K` search palette — cross-model topbar search.**
+  A new topbar trigger ("Search…  ⌘K") and modal palette let an
+  operator search across every registered admin model from any
+  page. Replaces "where is that model's list page again?" with
+  one keystroke. Per-list-page search stays put — it remains the
+  column-aware, filter-preserving in-page query; the palette is
+  the cross-model "I know what I'm looking for" surface.
+  - **Endpoint:** new `GET /admin/_search?q=<term>` returning
+    JSON `{"results": [{"admin_name", "model_label", "label",
+    "url"}, ...]}`. Capped at 5 results per model and 20 total.
+    Sub-2-char queries short-circuit to an empty result set
+    without touching the DB so single-letter input doesn't
+    multiply across every registered model.
+  - **Per-model `view` permission gating.** Each model the
+    palette queries is gated by the operator's
+    `<admin_name>.view_<singular>` permission, so the palette
+    surfaces exactly the models the operator could already reach
+    via `/admin/<model>`. Administrators and Developers
+    short-circuit through `Role::bypasses_group_checks` —
+    same posture as elsewhere in the framework. Core
+    (framework-owned) entries like the synthetic User are
+    skipped to mirror `find_project_entry`'s policy; the
+    bespoke `/admin/users/*` surface remains the way to search
+    users.
+  - **`ModelAdmin::search_fields()` honoured.** Only models
+    that opt in via `search_fields()` participate. Models with
+    no declared search columns are silently skipped — the
+    declaration is the consent.
+  - **Topbar trigger.** Pill-shaped button between the brand
+    and the account nav, resolving through the chrome-scope
+    cascade so it reads light-on-dark inside the topbar
+    automatically. Mobile (<768px) collapses to icon-only —
+    the `⌘K` hint is dropped on touch where keyboard shortcuts
+    don't apply.
+  - **Modal palette UI.** Centered fixed-position dialog with a
+    search input on top, results list grouped by model below,
+    and a footer hint strip showing the keyboard surface.
+    Results group under the model's `display_name`; each item
+    shows the row's display label (same `pick_display_index`
+    logic the FK autocomplete uses).
+  - **Keyboard surface in `admin.js`.**
+    - `⌘K` / `Ctrl+K` toggles open from anywhere.
+    - `Esc` closes (only when open, so other Esc handlers stay
+      uncontested).
+    - `↑` / `↓` move selection with wrap-around; the first
+      result is selected by default so `Enter` has an
+      unambiguous target.
+    - `Enter` navigates to the selected row's edit URL.
+    - Backdrop click closes; clicks inside the dialog don't.
+    - Debounced 200 ms fetch to `/admin/_search`.
+  - **CSS.** New `components/search_palette.css` (~150 LOC).
+    Wired into `admin/admin.css` `@import` list and the
+    `ADMIN_CSS` `concat!` block in `src/admin/routes.rs`
+    in lock-step.
+  - **No new tokens.** Every value resolves through the
+    existing `--rio-*` surface; no addition to the public
+    token API.
+
 - **`rustio audit tail --since <duration>` time-window filter.**
   Extends the audit tail subcommand shipped two commits ago
   with time-based filtering. Operators investigating an

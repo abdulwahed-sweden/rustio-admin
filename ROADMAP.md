@@ -80,6 +80,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ Per-model list page with sortable column headers
 - ✅ Server-side filters + ILIKE search + pagination in a single SQL query
 - ✅ List-view toolbar (filters dropdown, sort dropdown, per-page picker, search glyph)
+- ✅ Global `⌘K` search palette — cross-model topbar search (`GET /admin/_search`), per-model `view`-permission gated
 - ✅ Active-filter pills strip with one-click removal
 - ✅ Numbered pagination with ellipsis compression past 7 pages
 - ✅ URL state preservation across every widget

@@ -1,0 +1,239 @@
+/* ============================================================
+ * rustio-admin / components / search_palette
+ *
+ * Global ⌘K search palette. Two surfaces:
+ *
+ *   1. .rio-search-trigger — the pill-shaped button in the topbar.
+ *      Reads as a placeholder ("Search…") with an inline ⌘K hint.
+ *      Resolves through the chrome-scope cascade in layout/shell.css,
+ *      so its tokens auto-flip to light-on-dark inside the topbar.
+ *
+ *   2. .rio-search-palette — the fixed-position modal dialog the
+ *      trigger opens. Lives in admin/_topbar.html so the markup is
+ *      adjacent to its trigger, but renders centered on viewport
+ *      with a dimmed backdrop. JS toggles `aria-hidden`.
+ *
+ * No build step — vanilla CSS, all values resolve through `--rio-*`
+ * tokens. Loaded after components/dropdowns.css so any cascade ties
+ * fall in the palette's favour.
+ * ============================================================ */
+
+/* ---- Trigger button (lives in the topbar) ----------------------
+ *
+ * Reads as a recessed search field, not a button. Background sits
+ * one rung below the topbar surface (`--rio-bg` against the topbar's
+ * `--rio-surface`) so the trigger looks "carved into" the chrome
+ * rather than stuck on top of it. The `⌘K` chip is a half-rung
+ * lighter — looks like a raised key against the recessed field.
+ * GitHub / Linear / Vercel pattern. */
+
+.rio-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  height: 34px;
+  min-width: 240px;
+  padding: 0 var(--rio-s3);
+  background: var(--rio-bg);
+  border: 1px solid var(--rio-border-soft);
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text-muted);
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-regular);
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s,
+              box-shadow 0.12s;
+}
+.rio-search-trigger:hover {
+  background: var(--rio-surface-2);
+  border-color: var(--rio-border);
+  color: var(--rio-text);
+}
+.rio-search-trigger:focus-visible {
+  outline: none;
+  border-color: var(--rio-accent);
+  box-shadow: 0 0 0 3px rgb(var(--rio-accent-rgb) / 0.18);
+}
+.rio-search-trigger__icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--rio-text-subtle);
+}
+.rio-search-trigger__label {
+  flex: 1;
+  text-align: start;
+  letter-spacing: var(--rio-tracking-body);
+}
+.rio-search-trigger__kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-family: var(--rio-font-mono);
+  font-size: 11px;
+  font-weight: var(--rio-fw-medium);
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border-soft);
+  border-radius: 4px;
+  color: var(--rio-text-muted);
+  /* Tiny inset highlight + bottom shadow give the chip a "raised
+   * key" feel against the recessed field. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
+              0 1px 0 rgb(0 0 0 / 0.04);
+}
+
+/* Mobile: icon-only. The keyboard hint is meaningless on touch, and
+ * the topbar runs out of horizontal room next to the brand + nav. */
+@media (max-width: 767px) {
+  .rio-search-trigger {
+    min-width: 0;
+    padding: 0 var(--rio-s2);
+  }
+  .rio-search-trigger__label,
+  .rio-search-trigger__kbd {
+    display: none;
+  }
+}
+
+/* ---- Palette modal --------------------------------------------- */
+
+.rio-search-palette {
+  /* Hidden by default; JS sets aria-hidden="false" to reveal. */
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgba(15, 23, 42, 0.45);
+}
+.rio-search-palette[aria-hidden="false"] {
+  display: flex;
+}
+.rio-search-palette__dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 92vw);
+  max-height: 70vh;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  box-shadow: var(--rio-shadow-lg);
+  overflow: hidden;
+}
+.rio-search-palette__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s3);
+  padding: var(--rio-s3) var(--rio-s4);
+  border-bottom: 1px solid var(--rio-border-soft);
+  flex-shrink: 0;
+}
+.rio-search-palette__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--rio-text-muted);
+}
+.rio-search-palette__input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: var(--rio-fs-lg);
+  color: var(--rio-text-strong);
+}
+.rio-search-palette__input::placeholder {
+  color: var(--rio-text-muted);
+}
+
+/* ---- Results list ---------------------------------------------- */
+
+.rio-search-palette__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--rio-s2);
+  overflow-y: auto;
+  flex: 1;
+}
+.rio-search-palette__group + .rio-search-palette__group {
+  margin-top: var(--rio-s2);
+}
+.rio-search-palette__group-label {
+  display: block;
+  padding: var(--rio-s2) var(--rio-s3) var(--rio-s1);
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--rio-tracking-allcaps);
+  color: var(--rio-text-muted);
+}
+.rio-search-palette__result {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rio-s3);
+  padding: var(--rio-s2) var(--rio-s3);
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.rio-search-palette__result:hover,
+.rio-search-palette__result.is-selected {
+  background: rgb(var(--rio-accent-rgb) / 0.10);
+  color: var(--rio-text-strong);
+}
+.rio-search-palette__result-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rio-search-palette__result-meta {
+  flex-shrink: 0;
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-muted);
+}
+
+/* ---- Empty / hint states --------------------------------------- */
+
+.rio-search-palette__empty {
+  padding: var(--rio-s5) var(--rio-s4);
+  color: var(--rio-text-muted);
+  text-align: center;
+  font-size: var(--rio-fs-sm);
+}
+
+/* ---- Footer hint strip ----------------------------------------- */
+
+.rio-search-palette__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--rio-s3);
+  padding: var(--rio-s2) var(--rio-s4);
+  border-top: 1px solid var(--rio-border-soft);
+  background: var(--rio-surface-2);
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-muted);
+  flex-shrink: 0;
+}
+.rio-search-palette__footer-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s1);
+}
+.rio-search-palette__footer-kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  font-family: var(--rio-font-mono);
+  font-size: 11px;
+  border: 1px solid var(--rio-border);
+  border-radius: 3px;
+  background: var(--rio-surface);
+  color: var(--rio-text-muted);
+}
