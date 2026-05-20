@@ -188,6 +188,55 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio group show --name <name>` CLI subcommand.**
+  Operational symmetry with `rustio user perms`: that command
+  answers "what can this user do?"; this one answers "who has
+  access via this group, and what does membership grant?".
+  Currently the only way to see a group's profile + members
+  + permissions in one place was to read three tables by
+  hand and join them mentally.
+  - **Output:**
+    ```
+    Group:        Editors
+    ID:           3
+    Description:  Content reviewers
+
+    Members (2):
+      alice@example.test            editor          active
+      bob@example.test              user            inactive
+
+    Permissions granted via this group (3):
+      posts.add_post
+      posts.change_post
+      posts.view_post
+    ```
+    The member email column auto-widens to the longest
+    address in the batch so the role / active columns
+    stay aligned across rows.
+  - **Active flag is surfaced** alongside role: an inactive
+    member is still *in* the group, but every
+    `check_permission` denies for them. Pairing the two on
+    one line saves operators from cross-referencing.
+  - **`(none)` markers** in every section so empty groups,
+    empty descriptions, and groups with no permission
+    grants don't render as bare blank space.
+  - **Unknown group hard-errors** (`error: no group named
+    nonexistent`) rather than silently printing an empty
+    report — same convention as `user perms`.
+  - **Pure formatter** `format_group_show` factored out so
+    the six unit tests cover the rendering layer without a
+    Postgres pool: empty group `(none)` markers, empty
+    description marker, member role + active status
+    rendering, permissions listing with count prefix,
+    email-column auto-widening on mixed-width batches, and
+    members-but-no-permissions composition.
+  - **Live-verified** against the clinic-appointments DB:
+    `rustio group show --name editors` (which has one
+    administrator member and 8 perm grants) →
+    full report including all 8 permission names;
+    `rustio group show --name nonexistent` →
+    clean `error:` line.
+
 - **`rustio audit tail` CLI subcommand.** Operator-facing
   read surface for the `rustio_admin_actions` table —
   sibling to the framework's HTML `/admin/history` page,
