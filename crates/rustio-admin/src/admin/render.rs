@@ -461,7 +461,7 @@ pub(crate) fn dashboard_ctx(
 fn greeting_from_email(email: &str) -> String {
     let local = email.split('@').next().unwrap_or(email);
     let cleaned: String = local
-        .split(|c: char| c == '.' || c == '_' || c == '-')
+        .split(['.', '_', '-'])
         .filter(|s| !s.is_empty())
         .map(capitalise)
         .collect::<Vec<_>>()

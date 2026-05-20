@@ -1353,8 +1353,7 @@ pub(crate) async fn do_admin_revoke_one_session(
         if let Err(e) = audit::record(&ctx.db, entry).await {
             log::error!(
                 target: "rustio_admin::sessions::admin_revoke_one",
-                "audit::record failed for session_id={} target_user_id={}: {}",
-                revoked_id, target_user_id, e,
+                "audit::record failed for session_id={revoked_id} target_user_id={target_user_id}: {e}",
             );
         }
     }
