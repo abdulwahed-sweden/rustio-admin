@@ -188,6 +188,75 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio user perms --email <email>` CLI subcommand.**
+  Operational debugging surface for the question "why can't
+  user X see model Y?" Without this command, the only way to
+  introspect a user's effective permission set was to read
+  the `rustio_user_permissions`, `rustio_group_permissions`,
+  and `rustio_user_groups` tables by hand and compute the
+  union in your head.
+  - **Report shape:**
+    ```
+    User:      alice@example.test
+    ID:        42
+    Role:      editor
+    Active:    yes
+
+    Groups:
+      Editors
+      Reviewers
+
+    Direct permissions (rustio_user_permissions):
+      posts.delete_post
+
+    Group permissions (inherited via memberships):
+      via "Editors":
+        posts.change_post
+        posts.view_post
+      via "Reviewers":
+        comments.view_comment
+
+    Effective permissions (what check_permission honours):
+      comments.view_comment
+      posts.change_post
+      posts.delete_post
+      posts.view_post
+      (4 total)
+    ```
+  - **Role-bypass aware:** for `Administrator` and `Developer`
+    (the roles `bypasses_group_checks()` is `true` for), the
+    `Role:` line carries a `(bypasses group checks)` suffix
+    and the effective block collapses to the marker
+    `★ all permissions (role bypasses group checks) ★` —
+    matching what `check_permission` actually does at the
+    runtime. Direct + group grants are still printed above
+    for transparency (an admin with unusual extra grants
+    should be visible during a role-change audit).
+  - **Inactive-user aware:** an inactive user fails every
+    `check_permission` regardless of grants; the report
+    surfaces this with `Active: no — every check_permission
+    call denies` and an effective-block marker
+    `(none — user is inactive, every check denies)`. Direct
+    grants still print for transparency.
+  - **Pure formatter** factored out as `format_perms_report`
+    so the printing layer is unit-testable without a
+    Postgres pool. Seven new tests cover: admin-bypass
+    marker, inactive-deny marker, empty-user `(none)`
+    markers, effective-set union + dedup across direct +
+    multiple groups (`posts.view_post` granted via direct
+    *and* a group appears once in `effective_perms()`), demo
+    flag rendering, admin-with-grants transparency, and
+    `effective_perms` cross-group dedup.
+  - **Live-verified** against the clinic-appointments DB:
+    `rustio user perms --email smoke@local` (administrator
+    with `editors` group membership) → bypass marker plus
+    full group-perm listing; `rustio user perms --email
+    nobody@example.test` (missing user) → `error: no user
+    with email nobody@example.test`;
+    `rustio user perms --email clinic-smoke@example.test`
+    (developer, no groups) → bypass marker plus `(none)`
+    on every other section.
+
 - **`GET /admin/healthz` — public liveness/readiness probe.**
   Unauthenticated by design — load balancers, k8s probes, and
   uptime checkers don't carry session cookies. Returns a small

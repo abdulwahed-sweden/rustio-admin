@@ -82,6 +82,16 @@ pub enum Action {
     },
     /// List every user with id / email / role / active flag.
     List,
+    /// Report a user's effective permissions: role, group
+    /// memberships, direct grants, group-inherited grants, and the
+    /// effective set the runtime's `check_permission` honours.
+    /// Operational: useful for debugging "why can't user X see
+    /// model Y" without reading the `rustio_user_permissions` /
+    /// `rustio_group_permissions` tables by hand.
+    Perms {
+        #[arg(long)]
+        email: String,
+    },
     /// Set the role on an existing user.
     Role {
         #[arg(long)]
@@ -234,6 +244,7 @@ pub async fn run(action: Action) -> Result<(), String> {
             .await
         }
         Action::List => list(db).await,
+        Action::Perms { email } => perms(db, email).await,
         Action::Role { email, role } => set_role(db, email, role.into()).await,
         Action::Delete { email } => delete(db, email).await,
         Action::ResetPassword {
@@ -364,6 +375,210 @@ async fn list(db: Db) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+/// Structured snapshot of a user's permission state, returned by the
+/// DB-fetching layer and consumed by the pure formatter. The two
+/// layers are split so [`format_perms_report`] is unit-testable
+/// without spinning up a Postgres pool.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PermsReport {
+    email: String,
+    id: i64,
+    role_label: String,
+    is_active: bool,
+    is_demo: bool,
+    bypasses_group_checks: bool,
+    /// Group names the user belongs to, sorted alphabetically.
+    groups: Vec<String>,
+    /// Permissions granted directly to the user via
+    /// `rustio_user_permissions`. Sorted.
+    direct_perms: Vec<String>,
+    /// Per-group permission grants. `(group_name, [perm, …])`.
+    /// Groups appear in the same alphabetical order as `groups`.
+    group_perms_by_group: Vec<(String, Vec<String>)>,
+}
+
+impl PermsReport {
+    /// Union of direct + group-inherited permissions — the set the
+    /// runtime's `check_permission` honours for non-bypassing roles.
+    fn effective_perms(&self) -> Vec<String> {
+        use std::collections::BTreeSet;
+        let mut set: BTreeSet<String> = BTreeSet::new();
+        set.extend(self.direct_perms.iter().cloned());
+        for (_, perms) in &self.group_perms_by_group {
+            set.extend(perms.iter().cloned());
+        }
+        set.into_iter().collect()
+    }
+}
+
+async fn perms(db: Db, email: String) -> Result<(), String> {
+    let user = auth::find_user_by_email(&db, &email)
+        .await
+        .map_err(|e| format!("lookup: {e}"))?
+        .ok_or_else(|| format!("no user with email {email}"))?;
+
+    let groups = sqlx::query(
+        "SELECT g.name
+           FROM rustio_groups g
+           JOIN rustio_user_groups ug ON ug.group_id = g.id
+          WHERE ug.user_id = $1
+          ORDER BY g.name",
+    )
+    .bind(user.id)
+    .fetch_all(db.pool())
+    .await
+    .map_err(|e| format!("groups query: {e}"))?;
+
+    let direct = sqlx::query(
+        "SELECT p.name
+           FROM rustio_permissions p
+           JOIN rustio_user_permissions up ON up.permission_id = p.id
+          WHERE up.user_id = $1
+          ORDER BY p.name",
+    )
+    .bind(user.id)
+    .fetch_all(db.pool())
+    .await
+    .map_err(|e| format!("direct-perms query: {e}"))?;
+
+    let group_pairs = sqlx::query(
+        "SELECT g.name AS group_name, p.name AS perm_name
+           FROM rustio_permissions p
+           JOIN rustio_group_permissions gp ON gp.permission_id = p.id
+           JOIN rustio_groups g ON g.id = gp.group_id
+           JOIN rustio_user_groups ug ON ug.group_id = gp.group_id
+          WHERE ug.user_id = $1
+          ORDER BY g.name, p.name",
+    )
+    .bind(user.id)
+    .fetch_all(db.pool())
+    .await
+    .map_err(|e| format!("group-perms query: {e}"))?;
+
+    let groups: Vec<String> = groups
+        .into_iter()
+        .filter_map(|r| r.try_get::<String, _>("name").ok())
+        .collect();
+    let direct_perms: Vec<String> = direct
+        .into_iter()
+        .filter_map(|r| r.try_get::<String, _>("name").ok())
+        .collect();
+
+    // Bucket group_pairs into Vec<(group, Vec<perm>)>. The SQL is
+    // already sorted by group then perm so we can fold in O(n)
+    // without re-sorting.
+    let mut group_perms_by_group: Vec<(String, Vec<String>)> = Vec::new();
+    for row in group_pairs {
+        let g: String = row.try_get("group_name").unwrap_or_default();
+        let p: String = row.try_get("perm_name").unwrap_or_default();
+        match group_perms_by_group.last_mut() {
+            Some((last, perms)) if last == &g => perms.push(p),
+            _ => group_perms_by_group.push((g, vec![p])),
+        }
+    }
+
+    let report = PermsReport {
+        email: user.email,
+        id: user.id,
+        role_label: user.role.label().to_string(),
+        is_active: user.is_active,
+        is_demo: user.is_demo,
+        bypasses_group_checks: user.role.bypasses_group_checks(),
+        groups,
+        direct_perms,
+        group_perms_by_group,
+    };
+    print!("{}", format_perms_report(&report));
+    Ok(())
+}
+
+/// Render the report as a human-readable block. Pure function — no
+/// IO, no clock, no DB — so the unit tests can hand it synthetic
+/// reports and assert exact output. The DB layer above builds the
+/// report and prints what this returns.
+fn format_perms_report(r: &PermsReport) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::new();
+    let _ = writeln!(out, "User:      {}", r.email);
+    let _ = writeln!(out, "ID:        {}", r.id);
+    let role_line = if r.bypasses_group_checks {
+        format!("{} (bypasses group checks)", r.role_label)
+    } else {
+        r.role_label.clone()
+    };
+    let _ = writeln!(out, "Role:      {role_line}");
+    let _ = writeln!(
+        out,
+        "Active:    {}",
+        if r.is_active { "yes" } else { "no — every check_permission call denies" }
+    );
+    if r.is_demo {
+        let _ = writeln!(out, "Demo:      yes");
+    }
+    out.push('\n');
+
+    let _ = writeln!(out, "Groups:");
+    if r.groups.is_empty() {
+        let _ = writeln!(out, "  (none)");
+    } else {
+        for g in &r.groups {
+            let _ = writeln!(out, "  {g}");
+        }
+    }
+    out.push('\n');
+
+    let _ = writeln!(out, "Direct permissions (rustio_user_permissions):");
+    if r.direct_perms.is_empty() {
+        let _ = writeln!(out, "  (none)");
+    } else {
+        for p in &r.direct_perms {
+            let _ = writeln!(out, "  {p}");
+        }
+    }
+    out.push('\n');
+
+    let _ = writeln!(out, "Group permissions (inherited via memberships):");
+    if r.group_perms_by_group.is_empty() {
+        let _ = writeln!(out, "  (none)");
+    } else {
+        for (g, perms) in &r.group_perms_by_group {
+            let _ = writeln!(out, "  via \"{g}\":");
+            for p in perms {
+                let _ = writeln!(out, "    {p}");
+            }
+        }
+    }
+    out.push('\n');
+
+    let _ = writeln!(
+        out,
+        "Effective permissions (what check_permission honours):"
+    );
+    if r.bypasses_group_checks {
+        // The role bypasses the M2M lookup entirely — direct and
+        // group grants are still listed above for transparency,
+        // but the runtime treats this user as having every
+        // permission regardless of the lookup result.
+        let _ = writeln!(out, "  ★ all permissions (role bypasses group checks) ★");
+    } else if !r.is_active {
+        // Inactive users always deny; surface this prominently
+        // since direct + group grants above might otherwise
+        // mislead the operator.
+        let _ = writeln!(out, "  (none — user is inactive, every check denies)");
+    } else {
+        let eff = r.effective_perms();
+        if eff.is_empty() {
+            let _ = writeln!(out, "  (none)");
+        } else {
+            for p in &eff {
+                let _ = writeln!(out, "  {p}");
+            }
+            let _ = writeln!(out, "  ({} total)", eff.len());
+        }
+    }
+    out
 }
 
 async fn set_role(db: Db, email: String, role: Role) -> Result<(), String> {
@@ -931,7 +1146,134 @@ fn build_summary(op: &str, reason: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::build_summary;
+    use super::{build_summary, format_perms_report, PermsReport};
+
+    fn base_report() -> PermsReport {
+        PermsReport {
+            email: "alice@example.test".into(),
+            id: 42,
+            role_label: "user".into(),
+            is_active: true,
+            is_demo: false,
+            bypasses_group_checks: false,
+            groups: vec![],
+            direct_perms: vec![],
+            group_perms_by_group: vec![],
+        }
+    }
+
+    #[test]
+    fn perms_report_admin_bypass_shows_all_permissions_marker() {
+        let r = PermsReport {
+            role_label: "administrator".into(),
+            bypasses_group_checks: true,
+            ..base_report()
+        };
+        let out = format_perms_report(&r);
+        assert!(out.contains("administrator (bypasses group checks)"));
+        assert!(out.contains("★ all permissions (role bypasses group checks) ★"));
+    }
+
+    #[test]
+    fn perms_report_inactive_user_shows_deny_marker() {
+        // Even if direct grants exist, an inactive user fails
+        // every check_permission. The report must surface this.
+        let r = PermsReport {
+            is_active: false,
+            direct_perms: vec!["posts.view_post".into()],
+            ..base_report()
+        };
+        let out = format_perms_report(&r);
+        assert!(out.contains("Active:    no — every check_permission call denies"));
+        assert!(out.contains("(none — user is inactive, every check denies)"));
+        // Direct grants are still printed above the effective
+        // section for transparency.
+        assert!(out.contains("posts.view_post"));
+    }
+
+    #[test]
+    fn perms_report_empty_user_uses_none_markers() {
+        // A freshly-created user with role=user, no groups,
+        // no direct grants. Every section should read "(none)".
+        let r = base_report();
+        let out = format_perms_report(&r);
+        assert!(out.contains("Groups:\n  (none)"));
+        assert!(out.contains("Direct permissions (rustio_user_permissions):\n  (none)"));
+        assert!(out.contains("Group permissions (inherited via memberships):\n  (none)"));
+        assert!(out.contains("Effective permissions (what check_permission honours):\n  (none)"));
+    }
+
+    #[test]
+    fn perms_report_effective_unions_direct_and_group() {
+        let r = PermsReport {
+            groups: vec!["Editors".into()],
+            direct_perms: vec!["posts.view_post".into()],
+            group_perms_by_group: vec![(
+                "Editors".into(),
+                vec!["posts.change_post".into(), "posts.view_post".into()],
+            )],
+            ..base_report()
+        };
+        let out = format_perms_report(&r);
+        // Direct + group-section bookkeeping.
+        assert!(out.contains("Groups:\n  Editors"));
+        assert!(out.contains("Direct permissions"));
+        assert!(out.contains("  posts.view_post"));
+        assert!(out.contains("  via \"Editors\":"));
+        assert!(out.contains("    posts.change_post"));
+        // Effective is the deduped union — view_post appears in
+        // both halves; the effective listing has it ONCE.
+        let effective_block = out
+            .split_once("Effective permissions")
+            .expect("effective section exists")
+            .1;
+        assert_eq!(effective_block.matches("posts.view_post").count(), 1);
+        assert!(effective_block.contains("posts.change_post"));
+        assert!(effective_block.contains("(2 total)"));
+    }
+
+    #[test]
+    fn perms_report_admin_with_grants_still_lists_them_for_transparency() {
+        // An administrator might also have direct grants (unusual
+        // but legal). The grants must be visible in the report
+        // even though the effective set collapses to "all
+        // permissions" via bypass. Operators auditing role
+        // changes need to see what's there.
+        let r = PermsReport {
+            role_label: "administrator".into(),
+            bypasses_group_checks: true,
+            direct_perms: vec!["posts.delete_post".into()],
+            ..base_report()
+        };
+        let out = format_perms_report(&r);
+        assert!(out.contains("  posts.delete_post"));
+        assert!(out.contains("★ all permissions"));
+    }
+
+    #[test]
+    fn perms_report_demo_user_shows_demo_marker() {
+        let r = PermsReport {
+            is_demo: true,
+            ..base_report()
+        };
+        let out = format_perms_report(&r);
+        assert!(out.contains("Demo:      yes"));
+    }
+
+    #[test]
+    fn effective_perms_deduplicates_across_groups() {
+        // Same permission granted via two different groups
+        // should appear ONCE in the effective set.
+        let r = PermsReport {
+            group_perms_by_group: vec![
+                ("Editors".into(), vec!["posts.view_post".into()]),
+                ("Reviewers".into(), vec!["posts.view_post".into()]),
+            ],
+            ..base_report()
+        };
+        let eff = r.effective_perms();
+        assert_eq!(eff, vec!["posts.view_post".to_string()]);
+    }
 
     #[test]
     fn summary_short_reason_pass_through() {
