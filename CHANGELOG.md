@@ -188,6 +188,52 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio audit tail --since <duration>` time-window filter.**
+  Extends the audit tail subcommand shipped two commits ago
+  with time-based filtering. Operators investigating an
+  incident now phrase the query in real-world terms ("what
+  happened in the last hour?") instead of guessing a row
+  count.
+  - **Format:** `<N><unit>` where unit is `s` / `m` / `h`
+    / `d`. Examples: `30s`, `15m`, `2h`, `7d`. Composes with
+    `--user` and `--model`: each filter intersects.
+  - **Loud on typos.** A malformed duration hard-errors:
+    ```
+    $ rustio audit tail --since 1hr
+    error: --since: cannot parse leading number from "1hr"
+    (expected e.g. 30s, 15m, 2h, 7d)
+    ```
+    Silently treating a typo as "no filter applied" would
+    mask an incident-response query, so the parser refuses
+    to fall back. Unknown units (`5x`), non-numeric leads,
+    negative durations all surface the same way.
+  - **Implementation:**
+    - New `parse_since_cutoff(raw, now) -> Result<DateTime>`
+      pure parser. `now` is injected so unit tests pin a
+      fixed clock.
+    - `tail()`'s WHERE-clause builder switched from a
+      fixed-combination match to an iterative builder that
+      walks `[user_id, model, since_ts]` and appends each
+      `$N` placeholder in the order it gets bound. Scales
+      to N optional filters; the previous match was already
+      at the limit of what fit with three filters.
+    - SQL adds `a.timestamp >= $N` to the WHERE conjunction
+      when `--since` is set. The cutoff timestamp is
+      computed Rust-side (`now - parsed_duration`) and bound
+      as a parameter — no string-formatted `INTERVAL` lit.
+  - **Five new unit tests** on `parse_since_cutoff`:
+    accepts s / m / h / d units, rejects empty / malformed /
+    unknown-unit / negative inputs, trims whitespace,
+    treats `0s` as a valid edge case (cutoff == now). Live-
+    verified against clinic-appointments DB:
+    `--since 1h` (no rows in the last hour given seeded
+    timestamps) → `(no audit rows)`;
+    `--since 30s` → same;
+    `--since 1hr` → typo error message;
+    `--user smoke@local --since 1d --limit 3` → 3 most-
+    recent login events for that user in the last day,
+    confirming filter composition.
+
 - **`rustio group show --name <name>` CLI subcommand.**
   Operational symmetry with `rustio user perms`: that command
   answers "what can this user do?"; this one answers "who has
