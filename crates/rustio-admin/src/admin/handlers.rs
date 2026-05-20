@@ -1407,8 +1407,20 @@ pub(crate) async fn show_object_json(
     id: i64,
     req: &Request,
 ) -> Result<Response> {
-    let entry = find_project_entry(&ctx.admin, admin_name)?;
-    if !super::json_api::wants_json(req) {
+    // Capture the negotiation decision once, up front. Both the
+    // "unknown model" lookup below and the row fetch can fail —
+    // when the client asked for JSON, those failures should
+    // also serialise as JSON envelopes, not as the framework's
+    // default HTML error page.
+    let wants_json = super::json_api::wants_json(req);
+
+    let entry = match find_project_entry(&ctx.admin, admin_name) {
+        Ok(e) => e,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
+
+    if !wants_json {
         // Send the caller to the form view. Browsers visiting
         // `/admin/<model>/<id>` directly land where they expect.
         return Ok(Response::redirect(format!(
@@ -1416,11 +1428,16 @@ pub(crate) async fn show_object_json(
             entry.admin_name, id
         )));
     }
-    let row = entry
-        .ops
-        .find_row(&ctx.db, id)
-        .await?
-        .ok_or_else(|| Error::NotFound(format!("{admin_name}/{id}")))?;
+
+    let row = match entry.ops.find_row(&ctx.db, id).await {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return Ok(super::json_api::json_error(Error::NotFound(format!(
+                "{admin_name}/{id}"
+            ))));
+        }
+        Err(e) => return Ok(super::json_api::json_error(e)),
+    };
     let obj = super::json_api::detail_envelope(entry, row);
     super::json_api::json_response(obj)
 }

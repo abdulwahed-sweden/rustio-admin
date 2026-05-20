@@ -118,6 +118,50 @@ leaves the alpha track.
 
 ### Added
 
+- **JSON error envelopes on the JSON detail endpoint.** Closes
+  a sharp edge in the read-only JSON API shipped two commits
+  ago: a client hitting `GET /admin/<model>/<missing-id>` with
+  `Accept: application/json` (or `?format=json`) was getting
+  the framework's HTML 404 page back, breaking the JSON
+  response-shape contract. Now the same path returns a typed
+  JSON envelope at the right HTTP status:
+  ```
+  HTTP/1.1 404 Not Found
+  Content-Type: application/json
+
+  {"error": "<message>", "status": 404}
+  ```
+  - **New helper** `json_api::json_error(Error) -> Response`
+    maps every `Error` variant to its declared HTTP status
+    (`Error::status()`) and uses `Error::client_message()` for
+    the body so the framework's 500-redaction policy carries
+    over — internal-error detail stays in logs, the envelope
+    sees a generic "Internal Server Error".
+  - **`show_object_json`** now captures the `wants_json`
+    decision once at the top of the handler and threads it
+    through both the model-lookup and row-fetch error paths,
+    so any error that escapes those calls renders as JSON
+    when the client wanted JSON. Browsers hitting the same URL
+    without `Accept` still get the existing 303 redirect to
+    `/admin/<model>/<id>/edit` — no change to the HTML UI.
+  - **Four unit tests** on the envelope shape: content-type +
+    status code carry-through, body-shape `{error, status}`,
+    redaction of `Internal` error detail, and a status-mapping
+    sweep covering every `Error` variant so a future variant
+    can't silently slip through. Live-verified against
+    clinic-appointments: `GET /admin/clinics/99999` with
+    `Accept: application/json` → `404 application/json
+    {"error":"clinics/99999","status":404}`; same with
+    `?format=json`; browser default → unchanged `303 → /edit`;
+    `GET /admin/clinics/1` JSON-OK path → unchanged.
+  - **Scope note:** the list endpoint's JSON branch is left
+    untouched. The only error path before the JSON
+    short-circuit there is a DB `Error::Internal` on
+    `ops.list()`, which is rare and lower-leverage than the
+    detail-endpoint 404. JSON error coverage for the list
+    endpoint, and for middleware-level 401/403 redirects on
+    JSON clients, is a separate follow-up.
+
 - **CSV export on the list endpoint** (`?format=csv` or
   `Accept: text/csv`). Sibling of the JSON read surface — same
   routes, same auth gate, same filter / search / sort /
