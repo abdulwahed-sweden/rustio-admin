@@ -12,11 +12,13 @@
   gap: var(--rio-s4);
   padding: 0 var(--rio-s5);
   height: var(--rio-topbar-h);
-  /* v0.15: chrome tier (Principle 10). Topbar carries weight —
-   * deeper than card surface, lighter than page canvas, with a
-   * distinct bottom border so the seam between chrome and content
-   * is unambiguous. */
-  background: var(--rio-surface-chrome);
+  /* Light topbar on the light page canvas. `--rio-surface`
+   * (`#F9FAFB`) sits slightly above `--rio-bg` (`#E5E7EB`) so the
+   * topbar still reads as a distinct strip — GitHub / Vercel /
+   * Linear convention. The bottom border carries the seam between
+   * chrome and content; the deep-slate weight in the layout comes
+   * from the sidebar, not the topbar. */
+  background: var(--rio-surface);
   border-bottom: 1px solid var(--rio-border);
   position: sticky;
   top: 0;

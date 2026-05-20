@@ -1,49 +1,183 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<header class="rio-page-header">
-  <h1>{{ index_title }}</h1>
+
+{# ---- Welcome header --------------------------------------------
+ # Friendly greeting + page title in one row. The greeting reads
+ # the identity email's local part (capitalised) so a long
+ # address doesn't dominate the header. The deck below pairs the
+ # framework's product name with the project app_name. #}
+<header class="rio-dashboard-greeting">
+  <div class="rio-dashboard-greeting__text">
+    <p class="rio-dashboard-greeting__hello">Hello, <strong>{{ greeting_name }}</strong> 👋</p>
+    <h1 class="rio-dashboard-greeting__title">{{ index_title }}</h1>
+    <p class="rio-dashboard-greeting__deck">Manage <strong>{{ app_name }}</strong> from one console.</p>
+  </div>
+  <div class="rio-dashboard-greeting__badges">
+    <span class="rio-dashboard-greeting__env rio-dashboard-greeting__env--{{ environment_kind }}">{{ environment_label }}</span>
+    <span class="rio-dashboard-greeting__ver">v{{ framework_version }}</span>
+  </div>
 </header>
 
-{% if apps %}
-{% for app in apps %}
-<section class="rio-card rio-app">
-  <h2 class="rio-app-label">{{ app.label }}</h2>
-  <table class="rio-table rio-app-models">
-    <tbody>
-      {% for model in app.models %}
-      <tr>
-        <th scope="row"><a href="/admin/{{ model.admin_name }}">{{ model.display_name }}</a></th>
-        <td class="rio-app-models__count"><span class="rio-meta" title="Planner row estimate (pg_class.reltuples); refreshed by ANALYZE, not every INSERT.">~ {{ model.row_estimate }}</span></td>
-        <td>{% if not read_only %}<a class="rio-button rio-button--ghost" href="/admin/{{ model.admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add</a>{% endif %}</td>
-        <td><a class="rio-button rio-button--ghost" href="/admin/{{ model.admin_name }}">{{ icon("table", class="rio-icon") }} View</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{# ---- Stats strip — four pastel tiles ---------------------------
+ # Each pulls a number from the dashboard context. Tints use the
+ # framework's semantic `-bg` tokens so colour stays WCAG-aligned. #}
+<section class="rio-dashboard-stats" aria-label="At a glance">
+  <article class="rio-stat rio-stat--info">
+    <p class="rio-stat__label">Registered models</p>
+    <p class="rio-stat__value">{{ total_models }}</p>
+    <p class="rio-stat__meta">Across {{ apps|length }} app{% if apps|length != 1 %}s{% endif %}</p>
+  </article>
+  <article class="rio-stat rio-stat--success">
+    <p class="rio-stat__label">Total rows</p>
+    <p class="rio-stat__value">{{ total_rows }}</p>
+    <p class="rio-stat__meta">approx. (pg_class stats)</p>
+  </article>
+  <article class="rio-stat rio-stat--warning">
+    <p class="rio-stat__label">Recent activity</p>
+    <p class="rio-stat__value">{{ recent_actions_count }}</p>
+    <p class="rio-stat__meta">latest events</p>
+  </article>
+  <article class="rio-stat rio-stat--accent">
+    <p class="rio-stat__label">Environment</p>
+    <p class="rio-stat__value rio-stat__value--text">{{ environment_label }}</p>
+    <p class="rio-stat__meta">RustIO v{{ framework_version }}</p>
+  </article>
 </section>
-{% endfor %}
-{% else %}
-<section class="rio-card rio-empty">
-  <p>No models registered yet. Call <code>Admin::new().model::&lt;YourModel&gt;()</code> in your <code>main.rs</code>.</p>
-</section>
-{% endif %}
 
-<section class="rio-card rio-recent">
-  <h2>Recent actions</h2>
-  {% if recent_actions %}
-  <ul class="rio-timeline">
-    {% for a in recent_actions %}
-    <li class="rio-timeline-item">
-      <span class="rio-pill rio-pill--{{ a.pill_class }}">{{ a.label }}</span>
-      <a href="/admin/{{ a.model_name }}">{{ a.model_name }}</a>
-      #<a href="/admin/{{ a.model_name }}/{{ a.object_id }}/edit">{{ a.object_id }}</a>
-      {% if a.summary %}— {{ a.summary }}{% endif %}
-      <span class="rio-meta">{{ a.user_email }} · {{ a.when_relative }}</span>
-    </li>
+{# ---- Flat model grid ------------------------------------------
+ # Every registered project model in one CSS-grid. Tiles tile
+ # horizontally on wide screens (3-4 columns), collapse gracefully
+ # on narrow. Each tile cycles through four accent palettes via
+ # `:nth-child` so the grid has visual rhythm. The app label
+ # surfaces as a subtle chip when the project has more than one
+ # app group (avoids redundancy when every model IS its own app). #}
+<section class="rio-dashboard-models" aria-label="Browse data">
+  <header class="rio-dashboard-section-head">
+    <h2 class="rio-dashboard-section-label">Browse data</h2>
+    <span class="rio-dashboard-section-count">{{ total_models }} model{% if total_models != 1 %}s{% endif %} · {{ total_rows }} row{% if total_rows != 1 %}s{% endif %} total</span>
+  </header>
+  {% if apps %}
+  <div class="rio-model-grid">
+    {% for app in apps %}
+      {% for model in app.models %}
+      <article class="rio-model-tile">
+        {# Only show the app-group chip when it adds information —
+         # i.e. when the app label differs from the model title.
+         # In a project where every model is its own app (no `.`
+         # in admin_name) the chip would just duplicate the title. #}
+        {% if app.label != model.display_name %}
+        <span class="rio-model-tile__app" title="App group">{{ app.label }}</span>
+        {% endif %}
+        <a class="rio-model-tile__title-link" href="/admin/{{ model.admin_name }}">
+          <h3 class="rio-model-tile__title">{{ model.display_name }}</h3>
+        </a>
+        <p class="rio-model-tile__stat">
+          <span class="rio-model-tile__stat-num">{{ model.row_estimate }}</span>
+          <span class="rio-model-tile__stat-suffix">{% if model.row_estimate == 1 %}row{% else %}rows{% endif %}</span>
+        </p>
+        <p class="rio-model-tile__meta" title="Approximate — from pg_class.reltuples, refreshed by ANALYZE">
+          {{ model.field_count }} field{% if model.field_count != 1 %}s{% endif %} · approx. count
+        </p>
+        <div class="rio-model-tile__actions">
+          <a class="rio-button rio-button--ghost rio-button--sm" href="/admin/{{ model.admin_name }}">
+            {{ icon("table", class="rio-icon") }} Browse
+          </a>
+          {% if not read_only %}
+          <a class="rio-button rio-button--ghost rio-button--sm" href="/admin/{{ model.admin_name }}/new">
+            {{ icon("plus", class="rio-icon") }} Add
+          </a>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
     {% endfor %}
-  </ul>
+  </div>
   {% else %}
-  <p class="rio-meta">No actions yet.</p>
+  <p class="rio-card rio-empty">
+    No models registered yet. Call <code>Admin::new().model::&lt;YourModel&gt;()</code> in your <code>main.rs</code>.
+  </p>
   {% endif %}
 </section>
+
+{# ---- Two-column split: activity + framework tools --------------
+ # Wide screens: activity 2/3 left, tools 1/3 right.
+ # Narrow: stacks. The Framework Tools card gates each link by the
+ # operator's role — Administrator-only items hide for Staff. #}
+<div class="rio-dashboard-split">
+
+  <section class="rio-dashboard-activity">
+    <header class="rio-dashboard-section-head">
+      <h2 class="rio-dashboard-section-label">Recent activity</h2>
+      {% if recent_actions %}
+      <a class="rio-dashboard-section-link" href="/admin/history">View full history →</a>
+      {% endif %}
+    </header>
+    {% if recent_actions %}
+    <ul class="rio-activity-feed">
+      {% for a in recent_actions %}
+      <li class="rio-activity-feed__item">
+        <span class="rio-pill rio-pill--{{ a.pill_class }}">{{ a.label }}</span>
+        <span class="rio-activity-feed__target">
+          <a href="/admin/{{ a.model_name }}">{{ a.model_name }}</a>
+          <span class="rio-activity-feed__sep" aria-hidden="true">·</span>
+          #<a href="/admin/{{ a.model_name }}/{{ a.object_id }}/edit">{{ a.object_id }}</a>
+        </span>
+        {% if a.summary %}<span class="rio-activity-feed__summary">{{ a.summary }}</span>{% endif %}
+        <span class="rio-activity-feed__meta">{{ a.user_email }} · {{ a.when_relative }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="rio-card rio-empty">No actions yet — once operators start creating, editing, or deleting rows, the feed lights up here.</p>
+    {% endif %}
+  </section>
+
+  <aside class="rio-dashboard-tools" aria-label="Framework tools">
+    <header class="rio-dashboard-section-head">
+      <h2 class="rio-dashboard-section-label">Framework tools</h2>
+    </header>
+    <ul class="rio-tool-list">
+      <li><a class="rio-tool-link" href="/admin/history">
+        {{ icon("clock", class="rio-tool-link__icon") }}
+        <span class="rio-tool-link__text">
+          <strong>Audit log</strong>
+          <span>Full history of every authority mutation.</span>
+        </span>
+      </a></li>
+      {% if identity.is_admin %}
+      <li><a class="rio-tool-link" href="/admin/users">
+        {{ icon("users", class="rio-tool-link__icon") }}
+        <span class="rio-tool-link__text">
+          <strong>Users</strong>
+          <span>Create, role-shift, lock, or recover operator accounts.</span>
+        </span>
+      </a></li>
+      <li><a class="rio-tool-link" href="/admin/groups">
+        {{ icon("key", class="rio-tool-link__icon") }}
+        <span class="rio-tool-link__text">
+          <strong>Groups &amp; permissions</strong>
+          <span>Bundle perms into reusable groups; assign by role.</span>
+        </span>
+      </a></li>
+      {% endif %}
+      {% if identity.is_developer %}
+      <li><a class="rio-tool-link" href="/admin/db">
+        {{ icon("database", class="rio-tool-link__icon") }}
+        <span class="rio-tool-link__text">
+          <strong>Database explorer</strong>
+          <span>Read-only Postgres schema view — tables, columns, indexes.</span>
+        </span>
+      </a></li>
+      {% endif %}
+      <li><a class="rio-tool-link" href="/admin/account/sessions">
+        {{ icon("log-out", class="rio-tool-link__icon") }}
+        <span class="rio-tool-link__text">
+          <strong>Your sessions</strong>
+          <span>Active sign-ins on this account; revoke from anywhere.</span>
+        </span>
+      </a></li>
+    </ul>
+  </aside>
+
+</div>
 {% endblock %}

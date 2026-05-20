@@ -53,21 +53,25 @@
 }
 
 /* ============================================================
- * v0.15.1 — chrome cascade override.
+ * Chrome cascade override (sidebar + footer).
  *
- * `--rio-surface-chrome` is the only deep-slate surface in the
- * framework — the topbar, sidebar, and footer all share it.
- * Components inside therefore need their text and sub-surface
- * tokens flipped to a light-on-dark palette.
- *
- * Rather than touching every component file, we redefine the
- * relevant tokens locally within these three parent selectors.
+ * `--rio-surface-chrome` is the deep-slate surface used by the
+ * sidebar and footer. Components inside those two regions need
+ * their text and sub-surface tokens flipped to a light-on-dark
+ * palette. Rather than touching every component file, we redefine
+ * the relevant tokens locally within the two parent selectors.
  * CSS custom properties cascade through descendants, so every
- * `var(--rio-text)`, `var(--rio-surface-2)`, etc. inside chrome
- * picks up the dark-surface values automatically.
+ * `var(--rio-text)`, `var(--rio-surface-2)`, etc. inside the
+ * sidebar / footer picks up the dark-surface values automatically.
+ *
+ * The topbar is intentionally OUT of this cascade — it uses the
+ * light `--rio-surface` token (see `layout/topbar.css`) and reads
+ * with the same dark-on-light palette as the rest of the page.
+ * GitHub / Vercel / Linear pattern: light topbar over light
+ * canvas, with the deep-slate sidebar carrying the navigation
+ * weight on the side.
  * ============================================================ */
 
-.rio-topbar,
 .rio-sidebar,
 .rio-footer {
   /* Light text on dark chrome — calibrated for #1F2A37 so it
