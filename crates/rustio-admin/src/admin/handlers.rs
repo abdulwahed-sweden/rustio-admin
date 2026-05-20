@@ -1293,6 +1293,120 @@ pub(crate) async fn lookup_model(
     Ok(Response::json_raw(body))
 }
 
+// ---- Global search palette (⌘K) ------------------------------------------
+
+/// Maximum results returned per model by the global search palette.
+const SEARCH_PER_MODEL_LIMIT: i64 = 5;
+
+/// Hard cap on total results returned by the global search palette.
+/// The palette is meant for "I know what I'm looking for"; longer
+/// hit-lists belong on the per-model list page with its full filter
+/// set.
+const SEARCH_TOTAL_LIMIT: usize = 20;
+
+/// Minimum query length the global search will run. Sub-threshold
+/// queries return an empty result set without touching the DB — a
+/// single character against N models is enough load multiplier to
+/// matter on a busy admin.
+const SEARCH_MIN_QUERY_LEN: usize = 2;
+
+#[derive(serde::Serialize)]
+struct SearchResult {
+    admin_name: String,
+    model_label: String,
+    label: String,
+    url: String,
+}
+
+#[derive(serde::Serialize)]
+struct SearchEnvelope {
+    results: Vec<SearchResult>,
+}
+
+/// Cross-model search endpoint backing the `⌘K` topbar palette.
+///
+/// `GET /admin/_search?q=<term>` returns JSON
+/// `{"results": [{"admin_name", "model_label", "label", "url"}, ...]}`,
+/// capped at [`SEARCH_TOTAL_LIMIT`] entries overall and
+/// [`SEARCH_PER_MODEL_LIMIT`] per model. Only project models with
+/// non-empty `search_fields` are queried; each is gated by the
+/// operator's `<admin_name>.view_<singular>` permission so the palette
+/// surfaces exactly what the operator could already reach via
+/// `/admin/<model>`. Core (framework-owned) entries like the synthetic
+/// User are skipped to mirror `find_project_entry`'s policy — searching
+/// users is reachable from `/admin/users` with its bespoke gate.
+///
+/// Empty term or a term shorter than [`SEARCH_MIN_QUERY_LEN`] short-
+/// circuits to an empty result set without touching the DB.
+pub(crate) async fn search_models(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    let term = req.query().get("q").unwrap_or_default().trim().to_string();
+    let mut envelope = SearchEnvelope {
+        results: Vec::new(),
+    };
+
+    if term.chars().count() < SEARCH_MIN_QUERY_LEN {
+        let body = serde_json::to_string(&envelope)
+            .map_err(|e| Error::Internal(format!("search serialize: {e}")))?;
+        return Ok(Response::json_raw(body));
+    }
+
+    for entry in ctx.admin.entries() {
+        if entry.core || entry.search_fields.is_empty() {
+            continue;
+        }
+        let perm = format!(
+            "{}.view_{}",
+            entry.admin_name,
+            entry.singular_name.to_ascii_lowercase()
+        );
+        if !auth::check_permission(&ctx.db, &identity, &perm).await? {
+            continue;
+        }
+        let page = entry
+            .ops
+            .list(
+                &ctx.db,
+                super::types::ListOpts {
+                    search: Some((
+                        term.clone(),
+                        entry.search_fields.iter().map(|s| s.to_string()).collect(),
+                    )),
+                    limit: Some(SEARCH_PER_MODEL_LIMIT),
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        let display_idx = render::pick_display_index(entry.fields, None);
+        for row in page.rows {
+            if envelope.results.len() >= SEARCH_TOTAL_LIMIT {
+                break;
+            }
+            let label = display_idx
+                .and_then(|i| row.cells.get(i).cloned())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| format!("#{}", row.id));
+            envelope.results.push(SearchResult {
+                admin_name: entry.admin_name.to_string(),
+                model_label: entry.display_name.to_string(),
+                label,
+                url: format!("/admin/{}/{}/edit", entry.admin_name, row.id),
+            });
+        }
+        if envelope.results.len() >= SEARCH_TOTAL_LIMIT {
+            break;
+        }
+    }
+
+    let body = serde_json::to_string(&envelope)
+        .map_err(|e| Error::Internal(format!("search serialize: {e}")))?;
+    Ok(Response::json_raw(body))
+}
+
 // ---- CRUD audit emission -------------------------------------------------
 
 /// Fire-and-forget audit emission for a project-model CRUD event.

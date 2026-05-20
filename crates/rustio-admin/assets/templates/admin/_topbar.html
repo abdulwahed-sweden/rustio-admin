@@ -5,6 +5,19 @@
   </button>
   {% endif %}
   <a href="/admin" class="rio-topbar-brand">{{ site_header }}</a>
+  {% if identity %}
+  {# Global ⌘K search palette trigger. The trigger sits between the
+   # brand and the nav; the modal markup lives below this header and
+   # is positioned `fixed` so DOM placement doesn't affect layout.
+   # JS in admin.js wires the button + ⌘K shortcut + keyboard nav. #}
+  <button type="button" class="rio-search-trigger" data-rio-search-trigger
+          aria-haspopup="dialog" aria-controls="rio-search-palette"
+          aria-label="Search across all models">
+    {{ icon("search", class="rio-search-trigger__icon") }}
+    <span class="rio-search-trigger__label">Search…</span>
+    <span class="rio-search-trigger__kbd" aria-hidden="true">⌘K</span>
+  </button>
+  {% endif %}
   <nav class="rio-topbar-nav" aria-label="Account">
     {% if identity %}
       <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
@@ -33,3 +46,40 @@
     {% endif %}
   </nav>
 </header>
+
+{% if identity %}
+{# Global ⌘K search palette modal. Hidden by default (aria-hidden);
+ # JS toggles aria-hidden="false" on open. The dialog is centered and
+ # dimmed via .rio-search-palette in components/search_palette.css.
+ # Backdrop click + Esc + selecting a result all close it. Empty
+ # query returns no results (server short-circuits below 2 chars). #}
+<div id="rio-search-palette" class="rio-search-palette"
+     role="dialog" aria-modal="true" aria-hidden="true"
+     aria-label="Search" data-rio-search-palette>
+  <div class="rio-search-palette__dialog" data-rio-search-palette-dialog>
+    <div class="rio-search-palette__input-wrap">
+      {{ icon("search", class="rio-search-palette__icon") }}
+      <input type="search" class="rio-search-palette__input"
+             placeholder="Search across all models…"
+             autocomplete="off" spellcheck="false"
+             data-rio-search-palette-input
+             aria-label="Search query"
+             aria-controls="rio-search-palette-results">
+    </div>
+    <ul id="rio-search-palette-results" class="rio-search-palette__list"
+        role="listbox" data-rio-search-palette-results></ul>
+    <div class="rio-search-palette__footer" aria-hidden="true">
+      <span class="rio-search-palette__footer-item">
+        <span class="rio-search-palette__footer-kbd">↑</span>
+        <span class="rio-search-palette__footer-kbd">↓</span> navigate
+      </span>
+      <span class="rio-search-palette__footer-item">
+        <span class="rio-search-palette__footer-kbd">↵</span> open
+      </span>
+      <span class="rio-search-palette__footer-item">
+        <span class="rio-search-palette__footer-kbd">esc</span> close
+      </span>
+    </div>
+  </div>
+</div>
+{% endif %}

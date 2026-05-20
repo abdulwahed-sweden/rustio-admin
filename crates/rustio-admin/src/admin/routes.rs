@@ -92,6 +92,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/components/dropdowns.css"),
     "\n",
+    include_str!("../../assets/static/admin/components/search_palette.css"),
+    "\n",
     include_str!("../../assets/static/admin/components/pagination.css"),
     "\n",
     include_str!("../../assets/static/admin/components/pills.css"),
@@ -1585,6 +1587,24 @@ pub fn register_admin_routes(
             match perm_guard(&c, &req, &perm).await? {
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => handlers::lookup_model(&c, ident, &name, req).await,
+            }
+        }
+    });
+
+    // Global cross-model search (`⌘K` palette). Registered before
+    // any generic `/admin/:admin_name/…` route so a literal `_search`
+    // segment can't be shadowed by a model named `_search`. Role
+    // gate is `Staff` — anyone who can reach the admin can open the
+    // palette; the handler itself filters results to models the
+    // operator can `view`, so each operator sees only what their
+    // sidebar already lets them reach.
+    let c = ctx.clone();
+    let router = router.get("/admin/_search", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::search_models(&c, ident, req).await,
             }
         }
     });
