@@ -116,6 +116,53 @@ leaves the alpha track.
   The example crate gains a small `READ_ONLY={1,true,yes}` env
   toggle so an operator can demo both modes without rebuilding.
 
+### Fixed
+
+- **Humanised field labels now recognise acronyms as whole
+  words.** A field named `id` used to render as `Id` in every
+  surface that consumed `AdminField.label` — list-page column
+  headers, the sort dropdown ("Id (ascending)" / "Id
+  (descending)"), validation-error labels, and the JSON / CSV
+  export headers. Now it renders as `ID`. Same fix applies to
+  `ip` → `IP`, `url` → `URL`, `uri` → `URI`, `api` → `API`,
+  `uuid` → `UUID`, `mfa` → `MFA`, `csv` → `CSV`, `sql` → `SQL`,
+  `html` → `HTML`, `http` → `HTTP`, `https` → `HTTPS`, `json`
+  → `JSON`, `tls` → `TLS`, `ssl` → `SSL`, `smtp` → `SMTP`,
+  `xml` → `XML`.
+  - **Whole-word rule:** the acronym must be its own
+    underscore-separated segment. `video` does *not* become
+    `vIDeo`; `idle` does *not* become `IDle`. Only standalone
+    segments are uppercased, so existing labels that happen to
+    contain an acronym substring are unaffected.
+  - **Compound names** work as expected: `email_id` →
+    `Email ID`, `id_card` → `ID Card`, `mfa_secret_key_id` →
+    `MFA Secret Key ID`, `csv_export_path` → `CSV Export Path`.
+  - **Mirrored update**: the same fix lives in both
+    `rustio_admin_macros::humanise_field` (consumed at macro
+    expansion to set `AdminField.label`) and
+    `rustio_admin::admin::render::humanise_field` (consumed by
+    `bucket_errors_by_label` to route validation errors back
+    to their owning field by inverting the label). The two
+    copies must stay byte-for-byte identical because the
+    macros crate cannot depend on the main crate (proc-macro
+    cycle); the `HUMANISE_ACRONYMS` constant is intentionally
+    duplicated and documented as such in both files.
+  - **Eleven new unit tests** pin the contract — five in
+    `admin::render::tests` and six in
+    `humanise_field_tests` — covering: standalone acronyms,
+    compound acronym placement (start / middle / end), acronym
+    substrings *not* uppercased (`video`, `idle`, `hidden`,
+    `recipe`), datetime suffix preservation
+    (`at` / `by` stay sentence-case), empty input safety, and
+    plain snake_case round-trip. Live-verified across three
+    pages of the clinic-appointments example:
+    `/admin/patients` (0 `Id`, 2 `ID`),
+    `/admin/account/sessions` (0 `Ip`, 4 `IP`),
+    `/admin/account/mfa` (0 `Mfa`, 1 `MFA`).
+  - This is a framework-level fix — every model on every
+    consumer crate that uses `#[derive(AdminModel)]` now gets
+    the correct labels without touching its own code.
+
 ### Added
 
 - **`GET /admin/healthz` — public liveness/readiness probe.**

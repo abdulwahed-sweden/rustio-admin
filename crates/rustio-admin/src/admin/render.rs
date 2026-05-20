@@ -1882,22 +1882,55 @@ pub(crate) struct FormSection {
 /// macro emits validation messages prefixed with this transformed
 /// label (`"Title is required."`); `bucket_errors_by_label` reverses
 /// the mapping at runtime to route flat errors to their owning field.
+///
+/// Whole-word acronym recognition: each underscore-separated segment
+/// is checked against [`HUMANISE_ACRONYMS`] before being
+/// title-cased, so `id` → `ID`, `email_id` → `Email ID`,
+/// `mfa_secret_key_id` → `MFA Secret Key ID`. Words *containing* but
+/// not *being* an acronym (`video` is not `vIDeo`) are left to the
+/// default first-letter-uppercase rule.
 fn humanise_field(s: &str) -> String {
+    if s.is_empty() {
+        return String::new();
+    }
     let mut out = String::with_capacity(s.len());
-    let mut next_upper = true;
-    for ch in s.chars() {
-        if ch == '_' {
+    let mut first_segment = true;
+    for segment in s.split('_') {
+        if !first_segment {
             out.push(' ');
-            next_upper = true;
-        } else if next_upper {
-            out.push(ch.to_ascii_uppercase());
-            next_upper = false;
+        }
+        first_segment = false;
+        let lower = segment.to_ascii_lowercase();
+        if HUMANISE_ACRONYMS.contains(&lower.as_str()) {
+            // Whole-word acronym — emit as uppercase regardless
+            // of the source case (`Id`, `ID`, and `id` all
+            // become `ID`).
+            out.push_str(&lower.to_ascii_uppercase());
         } else {
-            out.push(ch);
+            let mut chars = segment.chars();
+            if let Some(first) = chars.next() {
+                out.push(first.to_ascii_uppercase());
+                for c in chars {
+                    out.push(c);
+                }
+            }
         }
     }
     out
 }
+
+/// Acronyms that should be fully uppercase in humanised labels.
+///
+/// Kept tight and audit-able rather than open-ended: every entry
+/// is one a Postgres admin framework realistically meets in column
+/// names. Adding to this list also requires updating the byte-for-
+/// byte mirror in `rustio_admin_macros::HUMANISE_ACRONYMS` — the
+/// macros crate cannot depend on this crate (proc-macro cycle), so
+/// the two lists are intentionally duplicated.
+pub(crate) const HUMANISE_ACRONYMS: &[&str] = &[
+    "id", "ip", "url", "uri", "api", "uuid", "mfa", "csv", "sql",
+    "html", "http", "https", "json", "tls", "ssl", "smtp", "xml",
+];
 
 /// Split a flat `Vec<String>` from `AdminOps::create / update` into a
 /// global vec + a per-field map by prefix-matching against each
@@ -3201,6 +3234,60 @@ pub(crate) fn must_change_password_form_sections(min_length: usize) -> Vec<FormS
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `humanise_field` and its macro-side mirror must produce
+    /// identical output. This battery pins the contract; if a
+    /// future change drifts one without the other the validation-
+    /// error routing in [`bucket_errors_by_label`] breaks because
+    /// the runtime label no longer matches the macro-emitted one.
+    #[test]
+    fn humanise_field_standalone_acronyms() {
+        // The shipped fix: `id` no longer humanises to `Id`.
+        assert_eq!(humanise_field("id"), "ID");
+        assert_eq!(humanise_field("ip"), "IP");
+        assert_eq!(humanise_field("url"), "URL");
+        assert_eq!(humanise_field("uuid"), "UUID");
+        assert_eq!(humanise_field("mfa"), "MFA");
+    }
+
+    #[test]
+    fn humanise_field_compound_acronyms() {
+        assert_eq!(humanise_field("email_id"), "Email ID");
+        assert_eq!(humanise_field("id_card"), "ID Card");
+        assert_eq!(humanise_field("user_ip"), "User IP");
+        assert_eq!(humanise_field("api_token"), "API Token");
+        assert_eq!(humanise_field("mfa_secret_key_id"), "MFA Secret Key ID");
+        assert_eq!(humanise_field("csv_export_path"), "CSV Export Path");
+    }
+
+    #[test]
+    fn humanise_field_acronym_substrings_left_alone() {
+        // Whole-word rule: `id` inside `video` does not become
+        // `vIDeo`. Same for `ip` inside `recipe`, etc.
+        assert_eq!(humanise_field("video"), "Video");
+        assert_eq!(humanise_field("video_url"), "Video URL");
+        assert_eq!(humanise_field("hidden_field"), "Hidden Field");
+        assert_eq!(humanise_field("idle_seconds"), "Idle Seconds");
+    }
+
+    #[test]
+    fn humanise_field_plain_snake_case() {
+        assert_eq!(humanise_field("title"), "Title");
+        assert_eq!(humanise_field("chart_number"), "Chart Number");
+        assert_eq!(humanise_field("full_name"), "Full Name");
+        assert_eq!(
+            humanise_field("performed_by_technician"),
+            "Performed By Technician",
+        );
+    }
+
+    #[test]
+    fn humanise_field_edge_cases() {
+        assert_eq!(humanise_field(""), "");
+        assert_eq!(humanise_field("a"), "A");
+        assert_eq!(humanise_field("created_at"), "Created At");
+        assert_eq!(humanise_field("revoked_by"), "Revoked By");
+    }
 
     /// `VISIBILITY_AUDIT.md` finding B3 enforcement.
     ///
