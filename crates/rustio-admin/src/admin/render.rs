@@ -298,6 +298,20 @@ pub(crate) struct DashboardCtx {
     pub apps: Vec<DashboardApp>,
     pub recent_actions: Vec<RecentActionCtx>,
     pub flash: Option<FlashCtx>,
+    /// Friendly greeting label — first segment of the identity's
+    /// email (`alice` from `alice@example.com`), title-cased. The
+    /// template uses it for the welcome header so it doesn't read
+    /// as "Welcome, alice@example.com" (too formal / too long).
+    pub greeting_name: String,
+    /// Total project models registered (excludes the synthetic
+    /// User entry). Surfaces in the stats strip.
+    pub total_models: usize,
+    /// Sum of `row_estimate` across every registered project model.
+    /// Inherits the "approximate" caveat from `pg_class.reltuples`.
+    pub total_rows: i64,
+    /// `recent_actions.len()` — pre-computed so the template can
+    /// show "Recent activity (N)" without a `length` filter.
+    pub recent_actions_count: usize,
 }
 
 #[derive(Serialize)]
@@ -396,7 +410,7 @@ pub(crate) fn dashboard_ctx(
     csrf_token: String,
     row_estimates: &HashMap<&str, i64>,
 ) -> DashboardCtx {
-    let recent = recent_actions
+    let recent: Vec<RecentActionCtx> = recent_actions
         .into_iter()
         .map(|a| RecentActionCtx {
             action_type: a.action_type.clone(),
@@ -410,6 +424,16 @@ pub(crate) fn dashboard_ctx(
         })
         .collect();
 
+    let apps = group_entries_by_app(admin.entries(), row_estimates);
+    let total_models = apps.iter().map(|a| a.models.len()).sum();
+    let total_rows = apps
+        .iter()
+        .flat_map(|a| a.models.iter())
+        .map(|m| m.row_estimate)
+        .sum();
+    let recent_actions_count = recent.len();
+    let greeting_name = greeting_from_email(&identity.email);
+
     DashboardCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         entries: admin
@@ -418,9 +442,34 @@ pub(crate) fn dashboard_ctx(
             .filter(|e| !e.core)
             .map(SidebarEntry::from)
             .collect(),
-        apps: group_entries_by_app(admin.entries(), row_estimates),
+        apps,
         recent_actions: recent,
         flash: None,
+        greeting_name,
+        total_models,
+        total_rows,
+        recent_actions_count,
+    }
+}
+
+/// Pick a friendly greeting label from an identity email.
+///
+/// `alice@example.com` → `Alice`, `clinic.admin@…` → `Clinic Admin`,
+/// `_root` → `Root`. The result is plain text used in the dashboard
+/// welcome header; no HTML escaping required at this layer (minijinja
+/// auto-escapes on render).
+fn greeting_from_email(email: &str) -> String {
+    let local = email.split('@').next().unwrap_or(email);
+    let cleaned: String = local
+        .split(|c: char| c == '.' || c == '_' || c == '-')
+        .filter(|s| !s.is_empty())
+        .map(capitalise)
+        .collect::<Vec<_>>()
+        .join(" ");
+    if cleaned.is_empty() {
+        "there".to_string()
+    } else {
+        cleaned
     }
 }
 

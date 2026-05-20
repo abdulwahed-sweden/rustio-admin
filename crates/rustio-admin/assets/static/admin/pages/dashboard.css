@@ -1,37 +1,416 @@
 /* ============================================================
  * rustio-admin / pages / dashboard
  *
- * Dashboard model index — the `<th>` cell holds the model name as
- * a link. The generic `.rio-table th` rules render that as small
- * uppercase accent-coloured text, which fights the section h2 above
- * it. Override here so the model name reads as a strong, plain link
- * in the dashboard context.
+ * Operator-facing "Site administration" home. Five vertical
+ * regions:
+ *
+ *   1. Greeting header  — friendly hello + page title + env badge.
+ *   2. Stats strip      — four pastel tiles using semantic `-bg`
+ *                         tokens (info / success / warning / accent).
+ *   3. Model grid       — one flat CSS-grid of every project model.
+ *                         Tiles cycle through four accent palettes
+ *                         via `:nth-child` for visual rhythm; the
+ *                         grid auto-fills to 3-4 columns at desktop
+ *                         width and collapses cleanly on narrow.
+ *   4. Activity feed +  — two-column split below the grid. Recent
+ *      Framework tools     audit rows on the left (~2/3); a card
+ *                          of framework-tool links on the right
+ *                          (~1/3). Stacks on narrow viewports.
+ *   5. (recent activity in empty-state form when no audit rows.)
+ *
+ * Doctrine: light + restrained. Pastel tints come from the
+ * framework's already-calibrated semantic-color tokens; the
+ * cycle adds visual variety without departing from the palette.
  * ============================================================ */
 
-.rio-app-models th {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: var(--rio-fs-md);
-  background: transparent;
+/* ---- Greeting header ------------------------------------------ */
+
+.rio-dashboard-greeting {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s5);
+  padding: var(--rio-s5) 0 var(--rio-s4);
   border-bottom: 1px solid var(--rio-border-soft);
-  padding: 0.85rem var(--rio-s4);
+  margin-bottom: var(--rio-s5);
+  flex-wrap: wrap;
 }
-.rio-app-models th a {
+.rio-dashboard-greeting__text { flex: 1; min-width: 0; }
+.rio-dashboard-greeting__hello {
+  margin: 0 0 var(--rio-s1);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-medium);
+  color: var(--rio-text-muted);
+}
+.rio-dashboard-greeting__hello strong {
   color: var(--rio-text-strong);
   font-weight: var(--rio-fw-semibold);
 }
-.rio-app-models th a:hover { color: var(--rio-accent); text-decoration: none; }
-.rio-app-models td { padding: 0.85rem var(--rio-s4); border-bottom: 1px solid var(--rio-border-soft); }
+.rio-dashboard-greeting__title {
+  margin: 0 0 var(--rio-s2);
+  font-size: 1.6rem;
+  font-weight: var(--rio-fw-bold);
+  letter-spacing: var(--rio-tracking-display);
+  color: var(--rio-text-strong);
+  line-height: 1.2;
+}
+.rio-dashboard-greeting__deck {
+  margin: 0;
+  font-size: var(--rio-fs-md);
+  color: var(--rio-text-muted);
+}
+.rio-dashboard-greeting__deck strong {
+  color: var(--rio-text);
+  font-weight: var(--rio-fw-semibold);
+}
 
-/* Per-model approximate row count column. Right-aligned, mono
- * font with tabular nums so 5-digit counts line up with 2-digit
- * counts under each other. Compact width so the trailing Add /
- * View buttons keep their natural sizes. */
-.rio-app-models__count {
-  width: 1%;
-  white-space: nowrap;
-  text-align: end;
+/* Small inline badges on the right of the greeting header.
+ * Environment tag inherits the same colour family as the footer
+ * env dot; the `v0.15.1` chip is a quiet meta. */
+.rio-dashboard-greeting__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  flex-shrink: 0;
+}
+.rio-dashboard-greeting__env {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--rio-tracking-allcaps);
+  border-radius: 999px;
+  background: var(--rio-surface-2);
+  color: var(--rio-text-muted);
+}
+.rio-dashboard-greeting__env::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.rio-dashboard-greeting__env--prod {
+  background: var(--rio-success-bg);
+  color: var(--rio-success);
+}
+.rio-dashboard-greeting__env--dev {
+  background: var(--rio-warning-bg);
+  color: var(--rio-warning);
+}
+.rio-dashboard-greeting__ver {
   font-family: var(--rio-font-mono);
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-subtle);
+}
+
+/* ---- Stats strip ---------------------------------------------- */
+
+.rio-dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--rio-s3);
+  margin-bottom: var(--rio-s6);
+}
+.rio-stat {
+  padding: var(--rio-s4) var(--rio-s5);
+  border-radius: var(--rio-radius);
+  border: 1px solid var(--rio-border-soft);
+  background: var(--rio-surface);
+  position: relative;
+  overflow: hidden;
+}
+.rio-stat::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+.rio-stat--info    { background: var(--rio-info-bg); }
+.rio-stat--success { background: var(--rio-success-bg); }
+.rio-stat--warning { background: var(--rio-warning-bg); }
+.rio-stat--accent  { background: rgb(var(--rio-accent-rgb) / 0.08); }
+.rio-stat--info::before    { background: var(--rio-accent); }
+.rio-stat--success::before { background: var(--rio-success); }
+.rio-stat--warning::before { background: var(--rio-warning); }
+.rio-stat--accent::before  { background: var(--rio-accent); }
+
+.rio-stat__label {
+  margin: 0 0 var(--rio-s2);
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--rio-tracking-allcaps);
+  color: var(--rio-text-muted);
+}
+.rio-stat__value {
+  margin: 0 0 var(--rio-s1);
+  font-size: 2rem;
+  font-weight: var(--rio-fw-bold);
+  line-height: 1.1;
+  color: var(--rio-text-strong);
   font-variant-numeric: tabular-nums;
+}
+.rio-stat__value--text {
+  font-size: 1.15rem;
+  letter-spacing: var(--rio-tracking-heading);
+}
+.rio-stat__meta {
+  margin: 0;
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-muted);
+}
+
+/* ---- Section header pattern (shared) -------------------------- */
+
+.rio-dashboard-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rio-s4);
+  margin-bottom: var(--rio-s3);
+  padding-bottom: var(--rio-s2);
+  border-bottom: 1px solid var(--rio-border-soft);
+}
+.rio-dashboard-section-label {
+  margin: 0;
+  font-size: var(--rio-fs-lg);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-strong);
+  letter-spacing: var(--rio-tracking-heading);
+}
+.rio-dashboard-section-count {
   font-size: var(--rio-fs-sm);
+  color: var(--rio-text-muted);
+}
+.rio-dashboard-section-link {
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-accent);
+  text-decoration: none;
+  font-weight: var(--rio-fw-medium);
+}
+.rio-dashboard-section-link:hover { text-decoration: underline; }
+
+/* ---- Model tile grid ------------------------------------------ */
+
+.rio-dashboard-models { margin-bottom: var(--rio-s6); }
+.rio-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--rio-s3);
+}
+
+.rio-model-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s2);
+  padding: var(--rio-s4) var(--rio-s5);
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border-soft);
+  border-radius: var(--rio-radius);
+  transition: transform 0.14s, box-shadow 0.14s, border-color 0.14s;
+  overflow: hidden;
+}
+.rio-model-tile::before {
+  /* Top accent rail. Colour cycles every 4 tiles via `:nth-child`
+   * below; the default value here is the framework accent, used by
+   * tiles 4n+1. */
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  height: 3px;
+  background: var(--rio-accent);
+}
+.rio-model-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--rio-border);
+  box-shadow: var(--rio-shadow);
+}
+
+/* Four-tile colour cycle for visual rhythm. Tile body is muted
+ * almost to plain surface — `color-mix(... 4% in srgb)` over
+ * `--rio-surface` keeps just enough hue to differentiate without
+ * the page reading as "colourful". The 3 px top rail carries the
+ * real signal at full saturation; the body tint is the lightest
+ * possible companion. */
+.rio-model-tile:nth-child(4n+1) {
+  background: color-mix(in srgb, var(--rio-accent) 2%, var(--rio-surface));
+}
+.rio-model-tile:nth-child(4n+1)::before { background: var(--rio-accent); }
+
+.rio-model-tile:nth-child(4n+2) {
+  background: color-mix(in srgb, var(--rio-success) 2%, var(--rio-surface));
+}
+.rio-model-tile:nth-child(4n+2)::before { background: var(--rio-success); }
+
+.rio-model-tile:nth-child(4n+3) {
+  background: color-mix(in srgb, var(--rio-warning) 2%, var(--rio-surface));
+}
+.rio-model-tile:nth-child(4n+3)::before { background: var(--rio-warning); }
+
+.rio-model-tile:nth-child(4n+4) {
+  background: color-mix(in srgb, var(--rio-danger) 2%, var(--rio-surface));
+}
+.rio-model-tile:nth-child(4n+4)::before { background: var(--rio-danger); }
+
+.rio-model-tile__app {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: var(--rio-fs-xs);
+  font-weight: var(--rio-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--rio-tracking-allcaps);
+  color: var(--rio-text-muted);
+  background: rgb(255 255 255 / 0.6);
+  border: 1px solid var(--rio-border-soft);
+  border-radius: 999px;
+  align-self: flex-start;
+}
+
+.rio-model-tile__title-link { text-decoration: none; color: inherit; }
+.rio-model-tile__title {
+  margin: 0;
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-strong);
+  letter-spacing: var(--rio-tracking-heading);
+}
+.rio-model-tile__title-link:hover .rio-model-tile__title { color: var(--rio-accent); }
+
+.rio-model-tile__stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rio-s2);
+  margin: var(--rio-s1) 0 0;
+}
+.rio-model-tile__stat-num {
+  font-size: 1.85rem;
+  font-weight: var(--rio-fw-bold);
+  line-height: 1;
+  color: var(--rio-text-strong);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.rio-model-tile__stat-suffix {
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-regular);
+  color: var(--rio-text-muted);
+}
+.rio-model-tile__meta {
+  margin: 0;
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-subtle);
+}
+.rio-model-tile__actions {
+  display: flex;
+  gap: var(--rio-s2);
+  margin-top: auto;
+  padding-top: var(--rio-s3);
+  border-top: 1px solid rgb(0 0 0 / 0.06);
+}
+
+/* ---- Activity feed + Framework tools (two-column split) ------- */
+
+.rio-dashboard-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--rio-s5);
+}
+@media (max-width: 959px) {
+  .rio-dashboard-split { grid-template-columns: 1fr; }
+}
+
+.rio-dashboard-activity,
+.rio-dashboard-tools { min-width: 0; }
+
+.rio-activity-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rio-border-soft);
+  border-radius: var(--rio-radius);
+  background: var(--rio-surface);
+  overflow: hidden;
+}
+.rio-activity-feed__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rio-s3);
+  padding: var(--rio-s3) var(--rio-s5);
+  border-bottom: 1px solid var(--rio-border-soft);
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text);
+}
+.rio-activity-feed__item:last-child { border-bottom: 0; }
+.rio-activity-feed__item:nth-child(even) { background: var(--rio-surface-2); }
+
+.rio-activity-feed__target { font-weight: var(--rio-fw-medium); color: var(--rio-text-strong); }
+.rio-activity-feed__target a { color: var(--rio-text-strong); text-decoration: none; }
+.rio-activity-feed__target a:hover { color: var(--rio-accent); }
+.rio-activity-feed__sep { color: var(--rio-text-subtle); margin: 0 var(--rio-s1); }
+.rio-activity-feed__summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--rio-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rio-activity-feed__meta {
+  margin-inline-start: auto;
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Framework tools card ------------------------------------- */
+
+.rio-tool-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rio-border-soft);
+  border-radius: var(--rio-radius);
+  background: var(--rio-surface);
+  overflow: hidden;
+}
+.rio-tool-link {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rio-s3);
+  padding: var(--rio-s3) var(--rio-s4);
+  border-bottom: 1px solid var(--rio-border-soft);
+  text-decoration: none;
+  color: var(--rio-text);
+  transition: background-color 0.12s;
+}
+.rio-tool-list li:last-child .rio-tool-link { border-bottom: 0; }
+.rio-tool-link:hover { background: var(--rio-surface-2); }
+
+.rio-tool-link__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--rio-accent);
+  margin-top: 2px;
+}
+.rio-tool-link__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rio-tool-link__text strong {
+  font-size: var(--rio-fs-sm);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text-strong);
+}
+.rio-tool-link__text span {
+  font-size: var(--rio-fs-xs);
+  color: var(--rio-text-muted);
+  line-height: 1.4;
 }
