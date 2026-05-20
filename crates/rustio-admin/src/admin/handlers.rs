@@ -1330,11 +1330,17 @@ struct SearchEnvelope {
 /// capped at [`SEARCH_TOTAL_LIMIT`] entries overall and
 /// [`SEARCH_PER_MODEL_LIMIT`] per model. Only project models with
 /// non-empty `search_fields` are queried; each is gated by the
-/// operator's `<admin_name>.view_<singular>` permission so the palette
-/// surfaces exactly what the operator could already reach via
-/// `/admin/<model>`. Core (framework-owned) entries like the synthetic
-/// User are skipped to mirror `find_project_entry`'s policy — searching
-/// users is reachable from `/admin/users` with its bespoke gate.
+/// operator's `<admin_name>.change_<singular>` permission. The
+/// permission matches the URL the palette ships — every result links
+/// to `/admin/<model>/<id>/edit`, which is itself `change`-gated, so
+/// surfacing only `change`-permitted rows keeps the palette honest:
+/// every result is a row the operator can directly act on. Auditors /
+/// view-only operators still have the per-list-page search at
+/// `/admin/<model>?q=...` (gated on `view`).
+///
+/// Core (framework-owned) entries like the synthetic User are skipped
+/// to mirror `find_project_entry`'s policy — searching users is
+/// reachable from `/admin/users` with its bespoke gate.
 ///
 /// Empty term or a term shorter than [`SEARCH_MIN_QUERY_LEN`] short-
 /// circuits to an empty result set without touching the DB.
@@ -1358,8 +1364,12 @@ pub(crate) async fn search_models(
         if entry.core || entry.search_fields.is_empty() {
             continue;
         }
+        // Gate on `change`, not `view`: the URL we ship below is
+        // `/admin/<model>/<id>/edit`, which the framework routes
+        // through a `change`-gated handler. Surfacing rows the
+        // operator can't open creates a trap UX.
         let perm = format!(
-            "{}.view_{}",
+            "{}.change_{}",
             entry.admin_name,
             entry.singular_name.to_ascii_lowercase()
         );

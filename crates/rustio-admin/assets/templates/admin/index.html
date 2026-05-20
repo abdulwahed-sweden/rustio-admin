@@ -108,7 +108,10 @@
   <section class="rio-dashboard-activity">
     <header class="rio-dashboard-section-head">
       <h2 class="rio-dashboard-section-label">Recent activity</h2>
-      {% if recent_actions %}
+      {# /admin/history is Administrator-gated (routes.rs) — hide the
+       # affordance for Staff/Editor so we don't ship clickable links
+       # that 403 on follow-through. #}
+      {% if recent_actions and identity.is_admin %}
       <a class="rio-dashboard-section-link" href="/admin/history">View full history →</a>
       {% endif %}
     </header>
@@ -137,6 +140,11 @@
       <h2 class="rio-dashboard-section-label">Framework tools</h2>
     </header>
     <ul class="rio-tool-list">
+      {# Audit log + Users + Groups are all Administrator-gated
+       # on the server side. Merge them into one is_admin block
+       # so Staff/Editor operators don't see clickable affordances
+       # that 403 on follow-through. #}
+      {% if identity.is_admin %}
       <li><a class="rio-tool-link" href="/admin/history">
         {{ icon("clock", class="rio-tool-link__icon") }}
         <span class="rio-tool-link__text">
@@ -144,7 +152,6 @@
           <span>Full history of every authority mutation.</span>
         </span>
       </a></li>
-      {% if identity.is_admin %}
       <li><a class="rio-tool-link" href="/admin/users">
         {{ icon("users", class="rio-tool-link__icon") }}
         <span class="rio-tool-link__text">
