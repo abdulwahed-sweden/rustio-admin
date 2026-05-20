@@ -1,7 +1,7 @@
 /* ============================================================
  * rustio-admin / layout / topbar
  *
- * Sticky top chrome — brand mark, identity strip, theme toggle,
+ * Sticky top chrome — brand mark, identity strip, search trigger,
  * mobile sidebar toggle. Sits above all page content;
  * `position: sticky` keeps it pinned during scroll.
  * ============================================================ */

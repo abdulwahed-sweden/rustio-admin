@@ -4,9 +4,13 @@
  * Global ⌘K search palette. Two surfaces:
  *
  *   1. .rio-search-trigger — the pill-shaped button in the topbar.
- *      Reads as a placeholder ("Search…") with an inline ⌘K hint.
- *      Resolves through the chrome-scope cascade in layout/shell.css,
- *      so its tokens auto-flip to light-on-dark inside the topbar.
+ *      Reads as a recessed placeholder ("Search…") with an inline
+ *      ⌘K hint. The topbar is on the light `--rio-surface` since
+ *      the chrome cascade narrowed to sidebar + footer only — the
+ *      trigger sits one rung below the topbar surface (`--rio-bg`)
+ *      so it reads as carved into the chrome rather than stuck on
+ *      top of it. See the trigger section below for the full
+ *      "recessed input + raised key chip" composition.
  *
  *   2. .rio-search-palette — the fixed-position modal dialog the
  *      trigger opens. Lives in admin/_topbar.html so the markup is

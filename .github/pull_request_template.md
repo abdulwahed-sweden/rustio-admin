@@ -63,7 +63,6 @@
 - [ ] Dashboard
 - [ ] Tables (list view + bulk select bar)
 - [ ] Forms (create + edit + validation error states)
-- [ ] Dark mode (toggle in your OS or `data-rio-theme="dark"`)
 - [ ] Arabic rendering on at least one Arabic-content page
 - [ ] Mobile width (≤ 480px)
 - [ ] Permission matrix (`/admin/groups/<id>/edit`)

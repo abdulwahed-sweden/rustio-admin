@@ -252,10 +252,10 @@ operators, and reviewers. Each is enforced by the patterns in
 
 ### 5.3 Accessibility floor
 
-> **Every text/surface pair clears WCAG AAA in both themes.**
-> Light and dark palettes are validated on every token
-> change. The visual checklist (appendix B) walks the
-> high-traffic surfaces before a token-touching PR merges.
+> **Every text/surface pair clears WCAG AAA.** The single
+> light palette (the framework is light-only) is validated on
+> every token change. The visual checklist (appendix B) walks
+> the high-traffic surfaces before a token-touching PR merges.
 
 ### 5.4 SemVer for tokens
 
@@ -575,7 +575,7 @@ Carry from the design doctrine. Do not re-litigate.
 
 | Decision | Value | Override path |
 |----------|-------|---------------|
-| Accent palette | **Teal-emerald** (`#0F8C7E` light / `#3FAA9D` dark). Permanent since 0.3.0 | `Admin::accent_color("#…")` per project |
+| Accent palette | **Teal-emerald** (`#0F8C7E` page canvas / `#3FAA9D` chrome scope — see § 9). Permanent since 0.3.0 | `Admin::accent_color("#…")` per project |
 | Retired accent | **Terracotta** (`#A0341A` / `#C84934`). Do not reintroduce | None — framework identity decision |
 | Typography stack | **Geist** (Latin UI), **Tajawal** (Arabic UI), **Noto Naskh Arabic** (Arabic body), **Geist Mono** (code) | Project-scoped class wrappers may layer; cannot redefine `--rio-font-*` |
 | Size ladder | `--rio-fs-xs` (12px) → `--rio-fs-3xl` (30px) | Project-scoped class wrappers; no token redefinition |

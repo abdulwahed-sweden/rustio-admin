@@ -267,9 +267,6 @@ crates/rustio-admin/assets/static/admin/
 │   ├── radius.css
 │   ├── shadows.css
 │   └── typography.css
-├── themes/              ← dark / explicit-light overrides
-│   ├── dark.css
-│   └── light.css
 ├── base/                ← reset + body + headings + utilities
 │   ├── reset.css
 │   ├── base.css
@@ -303,8 +300,8 @@ crates/rustio-admin/assets/static/admin/
     └── print.css
 ```
 
-**Import order matters:** tokens before themes before base before layout
-before components before pages before responsive before print.
+**Import order matters:** tokens before base before layout before
+components before pages before responsive before print.
 `responsive.css` is the only file in `layout/` that loads late on purpose
 — its `display: none` sidebar rule is meant to override the desktop layout
 in `sidebar.css`. If your change depends on cascade order, document it
