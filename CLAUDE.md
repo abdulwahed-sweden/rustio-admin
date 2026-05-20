@@ -70,8 +70,8 @@ The library layers cleanly — read in this order:
 ### Templates and CSS
 
 - Templates live under `crates/rustio-admin/assets/templates/admin/`, baked at compile time. A disk-side `templates/admin/<page>.html` wins over the embedded copy if `RUSTIO_TEMPLATE_DIR` is set.
-- CSS lives under `crates/rustio-admin/assets/static/admin/`, organized as a Primer/Carbon-style multi-file architecture: `tokens/` → `themes/` → `base/` → `layout/` → `components/` → `pages/` → `print/`. The runtime concatenates fragments and serves one bundle at `/static/admin.css`. **The `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in lock-step** — order matters, and `responsive.css` is intentionally loaded last to override desktop layout.
-- The full token philosophy and dark-mode contract is `docs/design/DESIGN_DOCTRINE.md` (visual identity) and `docs/design/DESIGN_SYSTEM.md` (token ownership). Read both before changing CSS.
+- CSS lives under `crates/rustio-admin/assets/static/admin/`, organized as a Primer/Carbon-style multi-file architecture: `tokens/` → `base/` → `layout/` → `components/` → `pages/` → `print/`. The runtime concatenates fragments and serves one bundle at `/static/admin.css`. **The `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in lock-step** — order matters, and `responsive.css` is intentionally loaded last to override desktop layout.
+- The framework is light-only — there is no dark variant, no `prefers-color-scheme` media block, and no `data-rio-theme` attribute. The full token philosophy is `docs/design/DESIGN_DOCTRINE.md` (visual identity) and `docs/design/DESIGN_SYSTEM.md` (token ownership). Read both before changing CSS.
 
 ## Hard rules this codebase refuses to break
 

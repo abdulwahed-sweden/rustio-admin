@@ -43,7 +43,7 @@ The framework currently sits at **v0.2.1** (released 2026-05-07). The shape:
 - 5-tier role ladder (`User → Staff → Editor → Administrator → Developer`)
 - Server-side filters + ILIKE search + sortable columns + per-page picker + numbered pagination, all in a single SQL query with column-name validation
 - Audit log table (`rustio_admin_actions`) surfaced in the dashboard, the global history page, and per-object history
-- Hand-written single stylesheet (~1.9 k LOC) with a six-token override surface, three responsive breakpoints, and a graphite dark mode
+- Hand-written single stylesheet (~1.9 k LOC) with a six-token override surface, three responsive breakpoints, and a deep-slate chrome on a light page canvas
 - Self-hosted fonts (Geist + Geist Mono + Tajawal + Noto Naskh Arabic, ~270 KB embedded, SIL OFL-1.1)
 - Migrations runner that walks numerically prefixed `*.sql` files transactionally
 - Operator CLI (`rustio`) with `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`
@@ -169,8 +169,7 @@ The framework currently has no JSON API surface — every endpoint returns HTML.
 
 - ✅ Hand-written `admin.css` with a six-token override surface
 - ✅ Disk override path — set `RUSTIO_TEMPLATE_DIR=…` and any embedded template can be overridden file-for-file
-- ✅ Single-source-of-truth theme architecture (`AdminTheme` is an override patch, not a snapshot)
-- ✅ Inline theme bootstrap script in `<head>` (no flash-of-light on dark mode reload)
+- ✅ Single-source-of-truth theme architecture (`AdminTheme` is an override patch, not a snapshot — light-only)
 - ✅ Self-hosted fonts (Geist, Tajawal, Noto Naskh Arabic) with `unicode-range` filtering
 - ⚪ **Generated override scaffold.** `rustio override <template-name>` copies the named embedded template into the project's `templates/admin/` directory so the project can edit it. Currently the operator does this by hand.
 - ⚪ **Per-model template override.** `templates/admin/posts/list.html` overrides only the `Post` list page; everything else falls back to the framework default. Hook lives in `Templates::render_for_model` — partially wired but not consumed by the handler yet.

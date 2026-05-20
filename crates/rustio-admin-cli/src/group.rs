@@ -18,7 +18,7 @@ pub enum Action {
     /// List every group with id / name / member count.
     List,
     /// Show one group's profile — id / description / member list
-    /// + the permissions granted via this group. Operational
+    /// and the permissions granted via this group. Operational
     /// symmetry with `rustio user perms`: that command answers
     /// "what can this user do?"; this one answers "who has
     /// access via this group, and what does membership grant?".

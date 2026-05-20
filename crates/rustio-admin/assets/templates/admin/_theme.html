@@ -2,22 +2,17 @@
  #
  # IMPORTANT: this partial is included AFTER `<link rel="stylesheet"
  # href="/static/admin.css">` in `_base.html`. That ordering is the
- # whole point — the framework stylesheet ships with `:root`, light,
- # and dark token blocks, and a project override here wins ties on
- # source order without needing `!important`.
+ # whole point — a project override here wins ties on source order
+ # without needing `!important`.
  #
- # The selector list `html, html[data-rio-theme="light"],
- # html[data-rio-theme="dark"]` is deliberate: it gives the override
- # the same specificity as admin.css's per-mode blocks (0,0,1,1) so
- # an override applies regardless of which theme state is active.
+ # The framework is light-only, so a single `html { ... }` block at
+ # specificity (0,0,1,0) is enough to override the `:root` tokens.
  #
  # When no fields are set on `AdminTheme`, no markup is emitted at
  # all and admin.css is the single source of truth. #}
 {% if has_theme_overrides %}
 <style>
-html,
-html[data-rio-theme="light"],
-html[data-rio-theme="dark"] {
+html {
 {%- if accent_hex %}
   --rio-accent: {{ accent_hex }};
   --rio-accent-rgb: {{ accent_rgb }};

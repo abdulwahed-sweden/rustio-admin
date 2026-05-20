@@ -38,6 +38,77 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Removed
+
+- **Dark theme retired — the framework is now light-only.** The
+  parallel dark palette was the single largest source of token-
+  audit surface area and added a mode the operator UI never
+  benefited from in practice. One canonical palette, audited once.
+  Projects that need a dark skin still have the full `--rio-*`
+  override surface and can patch `:root` from their own
+  stylesheet.
+  - **Files deleted** —
+    `crates/rustio-admin/assets/static/admin/themes/dark.css`
+    (117 LOC) and
+    `crates/rustio-admin/assets/static/admin/themes/light.css`
+    (46 LOC). The whole `themes/` fragment tier is gone; the
+    bundle order is now `tokens → base → layout → components →
+    pages → responsive → print`. The `@import` list in
+    `admin/admin.css` and the `ADMIN_CSS` `concat!` block in
+    `src/admin/routes.rs` were updated in lock-step (per the
+    cascade-lockstep invariant).
+  - **`data-rio-theme` attribute removed.** The inline bootstrap
+    script in `<head>` that read `localStorage["rio-theme"]` and
+    set `<html data-rio-theme="…">` before first paint is gone.
+    The `prefers-color-scheme: dark` media block and the
+    `html[data-rio-theme="dark"]` / `[data-rio-theme="light"]`
+    selector pairs that lived in `themes/dark.css` and
+    `themes/light.css` are gone with them.
+  - **Theme-toggle button removed.** The "System / Light / Dark"
+    ghost button in the topbar is deleted from
+    `_topbar.html`; the supporting `.rio-theme-toggle` CSS block
+    in `layout/topbar.css` and the JS `initTheme()` function
+    (cycle handler + localStorage read/write) in
+    `assets/static/admin.js` are deleted. `admin.js` shrinks
+    by ~50 LOC.
+  - **`AdminTheme` override selector simplified.** The injected
+    `<style>` block in `_theme.html` now uses a single
+    `html { ... }` selector at specificity `(0,0,1,0)` instead
+    of the previous three-selector list
+    `html, html[data-rio-theme="light"], html[data-rio-theme="dark"]`
+    that matched the per-mode admin.css blocks at `(0,0,1,1)`.
+    The override still wins cascade ties on source order
+    without needing `!important`. **Public API unchanged** —
+    `AdminTheme` field set and `Admin::accent_color()` /
+    `Admin::theme()` behave identically; projects that only
+    set fields see no diff.
+  - **Tokens — colors / shadows.** No `--rio-*` token in
+    `:root` was added, renamed, or removed by this change. The
+    light values that previously lived in `tokens/colors.css`
+    and `tokens/shadows.css` remain unchanged; only the
+    duplicate per-mode override blocks (which lived in
+    `themes/dark.css` / `themes/light.css`) are gone. Project
+    overrides via `Admin::accent_color()` and the
+    `--rio-*` custom-property surface continue to work
+    exactly as before.
+  - **Chrome-scope accent lift preserved.** The cascade in
+    `layout/shell.css` that lifts `--rio-accent` from
+    `#0F8C7E` to `#3FAA9D` inside `.rio-topbar` /
+    `.rio-sidebar` / `.rio-footer` (so the base teal doesn't
+    muddle against the deep-slate chrome) is **kept** — it
+    was always a chrome-scope cascade, not a dark-mode
+    artefact. The accompanying `--rio-text-*`, `--rio-surface-*`,
+    `--rio-border-*` flips inside chrome are unchanged.
+  - **Doctrine update.** `DESIGN_DOCTRINE.md` § 5
+    ("Dark-mode philosophy") is rewritten as "Light-only
+    stance" — three-point rationale plus a pointer for
+    projects that want to override `:root` to a dark palette.
+    `DESIGN_SYSTEM.md` § 9 accent table relabelled as page-
+    canvas vs chrome-scope. `architecture.md`,
+    `modeladmin.md`, `DESIGN_BUILDER.md` (the
+    `dark_mode_default` toggle row), and `CLAUDE.md`
+    aligned with the new stance.
+
 ### Changed
 
 - **CSS migrated to logical properties — RTL-ready layout.** Closes

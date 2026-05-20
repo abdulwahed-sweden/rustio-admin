@@ -12,8 +12,7 @@
  *
  * The two-layer construction (one tight near-shadow, one wider
  * far-shadow) follows the Stripe / Linear convention — crispness
- * up close, lift from a distance. Dark-mode equivalents live in
- * themes/dark.css.
+ * up close, lift from a distance.
  * ============================================================ */
 
 :root {

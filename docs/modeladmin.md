@@ -231,7 +231,7 @@ let admin = Admin::new()
     .model::<Student>();
 ```
 
-`AdminTheme` is an **override patch**, not a snapshot — every field is `Option<String>` and defaults to `None`, meaning *"don't override — let `admin.css` decide."* Out of the box the framework emits no inline `<style>` block at all; the stylesheet is the single source of truth for every design token, including the dark-mode resolution.
+`AdminTheme` is an **override patch**, not a snapshot — every field is `Option<String>` and defaults to `None`, meaning *"don't override — let `admin.css` decide."* Out of the box the framework emits no inline `<style>` block at all; the stylesheet is the single source of truth for every design token. The framework is light-only — there is no dark-mode variant to worry about overriding.
 
 If you need to override more than the accent, use the fluent builder:
 
@@ -248,9 +248,9 @@ let admin = Admin::new().theme(theme);
 
 Available setters: `accent`, `bg`, `surface`, `text`, `text_muted`, `border`. Each accepts hex form (`"#A0341A"` or `"A0341A"`); the leading `#` is auto-normalised.
 
-Fields you don't set inherit from `admin.css` — including the framework's separate dark-mode variants. Setting `accent` once gives you a properly-lifted dark-mode accent variant for free. Override `bg` and you only override the *light-mode* canvas (the dark-mode `--rio-bg` resolution still applies on graphite). To override per-mode, use a project-side template override of `_theme.html` instead.
+Fields you don't set inherit from `admin.css`.
 
-The injected `<style>` block in `_theme.html` uses selector list `html, html[data-rio-theme="light"], html[data-rio-theme="dark"]` so it wins cascade ties on source order without `!important`.
+The injected `<style>` block in `_theme.html` uses a single `html { ... }` selector so it wins cascade ties on source order without `!important`.
 
 `Admin::accent()` returns `Option<&str>` — `None` means *"no override — admin.css owns it"*.
 

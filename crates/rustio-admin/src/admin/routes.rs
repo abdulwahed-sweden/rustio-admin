@@ -33,7 +33,7 @@ use crate::templates::Templates;
 /// Embedded stylesheet baked into the binary.
 ///
 /// The admin stylesheet is authored as a multi-file architecture
-/// under `assets/static/admin/` (tokens → themes → base → layout →
+/// under `assets/static/admin/` (tokens → base → layout →
 /// components → pages → responsive → print), modelled on GitHub
 /// Primer / IBM Carbon. The browser still receives one concatenated
 /// bundle so we keep our "self-hosted, single round-trip, no FOUT"
@@ -58,11 +58,6 @@ const ADMIN_CSS: &str = concat!(
     include_str!("../../assets/static/admin/tokens/shadows.css"),
     "\n",
     include_str!("../../assets/static/admin/tokens/typography.css"),
-    "\n",
-    // ---- themes -----------------------------------------------
-    include_str!("../../assets/static/admin/themes/dark.css"),
-    "\n",
-    include_str!("../../assets/static/admin/themes/light.css"),
     "\n",
     // ---- base -------------------------------------------------
     include_str!("../../assets/static/admin/base/reset.css"),
@@ -127,8 +122,8 @@ const ADMIN_CSS: &str = concat!(
     include_str!("../../assets/static/admin/print/print.css"),
 );
 
-/// Embedded admin JS (theme toggle + sidebar drawer). ≤200 LOC, no
-/// build step.
+/// Embedded admin JS (sidebar drawer + dropdowns + bulk select +
+/// FK autocomplete). ≤200 LOC, no build step.
 const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 
 /// Self-hosted fonts (SIL OFL-1.1, see assets/static/fonts/LICENSE.txt).

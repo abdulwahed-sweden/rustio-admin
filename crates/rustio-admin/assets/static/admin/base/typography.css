@@ -227,9 +227,9 @@ pre code {
  * without screaming. Inline-flex keeps the highlight tight to the
  * glyphs even when the cell ellipsises.
  *
- * Inherits text colour from the cell so dark mode just works — the
- * accent-tinted background sits behind whichever foreground the
- * row-cell already chose. */
+ * Inherits text colour from the cell so the accent-tinted
+ * background sits behind whichever foreground the row-cell
+ * already chose. */
 mark {
   background: rgb(var(--rio-accent-rgb) / 0.18);
   color: inherit;
