@@ -970,6 +970,13 @@ fn build_page_items(
 /// Field-type-aware copy for an `(field_type, direction)` pair.
 /// Datetime descending reads as "newest first"; string ascending as
 /// "A → Z"; everything else falls back to ascending/descending.
+///
+/// `FilePath` / `OptionalFilePath` are stored as strings in the DB
+/// (they're `TEXT` paths under the uploads dir) and sort
+/// lexicographically — so they share the `String` branch's
+/// `A → Z` / `Z → A` copy rather than the generic
+/// `ascending` / `descending` fallback that read awkwardly in
+/// the sort dropdown.
 fn sort_direction_label(
     field_type: super::types::FieldType,
     dir: super::modeladmin::SortDir,
@@ -979,8 +986,8 @@ fn sort_direction_label(
     match (field_type, dir) {
         (DateTime | OptionalDateTime, SortDir::Desc) => "newest first",
         (DateTime | OptionalDateTime, SortDir::Asc) => "oldest first",
-        (String | OptionalString, SortDir::Asc) => "A → Z",
-        (String | OptionalString, SortDir::Desc) => "Z → A",
+        (String | OptionalString | FilePath | OptionalFilePath, SortDir::Asc) => "A → Z",
+        (String | OptionalString | FilePath | OptionalFilePath, SortDir::Desc) => "Z → A",
         (Bool, SortDir::Asc) => "off → on",
         (Bool, SortDir::Desc) => "on → off",
         (_, SortDir::Asc) => "ascending",
@@ -3287,6 +3294,69 @@ mod tests {
         assert_eq!(humanise_field("a"), "A");
         assert_eq!(humanise_field("created_at"), "Created At");
         assert_eq!(humanise_field("revoked_by"), "Revoked By");
+    }
+
+    #[test]
+    fn sort_direction_label_strings_read_alphabetical() {
+        use super::super::modeladmin::SortDir;
+        use super::super::types::FieldType::*;
+        // Required and optional flavours share the same copy.
+        assert_eq!(sort_direction_label(String, SortDir::Asc), "A → Z");
+        assert_eq!(sort_direction_label(String, SortDir::Desc), "Z → A");
+        assert_eq!(sort_direction_label(OptionalString, SortDir::Asc), "A → Z");
+        assert_eq!(sort_direction_label(OptionalString, SortDir::Desc), "Z → A");
+    }
+
+    #[test]
+    fn sort_direction_label_filepaths_read_alphabetical() {
+        // FilePath / OptionalFilePath store strings on the wire
+        // and sort lexicographically — they belong in the same
+        // copy bucket as String, not the numeric fallback that
+        // used to read "Photo Path (ascending)" / "(descending)"
+        // and surfaced as a UX nit on the patients list page.
+        use super::super::modeladmin::SortDir;
+        use super::super::types::FieldType::*;
+        assert_eq!(sort_direction_label(FilePath, SortDir::Asc), "A → Z");
+        assert_eq!(sort_direction_label(FilePath, SortDir::Desc), "Z → A");
+        assert_eq!(sort_direction_label(OptionalFilePath, SortDir::Asc), "A → Z");
+        assert_eq!(sort_direction_label(OptionalFilePath, SortDir::Desc), "Z → A");
+    }
+
+    #[test]
+    fn sort_direction_label_datetimes_read_chronological() {
+        use super::super::modeladmin::SortDir;
+        use super::super::types::FieldType::*;
+        assert_eq!(sort_direction_label(DateTime, SortDir::Asc), "oldest first");
+        assert_eq!(sort_direction_label(DateTime, SortDir::Desc), "newest first");
+        assert_eq!(
+            sort_direction_label(OptionalDateTime, SortDir::Asc),
+            "oldest first",
+        );
+        assert_eq!(
+            sort_direction_label(OptionalDateTime, SortDir::Desc),
+            "newest first",
+        );
+    }
+
+    #[test]
+    fn sort_direction_label_bools_read_off_on() {
+        use super::super::modeladmin::SortDir;
+        use super::super::types::FieldType::*;
+        assert_eq!(sort_direction_label(Bool, SortDir::Asc), "off → on");
+        assert_eq!(sort_direction_label(Bool, SortDir::Desc), "on → off");
+    }
+
+    #[test]
+    fn sort_direction_label_numerics_fall_back_to_generic() {
+        // Numeric columns intentionally keep the generic
+        // "ascending" / "descending" copy: a column named `count`
+        // or `score` reads better than "smallest first" /
+        // "largest first" would. The fallback branch covers them.
+        use super::super::modeladmin::SortDir;
+        use super::super::types::FieldType::*;
+        assert_eq!(sort_direction_label(I32, SortDir::Asc), "ascending");
+        assert_eq!(sort_direction_label(I64, SortDir::Asc), "ascending");
+        assert_eq!(sort_direction_label(OptionalI64, SortDir::Desc), "descending");
     }
 
     /// `VISIBILITY_AUDIT.md` finding B3 enforcement.

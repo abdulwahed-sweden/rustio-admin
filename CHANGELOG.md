@@ -118,6 +118,29 @@ leaves the alpha track.
 
 ### Fixed
 
+- **`FilePath` columns now read "A → Z" / "Z → A" in the sort
+  dropdown.** They were falling through to the generic
+  `ascending` / `descending` copy (e.g. "Photo Path
+  (ascending)" on the patients list page), which read
+  awkwardly — `FilePath` / `OptionalFilePath` are stored as
+  `TEXT` paths and sort lexicographically, so they belong in
+  the same copy bucket as `String` / `OptionalString`. The
+  numeric branch (`I32` / `I64` / `OptionalI64`) keeps the
+  generic copy on purpose: "Count (smallest first)" /
+  "(largest first)" would read worse than "Count (ascending)".
+  - Updated `sort_direction_label` in `admin::render` to
+    cover `FilePath` and `OptionalFilePath` alongside the
+    string variants.
+  - **Five new unit tests** pin the contract per type bucket:
+    strings → "A → Z" / "Z → A", file paths → same (and
+    explicitly *not* numeric copy), datetimes → "oldest first"
+    / "newest first", booleans → "off → on" / "on → off",
+    numerics → "ascending" / "descending" (fallback
+    intentionally preserved). Live-verified against the
+    clinic-appointments patients page: 0 occurrences of
+    "Photo Path (ascending)" or "(descending)"; 2 occurrences
+    of "Photo Path (A → Z)" / "(Z → A)".
+
 - **Humanised field labels now recognise acronyms as whole
   words.** A field named `id` used to render as `Id` in every
   surface that consumed `AdminField.label` — list-page column
