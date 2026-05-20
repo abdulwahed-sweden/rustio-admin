@@ -53,7 +53,10 @@ pub(crate) fn wants_csv(req: &Request) -> bool {
             }
         }
     }
-    req.query().get("format").map(|s| s == "csv").unwrap_or(false)
+    req.query()
+        .get("format")
+        .map(|s| s == "csv")
+        .unwrap_or(false)
 }
 
 /// Build the CSV response body for a list page. Column order

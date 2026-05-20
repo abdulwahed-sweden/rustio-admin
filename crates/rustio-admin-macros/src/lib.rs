@@ -493,8 +493,8 @@ fn humanise_field(s: &str) -> String {
 /// the two lists are intentionally duplicated. Update both
 /// together.
 const HUMANISE_ACRONYMS: &[&str] = &[
-    "id", "ip", "url", "uri", "api", "uuid", "mfa", "csv", "sql",
-    "html", "http", "https", "json", "tls", "ssl", "smtp", "xml",
+    "id", "ip", "url", "uri", "api", "uuid", "mfa", "csv", "sql", "html", "http", "https", "json",
+    "tls", "ssl", "smtp", "xml",
 ];
 
 fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
@@ -788,7 +788,10 @@ mod humanise_field_tests {
         assert_eq!(humanise_field("title"), "Title");
         assert_eq!(humanise_field("chart_number"), "Chart Number");
         assert_eq!(humanise_field("full_name"), "Full Name");
-        assert_eq!(humanise_field("performed_by_technician"), "Performed By Technician");
+        assert_eq!(
+            humanise_field("performed_by_technician"),
+            "Performed By Technician"
+        );
     }
 
     #[test]

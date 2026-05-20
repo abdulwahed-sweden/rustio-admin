@@ -156,8 +156,7 @@ async fn main() -> Result<()> {
     // creates the directory lazily on first upload; for the
     // example we just point at a project-local `uploads/` so the
     // demo stays self-contained.
-    let uploads_dir = std::env::var("UPLOADS_DIR")
-        .unwrap_or_else(|_| "./uploads".into());
+    let uploads_dir = std::env::var("UPLOADS_DIR").unwrap_or_else(|_| "./uploads".into());
     let _ = std::fs::create_dir_all(&uploads_dir);
     let mut admin_builder = Admin::new()
         .app_name(app_name)

@@ -132,7 +132,8 @@ pub(crate) fn parse_multipart(
     let delim = format!("--{boundary}");
     let delim_bytes = delim.as_bytes();
 
-    let mut cursor = find_subsequence(body, delim_bytes).ok_or(MultipartError::NoOpeningBoundary)?;
+    let mut cursor =
+        find_subsequence(body, delim_bytes).ok_or(MultipartError::NoOpeningBoundary)?;
     // Skip the opening boundary itself.
     cursor += delim_bytes.len();
 
@@ -161,19 +162,19 @@ pub(crate) fn parse_multipart(
         // Headers: read until "\r\n\r\n".
         let headers_end_rel = find_subsequence(&body[cursor..], b"\r\n\r\n")
             .or_else(|| find_subsequence(&body[cursor..], b"\n\n"))
-            .ok_or_else(|| {
-                MultipartError::MalformedPart("part headers unterminated".into())
-            })?;
+            .ok_or_else(|| MultipartError::MalformedPart("part headers unterminated".into()))?;
         if headers_end_rel > HEADERS_MAX {
             return Err(MultipartError::PartHeadersTooLong);
         }
         let header_block = &body[cursor..cursor + headers_end_rel];
-        let header_terminator_len =
-            if body.get(cursor + headers_end_rel..cursor + headers_end_rel + 4) == Some(b"\r\n\r\n") {
-                4
-            } else {
-                2
-            };
+        let header_terminator_len = if body
+            .get(cursor + headers_end_rel..cursor + headers_end_rel + 4)
+            == Some(b"\r\n\r\n")
+        {
+            4
+        } else {
+            2
+        };
         cursor += headers_end_rel + header_terminator_len;
 
         let (name, filename, content_type) = parse_part_headers(header_block)?;
@@ -187,9 +188,7 @@ pub(crate) fn parse_multipart(
             && &body[cursor + next_boundary_rel - 2..cursor + next_boundary_rel] == b"\r\n"
         {
             next_boundary_rel - 2
-        } else if next_boundary_rel >= 1
-            && body[cursor + next_boundary_rel - 1] == b'\n'
-        {
+        } else if next_boundary_rel >= 1 && body[cursor + next_boundary_rel - 1] == b'\n' {
             next_boundary_rel - 1
         } else {
             next_boundary_rel
@@ -236,8 +235,9 @@ fn parse_part_headers(block: &[u8]) -> Result<(String, Option<String>, String), 
             content_type = line[line.find(':').unwrap_or(0) + 1..].trim().to_string();
         }
     }
-    let name = name
-        .ok_or_else(|| MultipartError::MalformedPart("part missing Content-Disposition name".into()))?;
+    let name = name.ok_or_else(|| {
+        MultipartError::MalformedPart("part missing Content-Disposition name".into())
+    })?;
     Ok((name, filename, content_type))
 }
 

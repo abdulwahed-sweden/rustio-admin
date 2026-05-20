@@ -72,7 +72,10 @@ pub(crate) fn wants_json(req: &Request) -> bool {
             }
         }
     }
-    req.query().get("format").map(|s| s == "json").unwrap_or(false)
+    req.query()
+        .get("format")
+        .map(|s| s == "json")
+        .unwrap_or(false)
 }
 
 /// JSON envelope returned by `GET /admin/<model>?format=json`.
@@ -182,9 +185,7 @@ fn typed_cell(field: &super::types::AdminField, cell: &str) -> serde_json::Value
                 }
             }
         }
-        FieldType::OptionalString
-        | FieldType::OptionalDateTime
-        | FieldType::OptionalFilePath => {
+        FieldType::OptionalString | FieldType::OptionalDateTime | FieldType::OptionalFilePath => {
             if cell.is_empty() {
                 serde_json::Value::Null
             } else {
@@ -351,8 +352,7 @@ mod tests {
         ] {
             let resp = json_error(err);
             assert_eq!(resp.status.as_u16(), expected);
-            let v: serde_json::Value =
-                serde_json::from_slice(&resp.body).expect("valid json");
+            let v: serde_json::Value = serde_json::from_slice(&resp.body).expect("valid json");
             assert_eq!(v["status"].as_u64(), Some(expected as u64));
         }
     }

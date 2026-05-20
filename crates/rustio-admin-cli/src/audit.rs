@@ -265,8 +265,18 @@ fn format_audit_tail(rows: &[AuditRow]) -> String {
 
     // Right-pad each column to the max width seen in this
     // batch. Adding 2 spaces between columns for readability.
-    let max_action = pres.iter().map(|p| p.action.len()).max().unwrap_or(6).max(6);
-    let max_target = pres.iter().map(|p| p.target.len()).max().unwrap_or(8).max(8);
+    let max_action = pres
+        .iter()
+        .map(|p| p.action.len())
+        .max()
+        .unwrap_or(6)
+        .max(6);
+    let max_target = pres
+        .iter()
+        .map(|p| p.target.len())
+        .max()
+        .unwrap_or(8)
+        .max(8);
     let max_who = pres.iter().map(|p| p.who.len()).max().unwrap_or(4).max(4);
 
     let mut out = String::new();

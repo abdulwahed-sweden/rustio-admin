@@ -41,9 +41,7 @@ fn list_templates() -> Result<(), String> {
 
 fn copy_template(name: &str, force: bool, out_root: &Path) -> Result<(), String> {
     let body = rustio_admin::embedded_template_source(name).ok_or_else(|| {
-        format!(
-            "unknown template `{name}`. Run `rustio override` (no args) for the full list."
-        )
+        format!("unknown template `{name}`. Run `rustio override` (no args) for the full list.")
     })?;
 
     // Defense in depth: refuse path-traversal attempts even though
@@ -122,7 +120,10 @@ mod tests {
         // Pick the first embedded name — the test stays robust
         // across reorderings.
         let names = rustio_admin::embedded_template_names();
-        let target = names.first().copied().expect("at least one embedded template");
+        let target = names
+            .first()
+            .copied()
+            .expect("at least one embedded template");
         copy_template(target, false, &tmp).expect("copy succeeds");
         let dest = tmp.join(target);
         assert!(dest.is_file(), "destination {} not written", dest.display());

@@ -370,7 +370,11 @@ mod formdata_tests {
         // multi-select filters parse from the URL.
         assert_eq!(
             f.get_all("status"),
-            &["active".to_string(), "pending".to_string(), "resolved".to_string()],
+            &[
+                "active".to_string(),
+                "pending".to_string(),
+                "resolved".to_string()
+            ],
         );
     }
 

@@ -512,7 +512,11 @@ fn format_perms_report(r: &PermsReport) -> String {
     let _ = writeln!(
         out,
         "Active:    {}",
-        if r.is_active { "yes" } else { "no — every check_permission call denies" }
+        if r.is_active {
+            "yes"
+        } else {
+            "no — every check_permission call denies"
+        }
     );
     if r.is_demo {
         let _ = writeln!(out, "Demo:      yes");

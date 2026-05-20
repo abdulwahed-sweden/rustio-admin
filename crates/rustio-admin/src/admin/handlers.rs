@@ -557,8 +557,7 @@ pub(crate) async fn do_save_filter(
     let query = super::saved_filters::sanitise_query(form.get("_query").unwrap_or_default());
 
     super::saved_filters::ensure_table(&ctx.db).await?;
-    super::saved_filters::save(&ctx.db, identity.user_id, entry.admin_name, &name, &query)
-        .await?;
+    super::saved_filters::save(&ctx.db, identity.user_id, entry.admin_name, &name, &query).await?;
 
     // Redirect to the list with the saved query applied so the
     // operator visually confirms what got bookmarked.
@@ -620,13 +619,9 @@ pub(crate) async fn list_model(
     // (the lookup endpoint URL bakes it in). Building the registry
     // once per list render is cheap — pure-functional walk over the
     // entries, no DB. The same registry hydrates FK cells below.
-    let registry =
-        super::relations::RelationRegistry::from_admin_entries(ctx.admin.entries());
-    let inferred = super::filters::infer_filters_with_registry(
-        entry.fields,
-        entry.singular_name,
-        &registry,
-    );
+    let registry = super::relations::RelationRegistry::from_admin_entries(ctx.admin.entries());
+    let inferred =
+        super::filters::infer_filters_with_registry(entry.fields, entry.singular_name, &registry);
     let mut filter_groups: Vec<render::FilterGroupCtx> = Vec::new();
     let mut sql_filters: Vec<(String, String)> = Vec::new();
     let mut sql_date_ranges: Vec<(String, Option<String>, Option<String>)> = Vec::new();
@@ -925,12 +920,8 @@ pub(crate) async fn list_model(
     // a presentation concern (the JSON shape stores raw FK ids,
     // not human labels).
     if super::json_api::wants_json(req) {
-        let envelope = super::json_api::list_envelope(
-            entry,
-            page_result,
-            page as usize,
-            per_page as usize,
-        );
+        let envelope =
+            super::json_api::list_envelope(entry, page_result, page as usize, per_page as usize);
         return super::json_api::json_response(envelope);
     }
 
@@ -944,16 +935,16 @@ pub(crate) async fn list_model(
     // logs and falls through to an empty list — the page still
     // renders, just without the bookmarks dropdown.
     let _ = super::saved_filters::ensure_table(&ctx.db).await;
-    let saved_filters = super::saved_filters::list_for_user(
-        &ctx.db,
-        identity.user_id,
-        entry.admin_name,
-    )
-    .await
-    .unwrap_or_else(|e| {
-        log::warn!("saved_filters fetch failed for user={}: {e}", identity.user_id);
-        Vec::new()
-    });
+    let saved_filters =
+        super::saved_filters::list_for_user(&ctx.db, identity.user_id, entry.admin_name)
+            .await
+            .unwrap_or_else(|e| {
+                log::warn!(
+                    "saved_filters fetch failed for user={}: {e}",
+                    identity.user_id
+                );
+                Vec::new()
+            });
 
     let list = render::list_ctx(
         &identity,
@@ -1044,11 +1035,8 @@ fn parse_sql_filter_query(
     qs: &crate::http::FormData,
     registry: &super::relations::RelationRegistry,
 ) -> SqlFilterQuery {
-    let inferred = super::filters::infer_filters_with_registry(
-        entry.fields,
-        entry.singular_name,
-        registry,
-    );
+    let inferred =
+        super::filters::infer_filters_with_registry(entry.fields, entry.singular_name, registry);
     let mut filters: Vec<(String, String)> = Vec::new();
     let mut date_ranges: Vec<(String, Option<String>, Option<String>)> = Vec::new();
     let mut multi_filters: Vec<(String, Vec<String>)> = Vec::new();
@@ -1138,21 +1126,19 @@ pub(crate) async fn export_model_csv(
             .collect(),
     };
 
-    let registry =
-        super::relations::RelationRegistry::from_admin_entries(ctx.admin.entries());
+    let registry = super::relations::RelationRegistry::from_admin_entries(ctx.admin.entries());
     let parsed = parse_sql_filter_query(entry, &qs, &registry);
 
     let search = qs.get("q").unwrap_or_default().to_string();
-    let search_opt: Option<(String, Vec<String>)> = if search.is_empty()
-        || entry.search_fields.is_empty()
-    {
-        None
-    } else {
-        Some((
-            search,
-            entry.search_fields.iter().map(|s| s.to_string()).collect(),
-        ))
-    };
+    let search_opt: Option<(String, Vec<String>)> =
+        if search.is_empty() || entry.search_fields.is_empty() {
+            None
+        } else {
+            Some((
+                search,
+                entry.search_fields.iter().map(|s| s.to_string()).collect(),
+            ))
+        };
 
     let page = entry
         .ops
@@ -1612,12 +1598,13 @@ pub(crate) async fn serve_upload(
     if !resolved.starts_with(&canonical_root) {
         return Err(Error::NotFound("upload not found".into()));
     }
-    let bytes = std::fs::read(&resolved)
-        .map_err(|_| Error::NotFound("upload not found".into()))?;
+    let bytes = std::fs::read(&resolved).map_err(|_| Error::NotFound("upload not found".into()))?;
     let content_type = guess_content_type(filename);
-    Ok(Response::new(hyper::StatusCode::OK, bytes::Bytes::from(bytes))
-        .with_header("content-type", content_type)
-        .with_header("cache-control", "private, max-age=300"))
+    Ok(
+        Response::new(hyper::StatusCode::OK, bytes::Bytes::from(bytes))
+            .with_header("content-type", content_type)
+            .with_header("cache-control", "private, max-age=300"),
+    )
 }
 
 /// Trivial filename-extension → MIME guesser. Covers the common
@@ -1732,10 +1719,7 @@ async fn fetch_inline_sections(
             total: page.total,
             rows,
             add_url: format!("/admin/{}/new", target.admin_name),
-            list_url: format!(
-                "/admin/{}?{}={}",
-                target.admin_name, inline.fk_field, pid
-            ),
+            list_url: format!("/admin/{}?{}={}", target.admin_name, inline.fk_field, pid),
         });
     }
     out
@@ -1955,7 +1939,11 @@ pub(crate) async fn do_update(
                     "Updated {} #{id} ({} {} changed)",
                     entry.singular_name,
                     changes.len(),
-                    if changes.len() == 1 { "field" } else { "fields" },
+                    if changes.len() == 1 {
+                        "field"
+                    } else {
+                        "fields"
+                    },
                 )
             };
             let metadata = if changes.is_empty() {
@@ -2049,9 +2037,9 @@ pub(crate) async fn show_delete_confirm(
         cascading,
         csrf_token(req),
     );
-    let body = ctx
-        .templates
-        .render_for_model(entry.admin_name, "admin/confirm_delete.html", &view)?;
+    let body =
+        ctx.templates
+            .render_for_model(entry.admin_name, "admin/confirm_delete.html", &view)?;
     Ok(Response::html(body))
 }
 
@@ -3037,7 +3025,7 @@ mod csv_escape_tests {
 #[cfg(test)]
 mod compute_row_diff_tests {
     use super::*;
-    use crate::admin::types::{AdminField, AdminEntry, EditRow, FieldType};
+    use crate::admin::types::{AdminEntry, AdminField, EditRow, FieldType};
 
     fn field(name: &'static str, label: &'static str, editable: bool) -> AdminField {
         AdminField {
@@ -3053,7 +3041,10 @@ mod compute_row_diff_tests {
     fn row(values: &[(&str, &str)]) -> EditRow {
         EditRow {
             id: 1,
-            values: values.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            values: values
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
         }
     }
 
@@ -3091,14 +3082,25 @@ mod compute_row_diff_tests {
             &'a self,
             _db: &'a crate::orm::Db,
             _opts: crate::admin::types::ListOpts,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<crate::admin::types::ListPage>> + Send + 'a>> {
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = crate::error::Result<crate::admin::types::ListPage>,
+                    > + Send
+                    + 'a,
+            >,
+        > {
             Box::pin(async { Ok(crate::admin::types::ListPage::default()) })
         }
         fn find_row<'a>(
             &'a self,
             _db: &'a crate::orm::Db,
             _id: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<Option<EditRow>>> + Send + 'a>> {
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<Output = crate::error::Result<Option<EditRow>>> + Send + 'a,
+            >,
+        > {
             Box::pin(async { Ok(None) })
         }
         fn create<'a>(
@@ -3120,14 +3122,18 @@ mod compute_row_diff_tests {
             &'a self,
             _db: &'a crate::orm::Db,
             _id: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<()>> + Send + 'a>> {
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = crate::error::Result<()>> + Send + 'a>,
+        > {
             Box::pin(async { Ok(()) })
         }
         fn object_label<'a>(
             &'a self,
             _db: &'a crate::orm::Db,
             _id: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<Option<String>>> + Send + 'a>> {
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = crate::error::Result<Option<String>>> + Send + 'a>,
+        > {
             Box::pin(async { Ok(None) })
         }
         fn execute_bulk_action<'a>(
@@ -3136,7 +3142,14 @@ mod compute_row_diff_tests {
             _name: &'a str,
             _ids: &'a [i64],
             _ctx: &'a crate::admin::bulk::BulkActionContext<'a>,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::error::Result<crate::admin::bulk::BulkActionResult>> + Send + 'a>> {
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<
+                        Output = crate::error::Result<crate::admin::bulk::BulkActionResult>,
+                    > + Send
+                    + 'a,
+            >,
+        > {
             Box::pin(async { Ok(crate::admin::bulk::BulkActionResult::default()) })
         }
     }
@@ -3144,13 +3157,34 @@ mod compute_row_diff_tests {
     #[test]
     fn diff_reports_changed_fields_only() {
         const FIELDS: &[AdminField] = &[
-            AdminField { name: "title", label: "Title", field_type: FieldType::String, editable: true, relation: None, choices: None },
-            AdminField { name: "body",  label: "Body",  field_type: FieldType::String, editable: true, relation: None, choices: None },
-            AdminField { name: "slug",  label: "Slug",  field_type: FieldType::String, editable: true, relation: None, choices: None },
+            AdminField {
+                name: "title",
+                label: "Title",
+                field_type: FieldType::String,
+                editable: true,
+                relation: None,
+                choices: None,
+            },
+            AdminField {
+                name: "body",
+                label: "Body",
+                field_type: FieldType::String,
+                editable: true,
+                relation: None,
+                choices: None,
+            },
+            AdminField {
+                name: "slug",
+                label: "Slug",
+                field_type: FieldType::String,
+                editable: true,
+                relation: None,
+                choices: None,
+            },
         ];
         let entry = entry_with(FIELDS);
         let before = row(&[("title", "Old"), ("body", "Same"), ("slug", "alpha")]);
-        let after  = row(&[("title", "New"), ("body", "Same"), ("slug", "beta")]);
+        let after = row(&[("title", "New"), ("body", "Same"), ("slug", "beta")]);
         let diff = compute_row_diff(&entry, &before, &after);
         let names: Vec<&str> = diff.iter().map(|c| c.field.as_str()).collect();
         assert_eq!(names, vec!["title", "slug"]);
@@ -3165,12 +3199,26 @@ mod compute_row_diff_tests {
         // Auto-touched columns (updated_at, password_hash) shouldn't
         // surface in the diff — they aren't user-driven changes.
         const FIELDS: &[AdminField] = &[
-            AdminField { name: "title",      label: "Title",      field_type: FieldType::String,   editable: true,  relation: None, choices: None },
-            AdminField { name: "updated_at", label: "Updated at", field_type: FieldType::DateTime, editable: false, relation: None, choices: None },
+            AdminField {
+                name: "title",
+                label: "Title",
+                field_type: FieldType::String,
+                editable: true,
+                relation: None,
+                choices: None,
+            },
+            AdminField {
+                name: "updated_at",
+                label: "Updated at",
+                field_type: FieldType::DateTime,
+                editable: false,
+                relation: None,
+                choices: None,
+            },
         ];
         let entry = entry_with(FIELDS);
         let before = row(&[("title", "A"), ("updated_at", "2026-01-01T00:00:00Z")]);
-        let after  = row(&[("title", "B"), ("updated_at", "2026-05-19T12:34:56Z")]);
+        let after = row(&[("title", "B"), ("updated_at", "2026-05-19T12:34:56Z")]);
         let diff = compute_row_diff(&entry, &before, &after);
         let names: Vec<&str> = diff.iter().map(|c| c.field.as_str()).collect();
         assert_eq!(names, vec!["title"]);
@@ -3181,12 +3229,17 @@ mod compute_row_diff_tests {
         // Missing-in-before == "" by the lookup contract. The diff
         // reports it as a real change so "previously NULL → now
         // X" surfaces clearly on the history page.
-        const FIELDS: &[AdminField] = &[
-            AdminField { name: "subtitle", label: "Subtitle", field_type: FieldType::OptionalString, editable: true, relation: None, choices: None },
-        ];
+        const FIELDS: &[AdminField] = &[AdminField {
+            name: "subtitle",
+            label: "Subtitle",
+            field_type: FieldType::OptionalString,
+            editable: true,
+            relation: None,
+            choices: None,
+        }];
         let entry = entry_with(FIELDS);
         let before = row(&[("subtitle", "")]);
-        let after  = row(&[("subtitle", "Now set")]);
+        let after = row(&[("subtitle", "Now set")]);
         let diff = compute_row_diff(&entry, &before, &after);
         assert_eq!(diff.len(), 1);
         assert_eq!(diff[0].from, "");
@@ -3195,12 +3248,17 @@ mod compute_row_diff_tests {
 
     #[test]
     fn diff_empty_when_nothing_changed() {
-        const FIELDS: &[AdminField] = &[
-            AdminField { name: "title", label: "Title", field_type: FieldType::String, editable: true, relation: None, choices: None },
-        ];
+        const FIELDS: &[AdminField] = &[AdminField {
+            name: "title",
+            label: "Title",
+            field_type: FieldType::String,
+            editable: true,
+            relation: None,
+            choices: None,
+        }];
         let entry = entry_with(FIELDS);
         let before = row(&[("title", "Same")]);
-        let after  = row(&[("title", "Same")]);
+        let after = row(&[("title", "Same")]);
         let diff = compute_row_diff(&entry, &before, &after);
         assert!(diff.is_empty());
     }
@@ -3213,7 +3271,10 @@ mod sanitise_upload_filename_tests {
     #[test]
     fn plain_ascii_name_passes_through() {
         assert_eq!(sanitise_upload_filename("photo.png"), "photo.png");
-        assert_eq!(sanitise_upload_filename("Report-2026_v2.pdf"), "Report-2026_v2.pdf");
+        assert_eq!(
+            sanitise_upload_filename("Report-2026_v2.pdf"),
+            "Report-2026_v2.pdf"
+        );
     }
 
     #[test]
@@ -3228,7 +3289,10 @@ mod sanitise_upload_filename_tests {
 
     #[test]
     fn replaces_unsafe_chars_with_underscore() {
-        assert_eq!(sanitise_upload_filename("hello world.png"), "hello_world.png");
+        assert_eq!(
+            sanitise_upload_filename("hello world.png"),
+            "hello_world.png"
+        );
         assert_eq!(sanitise_upload_filename("a;b&c.txt"), "a_b_c.txt");
         // Non-ASCII becomes `_` too — the goal is on-disk safety,
         // not Unicode preservation.
