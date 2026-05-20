@@ -736,6 +736,16 @@ pub fn register_admin_routes(
         |_req| async move { Ok(font_response(FONT_NOTO_SC)) },
     );
 
+    // Public: liveness / readiness probe. No auth — load
+    // balancers and k8s probes don't carry session cookies.
+    // Registered ahead of `/admin/:admin_name` so the route
+    // can't be shadowed by a model literally named `healthz`.
+    let c = ctx.clone();
+    let router = router.get("/admin/healthz", move |_req| {
+        let c = c.clone();
+        async move { super::healthz::healthz(&c.db).await }
+    });
+
     // Public: login/logout.
     let c = ctx.clone();
     let router = router.get("/admin/login", move |req| {
