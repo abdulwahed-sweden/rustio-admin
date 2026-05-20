@@ -118,6 +118,52 @@ leaves the alpha track.
 
 ### Added
 
+- **CSV export on the list endpoint** (`?format=csv` or
+  `Accept: text/csv`). Sibling of the JSON read surface — same
+  routes, same auth gate, same filter / search / sort /
+  pagination state, but RFC 4180 CSV instead of JSON. Detail
+  endpoint stays JSON-only — CSV for a single object doesn't
+  carry meaningful structure.
+  - **Content negotiation** lives in a new `admin::csv_export`
+    module. `wants_csv(req)` returns `true` when the `Accept`
+    header lists `text/csv` ahead of any `text/html` or
+    `application/json` preference, or when the URL carries
+    `?format=csv`. Browser defaults (`Accept: text/html`) keep
+    returning HTML; clients negotiating both `text/csv` and
+    `application/json` get whichever they listed first.
+  - **Output is RFC 4180:** CRLF line terminators; fields
+    containing `,`, `"`, `\r`, or `\n` are wrapped in double
+    quotes; literal `"` inside quoted fields is escaped by
+    doubling (`""`). Header row uses `AdminField.label` so the
+    spreadsheet columns match the human labels the HTML table
+    shows. Data rows reuse the per-cell stringification the
+    HTML list page already does (`row.cells`), so booleans stay
+    `true`/`false`, null `Optional*` slots become empty cells,
+    and datetimes render in the framework's `%Y-%m-%dT%H:%M`
+    form.
+  - **Download UX:** the response sets
+    `Content-Disposition: attachment; filename="<admin_name>.csv"`
+    so browsers prompt a download rather than rendering inline.
+  - **Auth:** piggybacks on the existing session-cookie path;
+    same per-model `view` permission gate as the list page;
+    audit emission unchanged.
+  - **Seven unit tests** on the writer + negotiator: simple
+    cells stay unquoted, comma cells quote, double-quote cells
+    double their quote, newline cells quote, CRLF row
+    termination, mixed quoted / unquoted cells in one row,
+    Accept-header precedence (`text/csv` first wins; `text/html`
+    or `application/json` first defeats it). Live-verified
+    against the clinic-appointments example:
+    `GET /admin/clinics` + `Accept: text/csv` → 200,
+    `Content-Disposition: attachment; filename="clinics.csv"`,
+    header `id,Name,Address,Is Open,Created At`, 5 data rows;
+    `GET /admin/patients?format=csv` → 20 patient rows with
+    proper bool serialisation and empty cell for unset
+    `photo_path`; HTML / JSON paths unchanged; mixed
+    `Accept: text/csv, application/json` → CSV wins; mixed
+    `Accept: application/json, text/csv` → JSON wins. `xxd`
+    confirmed `0d 0a` CRLF terminators on every row.
+
 - **JSON API (read-only) on the existing list + detail routes.**
   Closes the read-side half of the roadmap entry "CRUD API
   generation. A `?format=json` URL switch (or

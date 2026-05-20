@@ -910,6 +910,15 @@ pub(crate) async fn list_model(
             .await?;
     }
 
+    // CSV content negotiation — checked first so a request that
+    // names both `text/csv` and `application/json` in `Accept`
+    // wins for whichever the client listed first (handled inside
+    // `wants_csv` / `wants_json`). Same short-circuit rationale
+    // as JSON: skip FK hydration; the export carries raw cells.
+    if super::csv_export::wants_csv(req) {
+        return super::csv_export::list_response(entry, page_result);
+    }
+
     // JSON content negotiation. When the client wants JSON (via
     // `Accept` or `?format=json`), short-circuit ahead of the
     // HTML rendering — including the FK cell hydration, which is
