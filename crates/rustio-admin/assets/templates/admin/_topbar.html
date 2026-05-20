@@ -6,7 +6,6 @@
   {% endif %}
   <a href="/admin" class="rio-topbar-brand">{{ site_header }}</a>
   <nav class="rio-topbar-nav" aria-label="Account">
-    <button type="button" class="rio-theme-toggle" data-rio-theme-toggle aria-label="Toggle theme">System</button>
     {% if identity %}
       <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
       {# Two-factor self-service surface. Pre-0.8.1 the R3 MFA

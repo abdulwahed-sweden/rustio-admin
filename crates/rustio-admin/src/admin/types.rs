@@ -452,17 +452,17 @@ impl Default for SiteBranding {
 /// Project-level override patch for the admin chrome palette.
 ///
 /// `admin.css` is the single source of truth for the framework's design
-/// tokens (light defaults, dark mode, semantic surfaces, typography
-/// scale, …). `AdminTheme` is **purely a patch layer**: every field is
+/// tokens (palette, semantic surfaces, typography scale, …).
+/// `AdminTheme` is **purely a patch layer**: every field is
 /// `Option<String>` and defaults to `None`, meaning *“don’t override —
 /// let the stylesheet decide.”* Out of the box the framework emits no
 /// inline `<style>` block at all.
 ///
 /// Set a field — usually via the fluent builder methods or
 /// [`Admin::accent_color`] — to inject a `--rio-*` custom-property
-/// override on every page. Overrides apply across `data-rio-theme`
-/// states (system / light / dark) by emitting a multi-state selector
-/// after `admin.css`, so they win cascade ties without `!important`.
+/// override on every page. Overrides are emitted as a single
+/// `html { ... }` block after `admin.css`, so they win cascade ties
+/// without `!important`. The framework is light-only.
 ///
 /// Values are hex (`#rrggbb` or `rrggbb`); the leading `#` is
 /// auto-normalised at construction. Malformed input is rejected at

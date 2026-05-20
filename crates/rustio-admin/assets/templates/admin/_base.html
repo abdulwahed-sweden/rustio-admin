@@ -4,12 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ page_title|default("") }}{% if page_title %} · {% endif %}{{ site_title }}{% endblock %}</title>
-{# Inline theme bootstrap. Sets data-rio-theme before CSS is applied
- # so the chosen mode lands on the first paint — no flash-of-light on
- # dark, no flash-of-dark on light. Reads localStorage["rio-theme"]
- # written by admin.js's toggle. Absent / invalid → "system" (no
- # attribute set), letting prefers-color-scheme decide. #}
-<script>(function(){try{var t=localStorage.getItem("rio-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-rio-theme",t);}}catch(_){}})();</script>
 <link rel="stylesheet" href="/static/admin.css">
 {# _theme.html MUST come after admin.css — project token overrides
  # win cascade ties on source order without needing !important. #}

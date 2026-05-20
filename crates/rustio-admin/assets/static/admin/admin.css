@@ -1,14 +1,14 @@
 /* rustio-admin — hand-written stylesheet, split for contributors.
  *
  * Six-variable theme; project overrides via Admin::theme(...) and
- * its `_theme.html` partial that injects `:root { --rio-* … }`.
- * Mobile-first, three breakpoints. Dark palette flips via the
- * combination of `prefers-color-scheme: dark` and an explicit
- * `data-rio-theme="dark"` attribute on `<html>`.
+ * its `_theme.html` partial that injects `html { --rio-* … }`.
+ * Mobile-first, three breakpoints. Light-only — the framework
+ * ships a single palette and ignores the OS colour-scheme
+ * preference.
  *
  * Source layout follows the Primer / Carbon convention:
  *
- *   tokens  → themes → base → layout → components →
+ *   tokens  → base → layout → components →
  *   pages   → responsive → print
  *
  * Each fragment is a stand-alone CSS file with its own section
@@ -55,10 +55,6 @@
 @import url("tokens/radius.css");
 @import url("tokens/shadows.css");
 @import url("tokens/typography.css");
-
-/* ---- Themes — dark first, explicit-light last so it wins source order. */
-@import url("themes/dark.css");
-@import url("themes/light.css");
 
 /* ---- Base — reset, body, typography, utilities. */
 @import url("base/reset.css");

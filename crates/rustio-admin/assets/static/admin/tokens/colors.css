@@ -6,11 +6,10 @@
  * Canonical color tokens for the framework. Every component below
  * resolves through these `--rio-*` custom properties, so a project
  * can override the whole palette by writing one `:root` block in its
- * own stylesheet. There must be exactly ONE active definition per
- * token; the dark-theme block in themes/dark.css is the only
- * intentional override. If you add a new token here, document it
- * in CHANGELOG.md under "Tokens — colors" so feature branches can't
- * silently drift.
+ * own stylesheet. There is exactly ONE active definition per token —
+ * the framework is light-only, so this `:root` is the single source
+ * of truth. If you add a new token here, document it in CHANGELOG.md
+ * under "Tokens — colors" so feature branches can't silently drift.
  *
  * v0.15.0 — surface ladder deepened to satisfy Principle 9 (adjacent
  * surfaces ≥ 4% apart). Two internal surfaces added (`--rio-surface-

@@ -28,9 +28,8 @@ Five variable groups, one source of truth per group:
 
 Three rules:
 
-1. **One canonical value per token in `:root`.** Dark and explicit-light
-   overrides live in `themes/dark.css` and `themes/light.css` — nowhere
-   else.
+1. **One canonical value per token in `:root`.** The framework is
+   light-only — there are no dark or alternate-mode overrides anywhere.
 2. **No hard-coded colours, spacing, or font sizes outside `tokens/`.**
    Every component resolves through `var(--rio-*)`. Projects override the
    framework by patching `:root` from their own theme file; if a component
@@ -39,11 +38,12 @@ Three rules:
    `--rio-accent-hover-2` (or whatever) ships under "Tokens — colors"
    so feature branches can't silently drift the palette.
 
-The brand accent is **teal-emerald `#0F8C7E`** in light mode, **`#3FAA9D`**
-in dark. It is reserved for affordances — primary buttons, focus rings,
-active state, links, brand emblem. **It is never flood-filled across page
-chrome.** Surfaces stay neutral so the accent retains its weight as a
-call-to-action.
+The brand accent is **teal-emerald `#0F8C7E`**, lifted to **`#3FAA9D`**
+inside the deep-slate chrome (topbar / sidebar / footer) where the base
+hue muddles to ~3:1 contrast. It is reserved for affordances — primary
+buttons, focus rings, active state, links, brand emblem. **It is never
+flood-filled across page chrome.** Surfaces stay neutral so the accent
+retains its weight as a call-to-action.
 
 The crimson `#A0341A` used pre-0.3.0 was retired so projects can override
 exactly one teal value to rebrand.
@@ -119,8 +119,9 @@ from *layering*, not from drop shadow. Five rungs (light mode):
 | `--rio-surface-3` | `#EFF2F7` | Hover, pressed state, secondary chip              |
 | Accent wash       | 6–10 % α  | Selected row, active filter, sidebar `.is-active` |
 
-Never pure white, never pure black. The dark-mode floor is `#2B313C` —
-desaturated blue-graphite, not `#000` or `#111`.
+Never pure white, never pure black. The deepest surface in the
+framework is the chrome floor `#1F2A37` — desaturated blue-slate, not
+`#000` or `#111` — used for the topbar, sidebar, and footer.
 
 Borders work in three weights:
 
@@ -167,33 +168,32 @@ rules need to compute against them:
 
 ---
 
-## 5. Dark-mode philosophy
+## 5. Light-only stance
 
-**Dark mode is a calm nighttime workspace, not a hacker terminal.**
-Three non-negotiables, all encoded in `themes/dark.css`:
+The framework ships a **single, light palette**. No dark variant, no
+`prefers-color-scheme` media block, no theme toggle, no
+`data-rio-theme` attribute. The single `:root` block in
+`tokens/colors.css` is the only colour definition the framework owns.
 
-1. **No `#000`, no `#111`.** The floor is `#2B313C`. Page bg and surfaces
-   sit on a desaturated blue-graphite scale (~hsl 218°) that lifts in
-   4–5 % steps.
-2. **Accent lifts from `#0F8C7E` → `#3FAA9D`.** The deep light-mode teal
-   disappears into the graphite surface (~1.4:1 contrast); the lifted
-   variant pops at ~3.2:1 while keeping the same hue family so the brand
-   reads identically across modes.
-3. **Danger shifts from Tailwind red-400 to `#DC4444`** — a serious,
-   saturated red that actually communicates destructive intent. White-on-it
-   hits 4.7:1.
+Why light-only:
 
-Tokens are duplicated under both `prefers-color-scheme: dark` (for users
-who never touch the toggle) and `html[data-rio-theme="dark"]` (for explicit
-overrides) so the cascade is symmetric. The explicit-light override
-(`themes/light.css`) mirrors `:root`, so picking "Light" while the OS is
-in dark mode fully restores the light scale — semantic surfaces, shadows,
-and all — instead of letting dark values leak through.
+- **One palette to audit.** WCAG contrast pairs are checked once.
+  A dark variant doubled the surface area where token drift could
+  introduce a regression invisible to half the userbase.
+- **Operator software, not consumer.** Admin sessions are short and
+  bright-office by default; the cost of maintaining a parallel scale
+  was higher than the value it returned.
+- **Projects that need dark can override `:root`.** The token surface
+  is the same; a project stylesheet patching `--rio-bg`,
+  `--rio-surface*`, `--rio-text*`, `--rio-border*` can re-skin to a
+  dark palette without forking the framework.
 
-The theme bootstrap script in `_base.html` reads `localStorage["rio-theme"]`
-and sets the `data-rio-theme` attribute **before** CSS is applied, so the
-chosen mode lands on the first paint — no flash-of-light on dark, no
-flash-of-dark on light.
+The accent lifts from `#0F8C7E` to `#3FAA9D` **inside the deep-slate
+chrome surfaces only** (topbar / sidebar / footer — see
+`layout/shell.css`). On the light page canvas the base accent has
+sufficient contrast; inside chrome it muddles, hence the lifted
+variant. The lift is scoped via CSS custom-property cascade through
+`.rio-topbar, .rio-sidebar, .rio-footer`, not a separate theme.
 
 ---
 

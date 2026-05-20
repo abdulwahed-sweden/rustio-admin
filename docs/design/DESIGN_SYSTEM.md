@@ -129,7 +129,7 @@ in check.
 |---------|-----------------|---------------------|
 | **Token drift across feature branches** | Two open branches edit overlapping `--rio-*` tokens; the second to merge overwrites or conflicts with the first | `admin.css` token blocks; visible as colour or spacing inconsistencies in the merged main |
 | **Project-side `:root` redefinition** | A project's own CSS silently forks a framework token (`:root { --rio-accent: … }`) | Project stylesheet; visible when the framework default fails to roll forward |
-| **Accessibility regression** | A token's value shifts, breaking a contrast pair under WCAG | Light or dark theme; visible only on audit |
+| **Accessibility regression** | A token's value shifts, breaking a contrast pair under WCAG | Light palette; visible only on audit |
 | **Theme divergence between branches** | Feature branches accumulate parallel visual systems instead of converging on `main` | Cross-branch diffs; visible as "this branch looks different" surprise at merge time |
 | **Authority misconception** | UI hiding gets used as a security mechanism (a hidden button is "safe") | Server-side guards; visible only when an attacker submits a forged POST |
 | **Font resolution failure** | Arabic text lands on a Latin face because the fallback chain was edited | Any Arabic-rendering surface |
@@ -430,10 +430,15 @@ Projects must **not** redefine `--rio-*` variables in CSS.
 
 The framework default since 0.3.0 is teal-emerald.
 
-| Mode  | `--rio-accent` | `--rio-accent-hover` | `--rio-accent-rgb` |
-|-------|----------------|----------------------|---------------------|
-| Light | `#0F8C7E`      | `#0A6E62`            | `15 140 126`        |
-| Dark  | `#3FAA9D`      | `#5FBFB3`            | `63 170 157`        |
+| Scope                                  | `--rio-accent` | `--rio-accent-hover` | `--rio-accent-rgb` |
+|----------------------------------------|----------------|----------------------|---------------------|
+| Page canvas (default)                  | `#0F8C7E`      | `#0A6E62`            | `15 140 126`        |
+| Chrome scope (topbar/sidebar/footer)   | `#3FAA9D`      | `#5FBFB3`            | `63 170 157`        |
+
+The chrome-scope lift exists because the base teal muddles to ~3:1
+contrast against the `#1F2A37` slate; the lifted variant restores
+~5.3:1 while staying in the same hue family. The lift is applied via
+the cascade inside `layout/shell.css`, not via a separate theme.
 
 The previous terracotta accent (`#A0341A` / `#C84934`) was
 retired in 0.3.0. It survives only as a comment reference in
@@ -441,9 +446,9 @@ retired in 0.3.0. It survives only as a comment reference in
 the framework identity changes deliberately.
 
 The teal palette is permanent. It was chosen because it is
-calmer and more operational for long admin sessions, has a
-stronger contrast story in dark mode, and reads cleaner with
-the Geist + Tajawal + Noto Naskh typography stack. Branding
+calmer and more operational for long admin sessions, holds
+contrast cleanly across the surface ladder, and reads cleaner
+with the Geist + Tajawal + Noto Naskh typography stack. Branding
 overrides via `Admin::accent_color()` are still supported
 per project, but the framework default does not re-shift.
 

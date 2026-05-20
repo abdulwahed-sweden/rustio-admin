@@ -77,9 +77,9 @@ assets/templates/admin/
 
 ## CSS + JS
 
-Located under `crates/rustio-admin/assets/static/`. Single hand-written stylesheet (~1.9k LOC) and a minimal JS file (~210 LOC) for theme toggle + sidebar drawer + dropdown wiring + bulk select. **No build step.**
+Located under `crates/rustio-admin/assets/static/`. Single hand-written stylesheet (~1.9k LOC) and a minimal JS file (~160 LOC) for the sidebar drawer, dropdown wiring, bulk-select form helper, and FK autocomplete. **No build step.**
 
-The stylesheet is the single source of truth for every design token — light defaults at `:root`, dark variants under both `@media (prefers-color-scheme: dark)` and `html[data-rio-theme="dark"]`, and a symmetric `[data-rio-theme="light"]` block so an explicit user toggle while the OS is dark renders correctly. The token surface is wider than 0.1.x:
+The stylesheet is the single source of truth for every design token — a single `:root` block defines the whole palette. The framework is **light-only**: there is no dark variant, the OS `prefers-color-scheme` preference is ignored, and no `data-rio-theme` attribute or toggle exists. The token surface is wider than 0.1.x:
 
 - **Six override-point tokens** that `AdminTheme` can patch: `--rio-accent`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-muted`, `--rio-border`.
 - **Surface ladder** (`--rio-surface`, `--rio-surface-2`, `--rio-surface-3`) for layered depth.
@@ -88,9 +88,9 @@ The stylesheet is the single source of truth for every design token — light de
 - **Typography scale** (sizes, line-heights, weights, family fallback chains).
 - **Spacing scale** (`--rio-s1` through `--rio-s7`).
 - **Three soft shadows** (xs / regular / lg) at `0.04–0.10` alpha.
-- **Brand accent semantics** plus **success / warning / danger / info** with per-theme tuned variants.
+- **Brand accent semantics** plus **success / warning / danger / info** with hue-tuned variants.
 
-`_theme.html` is **purely an override patch** — when `AdminTheme` has no fields set, the partial emits no markup at all and `admin.css` is the only style source. When fields are set, the partial emits a `<style>` block *after* `<link rel="stylesheet" href="/static/admin.css">` in `_base.html` with selector list `html, html[data-rio-theme="light"], html[data-rio-theme="dark"]` so an override wins cascade ties on source order without needing `!important`. Project re-skins are one `Admin::accent_color("…")` call away — the framework's own dark-mode resolution still applies for tokens you didn't override.
+`_theme.html` is **purely an override patch** — when `AdminTheme` has no fields set, the partial emits no markup at all and `admin.css` is the only style source. When fields are set, the partial emits a `<style>` block *after* `<link rel="stylesheet" href="/static/admin.css">` in `_base.html` with a single `html { ... }` selector so an override wins cascade ties on source order without needing `!important`. Project re-skins are one `Admin::accent_color("…")` call away — tokens you didn't override fall through to the framework defaults.
 
 Three responsive breakpoints (mobile-first):
 
@@ -99,8 +99,6 @@ Three responsive breakpoints (mobile-first):
 | `< 768px`  | Single column. Sidebar off-canvas behind a hamburger. Tables horizontally scrollable. |
 | `≥ 768px`  | Two-column flex row. Sidebar `position: sticky` below the topbar with its own internal scroll. |
 | `≥ 1280px` | Wider sidebar, more padding. Main content capped at 1280px so wide monitors don't sprawl table rows. |
-
-Dark mode flips on either `prefers-color-scheme: dark` (OS-level) or `<html data-rio-theme="dark">` (manual toggle, persisted to `localStorage`). The mode is resolved by an inline bootstrap script in `<head>` *before* CSS loads, so the chosen mode lands on the first paint with no flash-of-light-on-dark.
 
 ## Public API surface
 

@@ -55,34 +55,31 @@
 /* ============================================================
  * v0.15.1 — chrome cascade override.
  *
- * `--rio-surface-chrome` is the only dark surface in light mode
- * (and the deepest near-black surface in dark mode). Components
- * inside topbar / sidebar / footer therefore need their text and
- * sub-surface tokens flipped to a light-on-dark palette.
+ * `--rio-surface-chrome` is the only deep-slate surface in the
+ * framework — the topbar, sidebar, and footer all share it.
+ * Components inside therefore need their text and sub-surface
+ * tokens flipped to a light-on-dark palette.
  *
  * Rather than touching every component file, we redefine the
  * relevant tokens locally within these three parent selectors.
  * CSS custom properties cascade through descendants, so every
  * `var(--rio-text)`, `var(--rio-surface-2)`, etc. inside chrome
- * picks up the dark-surface values automatically. The theme-toggle
- * button keeps `var(--rio-surface)` (the card surface) so it
- * visually pops against the chrome — a deliberate exception.
+ * picks up the dark-surface values automatically.
  * ============================================================ */
 
 .rio-topbar,
 .rio-sidebar,
 .rio-footer {
-  /* Light text on dark chrome — calibrated for #1F2A37 (light
-   * mode) and #0A0E14 (dark mode). Same values work for both
-   * because chrome is always near-black. */
+  /* Light text on dark chrome — calibrated for #1F2A37 so it
+   * stays AA-legible against the slate background. */
   --rio-text-strong: #F5F6F8;
   --rio-text:        #C9CFD8;
   --rio-text-muted:  #8B919C;
   --rio-text-subtle: #6E737D;
 
   /* Sub-surface tones used by hover, pressed, and active states
-   * inside chrome — these lift the dark background by 5-10% per
-   * step so interaction is visible without flash. */
+   * inside chrome — these lift the chrome background by 5-10%
+   * per step so interaction is visible without flash. */
   --rio-surface-2: #2A3441;
   --rio-surface-3: #364150;
 
@@ -92,13 +89,13 @@
   --rio-border:        #364150;
   --rio-border-strong: #4A5364;
 
-  /* Lifted accent within chrome — same logic as dark mode:
-   * `#0F8C7E` (deep teal) against `#1F2A37` (deep slate) muddles
-   * to ~3:1 contrast. Lifting the chrome-scope accent to the
-   * `#3FAA9D` variant restores ~5.3:1 — the active sidebar item
-   * and any in-chrome accent surface read as crisp teal, not
-   * "dark teal blob." Brand identity is preserved because the
-   * eye reads both shades as the same hue family. */
+  /* Lifted accent within chrome. The base `#0F8C7E` (deep teal)
+   * against `#1F2A37` (deep slate) muddles to ~3:1 contrast.
+   * Lifting the chrome-scope accent to `#3FAA9D` restores ~5.3:1
+   * — the active sidebar item and any in-chrome accent surface
+   * reads as crisp teal, not "dark teal blob." Brand identity is
+   * preserved because the eye reads both shades as the same hue
+   * family. */
   --rio-accent:     #3FAA9D;
   --rio-accent-rgb: 63 170 157;
 }

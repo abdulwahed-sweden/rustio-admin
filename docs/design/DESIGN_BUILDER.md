@@ -742,7 +742,6 @@ Framework capability that is optional by design:
 | `mfa` | Enables R3 TOTP enrolment surfaces | Generated admin omits MFA pages | `DESIGN_R3_MFA.md` |
 | `email` | Wires the framework's email sender into recovery flows | Generated recovery uses log-only mailer | `DESIGN_EMAIL.md`, `DESIGN_RECOVERY.md` |
 | `soft_delete` | (When Framework ships it.) Generates soft-delete ModelAdmin overrides | Omits | Pending Framework support |
-| `dark_mode_default` | Project ships with `data-rio-theme="dark"` as the bootstrap default | Light default | `DESIGN_SYSTEM.md` |
 
 A new feature lands here only after the corresponding Framework
 contract document accepts it. Until then, the Builder rejects
