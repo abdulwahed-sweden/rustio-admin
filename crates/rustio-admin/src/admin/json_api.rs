@@ -29,10 +29,11 @@
 //! read-only half end-to-end; the write half can be layered on
 //! top without redesigning the read surface.
 
+use hyper::StatusCode;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::http::{Request, Response};
 
 use super::types::ListPage;
@@ -205,6 +206,33 @@ pub(crate) fn json_response<T: Serialize>(body: T) -> Result<Response> {
     Ok(Response::json_raw(s))
 }
 
+/// JSON-shape error envelope for API clients. Returned by API
+/// handlers in lieu of the framework's default HTML error page
+/// so the response contract stays predictable for non-browser
+/// consumers.
+///
+/// Shape: `{"error": "<message>", "status": <code>}`. The status
+/// number is duplicated in the body so clients that don't read
+/// headers (most JS) still see it. `client_message()` strips
+/// detail from 500s — internal text stays in logs.
+pub(crate) fn json_error(err: Error) -> Response {
+    let status = StatusCode::from_u16(err.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let body = serde_json::json!({
+        "error": err.client_message(),
+        "status": err.status(),
+    });
+    let s = serde_json::to_string(&body).unwrap_or_else(|_| {
+        // Fallback for the unreachable case where serialising a
+        // {string, number} pair fails — emit a hand-built JSON
+        // string so the response contract still holds.
+        format!(
+            r#"{{"error":"json error envelope serialisation failed","status":{}}}"#,
+            err.status()
+        )
+    });
+    Response::new(status, s).with_header("content-type", "application/json")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,6 +290,71 @@ mod tests {
         let f = field("title", FieldType::String);
         assert_eq!(typed_cell(&f, ""), serde_json::json!(""));
         assert_eq!(typed_cell(&f, "hi"), serde_json::json!("hi"));
+    }
+
+    #[test]
+    fn json_error_carries_status_code_and_content_type() {
+        // 404 NotFound case — the common "row missing" path.
+        let resp = json_error(Error::NotFound("clinics/9999".into()));
+        assert_eq!(resp.status.as_u16(), 404);
+        let ctype = resp
+            .headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("content-type"))
+            .map(|(_, v)| v.as_str())
+            .unwrap_or("");
+        assert_eq!(ctype, "application/json");
+    }
+
+    #[test]
+    fn json_error_envelope_shape_is_error_plus_status() {
+        let resp = json_error(Error::NotFound("clinics/9999".into()));
+        let body = std::str::from_utf8(&resp.body).expect("utf-8");
+        let v: serde_json::Value = serde_json::from_str(body).expect("valid json");
+        assert_eq!(v["status"], 404);
+        // Message comes from `client_message()` and matches what
+        // the framework would otherwise put in the HTML page.
+        assert_eq!(v["error"], "clinics/9999");
+    }
+
+    #[test]
+    fn json_error_redacts_internal_message() {
+        // For 500s the framework deliberately returns a generic
+        // string — the real detail stays in logs. The JSON
+        // envelope must inherit that policy.
+        let resp = json_error(Error::Internal("password in this string!".into()));
+        assert_eq!(resp.status.as_u16(), 500);
+        let body = std::str::from_utf8(&resp.body).expect("utf-8");
+        assert!(
+            !body.contains("password"),
+            "internal error detail leaked into client envelope: {body}",
+        );
+        let v: serde_json::Value = serde_json::from_str(body).expect("valid json");
+        assert_eq!(v["error"], "Internal Server Error");
+        assert_eq!(v["status"], 500);
+    }
+
+    #[test]
+    fn json_error_maps_each_status_variant() {
+        // Every variant of Error must produce its expected
+        // HTTP status code in the envelope. This guards against
+        // silent regressions if a future Error variant is added
+        // and we forget to thread it through.
+        for (err, expected) in [
+            (Error::BadRequest("x".into()), 400),
+            (Error::Unauthorized("x".into()), 401),
+            (Error::Forbidden("x".into()), 403),
+            (Error::NotFound("x".into()), 404),
+            (Error::MethodNotAllowed("x".into()), 405),
+            (Error::Conflict("x".into()), 409),
+            (Error::Internal("x".into()), 500),
+        ] {
+            let resp = json_error(err);
+            assert_eq!(resp.status.as_u16(), expected);
+            let v: serde_json::Value =
+                serde_json::from_slice(&resp.body).expect("valid json");
+            assert_eq!(v["status"].as_u64(), Some(expected as u64));
+        }
     }
 
     #[test]
