@@ -32,9 +32,12 @@
   gap: var(--rio-s5);
 }
 .rio-fieldset {
-  border: 1px solid var(--rio-border);
+  /* v0.16 — generous 32px internal padding on cards. Previously
+   * 24/24 felt pinched; the new 32/32 pad gives form sections the
+   * "premium card" feel without inflating the page. */
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6) var(--rio-s5);
+  padding: var(--rio-s6);
   margin: 0;
   background: var(--rio-surface);
   box-shadow: var(--rio-shadow);
@@ -95,18 +98,20 @@
 .rio-input,
 .rio-textarea,
 .rio-select {
+  /* v0.16 — 44px target height (touch-target standard). Padding bumped
+   * to 10/14 so single-line inputs sit at exactly 44px with 16px text
+   * at 1.6 line-height. Inputs read as "place to type" not "drawn
+   * rectangle." */
   width: 100%;
-  padding: 0.6rem var(--rio-s3);
-  border: 1px solid var(--rio-border);
+  min-height: 44px;
+  padding: 0.625rem var(--rio-s3);              /* 10px / 12px */
+  border: 1px solid var(--rio-border-strong);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
   color: var(--rio-text-strong);
-  /* Inset shadow turns the field from "drawn rectangle" into
-   * "place to type." Premium-software detail — Principle 11
-   * supporting weight without flash. */
   box-shadow: var(--rio-shadow-inset);
   font: inherit;
-  font-size: var(--rio-fs-md);
+  font-size: var(--rio-fs-md);                  /* 16px */
   line-height: var(--rio-lh-ui);
   transition: border-color 0.12s, box-shadow 0.12s, background-color 0.12s;
 }
@@ -114,16 +119,17 @@
 .rio-textarea::placeholder { color: var(--rio-text-subtle); }
 .rio-input:hover,
 .rio-textarea:hover,
-.rio-select:hover { border-color: var(--rio-border-strong); }
+.rio-select:hover { border-color: var(--rio-text-muted); }
 .rio-input:focus,
 .rio-textarea:focus,
 .rio-select:focus {
   outline: none;
   border-color: var(--rio-accent);
-  /* Stack inset + focus ring: the inset stays so the field
-   * keeps its depth; the focus ring sits on top. */
+  /* v0.16 — focus ring uses the new --rio-accent-border token (teal-200)
+   * as a 4px halo. Reads as "this is the focused field" from across the
+   * page without flash. Inset stays so the field keeps its depth. */
   box-shadow: var(--rio-shadow-inset),
-              0 0 0 3px rgb(var(--rio-accent-rgb) / 0.22);
+              0 0 0 4px var(--rio-accent-border);
 }
 .rio-input:disabled,
 .rio-textarea:disabled,

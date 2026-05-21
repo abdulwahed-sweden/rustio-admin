@@ -10,23 +10,25 @@
   display: flex;
   align-items: center;
   gap: var(--rio-s4);
+  /* v0.16 — 24px horizontal padding. Topbar stops feeling cramped
+   * beside the brand and there's real breathing room between
+   * topbar items. */
   padding: 0 var(--rio-s5);
   height: var(--rio-topbar-h);
   /* Light topbar on the light page canvas. `--rio-surface`
-   * (`#F9FAFB`) sits slightly above `--rio-bg` (`#E5E7EB`) so the
-   * topbar still reads as a distinct strip — GitHub / Vercel /
-   * Linear convention. The bottom border carries the seam between
-   * chrome and content; the deep-slate weight in the layout comes
-   * from the sidebar, not the topbar. */
+   * (now pure `#FFFFFF`) sits one tier above the canvas — GitHub /
+   * Vercel / Linear convention. The bottom border carries the seam
+   * between chrome and content; the deep-slate weight in the layout
+   * comes from the sidebar, not the topbar. */
   background: var(--rio-surface);
-  border-bottom: 1px solid var(--rio-border);
+  border-bottom: 1px solid var(--rio-border-soft);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 .rio-topbar-brand {
   font-weight: var(--rio-fw-bold);
-  font-size: var(--rio-fs-lg);                 /* 17px */
+  font-size: var(--rio-fs-lg);                 /* 18px */
   color: var(--rio-text-strong);
   letter-spacing: var(--rio-tracking-heading);
 }
@@ -40,12 +42,12 @@
 }
 .rio-topbar-identity {
   color: var(--rio-text-muted);
-  font-size: var(--rio-fs-md);                 /* 15px */
+  font-size: var(--rio-fs-md);                 /* 16px */
   font-weight: var(--rio-fw-regular);
 }
 .rio-topbar-link {
   color: var(--rio-text-muted);
-  font-size: var(--rio-fs-md);
+  font-size: var(--rio-fs-md);                 /* 16px */
   font-weight: var(--rio-fw-medium);
 }
 .rio-topbar-link:hover { color: var(--rio-text); }

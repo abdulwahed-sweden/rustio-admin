@@ -11,68 +11,92 @@
  * of truth. If you add a new token here, document it in CHANGELOG.md
  * under "Tokens — colors" so feature branches can't silently drift.
  *
- * v0.15.0 — surface ladder deepened to satisfy Principle 9 (adjacent
- * surfaces ≥ 4% apart). Two internal surfaces added (`--rio-surface-
- * chrome` for the topbar/sidebar — Principle 10; `--rio-surface-
- * elevated` for transient overlays). Border scale firmed by one
- * step so cards/tables actually register at arm's length. Text
- * scale moved one stop darker so the chrome carries its weight.
- * See docs/design/PLAN_VISUAL_v2.md for the rationale.
+ * v0.16.0 — clinical-SaaS overhaul. The palette moves to the modern
+ * slate ladder (slate-500/600/700/800/900) used by Linear, Vercel,
+ * Notion, and most modern healthtech (Doctolib, Athenahealth). Three
+ * load-bearing changes:
+ *
+ *   1. Canvas / surface inverted — canvas is now LIGHTER (#F2F4F7)
+ *      and cards are PURE WHITE (#FFFFFF), restoring the
+ *      "white card on near-white page" SaaS convention. Previously
+ *      canvas was darker than cards, which inverts the depth metaphor
+ *      and reads as broken/unfinished.
+ *
+ *   2. Accent gains a soft + a border variant — `--rio-accent-soft`
+ *      (teal-50) and `--rio-accent-border` (teal-200). These let the
+ *      accent bleed into focus rings, selected-row tints, and
+ *      hover backgrounds across the whole UI, not just on buttons.
+ *      This is the single change that most fixes the
+ *      "no-color, no-character" complaint.
+ *
+ *   3. Chrome and text share DNA — both resolve to slate-900
+ *      (`#0F172A`), so the topbar/sidebar and the text-strong on
+ *      content speak one language.
+ *
+ * Status colours (success / warning / danger) move one tier brighter
+ * so status pills register at small sizes against light surfaces.
  * ============================================================ */
 
 :root {
-  /* Brand accent — teal-emerald `#0F8C7E`. Reserved for affordances:
-   * primary buttons, focus rings, active state, links, brand emblem.
-   * Never flood-filled across page chrome — surfaces stay neutral so
-   * the accent retains its weight as a call-to-action. The previous
-   * crimson `#A0341A` was retired in 0.3.0 so the framework has one
-   * canonical accent across every admin page. Projects override the
-   * whole `:root` block to swap it. */
-  --rio-accent: #0F8C7E;
-  --rio-accent-hover: #0A6E62;
-  --rio-accent-rgb: 15 140 126;
+  /* Brand accent — teal-600 `#0D9488`. Brighter, more modern than the
+   * previous `#0F8C7E` while keeping the clinical association. Reserved
+   * for affordances: primary buttons, focus rings, active state, links,
+   * brand emblem. Never flood-filled across page chrome — surfaces stay
+   * neutral so the accent retains its weight as a call-to-action.
+   * Projects override the whole `:root` block to swap it. */
+  --rio-accent:        #0D9488;
+  --rio-accent-hover:  #0F766E;
+  --rio-accent-rgb:    13 148 136;
 
-  /* Surface ladder (Principle 9). Six rungs total. v0.15.1 rebalanced
-   * the palette: page canvas moved to a neutral cool grey (was a
-   * blue-tinted slate); cards stay off-white; chrome jumped to a
-   * deep slate-blue so the operator skeleton reads as a confident
-   * dark frame around the lighter content. Never pure white except
-   * for elevated overlays (the only surface reserved for popovers
-   * and dropdowns). The bright dark chrome pairs cleanly with the
-   * teal accent — slate-on-teal is a long-standing premium-software
-   * combination (Linear, Vercel, Stripe Dashboard, Notion). */
-  --rio-bg:               #E5E7EB;  /* page canvas — neutral cool grey */
-  --rio-surface:          #F9FAFB;  /* cards, panels, table body */
-  --rio-surface-2:        #EEF0F3;  /* table head, hovered row, panel base */
-  --rio-surface-3:        #E3E6EA;  /* row hover, pressed state, secondary chip */
-  --rio-surface-chrome:   #1F2A37;  /* TOPBAR / SIDEBAR / FOOTER — deep slate */
-  --rio-surface-elevated: #FFFFFF;  /* dropdowns, popovers — the only pure white */
+  /* Accent extensions (v0.16) — applied as: focus-ring backgrounds,
+   * selected-row tints, ghost-button hover backgrounds, input focus
+   * rings (4px ring with `--rio-accent-border`). These are what make
+   * the accent visible throughout the UI rather than only on buttons. */
+  --rio-accent-soft:   #F0FDFA;
+  --rio-accent-border: #99F6E4;
 
-  /* Slate text scale — never pure black. Pushed one stop darker
-   * across the board in v0.15. `text-strong` is reserved for
-   * page titles + KPI numbers; `text` is body; muted/subtle drop
-   * down gradually so faint metadata still passes WCAG AA against
-   * every surface tier above. */
-  --rio-text-strong: #0A0D11;
-  --rio-text:        #14181D;
-  --rio-text-muted:  #3B4148;
-  --rio-text-subtle: #5C656F;
+  /* Surface ladder (Principle 9). Six rungs total. v0.16.0 inverted
+   * the canvas/surface relationship: canvas is now the lighter tier
+   * and cards are pure white. This restores the SaaS convention where
+   * cards visibly sit ABOVE the page. Chrome remains the deepest tier
+   * — `#0F172A` (slate-900) — so the operator skeleton reads as a
+   * confident dark frame around the lighter content. */
+  --rio-bg:               #F2F4F7;  /* page canvas — neutral cool light */
+  --rio-surface:          #FFFFFF;  /* cards, panels, table body — crisp white */
+  --rio-surface-2:        #F8FAFC;  /* table head, zebra row, hover background */
+  --rio-surface-3:        #F1F5F9;  /* pressed state, secondary chip, sunken */
+  --rio-surface-chrome:   #0F172A;  /* TOPBAR / SIDEBAR / FOOTER — slate-900 */
+  --rio-surface-elevated: #FFFFFF;  /* dropdowns, popovers */
 
-  /* Border scale — firmer than 0.14 so cards/tables register at
-   * arm's length. `border-soft` is in-card row dividers; `border`
-   * is the default card/table outline; `border-strong` is hover
-   * and focus. */
-  --rio-border-soft:   #D8DDE4;
-  --rio-border:        #C9CFD7;
-  --rio-border-strong: #A8B0BA;
+  /* Slate text scale (v0.16). All four tiers come from the same slate
+   * family so text never looks "tinted" against the chrome — chrome
+   * is also slate-900, so they share DNA. `text-strong` is page
+   * titles + KPI numbers; `text` is body; muted/subtle drop down
+   * gradually and still pass WCAG AA against every surface tier
+   * above. */
+  --rio-text-strong: #0F172A;  /* slate-900 — matches chrome */
+  --rio-text:        #1E293B;  /* slate-800 — body, table cells */
+  --rio-text-muted:  #475569;  /* slate-600 — labels, metadata */
+  --rio-text-subtle: #64748B;  /* slate-500 — captions, hints */
 
-  /* Derived tokens — colors carry meaning across the UI. Info-bg reads
-   * as a soft cool wash that harmonises with the teal accent. */
-  --rio-success: #15803D;
-  --rio-warning: #B45309;
-  --rio-danger:  #B91C1C;
+  /* Border scale (v0.16). Lighter than 0.15 — modern SaaS uses
+   * minimal divider weight. `border-soft` is in-card row dividers;
+   * `border` is the default card/table outline; `border-strong` is
+   * inputs (where the eye needs to find "place to type"). */
+  --rio-border-soft:   #E2E8F0;  /* slate-200 */
+  --rio-border:        #CBD5E1;  /* slate-300 */
+  --rio-border-strong: #94A3B8;  /* slate-400 */
+
+  /* Status colours (v0.16) one tier brighter than 0.15. Status pills
+   * are small surfaces; muted forest/amber/maroon got swallowed by
+   * the slate background. The new `-600` series reads clearly at
+   * 10–12px while staying within WCAG AA against the soft backgrounds
+   * paired with each. */
+  --rio-success: #059669;   /* emerald-600 */
+  --rio-warning: #D97706;   /* amber-600 */
+  --rio-danger:  #DC2626;   /* red-600 */
   --rio-success-bg: #ECFDF5;
   --rio-warning-bg: #FFFBEB;
   --rio-danger-bg:  #FEF2F2;
-  --rio-info-bg:    #ECFAF7;
+  --rio-info-bg:    #F0FDFA;  /* aligned with --rio-accent-soft */
 }

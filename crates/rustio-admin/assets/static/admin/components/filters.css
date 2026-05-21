@@ -10,14 +10,14 @@
  * every state transition is a navigation. No Apply step.
  * ============================================================ */
 
+/* v0.16 — list-page search bar redesigned. 24px gap below, 44px input
+ * height, 18px icon, 16px text. Search reads as a proper affordance,
+ * not a row of cramped inputs jammed against the table. */
 .rio-search-bar {
   display: flex;
-  gap: var(--rio-s2);
-  margin-bottom: var(--rio-s4);
+  gap: var(--rio-s3);
+  margin-bottom: var(--rio-s5);
 }
-/* Wrap that holds the input + the absolutely-positioned magnifying
- * glass icon. Takes the input's flex sizing so the search bar layout
- * is unchanged from the bare-input version. */
 .rio-search-input-wrap {
   position: relative;
   flex: 1;
@@ -26,42 +26,48 @@
 }
 .rio-search-icon {
   position: absolute;
-  inset-inline-start: 0.85rem;
+  inset-inline-start: var(--rio-s4);
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: var(--rio-text-subtle);
   pointer-events: none;
 }
 .rio-search-input {
   flex: 1;
-  padding: 0.6rem var(--rio-s4);
-  border: 1px solid var(--rio-border);
+  min-height: 44px;
+  padding: var(--rio-s2) var(--rio-s4);
+  border: 1px solid var(--rio-border-strong);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
   color: var(--rio-text-strong);
   font: inherit;
-  font-size: var(--rio-fs-md);
+  font-size: var(--rio-fs-md);                 /* 16px */
+  line-height: var(--rio-lh-ui);
+  box-shadow: var(--rio-shadow-inset);
   transition: border-color 0.12s, box-shadow 0.12s;
 }
-/* Make room for the leading glyph when the input lives inside a
- * `.rio-search-input-wrap`. Bare inputs (no wrap) keep the original
- * left padding. */
-.rio-search-input-wrap .rio-search-input { padding-inline-start: 2.4rem; }
+.rio-search-input-wrap .rio-search-input {
+  /* Reserve 44px on the leading edge for the icon. */
+  padding-inline-start: calc(var(--rio-s4) + 18px + var(--rio-s2));
+}
 .rio-search-input::placeholder { color: var(--rio-text-subtle); }
 .rio-search-input:focus {
   outline: none;
   border-color: var(--rio-accent);
-  box-shadow: 0 0 0 3px rgb(var(--rio-accent-rgb) / 0.12);
+  box-shadow: var(--rio-shadow-inset),
+              0 0 0 4px var(--rio-accent-border);
 }
 
 .rio-filters {
+  /* v0.16 — 24px internal padding, lighter border. Filter panel
+   * reads as a real card rather than a stripe of tiny chips. */
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
-  padding: var(--rio-s4);
-  margin-bottom: var(--rio-s4);
+  padding: var(--rio-s5);
+  margin-bottom: var(--rio-s5);
 }
 .rio-filters-title {
   font-size: var(--rio-fs-xs);

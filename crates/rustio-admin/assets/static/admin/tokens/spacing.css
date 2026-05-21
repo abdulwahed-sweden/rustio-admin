@@ -17,6 +17,12 @@
   --rio-s6: 2rem;
   --rio-s7: 3rem;
 
-  --rio-sidebar-w: 240px;
-  --rio-topbar-h: 72px;            /* v0.15: was 64px — Principle 10 weight */
+  --rio-sidebar-w: 264px;          /* v0.16: was 240px — fits longer model names */
+  --rio-topbar-h:  72px;           /* v0.15: was 64px — Principle 10 weight */
+
+  /* Content area — caps reading width on ultra-wide monitors.
+   * Without a cap, tables stretch to infinity and lose scannability.
+   * 1440px lets a 4-column dashboard sit comfortably with 32px page
+   * padding either side. */
+  --rio-content-max: 1440px;
 }

@@ -10,35 +10,42 @@
  * matrix, session cards) live under pages/.
  * ============================================================ */
 
-/* Tables — calm and spacious. Rows are 14px tall in padding so a
- * full screen breathes; the zebra stripe uses surface-2 (a quiet
- * neutral lift) instead of an accent-tinted overlay so the eye
- * doesn't read it as a colour signal. Header text is uppercase but
- * small enough not to compete with cell content. */
+/* Tables — calm and spacious. v0.16 — row height ≥56px via 16/24
+ * cell padding so 8-hour clinical shifts don't strain. Zebra stripe
+ * uses surface-2 (a quiet neutral lift) instead of an accent-tinted
+ * overlay so the eye doesn't read it as a colour signal. Header
+ * text is uppercase but small enough not to compete with cell
+ * content. */
 .rio-table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--rio-fs-base);                /* 16px cell text */
+  line-height: var(--rio-lh-ui);                /* 1.6 */
 }
 .rio-table th, .rio-table td {
-  padding: 0.85rem var(--rio-s4);
+  /* v0.16: 16/24 padding → ~56px row height (24px text block +
+   * 32px padding). Comfortable to scan, easy to click. */
+  padding: var(--rio-s4) var(--rio-s5);
   text-align: start;
   border-bottom: 1px solid var(--rio-border-soft);
+  vertical-align: middle;
 }
 .rio-table th {
-  /* v0.15: header weight stepped down from bold (700) to semibold
-   * (600). 700 reads shouty on 13px text; 600 + uppercase +
-   * tracked allcaps lands the right "professional financial
-   * software" tone (Bloomberg / Stripe / Linear) without
-   * dominating the cell content. */
+  /* v0.16: 14px (was 13px) uppercase header. Slightly larger but
+   * still a quiet scan-anchor. 600 weight + tracked allcaps lands
+   * the Bloomberg / Stripe / Linear tone without dominating cell
+   * content. */
   font-weight: var(--rio-fw-semibold);
-  font-size: var(--rio-fs-xs);                  /* 13px — quiet label */
+  font-size: var(--rio-fs-xs);                  /* 14px — quiet label */
   color: var(--rio-text-muted);
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
   background: var(--rio-surface-2);
   border-bottom: 1px solid var(--rio-border);
   white-space: nowrap;
+  /* Header rows can be shorter than body rows — operators don't
+   * need a 56px header. 12px vertical padding gets header to ~40px. */
+  padding-block: var(--rio-s3);
 }
 .rio-table tbody tr:last-child td { border-bottom: none; }
 .rio-table tbody tr { transition: background-color 0.1s; }
@@ -203,9 +210,10 @@
 }
 .rio-bulk-bar-clear:hover { color: #fff; }
 
-/* Zebra: surface-2 (quiet neutral). Hover lifts to surface-3. */
+/* Zebra: surface-2 (quiet neutral). Hover lifts to accent-soft so
+ * the eye reads it as "actionable row" not just "different colour." */
 .rio-table--striped tbody tr:nth-child(even) { background: var(--rio-surface-2); }
-.rio-table tbody tr:hover { background: var(--rio-surface-3); }
+.rio-table tbody tr:hover { background: var(--rio-accent-soft); }
 
 /* Sortable headers — wrap the label in a link; arrow surfaces in the
  * active direction. Header looks identical to a non-sortable cell

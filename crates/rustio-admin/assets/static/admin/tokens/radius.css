@@ -9,7 +9,7 @@
  * ============================================================ */
 
 :root {
-  --rio-radius: 10px;
-  --rio-radius-sm: 6px;
-  --rio-radius-lg: 14px;
+  --rio-radius:    10px;
+  --rio-radius-sm:  6px;
+  --rio-radius-lg: 12px;   /* v0.16: was 14px — one tier tighter for SaaS cards */
 }

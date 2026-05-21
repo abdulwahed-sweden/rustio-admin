@@ -8,7 +8,10 @@
  * ============================================================ */
 
 .rio-page-header {
-  margin-bottom: var(--rio-s5);
+  /* v0.16 — 32px below page header before the first content card.
+   * The dashboard / list / form pages need real breathing room
+   * between H1 and the data. */
+  margin-bottom: var(--rio-s6);
 }
 .rio-breadcrumbs {
   font-size: var(--rio-fs-sm);
@@ -31,11 +34,14 @@
 .rio-page-actions h1 { color: var(--rio-text-strong); }
 
 .rio-card {
+  /* v0.16 — 32px internal padding (was 24), 32px bottom gap between
+   * cards (was 24). With the lighter border-soft + softer shadow,
+   * cards lift cleanly off the page canvas. */
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s5);
-  margin-bottom: var(--rio-s5);
+  padding: var(--rio-s6);
+  margin-bottom: var(--rio-s6);
   box-shadow: var(--rio-shadow);
 }
 .rio-card-section {

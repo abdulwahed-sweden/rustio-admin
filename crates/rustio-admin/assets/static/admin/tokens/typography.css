@@ -130,26 +130,32 @@
     sans-serif;
 
   /* Size scale — rem-based, 16px html root.
-   * Floor is now 13px for true micro-text only (kbd shortcut, footer).
-   * Everyday surfaces land between 14px and 16px so a ten-hour session
-   * never strains. Table cells / sidebar / buttons all sit at 15px. */
+   * v0.16.0 — 16px is now the floor for any non-micro text. Sidebar,
+   * buttons, table cells all sit at 16px so an eight-hour clinical
+   * shift never strains the reader. The 14px (`--rio-fs-sm`) and
+   * 13–14px (`--rio-fs-xs`) tiers are reserved for genuinely
+   * secondary text: table headers (which scan, not read), kbd
+   * shortcuts, footer chips. The heading ladder tightens one notch
+   * (20 / 24 / 32) so h1 dominates without the ladder going wobbly. */
   --rio-font-size-base: 1rem;         /* 16px — body baseline */
-  --rio-fs-xs:    0.8125rem;          /* 13px — kbd, footer, tiny meta */
-  --rio-fs-sm:    0.9rem;             /* 14.4px — table headers, hint text */
-  --rio-fs-md:    0.9375rem;          /* 15px — sidebar, nav, button label */
+  --rio-fs-xs:    0.875rem;           /* 14px — kbd, footer, tiny meta */
+  --rio-fs-sm:    0.9375rem;          /* 15px — table headers (uppercase) */
+  --rio-fs-md:    1rem;               /* 16px — sidebar, nav, button label */
   --rio-fs-base:  1rem;               /* 16px — body, table cell */
-  --rio-fs-lg:    1.0625rem;          /* 17px — main prose body */
-  --rio-fs-xl:    1.25rem;            /* 20px — section h3 */
-  --rio-fs-h3:    1.375rem;           /* 22px */
-  --rio-fs-h2:    1.625rem;           /* 26px */
-  --rio-fs-h1:    1.875rem;           /* 30px — calmer than 34px */
+  --rio-fs-lg:    1.125rem;           /* 18px — main prose body, lead text */
+  --rio-fs-xl:    1.25rem;            /* 20px — section h3 / card title */
+  --rio-fs-h3:    1.25rem;            /* 20px — section heading */
+  --rio-fs-h2:    1.5rem;             /* 24px — major heading */
+  --rio-fs-h1:    2rem;               /* 32px — page title */
   --rio-fs-display: 2.25rem;          /* 36px — login title */
 
   /* Line heights — tuned per script. Arabic needs more leading because
-   * Naskh letterforms hang above and below the baseline. UI lh widened
-   * to 1.5 so dense table rows still breathe. */
-  --rio-lh-tight:  1.25;              /* h1/h2/h3, big display */
-  --rio-lh-ui:     1.5;               /* dense UI: buttons, tags, table */
+   * Naskh letterforms hang above and below the baseline.
+   * v0.16.0 — UI line-height lifted from 1.5 to 1.6 so buttons / table
+   * cells / nav items all sit on the same 1.6 floor as body text.
+   * Display sizes get 1.2 because they look loose at 1.25 at 32–36px. */
+  --rio-lh-tight:  1.2;               /* h1/h2/h3, big display */
+  --rio-lh-ui:     1.6;               /* dense UI: buttons, tags, table */
   --rio-lh-body:   1.65;              /* English paragraph body */
   --rio-lh-arabic: 1.95;              /* Arabic paragraph body */
 

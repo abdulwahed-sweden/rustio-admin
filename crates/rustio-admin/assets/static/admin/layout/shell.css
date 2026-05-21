@@ -46,10 +46,18 @@
   min-height: 0;
 }
 
+/* v0.16 — generous content padding (32px horizontal desktop, 24px top).
+ * `max-width` caps reading width on ultra-wide monitors so tables stay
+ * scannable. The inner block is centred so 4K monitors don't leave the
+ * content glued to the sidebar edge. */
 .rio-main {
   flex: 1 1 auto;
-  padding: var(--rio-s6) var(--rio-s5);
   min-width: 0;
+  padding: var(--rio-s5) var(--rio-s6) var(--rio-s6);
+}
+.rio-main > * {
+  max-width: var(--rio-content-max);
+  margin-inline: auto;
 }
 
 /* ============================================================
@@ -74,32 +82,39 @@
 
 .rio-sidebar,
 .rio-footer {
-  /* Light text on dark chrome — calibrated for #1F2A37 so it
-   * stays AA-legible against the slate background. */
-  --rio-text-strong: #F5F6F8;
-  --rio-text:        #C9CFD8;
-  --rio-text-muted:  #8B919C;
-  --rio-text-subtle: #6E737D;
+  /* v0.16 — chrome cascade retuned for slate-900 chrome (`#0F172A`).
+   * Every override below stays in the slate family so chrome reads
+   * as one designed surface, not a tinted variant. Each text + sub-
+   * surface tier passes WCAG AA against the new chrome background. */
+
+  /* Light text on slate-900 chrome — slate-50 → slate-500 ladder. */
+  --rio-text-strong: #F8FAFC;   /* slate-50  — sidebar headings */
+  --rio-text:        #E2E8F0;   /* slate-200 — sidebar item label */
+  --rio-text-muted:  #94A3B8;   /* slate-400 — secondary chrome text */
+  --rio-text-subtle: #64748B;   /* slate-500 — captions in chrome */
 
   /* Sub-surface tones used by hover, pressed, and active states
-   * inside chrome — these lift the chrome background by 5-10%
-   * per step so interaction is visible without flash. */
-  --rio-surface-2: #2A3441;
-  --rio-surface-3: #364150;
+   * inside chrome. One slate step lighter per tier so interaction
+   * is visible without flash. */
+  --rio-surface-2: #1E293B;   /* slate-800 — hover */
+  --rio-surface-3: #334155;   /* slate-700 — pressed / active */
 
-  /* Dividers — slightly lighter than the chrome surface so a thin
-   * border separates rows / sections without dominating. */
-  --rio-border-soft:   #2A3441;
-  --rio-border:        #364150;
-  --rio-border-strong: #4A5364;
+  /* Dividers — same slate ladder, visible enough to separate
+   * sidebar sections without dominating. */
+  --rio-border-soft:   #1E293B;   /* slate-800 */
+  --rio-border:        #334155;   /* slate-700 */
+  --rio-border-strong: #475569;   /* slate-600 */
 
-  /* Lifted accent within chrome. The base `#0F8C7E` (deep teal)
-   * against `#1F2A37` (deep slate) muddles to ~3:1 contrast.
-   * Lifting the chrome-scope accent to `#3FAA9D` restores ~5.3:1
-   * — the active sidebar item and any in-chrome accent surface
-   * reads as crisp teal, not "dark teal blob." Brand identity is
-   * preserved because the eye reads both shades as the same hue
-   * family. */
-  --rio-accent:     #3FAA9D;
-  --rio-accent-rgb: 63 170 157;
+  /* Lifted accent within chrome. Base accent `#0D9488` (teal-600)
+   * on slate-900 measures ~4.3:1 — passes AA but reads as "dark
+   * teal blob." Lifting the chrome-scope accent to `#2DD4BF`
+   * (teal-400) restores ~9.6:1 — the active sidebar item and any
+   * in-chrome accent reads as a clean teal. Same hue family so
+   * brand identity stays consistent across light and chrome
+   * surfaces. */
+  --rio-accent:        #2DD4BF;   /* teal-400 */
+  --rio-accent-hover:  #5EEAD4;   /* teal-300 */
+  --rio-accent-rgb:    45 212 191;
+  --rio-accent-soft:   #134E4A;   /* teal-900 — for selected-item BG within chrome */
+  --rio-accent-border: #0F766E;   /* teal-700 — visible focus ring on chrome */
 }
