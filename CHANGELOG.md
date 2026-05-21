@@ -257,6 +257,30 @@ leaves the alpha track.
     consumer crate that uses `#[derive(AdminModel)]` now gets
     the correct labels without touching its own code.
 
+### Added
+
+- **`middleware::locale` — Accept-Language negotiation.** New
+  built-in middleware that parses the inbound `Accept-Language`
+  header, picks the operator's first preferred language tag,
+  validates it (ASCII letters/digits/hyphens, ≤ 16 chars), and
+  stashes a `Locale(String)` struct in the request context.
+  Handlers read it via `req.ctx().get::<Locale>()`. Falls back
+  to `DEFAULT_LOCALE` (`"en"`) when the header is missing or
+  contains no valid tag — locale negotiation is best-effort and
+  never rejects a request.
+  - First-wins instead of q-value sort: real browsers send the
+    preferred locale first, so the simpler policy matches client
+    intent without traversing a sorted vector per request.
+  - Re-exports: `locale`, `parse_accept_language`, `Locale`,
+    `DEFAULT_LOCALE`.
+  - 10 unit tests on the parser: missing / empty / single tag /
+    realistic browser headers / `q=` weight stripping /
+    invalid-segment fallthrough / oversized-tag rejection /
+    all-invalid / whitespace tolerance / Arabic + CJK tags /
+    `Locale::as_str` round-trip.
+  - Pure plumbing — no template change, no handler change. The
+    upcoming message-catalog work consumes this surface.
+
 ### Changed
 
 - **Topbar unread-count badge now consistent across every

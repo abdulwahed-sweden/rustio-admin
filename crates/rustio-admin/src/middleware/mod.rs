@@ -5,6 +5,7 @@
 mod compression;
 mod correlation_id;
 mod csrf;
+mod locale;
 mod logger;
 mod rate_limit;
 mod security_headers;
@@ -15,6 +16,8 @@ pub use compression::gzip;
 pub use correlation_id::{correlation_id, CorrelationId, CORRELATION_ID_HEADER};
 // public:
 pub use csrf::{csrf_protect, CsrfGuard, CSRF_HEADER};
+// public:
+pub use locale::{locale, parse_accept_language, Locale, DEFAULT_LOCALE};
 // public:
 pub use logger::logger;
 // public:

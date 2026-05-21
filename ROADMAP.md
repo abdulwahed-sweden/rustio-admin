@@ -187,7 +187,7 @@ JSON content negotiation ships today on list + detail endpoints; CSV export ship
 - 🟡 **RTL-first architecture.** Mirrored UI (sidebar on the right, etc.) is not implemented. Today's CSS uses `margin-left` / `padding-left` rather than logical properties; the framework reads correctly with mixed Arabic content but doesn't flip the chrome direction.
 - ⚪ **Logical CSS properties.** Migrate `margin-left`/`padding-left` to `margin-inline-start`/`padding-inline-start` so `[dir="rtl"]` flips the layout automatically.
 - ⚪ **Message catalog.** `rustio.po` files baked in or loaded from disk; framework strings (`"Save"`, `"Delete"`, `"No actions yet"`) translatable per-locale. Project models continue to use their own labels.
-- ⚪ **Locale negotiation middleware.** `Accept-Language` header → user preference → fallback chain.
+- ✅ **Locale negotiation middleware** — `middleware::locale` parses the inbound `Accept-Language` header, picks the operator's first preferred tag (first-wins; browser sends preferred locale first in practice), validates it (ASCII letters/digits/hyphens, ≤ 16 chars), and stashes a `Locale` struct in the request context. Falls back to `DEFAULT_LOCALE` (`"en"`) when the header is absent or contains no valid tag. Pure plumbing — translation lookup itself is the message-catalog ROADMAP item, which now has its foundation.
 - 🔬 **Bidirectional embedded text.** Long-form prose with mixed RTL+LTR runs (an English brand name inside an Arabic paragraph) needs Unicode bidi marks in the right places. Today's templates rely on browser defaults; an explicit policy may surface edge cases.
 
 ---
