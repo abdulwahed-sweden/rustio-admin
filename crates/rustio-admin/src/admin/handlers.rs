@@ -2444,7 +2444,14 @@ pub(crate) async fn show_object_history(
         singular_name: entry.singular_name.to_string(),
         object_id: id,
         object_label: label,
-        entries: render::map_audit_actions(actions),
+        entries: ctx
+            .admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(render::SidebarEntry::from)
+            .collect(),
+        history_entries: render::map_audit_actions(actions),
         flash: None,
     };
     let body = ctx
@@ -2465,7 +2472,14 @@ pub(crate) async fn show_log_entries(
     let view = render::LogEntriesCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
         page_title: "Recent admin actions",
-        entries: render::map_audit_actions(actions),
+        entries: ctx
+            .admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(render::SidebarEntry::from)
+            .collect(),
+        history_entries: render::map_audit_actions(actions),
         flash: None,
     };
     let body = ctx.templates.render("admin/log_entries.html", &view)?;

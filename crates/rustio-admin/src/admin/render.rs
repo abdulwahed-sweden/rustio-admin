@@ -2726,7 +2726,14 @@ pub(crate) struct ObjectHistoryCtx {
     pub singular_name: String,
     pub object_id: i64,
     pub object_label: String,
-    pub entries: Vec<HistoryEntryCtx>,
+    /// Sidebar nav models — read by `_sidebar.html` as
+    /// `{{ entry.admin_name }}` / `{{ entry.display_name }}`.
+    /// Kept under the conventional `entries` name to match every
+    /// other rendered page; the audit rows for the page body live
+    /// in `history_entries` to avoid colliding on the sidebar
+    /// template's reads.
+    pub entries: Vec<SidebarEntry>,
+    pub history_entries: Vec<HistoryEntryCtx>,
     pub flash: Option<FlashCtx>,
 }
 
@@ -2735,7 +2742,9 @@ pub(crate) struct LogEntriesCtx {
     #[serde(flatten)]
     pub base: BaseContext,
     pub page_title: &'static str,
-    pub entries: Vec<HistoryEntryCtx>,
+    /// Sidebar nav models — see `ObjectHistoryCtx::entries`.
+    pub entries: Vec<SidebarEntry>,
+    pub history_entries: Vec<HistoryEntryCtx>,
     pub flash: Option<FlashCtx>,
 }
 

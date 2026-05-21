@@ -6,11 +6,11 @@
 </header>
 
 <section class="rio-card">
-  {% if entries %}
+  {% if history_entries %}
   <table class="rio-table rio-table--striped">
     <thead><tr><th>When</th><th>Action</th><th>Model</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
     <tbody>
-      {% for e in entries %}
+      {% for e in history_entries %}
       <tr>
         <td title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
         <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
