@@ -84,6 +84,12 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
         r#"<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>"#,
     );
 
+    // Flag — dashboard "Feature flags" tool tile.
+    m.insert(
+        "flag",
+        r#"<path d="M4 22V4a1 1 0 0 1 1-1h13.97a.5.5 0 0 1 .39.81L16 8l3.36 4.19a.5.5 0 0 1-.39.81H5"/>"#,
+    );
+
     m
 });
 

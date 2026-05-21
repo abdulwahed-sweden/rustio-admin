@@ -1,0 +1,67 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    Project-side feature flags read by <code>rustio_admin::feature_enabled(db, "key")</code>.
+    Reads are cached for 60 s per process — toggles may take up to a
+    minute to propagate across a multi-process fleet.
+  </p>
+</header>
+
+<section class="rio-card">
+  {% if flags %}
+  <table class="rio-table">
+    <thead>
+      <tr><th>Key</th><th>State</th><th>Description</th><th>Updated</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for f in flags %}
+      <tr>
+        <td><code>{{ f.key }}</code></td>
+        <td>
+          {% if f.enabled %}
+          <span class="rio-pill rio-pill--badge-success">enabled</span>
+          {% else %}
+          <span class="rio-pill rio-pill--badge-neutral">disabled</span>
+          {% endif %}
+        </td>
+        <td>{{ f.description }}</td>
+        <td title="{{ f.updated_iso }}"><span class="rio-meta">{{ f.updated_iso }}</span></td>
+        <td>
+          <form method="post" action="/admin/feature_flags/{{ f.key }}/toggle" class="rio-form-inline">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+            <input type="hidden" name="enabled" value="{% if f.enabled %}0{% else %}1{% endif %}">
+            <button type="submit" class="rio-button rio-button--ghost rio-button--sm">
+              {% if f.enabled %}Disable{% else %}Enable{% endif %}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="rio-empty">No flags yet — register one below.</p>
+  {% endif %}
+</section>
+
+<section class="rio-card">
+  <h2>Add a flag</h2>
+  <form method="post" action="/admin/feature_flags" class="rio-form rio-form--inline">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <label class="rio-form-field">
+      <span>Key</span>
+      <input type="text" name="key" required pattern="[a-z0-9_]+"
+             placeholder="snake_case_identifier"
+             class="rio-input">
+    </label>
+    <label class="rio-form-field">
+      <span>Description</span>
+      <input type="text" name="description" placeholder="What flips when this is on?" class="rio-input">
+    </label>
+    <button type="submit" class="rio-button rio-button--primary">Add flag</button>
+  </form>
+</section>
+{% endblock %}

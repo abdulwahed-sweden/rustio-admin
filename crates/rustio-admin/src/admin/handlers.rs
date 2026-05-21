@@ -2755,6 +2755,52 @@ pub(crate) async fn show_apis_index(
     Ok(Response::html(body))
 }
 
+pub(crate) async fn show_feature_flags(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let flags = super::feature_flags::list_flags(&ctx.db)
+        .await
+        .unwrap_or_default();
+    let view = render::feature_flags_ctx(&identity, &ctx.admin, csrf_token(req), flags, None);
+    let body = ctx.templates.render("admin/feature_flags.html", &view)?;
+    Ok(Response::html(body))
+}
+
+pub(crate) async fn do_create_feature_flag(
+    ctx: &AdminCtx,
+    _identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    let form = req.form()?;
+    let key = form.get("key").unwrap_or_default().trim().to_string();
+    let description = form
+        .get("description")
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if !key.is_empty() {
+        let _ = super::feature_flags::create_flag(&ctx.db, &key, &description).await;
+    }
+    Ok(Response::redirect("/admin/feature_flags"))
+}
+
+pub(crate) async fn do_toggle_feature_flag(
+    ctx: &AdminCtx,
+    _identity: Identity,
+    key: &str,
+    req: Request,
+) -> Result<Response> {
+    let form = req.form()?;
+    // Toggle direction comes from the form's `enabled` hidden
+    // field (1 / 0) — the template sets it to the inverse of the
+    // current state so two consecutive clicks flip back.
+    let target = form.get("enabled").map(|s| s == "1").unwrap_or(false);
+    super::feature_flags::set_flag(&ctx.db, key, target).await?;
+    Ok(Response::redirect("/admin/feature_flags"))
+}
+
 pub(crate) async fn show_health(
     ctx: &AdminCtx,
     identity: Identity,

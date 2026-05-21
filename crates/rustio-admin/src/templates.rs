@@ -402,6 +402,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/health.html"),
     ),
     (
+        "admin/feature_flags.html",
+        include_str!("../assets/templates/admin/feature_flags.html"),
+    ),
+    (
         "admin/password_change.html",
         include_str!("../assets/templates/admin/password_change.html"),
     ),

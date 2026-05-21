@@ -887,6 +887,45 @@ pub fn register_admin_routes(
         }
     });
 
+    // Feature flags — Administrator-only management page.
+    // Lists existing flags with toggle buttons + a "create"
+    // form. Reads in project code via
+    // `rustio_admin::feature_enabled(db, key)`.
+    let c = ctx.clone();
+    let router = router.get("/admin/feature_flags", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_feature_flags(&c, ident, &req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.post("/admin/feature_flags", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_create_feature_flag(&c, ident, req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.post("/admin/feature_flags/:key/toggle", move |req| {
+        let c = c.clone();
+        async move {
+            let key = req
+                .param("key")
+                .ok_or_else(|| Error::BadRequest("missing flag key".into()))?
+                .to_string();
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_toggle_feature_flag(&c, ident, &key, req).await,
+            }
+        }
+    });
+
     // Health dashboard — Administrator-only web counterpart to
     // `rustio doctor`. Runs the same DB probes the CLI does
     // (Postgres reachable, auth tables present, ≥1 active admin,

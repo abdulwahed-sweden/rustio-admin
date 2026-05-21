@@ -259,6 +259,16 @@ leaves the alpha track.
 
 ### Added
 
+- **Feature flags — `rustio_feature_flags` + admin UI.** Project
+  code calls `rustio_admin::feature_enabled(db, "new_signup_flow")`
+  from anywhere a `Db` is in scope; reads hit a 60-second per-key
+  in-process cache so hot paths stay cheap. Administrators manage
+  flags from `/admin/feature_flags` (list with per-row toggle
+  button + a "create" form for new keys), linked from the
+  dashboard "Framework tools" aside. Every write invalidates the
+  cache so toggles are observable on the next read. New
+  `flag` icon added to the inline-SVG catalog.
+
 - **TypeScript SDK skeleton at `/admin/apis/sdk.ts`.** Server-
   rendered companion to the OpenAPI spec — one `export interface`
   per registered project model with TypeScript types projected

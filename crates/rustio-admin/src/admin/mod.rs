@@ -9,6 +9,8 @@ pub mod bulk;
 pub(crate) mod csv_export;
 pub(crate) mod db_browser;
 // public:
+pub mod feature_flags;
+// public:
 pub mod filters;
 mod handlers;
 pub(crate) mod health_dashboard;
@@ -37,6 +39,8 @@ pub use audit::{
 };
 // public:
 pub use bulk::{BulkActionContext, BulkActionFailure, BulkActionResult};
+// public:
+pub use feature_flags::{feature_enabled, FeatureFlag};
 // public:
 pub use filters::{
     classify_field, field_ui_metadata, field_ui_metadata_with_relation, format_relation_cell,

@@ -2815,6 +2815,55 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
 }
 
 #[derive(Serialize)]
+pub(crate) struct FeatureFlagsCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub flags: Vec<FeatureFlagCtx>,
+    pub flash: Option<FlashCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct FeatureFlagCtx {
+    pub key: String,
+    pub enabled: bool,
+    pub description: String,
+    pub created_iso: String,
+    pub updated_iso: String,
+}
+
+pub(crate) fn feature_flags_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    flags: Vec<crate::admin::feature_flags::FeatureFlag>,
+    flash: Option<FlashCtx>,
+) -> FeatureFlagsCtx {
+    FeatureFlagsCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "Feature flags",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        flags: flags
+            .into_iter()
+            .map(|f| FeatureFlagCtx {
+                key: f.key,
+                enabled: f.enabled,
+                description: f.description,
+                created_iso: f.created_at.to_rfc3339(),
+                updated_iso: f.updated_at.to_rfc3339(),
+            })
+            .collect(),
+        flash,
+    }
+}
+
+#[derive(Serialize)]
 pub(crate) struct HealthCtx {
     #[serde(flatten)]
     pub base: BaseContext,
