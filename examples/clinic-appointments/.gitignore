@@ -1,8 +1,0 @@
-# Uploaded files written by Admin::uploads_dir (./uploads/ by
-# default in this example). Demo-only — never commit operator-
-# uploaded blobs to the repo.
-/uploads/
-
-# Local environment overrides — `.env.example` is the tracked
-# schema; `.env` carries real credentials.
-.env
