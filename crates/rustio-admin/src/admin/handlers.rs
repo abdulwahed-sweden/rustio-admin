@@ -453,7 +453,7 @@ pub(crate) async fn dashboard(
     req: &Request,
 ) -> Result<Response> {
     ensure_audit_ready(&ctx.db).await;
-    let recent_actions = audit::recent(&ctx.db, 10, None, None)
+    let recent_actions = audit::recent(&ctx.db, 10, None, None, None)
         .await
         .unwrap_or_default();
     // Approximate row counts via `pg_class.reltuples` — one batched
@@ -2634,9 +2634,33 @@ pub(crate) async fn show_log_entries(
     req: &Request,
 ) -> Result<Response> {
     ensure_audit_ready(&ctx.db).await;
-    let actions = audit::recent(&ctx.db, 100, None, None)
+    // Per-actor filter: `?user_id=N` narrows the audit feed to one
+    // operator's actions. Non-numeric / non-positive values drop
+    // silently — the feed renders unfiltered rather than 4xx-ing on a
+    // bad URL.
+    let qs = req.query();
+    let user_filter: Option<i64> = qs
+        .get("user_id")
+        .and_then(|s| s.trim().parse::<i64>().ok())
+        .filter(|n| *n > 0);
+    let actions = audit::recent(&ctx.db, 100, None, None, user_filter)
         .await
         .unwrap_or_default();
+    // Resolve the filtered user's display label (email) so the
+    // active-filter banner can render "Showing actions by <email>"
+    // instead of a bare id. A missing user falls back to `#<id>`.
+    let user_filter_label: Option<String> = if let Some(uid) = user_filter {
+        let email: Option<String> =
+            sqlx::query_scalar("SELECT email FROM rustio_users WHERE id = $1")
+                .bind(uid)
+                .fetch_optional(ctx.db.pool())
+                .await
+                .ok()
+                .flatten();
+        Some(email.unwrap_or_else(|| format!("#{uid}")))
+    } else {
+        None
+    };
     let view = render::LogEntriesCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
         page_title: "Recent admin actions",
@@ -2649,6 +2673,7 @@ pub(crate) async fn show_log_entries(
             .collect(),
         history_entries: render::map_audit_actions(actions),
         flash: None,
+        user_filter_label,
     };
     let body = ctx.templates.render("admin/log_entries.html", &view)?;
     Ok(Response::html(body))

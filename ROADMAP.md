@@ -122,7 +122,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ `rustio_admin_actions` table populated on every create / update / delete
 - ✅ Per-object history page at `/admin/<model>/<id>/history`
 - ✅ Global history page at `/admin/history`
-- 🟡 **Activity feed.** Today's `/admin/history` is a flat reverse-chronological list. A user-centric feed ("show me what *I* did" / "show me what *my team* did") needs per-actor filtering and date grouping.
+- 🟡 **Activity feed.** Per-actor filtering ships: `/admin/history?user_id=N` narrows the feed; clicking any entry's `By` column pivots in one click and an active-filter banner with a clear-link makes the state visible. Date grouping (group rows under a `YYYY-MM-DD` header) is still pending.
 - ⚪ **Diff view.** For update events, show the before / after of changed columns inline on the history entry.
 
 ### Read-only admin mode

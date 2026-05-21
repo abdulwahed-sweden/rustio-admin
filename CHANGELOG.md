@@ -259,6 +259,18 @@ leaves the alpha track.
 
 ### Added
 
+- **Per-actor filter on `/admin/history`.** `?user_id=N` narrows
+  the audit feed to one operator's actions. Every row's `By`
+  column is now a click-through to its actor's filtered view
+  (`/admin/history?user_id=<id>`). When filtered, an active-
+  filter banner at the top of the page reads "Showing actions
+  by <email>" with a clear (×) link back to the unfiltered
+  feed. `audit::recent` gains a `user_filter: Option<i64>`
+  parameter that composes with the existing `model_filter` and
+  `action_filter` via AND. Resolves the actor's email
+  server-side so the banner reads names, not numbers (falls
+  back to `#<id>` for missing rows).
+
 - **JSON response negotiation on write paths.** `POST /admin/<model>`
   (create), `POST /admin/<model>/<id>/edit` (update), and
   `POST /admin/<model>/<id>/delete` (delete) now mirror the

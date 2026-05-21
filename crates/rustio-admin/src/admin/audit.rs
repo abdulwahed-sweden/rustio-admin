@@ -594,11 +594,17 @@ impl AuditEvent {
 
 // public:
 /// Fetch the most recent `limit` admin actions, newest first.
+///
+/// Each `Option` filter narrows the WHERE clause when set:
+/// `model_filter` matches `model_name` exactly; `action_filter`
+/// matches `action_type` exactly; `user_filter` matches the actor's
+/// `user_id`. All filters compose with AND.
 pub async fn recent(
     db: &Db,
     limit: i64,
     model_filter: Option<&str>,
     action_filter: Option<&str>,
+    user_filter: Option<i64>,
 ) -> Result<Vec<AdminAction>> {
     let mut sql = String::from(
         "SELECT a.id, a.user_id, u.email AS user_email, a.action_type,
@@ -617,6 +623,10 @@ pub async fn recent(
         clauses.push(format!("a.action_type = ${param_idx}"));
         param_idx += 1;
     }
+    if user_filter.is_some() {
+        clauses.push(format!("a.user_id = ${param_idx}"));
+        param_idx += 1;
+    }
     if !clauses.is_empty() {
         sql.push_str(" WHERE ");
         sql.push_str(&clauses.join(" AND "));
@@ -631,6 +641,9 @@ pub async fn recent(
     }
     if let Some(a) = action_filter {
         q = q.bind(a);
+    }
+    if let Some(u) = user_filter {
+        q = q.bind(u);
     }
     q = q.bind(limit);
 

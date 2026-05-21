@@ -2683,6 +2683,7 @@ pub(crate) fn render_forbidden_body(
 pub(crate) struct HistoryEntryCtx {
     pub timestamp_iso: String,
     pub when_relative: String,
+    pub user_id: i64,
     pub user_email: String,
     pub action_type: String,
     pub label: &'static str,
@@ -2746,6 +2747,11 @@ pub(crate) struct LogEntriesCtx {
     pub entries: Vec<SidebarEntry>,
     pub history_entries: Vec<HistoryEntryCtx>,
     pub flash: Option<FlashCtx>,
+    /// When `Some(label)`, the page is showing audit entries
+    /// filtered by `?user_id=N`. The label is the actor's email
+    /// (or `#<id>` fallback) for the banner. `None` → no filter
+    /// banner rendered; the table shows the unfiltered feed.
+    pub user_filter_label: Option<String>,
 }
 
 pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCtx> {
@@ -2756,6 +2762,7 @@ pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCt
             HistoryEntryCtx {
                 timestamp_iso: a.timestamp.to_rfc3339(),
                 when_relative: relative_time(a.timestamp),
+                user_id: a.user_id,
                 user_email: a.user_email.unwrap_or_else(|| "—".to_string()),
                 label: action_label(&a.action_type),
                 pill_class: action_pill_class(&a.action_type),
