@@ -130,17 +130,31 @@ where
             if let Some((term, cols)) = &opts.search {
                 let term = term.trim();
                 if !term.is_empty() {
-                    let valid_cols: Vec<&String> =
-                        cols.iter().filter(|c| valid.contains(c.as_str())).collect();
-                    if !valid_cols.is_empty() {
+                    // FTS path — opt in by setting
+                    // `ModelAdmin::search_index_column`. Validated
+                    // against M::COLUMNS so a typo'd config falls
+                    // through silently to the ILIKE path rather than
+                    // emitting SQL that references a missing column.
+                    let fts_col = opts.search_index_column.filter(|c| valid.contains(*c));
+                    if let Some(col) = fts_col {
                         let p = placeholder;
-                        let or_clauses: Vec<String> = valid_cols
-                            .iter()
-                            .map(|c| format!("{c}::text ILIKE ${p}"))
-                            .collect();
-                        where_clauses.push(format!("({})", or_clauses.join(" OR ")));
-                        where_bindings.push(format!("%{term}%"));
+                        where_clauses
+                            .push(format!("{col} @@ websearch_to_tsquery('english', ${p})"));
+                        where_bindings.push(term.to_string());
                         placeholder += 1;
+                    } else {
+                        let valid_cols: Vec<&String> =
+                            cols.iter().filter(|c| valid.contains(c.as_str())).collect();
+                        if !valid_cols.is_empty() {
+                            let p = placeholder;
+                            let or_clauses: Vec<String> = valid_cols
+                                .iter()
+                                .map(|c| format!("{c}::text ILIKE ${p}"))
+                                .collect();
+                            where_clauses.push(format!("({})", or_clauses.join(" OR ")));
+                            where_bindings.push(format!("%{term}%"));
+                            placeholder += 1;
+                        }
                     }
                 }
             }

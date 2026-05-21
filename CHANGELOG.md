@@ -259,6 +259,22 @@ leaves the alpha track.
 
 ### Added
 
+- **Postgres FTS opt-in via `ModelAdmin::search_index_column`.**
+  Models that declare a tsvector column (e.g. a `GENERATED ALWAYS
+  AS (to_tsvector('english', coalesce(title,'') || ' ' ||
+  coalesce(body,''))) STORED` column with a `gin` index) can opt
+  into Postgres full-text search by returning
+  `Some("search_vector")` from the new trait method. The list-page
+  WHERE clause switches from the default `ILIKE` OR-loop to
+  `<col> @@ websearch_to_tsquery('english', $N)` — same search
+  box, indexed lookup. Pre-existing models with default `None`
+  keep the ILIKE path unchanged. Column name is validated against
+  `M::COLUMNS` so a typo'd config falls through cleanly to
+  ILIKE rather than emitting SQL referencing a missing column.
+  The new opt-in propagates through `AdminEntry` → `ListOpts` so
+  the global `⌘K` palette + CSV-export filter parser honour it
+  too.
+
 - **`rustio reload` CLI verb.** Thin wrapper around
   `cargo watch -x run` — the standard Rust hot-iterate loop.
   Probes for `cargo-watch` first so a missing dependency surfaces

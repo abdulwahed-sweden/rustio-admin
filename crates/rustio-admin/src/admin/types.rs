@@ -184,6 +184,11 @@ pub struct AdminEntry {
     pub list_filter: &'static [&'static str],
     /// `ModelAdmin::search_fields()`. Empty by default.
     pub search_fields: &'static [&'static str],
+    /// `ModelAdmin::search_index_column()`. When `Some`, the
+    /// list-page search uses Postgres FTS against this tsvector
+    /// column instead of the default `ILIKE` OR-loop across
+    /// `search_fields`.
+    pub search_index_column: Option<&'static str>,
     /// `ModelAdmin::ordering()`. Strings parsed via
     /// [`super::modeladmin::parse_order_spec`].
     pub ordering: &'static [&'static str],
@@ -244,6 +249,13 @@ pub struct ListOpts {
     /// with `$N = '%term%'`. An empty `term` or empty `columns`
     /// leaves the WHERE alone.
     pub search: Option<(String, Vec<String>)>,
+    /// When `Some(col)`, the search WHERE clause uses Postgres
+    /// FTS against this tsvector column
+    /// (`<col> @@ websearch_to_tsquery('english', $N)`) instead
+    /// of the ILIKE OR-loop above. `search` must still carry the
+    /// raw term; the columns slice is ignored on this path.
+    /// Sourced from `AdminEntry::search_index_column`.
+    pub search_index_column: Option<&'static str>,
     /// `LIMIT $N` for the data query. The COUNT(*) query never
     /// applies it. `None` → no limit.
     pub limit: Option<i64>,
@@ -1008,6 +1020,7 @@ impl Admin {
             list_display: M::list_display(),
             list_filter: M::list_filter(),
             search_fields: M::search_fields(),
+            search_index_column: M::search_index_column(),
             ordering: M::ordering(),
             list_per_page: M::list_per_page(),
             readonly_fields: M::readonly_fields(),
@@ -1154,6 +1167,7 @@ fn core_user_entry() -> AdminEntry {
         list_display: &[],
         list_filter: &[],
         search_fields: &[],
+        search_index_column: None,
         ordering: &["-id"],
         list_per_page: 50,
         readonly_fields: &[],

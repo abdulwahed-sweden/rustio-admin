@@ -173,6 +173,32 @@ pub trait ModelAdmin: AdminModel {
         &[]
     }
 
+    /// Name of a Postgres `tsvector` column to use for full-text
+    /// search instead of the framework's default `ILIKE` OR-loop
+    /// across `search_fields()`. When `Some("search_vector")`, the
+    /// list-page WHERE clause switches to
+    /// `<col> @@ websearch_to_tsquery('english', $N)` — operators
+    /// keep typing in the same search box; the index does the
+    /// work. Maintain the tsvector yourself (a generated column
+    /// or a trigger; the framework doesn't write to it). Default:
+    /// `None` (the existing ILIKE path).
+    ///
+    /// ```ignore
+    /// // 1. Add a generated tsvector column in a migration:
+    /// //    ALTER TABLE posts ADD COLUMN search_vector tsvector
+    /// //      GENERATED ALWAYS AS (to_tsvector('english',
+    /// //        coalesce(title,'') || ' ' || coalesce(body,''))) STORED;
+    /// //    CREATE INDEX posts_search_idx ON posts USING gin(search_vector);
+    /// //
+    /// // 2. Opt in from ModelAdmin:
+    /// fn search_index_column() -> Option<&'static str> {
+    ///     Some("search_vector")
+    /// }
+    /// ```
+    fn search_index_column() -> Option<&'static str> {
+        None
+    }
+
     /// Default ordering. `-foo` for `foo DESC`, `foo` for `foo ASC`.
     /// Multiple entries → multi-column ORDER BY in slice order.
     /// Default: `["-id"]` (newest first).
@@ -450,5 +476,38 @@ mod tests {
     fn sort_dir_sql_is_stable() {
         assert_eq!(SortDir::Asc.sql(), "ASC");
         assert_eq!(SortDir::Desc.sql(), "DESC");
+    }
+
+    #[test]
+    fn search_index_column_default_is_none() {
+        // The FTS opt-in is documented as off by default —
+        // projects without a tsvector column get the ILIKE
+        // path unchanged. A stub model that doesn't override
+        // the method must report None so the runtime branch
+        // falls through cleanly to ILIKE.
+        struct Stub;
+        impl crate::admin::types::AdminModel for Stub {
+            const ADMIN_NAME: &'static str = "s";
+            const DISPLAY_NAME: &'static str = "S";
+            const SINGULAR_NAME: &'static str = "S";
+            const FIELDS: &'static [crate::admin::types::AdminField] = &[];
+            fn id(&self) -> i64 {
+                0
+            }
+            fn from_form(_: &crate::http::FormData) -> std::result::Result<Self, Vec<String>> {
+                Err(vec![])
+            }
+            fn display_values(&self) -> Vec<(String, String)> {
+                vec![]
+            }
+            fn object_label(&self) -> String {
+                String::new()
+            }
+            fn values_to_update(&self) -> Vec<(&'static str, crate::orm::Value)> {
+                vec![]
+            }
+        }
+        impl ModelAdmin for Stub {}
+        assert_eq!(<Stub as ModelAdmin>::search_index_column(), None);
     }
 }
