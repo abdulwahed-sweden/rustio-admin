@@ -259,6 +259,15 @@ leaves the alpha track.
 
 ### Added
 
+- **Interactive API playground at `/admin/apis/playground`.**
+  Read-only preview: pick a model + optional search / sort /
+  page / per_page, click Send, see the JSON envelope rendered
+  in-page with HTTP status + latency. Vanilla `fetch()`
+  client-side (no third-party JS); served as one inline `<script>`
+  block in the embedded template. Linked from `/admin/apis`
+  alongside the OpenAPI download. Write-method
+  experimentation is still pending.
+
 - **`rustio startproject --preset blog`.** A two-model starter
   (Post + Comment) for projects that want a relation demo out of
   the box. The preset layers a `src/comment.rs` model with a

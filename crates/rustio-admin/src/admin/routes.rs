@@ -1679,6 +1679,24 @@ pub fn register_admin_routes(
         }
     });
 
+    // Interactive playground (read-only preview): pick a model,
+    // build a list-page query, fetch the JSON envelope in-page.
+    // Mounted before the generic /admin/:admin_name pattern so
+    // `apis` / `playground` segments don't collide with a model
+    // named `playground`. Same Staff gate as the API index;
+    // operators still need per-model `view` to receive non-empty
+    // results.
+    let c = ctx.clone();
+    let router = router.get("/admin/apis/playground", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_apis_playground(&c, ident, &req).await,
+            }
+        }
+    });
+
     // Per-model list — needs `view` permission.
     let c = ctx.clone();
     let router = router.get("/admin/:admin_name", move |req| {

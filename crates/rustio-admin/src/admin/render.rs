@@ -2814,6 +2814,49 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
     }
 }
 
+#[derive(Serialize)]
+pub(crate) struct PlaygroundCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    /// Models eligible for the playground — admin_name + a human-
+    /// readable label for the dropdown.
+    pub models: Vec<PlaygroundModelCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct PlaygroundModelCtx {
+    pub admin_name: &'static str,
+    pub display_name: &'static str,
+}
+
+pub(crate) fn playground_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+) -> PlaygroundCtx {
+    PlaygroundCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "API playground",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        models: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(|e| PlaygroundModelCtx {
+                admin_name: e.admin_name,
+                display_name: e.display_name,
+            })
+            .collect(),
+    }
+}
+
 pub(crate) fn apis_index_ctx(
     identity: &Identity,
     admin: &Admin,

@@ -2755,6 +2755,16 @@ pub(crate) async fn show_apis_index(
     Ok(Response::html(body))
 }
 
+pub(crate) async fn show_apis_playground(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let view = render::playground_ctx(&identity, &ctx.admin, csrf_token(req));
+    let body = ctx.templates.render("admin/apis_playground.html", &view)?;
+    Ok(Response::html(body))
+}
+
 pub(crate) async fn show_log_entries(
     ctx: &AdminCtx,
     identity: Identity,

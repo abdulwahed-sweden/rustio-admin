@@ -1,0 +1,136 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/apis">API surface</a> ·
+    <span>{{ page_title }}</span>
+  </nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    Read-only preview: pick a model, optionally tweak the list-page
+    query (search / sort / page), and fetch the JSON response in-page.
+    For writes (create / update / delete) use the form-encoded
+    endpoints documented on <a href="/admin/apis">/admin/apis</a>.
+  </p>
+</header>
+
+<section class="rio-card rio-playground">
+  <form id="rio-playground-form" class="rio-playground__form" onsubmit="return false;">
+    <label class="rio-playground__field">
+      <span>Model</span>
+      <select id="rio-playground-model" class="rio-input">
+        {% for m in models %}
+        <option value="{{ m.admin_name }}">{{ m.display_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label class="rio-playground__field">
+      <span>Search (<code>?q=</code>)</span>
+      <input type="text" id="rio-playground-q" class="rio-input" placeholder="optional">
+    </label>
+
+    <label class="rio-playground__field">
+      <span>Sort field (<code>?sort=</code>)</span>
+      <input type="text" id="rio-playground-sort" class="rio-input" placeholder="e.g. created_at">
+    </label>
+
+    <label class="rio-playground__field">
+      <span>Direction</span>
+      <select id="rio-playground-dir" class="rio-input">
+        <option value="">(default)</option>
+        <option value="asc">asc</option>
+        <option value="desc">desc</option>
+      </select>
+    </label>
+
+    <label class="rio-playground__field">
+      <span>Page</span>
+      <input type="number" id="rio-playground-page" class="rio-input" placeholder="1" min="1">
+    </label>
+
+    <label class="rio-playground__field">
+      <span>Per page</span>
+      <select id="rio-playground-perpage" class="rio-input">
+        <option value="">(default)</option>
+        <option>25</option>
+        <option>50</option>
+        <option>100</option>
+        <option>200</option>
+      </select>
+    </label>
+
+    <div class="rio-playground__actions">
+      <button type="button" id="rio-playground-send" class="rio-button rio-button--primary">Send</button>
+      <code id="rio-playground-url" class="rio-meta rio-playground__url"></code>
+    </div>
+  </form>
+
+  <div class="rio-playground__result">
+    <div class="rio-playground__status">
+      <span id="rio-playground-status" class="rio-meta">Idle.</span>
+    </div>
+    <pre id="rio-playground-body" class="rio-playground__body" aria-live="polite"></pre>
+  </div>
+</section>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const modelSel = $("rio-playground-model");
+  const q = $("rio-playground-q");
+  const sort = $("rio-playground-sort");
+  const dir = $("rio-playground-dir");
+  const page = $("rio-playground-page");
+  const perPage = $("rio-playground-perpage");
+  const sendBtn = $("rio-playground-send");
+  const urlOut = $("rio-playground-url");
+  const statusOut = $("rio-playground-status");
+  const bodyOut = $("rio-playground-body");
+
+  function buildUrl() {
+    const params = new URLSearchParams();
+    params.set("format", "json");
+    if (q.value.trim()) params.set("q", q.value.trim());
+    if (sort.value.trim()) params.set("sort", sort.value.trim());
+    if (dir.value) params.set("dir", dir.value);
+    if (page.value) params.set("page", page.value);
+    if (perPage.value) params.set("per_page", perPage.value);
+    return "/admin/" + modelSel.value + "?" + params.toString();
+  }
+
+  function refreshUrl() {
+    urlOut.textContent = buildUrl();
+  }
+  [modelSel, q, sort, dir, page, perPage].forEach((el) =>
+    el.addEventListener("input", refreshUrl)
+  );
+  refreshUrl();
+
+  sendBtn.addEventListener("click", async () => {
+    const url = buildUrl();
+    statusOut.textContent = "Fetching " + url + " …";
+    bodyOut.textContent = "";
+    try {
+      const t0 = performance.now();
+      const r = await fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      const ms = Math.round(performance.now() - t0);
+      const text = await r.text();
+      statusOut.textContent = "HTTP " + r.status + " · " + ms + " ms · " + text.length + " bytes";
+      try {
+        const obj = JSON.parse(text);
+        bodyOut.textContent = JSON.stringify(obj, null, 2);
+      } catch (e) {
+        bodyOut.textContent = text;
+      }
+    } catch (e) {
+      statusOut.textContent = "Fetch failed: " + e;
+    }
+  });
+})();
+</script>
+{% endblock %}

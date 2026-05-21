@@ -161,7 +161,7 @@ JSON content negotiation ships today on list + detail endpoints; CSV export ship
 - ✅ **JSON on write paths** — `do_create` / `do_update` / `do_delete` honour the same `wants_json` negotiation the read path already used. Success returns `{"ok": true, "admin_name", "id"}` (201 for create, 200 for update/delete); validation errors return `{"errors": [...], "status": 400}`; framework errors return the existing `json_error` envelope. Request body still parsed as form-encoded / multipart — only the response shape switches per `Accept` / `?format=json`. JSON-body parsing for writes is a future extension.
 - ⚪ **Built-in docs pages.** Render the `docs/*.md` files inside the admin chrome at `/admin/docs` so operators can read framework docs without leaving the panel.
 - ✅ **Auto-generated OpenAPI surface** — `GET /admin/apis/openapi.json` serves an OpenAPI 3.0 document with per-model component schemas and full path coverage (list / create / detail / update / delete). `GET /admin/apis` is the HTML companion: one section per model with an endpoint table, a field table (name / type label / nullable), and a one-click download link to the JSON spec. Footer carries a permanent "API surface" link next to "Audit log".
-- ⚪ **Interactive API playground.** Embedded request-builder per endpoint — choose a method, fill in JSON, see the response. Implemented as a server-rendered page, no third-party JS dependency.
+- 🟡 **Interactive API playground** — `/admin/apis/playground` ships a read-only preview: pick a model + optional search / sort / pagination, send the request with `Accept: application/json`, render the JSON envelope in-page with status + latency. Vanilla `fetch()` inline in the template, no third-party JS. Write-method experimentation (POST / PUT / DELETE) is still pending.
 - ⚪ **SDK generation.** `rustio sdk-gen rust|typescript|python` builds a typed client from the OpenAPI spec. Out-of-tree initially; a CLI subcommand once the OpenAPI spec stabilises.
 - 🔬 **GraphQL surface.** Open question — the framework's CRUD shape is regular enough that a typed GraphQL endpoint is feasible, but it's a sizeable maintenance commitment for unclear demand.
 
@@ -228,7 +228,7 @@ Each item below is real and on the planning surface, but not yet scheduled for a
 - ⚪ **Feature flags.** A simple `rustio_feature_flags` table + a `feature_enabled("…")` helper for project code. Flags toggleable from the admin UI by administrators.
 - ⚪ **Health dashboard (web UI).** Browser-renderable counterpart to `rustio doctor` — DB latency, audit-table size, recent error counts, session count.
 - ⚪ **Search systems.** Ship a Postgres full-text option (`tsvector` columns, `phraseto_tsquery`) as the next tier above the current ILIKE fallback. Listed under "long term" because it intersects with the explicit "no search backend" non-goal — the implementation has to live entirely inside Postgres.
-- ⚪ **Database browser.** A read-only schema explorer at `/admin/db` showing every table, its columns, foreign keys, and row counts. Useful during development; hidden behind the Developer role.
+- ✅ **Database browser** — `/admin/db` ships a read-only schema explorer (tables, columns, foreign keys, row counts) under the Developer role gate.
 
 ---
 
