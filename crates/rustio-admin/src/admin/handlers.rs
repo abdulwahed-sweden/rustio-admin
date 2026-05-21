@@ -1966,10 +1966,28 @@ pub(crate) async fn do_create(
     admin_name: &str,
     req: Request,
 ) -> Result<Response> {
-    let entry = find_project_entry(&ctx.admin, admin_name)?;
-    let form = parse_form_with_uploads(&req, ctx.admin.uploads_dir_path()).await?;
+    // Mirror the read-path negotiation onto writes: when the client
+    // asked for JSON, success / validation / framework errors all
+    // collapse to JSON envelopes. Form-encoded body parsing stays
+    // the same — only the response shape changes.
+    let wants_json = super::json_api::wants_json(&req);
+    let entry = match find_project_entry(&ctx.admin, admin_name) {
+        Ok(e) => e,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
+    let form = match parse_form_with_uploads(&req, ctx.admin.uploads_dir_path()).await {
+        Ok(f) => f,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
     let intent = submit_intent(&form);
-    match entry.ops.create(&ctx.db, &form).await? {
+    let create_result = match entry.ops.create(&ctx.db, &form).await {
+        Ok(r) => r,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
+    match create_result {
         Ok(id) => {
             // Audit the create. `object_label` resolves the label
             // via the same ladder the list view uses (display field
@@ -1994,11 +2012,21 @@ pub(crate) async fn do_create(
                 None,
             )
             .await;
+            if wants_json {
+                return Ok(super::json_api::mutation_ok_envelope(
+                    admin_name,
+                    id,
+                    hyper::StatusCode::CREATED,
+                ));
+            }
             Ok(Response::redirect(redirect_after_save(
                 intent, admin_name, id,
             )))
         }
         Err(errors) => {
+            if wants_json {
+                return Ok(super::json_api::validation_errors_envelope(errors));
+            }
             let token = csrf_token(&req);
             let relation_options =
                 render::resolve_relation_options(&ctx.admin, entry, &ctx.db).await?;
@@ -2097,13 +2125,26 @@ pub(crate) async fn do_update(
     id: i64,
     req: Request,
 ) -> Result<Response> {
-    let entry = find_project_entry(&ctx.admin, admin_name)?;
-    let mut form = parse_form_with_uploads(&req, ctx.admin.uploads_dir_path()).await?;
+    let wants_json = super::json_api::wants_json(&req);
+    let entry = match find_project_entry(&ctx.admin, admin_name) {
+        Ok(e) => e,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
+    let mut form = match parse_form_with_uploads(&req, ctx.admin.uploads_dir_path()).await {
+        Ok(f) => f,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
     // Snapshot the row BEFORE the update so the audit-emission
     // branch below can diff before/after and persist the changed-
     // columns set inside `metadata.changes`. Reused below for the
     // readonly-field injection too — same query, single fetch.
-    let before_row = entry.ops.find_row(&ctx.db, id).await?;
+    let before_row = match entry.ops.find_row(&ctx.db, id).await {
+        Ok(r) => r,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
     // Readonly fields render `disabled` and are not submitted by the
     // browser. Inject the existing values so `M::from_form` parses a
     // complete row — the generated parser doesn't know which columns
@@ -2121,7 +2162,12 @@ pub(crate) async fn do_update(
         }
     }
     let intent = submit_intent(&form);
-    match entry.ops.update(&ctx.db, id, &form).await? {
+    let update_result = match entry.ops.update(&ctx.db, id, &form).await {
+        Ok(r) => r,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
+    match update_result {
         Ok(()) => {
             // Audit the update. Diff before/after editable columns
             // and persist the change set under `metadata.changes`
@@ -2165,11 +2211,21 @@ pub(crate) async fn do_update(
                 metadata,
             )
             .await;
+            if wants_json {
+                return Ok(super::json_api::mutation_ok_envelope(
+                    admin_name,
+                    id,
+                    hyper::StatusCode::OK,
+                ));
+            }
             Ok(Response::redirect(redirect_after_save(
                 intent, admin_name, id,
             )))
         }
         Err(errors) => {
+            if wants_json {
+                return Ok(super::json_api::validation_errors_envelope(errors));
+            }
             let existing = entry.ops.find_row(&ctx.db, id).await?;
             let token = csrf_token(&req);
             let relation_options =
@@ -2253,7 +2309,12 @@ pub(crate) async fn do_delete(
     req: Request,
     id: i64,
 ) -> Result<Response> {
-    let entry = find_project_entry(&ctx.admin, admin_name)?;
+    let wants_json = super::json_api::wants_json(&req);
+    let entry = match find_project_entry(&ctx.admin, admin_name) {
+        Ok(e) => e,
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    };
     // Resolve the label BEFORE the delete so the audit summary
     // ("Deleted Post: Hello world") survives the row going away.
     // A row that's already gone falls back to `#<id>` — no 500.
@@ -2264,7 +2325,11 @@ pub(crate) async fn do_delete(
         .ok()
         .flatten()
         .unwrap_or_else(|| format!("#{id}"));
-    entry.ops.delete(&ctx.db, id).await?;
+    match entry.ops.delete(&ctx.db, id).await {
+        Ok(()) => {}
+        Err(e) if wants_json => return Ok(super::json_api::json_error(e)),
+        Err(e) => return Err(e),
+    }
     let summary = format!("Deleted {}: {label}", entry.singular_name);
     record_crud_audit(
         ctx,
@@ -2277,6 +2342,13 @@ pub(crate) async fn do_delete(
         None,
     )
     .await;
+    if wants_json {
+        return Ok(super::json_api::mutation_ok_envelope(
+            admin_name,
+            id,
+            hyper::StatusCode::OK,
+        ));
+    }
     Ok(Response::redirect(format!("/admin/{admin_name}")))
 }
 

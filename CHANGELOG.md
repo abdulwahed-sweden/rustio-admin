@@ -259,6 +259,23 @@ leaves the alpha track.
 
 ### Added
 
+- **JSON response negotiation on write paths.** `POST /admin/<model>`
+  (create), `POST /admin/<model>/<id>/edit` (update), and
+  `POST /admin/<model>/<id>/delete` (delete) now mirror the
+  read-path content negotiation. With `Accept: application/json`
+  (or `?format=json`):
+  - Success returns
+    `{"ok": true, "admin_name": "<slug>", "id": N}` — status 201
+    on create, 200 on update / delete.
+  - Validation errors from `AdminOps::create` / `update` return
+    `{"errors": ["Field: message", ...], "status": 400}`.
+  - Framework errors (not-found, internal) collapse to the
+    existing `{"error": "...", "status": N}` envelope.
+  Request bodies are still parsed as form-encoded / multipart —
+  only the response shape switches. Same permission gates, same
+  audit row, same constraint-violation surfacing.
+  JSON-body request parsing is a future extension.
+
 - **Per-action permission gate on bulk actions.** New
   `BulkAction.permission: Option<&'static str>` field. When `Some`,
   the bulk handler enforces `<admin_name>.<permission>_<singular>`

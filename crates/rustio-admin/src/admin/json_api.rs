@@ -1,8 +1,8 @@
 //! `?format=json` and `Accept: application/json` content
 //! negotiation for the admin's list + detail routes.
 //!
-//! v1 surface — read-only. The existing list and detail handlers
-//! branch on [`wants_json`] before rendering:
+//! v1 surface. The list, detail, and write handlers branch on
+//! [`wants_json`] before rendering:
 //!
 //! - **List** (`GET /admin/<model>?format=json`): returns
 //!   `{"rows":[…], "total":N, "page":N, "per_page":N, "pages":N}`
@@ -22,12 +22,16 @@
 //! by the same `perm_guard` the HTML routes use. Audit emission
 //! is unchanged.
 //!
-//! Create / update / delete via JSON is a deliberate **deferred
-//! follow-up** — error shape, partial-success semantics on bulk
-//! actions, and JSON-body validation are wider design surface
-//! than a single commit warrants. This module ships the
-//! read-only half end-to-end; the write half can be layered on
-//! top without redesigning the read surface.
+//! Write-path negotiation also ships now: `do_create`, `do_update`,
+//! and `do_delete` mirror the read-path pattern — when the client
+//! asks for JSON, the success path returns
+//! [`mutation_ok_envelope`] (`{"ok": true, "admin_name", "id"}`),
+//! validation errors return [`validation_errors_envelope`]
+//! (`{"errors": [...], "status": 400}`), and framework errors
+//! return [`json_error`]. Request bodies are still parsed as
+//! form-encoded (or multipart for file uploads) — only the
+//! response shape changes per `Accept` / `?format=json`.
+//! JSON-body parsing for writes is a future extension.
 
 use hyper::StatusCode;
 use serde::Serialize;
@@ -198,6 +202,43 @@ fn typed_cell(field: &super::types::AdminField, cell: &str) -> serde_json::Value
     }
 }
 
+/// JSON envelope for a successful mutating response (create /
+/// update / delete). Shape: `{"ok": true, "admin_name": "<slug>",
+/// "id": N}`. Created rows go through this with status 201;
+/// updates and deletes use status 200.
+///
+/// Form-encoded request body is still expected on the request
+/// side — this surface ships the JSON *response* shape, not JSON
+/// body parsing. Clients POST `application/x-www-form-urlencoded`
+/// with `Accept: application/json` and receive the envelope back.
+pub(crate) fn mutation_ok_envelope(admin_name: &str, id: i64, status: StatusCode) -> Response {
+    let body = serde_json::json!({
+        "ok": true,
+        "admin_name": admin_name,
+        "id": id,
+    });
+    let s = serde_json::to_string(&body)
+        .unwrap_or_else(|_| format!(r#"{{"ok":true,"admin_name":"{admin_name}","id":{id}}}"#));
+    Response::new(status, s).with_header("content-type", "application/json")
+}
+
+/// JSON envelope for validation errors raised by
+/// `AdminOps::create` / `update`. Shape: `{"errors": [<string>,
+/// ...], "status": 400}`. The error strings are the framework's
+/// already-prefixed messages (label-attached entries carry the
+/// field's humanised label inline) — clients can split on the
+/// existing convention without a separate per-field map.
+pub(crate) fn validation_errors_envelope(errors: Vec<String>) -> Response {
+    let body = serde_json::json!({
+        "errors": errors,
+        "status": 400,
+    });
+    let s = serde_json::to_string(&body).unwrap_or_else(|_| {
+        r#"{"errors":["validation envelope serialisation failed"],"status":400}"#.to_string()
+    });
+    Response::new(StatusCode::BAD_REQUEST, s).with_header("content-type", "application/json")
+}
+
 /// Helper that wraps a Serialize body into a `Response` with the
 /// right Content-Type. Returns 500 on serialisation failure with
 /// a JSON-shaped error envelope so the client still sees JSON.
@@ -364,5 +405,39 @@ mod tests {
         let opt = field("photo_path", FieldType::OptionalFilePath);
         assert_eq!(typed_cell(&opt, ""), serde_json::Value::Null);
         assert_eq!(typed_cell(&opt, "x.png"), serde_json::json!("x.png"));
+    }
+
+    #[test]
+    fn mutation_ok_envelope_carries_admin_name_id_and_status() {
+        let resp = mutation_ok_envelope("posts", 42, StatusCode::CREATED);
+        assert_eq!(resp.status, StatusCode::CREATED);
+        assert!(resp
+            .headers
+            .iter()
+            .any(|(k, v)| k == "content-type" && v == "application/json"));
+        let v: serde_json::Value = serde_json::from_slice(&resp.body).expect("valid json");
+        assert_eq!(v["ok"], serde_json::Value::Bool(true));
+        assert_eq!(v["admin_name"], serde_json::json!("posts"));
+        assert_eq!(v["id"], serde_json::json!(42));
+    }
+
+    #[test]
+    fn mutation_ok_envelope_supports_ok_status_for_update_delete() {
+        let resp = mutation_ok_envelope("widgets", 7, StatusCode::OK);
+        assert_eq!(resp.status, StatusCode::OK);
+    }
+
+    #[test]
+    fn validation_errors_envelope_shape_and_status() {
+        let resp = validation_errors_envelope(vec![
+            "Title: must not be empty".to_string(),
+            "Status: choose one of draft/published".to_string(),
+        ]);
+        assert_eq!(resp.status, StatusCode::BAD_REQUEST);
+        let v: serde_json::Value = serde_json::from_slice(&resp.body).expect("valid json");
+        assert_eq!(v["status"], serde_json::json!(400));
+        let errors = v["errors"].as_array().expect("errors is array");
+        assert_eq!(errors.len(), 2);
+        assert_eq!(errors[0], serde_json::json!("Title: must not be empty"));
     }
 }
