@@ -26,7 +26,7 @@ use crate::auth::Identity;
 use crate::error::{Error, Result};
 use crate::http::{Request, Response};
 
-use super::handlers::{csrf_token, AdminCtx};
+use super::handlers::{base_with_unread, csrf_token, AdminCtx};
 use super::render::{BaseContext, SidebarEntry};
 
 #[derive(Serialize)]
@@ -209,7 +209,7 @@ pub(crate) async fn show_db_browser(
     by_name.clear();
 
     let view = DbBrowserCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Database",
         entries: ctx
             .admin

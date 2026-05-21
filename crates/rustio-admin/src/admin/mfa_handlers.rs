@@ -42,7 +42,7 @@ use crate::auth::{self, Identity};
 use crate::error::Result;
 use crate::http::{Request, Response};
 
-use super::handlers::{csrf_token, AdminCtx};
+use super::handlers::{base_with_unread, csrf_token, AdminCtx};
 use super::render::BaseContext;
 
 // ---- /admin/mfa/verify (R3 commit #12) -------------------------------------
@@ -81,7 +81,7 @@ pub(crate) async fn show_verify(
     req: &Request,
 ) -> Result<Response> {
     let view = MfaVerifyCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Two-factor authentication",
         email: identity.email.clone(),
         error: None,
@@ -141,6 +141,9 @@ pub(crate) async fn do_verify(
     // between "wrong TOTP", "replay", "no current session",
     // or "no MFA enrolled" reaches the client.
     let uniform_failure = |ctx: &AdminCtx| -> Result<Response> {
+        // Mid-auth render — closure can't .await the unread-count
+        // fetch and the badge is irrelevant on the MFA-verify
+        // page anyway (operator isn't fully signed in yet).
         let view = MfaVerifyCtx {
             base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
             page_title: "Two-factor authentication",
@@ -354,7 +357,7 @@ pub(crate) async fn show_enroll(
     let otpauth_url = build_otpauth_url(issuer, &identity.email, &provisioned.base32, step_seconds);
 
     let view = MfaEnrollCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Set up two-factor authentication",
         otpauth_url,
         secret_base32: provisioned.base32,
@@ -407,6 +410,8 @@ pub(crate) async fn do_enroll(
         let step_seconds = ctx.admin.active_recovery_policy().mfa_step_seconds();
         let otpauth_url =
             build_otpauth_url(issuer, &identity.email, &provisioned.base32, step_seconds);
+        // Sync closure — can't .await; the badge isn't critical
+        // mid-enrolment so use BaseContext::new() directly.
         let view = MfaEnrollCtx {
             base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
             page_title: "Set up two-factor authentication",
@@ -459,7 +464,7 @@ pub(crate) async fn do_enroll(
     match outcome {
         EnrolOutcome::Enrolled { plain_backup_codes } => {
             let view = MfaEnrollCompleteCtx {
-                base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+                base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(&req)).await,
                 page_title: "Two-factor authentication enabled",
                 plain_backup_codes,
             };
@@ -473,7 +478,7 @@ pub(crate) async fn do_enroll(
             // retry without re-scanning the QR. The hidden
             // field already carries the secret on the way back.
             let view = MfaEnrollCtx {
-                base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+                base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(&req)).await,
                 page_title: "Set up two-factor authentication",
                 otpauth_url: build_otpauth_url(
                     ctx.admin.branding().site_title.as_str(),
@@ -590,7 +595,7 @@ pub(crate) async fn show_regenerate(
     }
 
     let view = MfaRegenerateCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Generate new backup codes",
         error: None,
     };
@@ -639,7 +644,7 @@ pub(crate) async fn do_regenerate(
             previous_codes_invalidated,
         } => {
             let view = MfaRegenerateCompleteCtx {
-                base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+                base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(&req)).await,
                 page_title: "New backup codes generated",
                 plain_backup_codes,
                 previous_codes_invalidated,
@@ -729,7 +734,7 @@ pub(crate) async fn show_disable(
     }
 
     let view = MfaDisableCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Disable two-factor authentication",
         error: None,
     };

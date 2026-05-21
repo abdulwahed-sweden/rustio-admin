@@ -83,6 +83,31 @@ pub(super) fn csrf_token(req: &Request) -> String {
         .unwrap_or_default()
 }
 
+/// Build a `BaseContext` for an authenticated page handler, with
+/// the operator's unread-notification count pre-fetched. Closes
+/// the previous-cycle gap where 50-odd handlers built BaseContext
+/// inline and the topbar bell badge stayed at zero on those
+/// pages. Every authenticated page that builds a struct-literal
+/// ctx should call this instead of `BaseContext::new(Some(...))`.
+///
+/// Takes `&Db` + `&Admin` directly rather than a context wrapper
+/// so both `AdminCtx` and `AuthAdminCtx` callers (handlers.rs +
+/// builtin.rs respectively) can share the helper without a
+/// per-context overload.
+///
+/// Failure-soft: the inner query short-circuits to `0` on any DB
+/// hiccup so a notifications-table issue can't take down the rest
+/// of the admin chrome.
+pub(super) async fn base_with_unread(
+    db: &crate::orm::Db,
+    admin: &crate::admin::types::Admin,
+    identity: &Identity,
+    csrf: String,
+) -> render::BaseContext {
+    let count = super::notifications::unread_count(db, identity.user_id).await;
+    render::BaseContext::new(Some(identity), csrf, admin).with_unread_count(count)
+}
+
 pub(crate) async fn show_login(ctx: &AdminCtx, req: Request) -> Result<Response> {
     // The login page surfaces two non-error flashes:
     //
@@ -3078,7 +3103,7 @@ pub(crate) async fn show_password_change(
     let just_changed = req.query().get("changed").is_some();
     let min_length = ctx.admin.active_password_policy().min_length();
     let view = render::PasswordChangeCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: if just_changed {
             "Password changed"
         } else {
@@ -3179,7 +3204,7 @@ pub(crate) async fn do_password_change(
         let mut sections = render::password_change_form_sections(min_length);
         render::apply_field_errors(&mut sections, &field_errors);
         let view = render::PasswordChangeCtx {
-            base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+            base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(&req)).await,
             page_title: "Change password",
             errors,
             success: false,
@@ -3308,13 +3333,15 @@ pub(crate) async fn show_account_sessions(
     };
     let sessions = crate::auth::list_active_for_user(&ctx.db, identity.user_id).await?;
 
-    let view = render::account_sessions_ctx(
+    let mut view = render::account_sessions_ctx(
         &identity,
         &ctx.admin,
         sessions,
         current_session_id,
         csrf_token(req),
     );
+    view.base.unread_count =
+        super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/account_sessions.html", &view)?;
     Ok(Response::html(body))
 }

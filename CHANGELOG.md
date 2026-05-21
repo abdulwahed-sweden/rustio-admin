@@ -257,6 +257,24 @@ leaves the alpha track.
     consumer crate that uses `#[derive(AdminModel)]` now gets
     the correct labels without touching its own code.
 
+### Changed
+
+- **Topbar unread-count badge now consistent across every
+  authenticated page.** Closes the "opted-in handlers only"
+  caveat from the badge MVP. New `handlers::base_with_unread`
+  shared helper fetches the count once + chains
+  `with_unread_count` onto a fresh `BaseContext`; 33 inline
+  `BaseContext::new(Some(...))` sites across `builtin.rs`,
+  `admin_recovery_handlers.rs`, `mfa_handlers.rs`, and
+  `db_browser.rs` migrated to it. Four sync-closure error-path
+  renders (re-auth wall, MFA-verify failure, MFA-enrol error,
+  admin-reset-password error) stay on the bare constructor
+  with a comment explaining the limitation — these are
+  mid-auth surfaces where the badge isn't critical anyway.
+  Browser-walked: `/admin/users`, `/admin/db`,
+  `/admin/account/sessions`, `/admin/password_change`, and the
+  per-user view all render the badge correctly now.
+
 ### Added
 
 - **Built-in framework docs at `/admin/docs`.** Operators read

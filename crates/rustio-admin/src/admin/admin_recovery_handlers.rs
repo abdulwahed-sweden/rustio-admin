@@ -72,7 +72,7 @@ use crate::http::{Request, Response};
 
 use super::audit;
 use super::builtin::{client_ip, correlation_id_from};
-use super::handlers::{csrf_token, AdminCtx};
+use super::handlers::{base_with_unread, csrf_token, AdminCtx};
 use super::render::{self, BaseContext, FormSection};
 
 // ---- Pure helpers (unit-testable without DB / Request) ---------------------
@@ -165,7 +165,7 @@ pub(crate) async fn show_reauth(
     let raw = req.query().get("return_to").map(|s| s.to_string());
     let return_to = redirect_after_reauth(raw.as_deref());
     let view = ReauthCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Confirm your identity",
         email: identity.email.clone(),
         return_to,
@@ -207,6 +207,9 @@ pub(crate) async fn do_reauth(
     // Per DESIGN_R3_MFA.md §3.1, the disclosure rule applies to
     // every re-auth failure mode.
     let uniform_failure = |ctx: &AdminCtx, return_to: &str| -> Result<Response> {
+        // Sync closure — the helper requires .await. Reauth wall
+        // is mid-auth surface; badge irrelevant. Use the bare
+        // constructor.
         let view = ReauthCtx {
             base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
             page_title: "Confirm your identity",
@@ -356,7 +359,7 @@ pub(crate) async fn show_must_change_password(
     }
     let min_length = ctx.admin.active_password_policy().min_length();
     let view = MustChangePasswordCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
         page_title: "Set a new password",
         sections: render::must_change_password_form_sections(min_length),
         errors: Vec::new(),
@@ -471,7 +474,7 @@ pub(crate) async fn do_must_change_password(
         let mut sections = render::must_change_password_form_sections(min_length);
         render::apply_field_errors(&mut sections, &field_errors);
         let view = MustChangePasswordCtx {
-            base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin),
+            base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(&req)).await,
             page_title: "Set a new password",
             sections,
             errors,
@@ -753,7 +756,7 @@ pub(crate) async fn show_admin_reset_password(
     }
 
     let view = AdminResetPasswordCtx::form(
-        BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        base_with_unread(&ctx.db, &ctx.admin, &actor_identity, csrf_token(req)).await,
         target_user_id,
         target_email,
         String::new(),
@@ -838,6 +841,7 @@ pub(crate) async fn do_admin_reset_password(
                        errors: Vec<String>,
                        field_errors: HashMap<String, Vec<String>>|
      -> Result<Response> {
+        // Sync closure — error-path render. Badge not critical.
         let view = AdminResetPasswordCtx::form(
             BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
             target_user_id,
@@ -917,7 +921,13 @@ pub(crate) async fn do_admin_reset_password(
                     // survive a 303 → GET redirect. Template warns
                     // against refresh.
                     let view = AdminResetPasswordCtx {
-                        base: BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+                        base: base_with_unread(
+                            &ctx.db,
+                            &ctx.admin,
+                            &actor_identity,
+                            csrf_token(&req),
+                        )
+                        .await,
                         page_title: format!("Password reset for {target_email}"),
                         target_user_id,
                         target_email: target_email.clone(),
@@ -1044,7 +1054,7 @@ pub(crate) async fn show_lock_user(
     }
 
     let view = LockUserCtx {
-        base: BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &actor_identity, csrf_token(req)).await,
         page_title: format!("Lock account — {target_email}"),
         target_user_id,
         target_email,
@@ -1108,7 +1118,7 @@ pub(crate) async fn do_lock_user(
 
     if !errors.is_empty() {
         let view = LockUserCtx {
-            base: BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+            base: base_with_unread(&ctx.db, &ctx.admin, &actor_identity, csrf_token(&req)).await,
             page_title: format!("Lock account — {target_email}"),
             target_user_id,
             target_email,
@@ -1166,7 +1176,7 @@ pub(crate) async fn show_unlock_user(
     }
 
     let view = ConfirmActionCtx {
-        base: BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &actor_identity, csrf_token(req)).await,
         page_title: format!("Unlock account — {target_email}"),
         target_user_id,
         target_email,
@@ -1216,7 +1226,7 @@ pub(crate) async fn show_admin_revoke_sessions(
     }
 
     let view = ConfirmActionCtx {
-        base: BaseContext::new(Some(&actor_identity), csrf_token(req), &ctx.admin),
+        base: base_with_unread(&ctx.db, &ctx.admin, &actor_identity, csrf_token(req)).await,
         page_title: format!("Revoke sessions — {target_email}"),
         target_user_id,
         target_email,
@@ -1419,7 +1429,7 @@ async fn do_confirm_action(
             .or_default()
             .push(msg.clone());
         let view = ConfirmActionCtx {
-            base: BaseContext::new(Some(&actor_identity), csrf_token(&req), &ctx.admin),
+            base: base_with_unread(&ctx.db, &ctx.admin, &actor_identity, csrf_token(&req)).await,
             page_title: format!("{action_title} — {target_email}"),
             target_user_id,
             target_email,
