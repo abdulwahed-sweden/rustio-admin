@@ -145,7 +145,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ **Email-based password reset flow** — admin-driven + self-service variants, single-use signed token, real SMTP transport, project-branded HTML email
 - ✅ **Two-factor authentication** — TOTP + single-use backup codes
 - ✅ **Emergency-access CLI** — `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`
-- ⚪ **Session management UI.** The `user_view.html` page already lists active sessions; add a "revoke this session" affordance.
+- ✅ **Session management UI** — `user_view.html` sessions tab lists active sessions with a per-row Revoke button (hidden on the actor's own session). `POST /admin/users/:id/sessions/:session_id/revoke` enforces cross-rank, runs through `auth::invalidate_sessions` (Doctrine 22 single writer), emits `SessionsRevokedByOther`. Self-service variants at `/admin/account/sessions/:id/revoke`, `…/revoke-others`, `…/revoke-all`
 - ⚪ **Audit on auth events.** Failed login attempts, password changes, role changes — currently the audit log is CRUD-only.
 - 🔬 **WebAuthn / passkeys.** Strictly research at this point; the trade-off between framework surface area and operator value is unclear.
 
