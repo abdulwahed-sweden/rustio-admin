@@ -8,15 +8,17 @@
   </nav>
   <h1>{{ page_title }}</h1>
   <p class="rio-page-header__lead">
-    Read-only preview: pick a model, optionally tweak the list-page
-    query (search / sort / page), and fetch the JSON response in-page.
-    For writes (create / update / delete) use the form-encoded
-    endpoints documented on <a href="/admin/apis">/admin/apis</a>.
+    Pick a model + endpoint, optionally tweak parameters, and fetch
+    the response in-page. Write methods (create / update / delete)
+    submit form-encoded bodies; the CSRF token is injected
+    automatically.
   </p>
 </header>
 
-<section class="rio-card rio-playground">
+<section class="rio-card rio-playground" data-method="list">
   <form id="rio-playground-form" class="rio-playground__form" onsubmit="return false;">
+    <input type="hidden" id="rio-playground-csrf" value="{{ csrf_token }}">
+
     <label class="rio-playground__field">
       <span>Model</span>
       <select id="rio-playground-model" class="rio-input">
@@ -27,16 +29,32 @@
     </label>
 
     <label class="rio-playground__field">
+      <span>Endpoint</span>
+      <select id="rio-playground-method" class="rio-input">
+        <option value="list">GET — list</option>
+        <option value="detail">GET — detail</option>
+        <option value="create">POST — create</option>
+        <option value="update">POST — update</option>
+        <option value="delete">POST — delete</option>
+      </select>
+    </label>
+
+    <label class="rio-playground__field" data-show-for="detail update delete">
+      <span>Row ID</span>
+      <input type="number" id="rio-playground-id" class="rio-input" placeholder="e.g. 42" min="1">
+    </label>
+
+    <label class="rio-playground__field" data-show-for="list">
       <span>Search (<code>?q=</code>)</span>
       <input type="text" id="rio-playground-q" class="rio-input" placeholder="optional">
     </label>
 
-    <label class="rio-playground__field">
+    <label class="rio-playground__field" data-show-for="list">
       <span>Sort field (<code>?sort=</code>)</span>
       <input type="text" id="rio-playground-sort" class="rio-input" placeholder="e.g. created_at">
     </label>
 
-    <label class="rio-playground__field">
+    <label class="rio-playground__field" data-show-for="list">
       <span>Direction</span>
       <select id="rio-playground-dir" class="rio-input">
         <option value="">(default)</option>
@@ -45,12 +63,12 @@
       </select>
     </label>
 
-    <label class="rio-playground__field">
+    <label class="rio-playground__field" data-show-for="list">
       <span>Page</span>
       <input type="number" id="rio-playground-page" class="rio-input" placeholder="1" min="1">
     </label>
 
-    <label class="rio-playground__field">
+    <label class="rio-playground__field" data-show-for="list">
       <span>Per page</span>
       <select id="rio-playground-perpage" class="rio-input">
         <option value="">(default)</option>
@@ -59,6 +77,11 @@
         <option>100</option>
         <option>200</option>
       </select>
+    </label>
+
+    <label class="rio-playground__field rio-playground__field--wide" data-show-for="create update">
+      <span>Body (form-encoded, <code>k=v&amp;k2=v2</code>)</span>
+      <textarea id="rio-playground-body" class="rio-input" rows="4" placeholder="title=Hello&body=World"></textarea>
     </label>
 
     <div class="rio-playground__actions">
@@ -71,56 +94,116 @@
     <div class="rio-playground__status">
       <span id="rio-playground-status" class="rio-meta">Idle.</span>
     </div>
-    <pre id="rio-playground-body" class="rio-playground__body" aria-live="polite"></pre>
+    <pre id="rio-playground-body-out" class="rio-playground__body" aria-live="polite"></pre>
   </div>
 </section>
 
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
+  const root = document.querySelector(".rio-playground");
+  const csrfInput = $("rio-playground-csrf");
   const modelSel = $("rio-playground-model");
+  const methodSel = $("rio-playground-method");
+  const idInput = $("rio-playground-id");
   const q = $("rio-playground-q");
   const sort = $("rio-playground-sort");
   const dir = $("rio-playground-dir");
   const page = $("rio-playground-page");
   const perPage = $("rio-playground-perpage");
+  const bodyInput = $("rio-playground-body");
   const sendBtn = $("rio-playground-send");
   const urlOut = $("rio-playground-url");
   const statusOut = $("rio-playground-status");
-  const bodyOut = $("rio-playground-body");
+  const bodyOut = $("rio-playground-body-out");
 
-  function buildUrl() {
+  // CSS-free visibility toggle: when the method changes, set
+  // `data-method` on the root and let `[data-show-for]` checks
+  // decide who renders. Inline display style is intentional —
+  // keeps the toggle one place, no CSS dependency.
+  function applyMethodVisibility() {
+    const m = methodSel.value;
+    root.dataset.method = m;
+    document.querySelectorAll("[data-show-for]").forEach((el) => {
+      const show = el.dataset.showFor.split(" ").includes(m);
+      el.style.display = show ? "" : "none";
+    });
+  }
+
+  function buildRequest() {
+    const method = methodSel.value;
     const params = new URLSearchParams();
     params.set("format", "json");
-    if (q.value.trim()) params.set("q", q.value.trim());
-    if (sort.value.trim()) params.set("sort", sort.value.trim());
-    if (dir.value) params.set("dir", dir.value);
-    if (page.value) params.set("page", page.value);
-    if (perPage.value) params.set("per_page", perPage.value);
-    return "/admin/" + modelSel.value + "?" + params.toString();
+    const slug = modelSel.value;
+    const id = (idInput.value || "").trim();
+    switch (method) {
+      case "list": {
+        if (q.value.trim()) params.set("q", q.value.trim());
+        if (sort.value.trim()) params.set("sort", sort.value.trim());
+        if (dir.value) params.set("dir", dir.value);
+        if (page.value) params.set("page", page.value);
+        if (perPage.value) params.set("per_page", perPage.value);
+        return { method: "GET", url: "/admin/" + slug + "?" + params.toString() };
+      }
+      case "detail":
+        return { method: "GET", url: "/admin/" + slug + "/" + id + "?" + params.toString() };
+      case "create":
+      case "update":
+      case "delete": {
+        const url =
+          method === "create"
+            ? "/admin/" + slug + "?" + params.toString()
+            : "/admin/" + slug + "/" + id + "/" + (method === "update" ? "edit" : "delete") +
+              "?" + params.toString();
+        // Compose form-encoded body. Always include _csrf — the
+        // framework's middleware refuses POSTs without it. For
+        // delete the body is just the token; create/update get
+        // the operator-typed text plus the token.
+        const userBody = (bodyInput.value || "").trim();
+        const csrf = encodeURIComponent(csrfInput.value);
+        const body = userBody
+          ? userBody + "&_csrf=" + csrf
+          : "_csrf=" + csrf;
+        return {
+          method: "POST",
+          url,
+          body,
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        };
+      }
+    }
   }
 
   function refreshUrl() {
-    urlOut.textContent = buildUrl();
+    try {
+      urlOut.textContent = buildRequest().url;
+    } catch (e) {
+      urlOut.textContent = "";
+    }
   }
-  [modelSel, q, sort, dir, page, perPage].forEach((el) =>
+  [modelSel, methodSel, idInput, q, sort, dir, page, perPage].forEach((el) =>
     el.addEventListener("input", refreshUrl)
   );
+  methodSel.addEventListener("change", applyMethodVisibility);
+  applyMethodVisibility();
   refreshUrl();
 
   sendBtn.addEventListener("click", async () => {
-    const url = buildUrl();
-    statusOut.textContent = "Fetching " + url + " …";
+    const req = buildRequest();
+    statusOut.textContent = req.method + " " + req.url + " …";
     bodyOut.textContent = "";
     try {
       const t0 = performance.now();
-      const r = await fetch(url, {
-        headers: { Accept: "application/json" },
+      const r = await fetch(req.url, {
+        method: req.method,
+        headers: Object.assign({ Accept: "application/json" }, req.headers || {}),
+        body: req.body,
         credentials: "same-origin",
       });
       const ms = Math.round(performance.now() - t0);
       const text = await r.text();
-      statusOut.textContent = "HTTP " + r.status + " · " + ms + " ms · " + text.length + " bytes";
+      statusOut.textContent =
+        "HTTP " + r.status + " · " + ms + " ms · " + text.length + " bytes";
       try {
         const obj = JSON.parse(text);
         bodyOut.textContent = JSON.stringify(obj, null, 2);

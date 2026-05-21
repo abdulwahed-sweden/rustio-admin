@@ -259,14 +259,24 @@ leaves the alpha track.
 
 ### Added
 
+- **API playground writes — `create / update / delete`.**
+  `/admin/apis/playground` now closes the loop with a method
+  selector (`list / detail / create / update / delete`) and
+  method-conditional inputs: row-ID input appears for
+  detail/update/delete; a form-encoded body textarea appears
+  for create/update. The CSRF token is read from the page and
+  injected automatically into every POST body — operators don't
+  hand-paste it. Response pane and latency telemetry stay the
+  same; the previous read-only contract is intact (the default
+  `list` method renders identically to before).
+
 - **Interactive API playground at `/admin/apis/playground`.**
   Read-only preview: pick a model + optional search / sort /
   page / per_page, click Send, see the JSON envelope rendered
   in-page with HTTP status + latency. Vanilla `fetch()`
   client-side (no third-party JS); served as one inline `<script>`
   block in the embedded template. Linked from `/admin/apis`
-  alongside the OpenAPI download. Write-method
-  experimentation is still pending.
+  alongside the OpenAPI download.
 
 - **`rustio startproject --preset blog`.** A two-model starter
   (Post + Comment) for projects that want a relation demo out of

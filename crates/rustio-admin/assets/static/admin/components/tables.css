@@ -305,6 +305,11 @@
   font-size: var(--rio-fs-sm);
   color: var(--rio-text-muted);
 }
+.rio-playground__field--wide { grid-column: 1 / -1; }
+.rio-playground__field textarea {
+  font-family: var(--rio-font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: var(--rio-fs-sm);
+}
 .rio-playground__actions {
   grid-column: 1 / -1;
   display: flex;
