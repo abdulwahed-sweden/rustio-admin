@@ -259,6 +259,18 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio test-init` CLI verb.** Writes a stdlib-only
+  `tests/smoke.rs` integration test that boots the project binary
+  via `cargo run`, polls the bound port via `TcpStream::connect`,
+  sends a raw HTTP GET to `/admin/`, and asserts a 302/303
+  redirect to `/admin/login`. No new project dependencies —
+  ideal as a fresh project's first CI check.
+  - `--force` to overwrite an existing `<out>/smoke.rs`
+  - `--out <dir>` defaults to `tests` (Cargo's integration
+    convention). Refuses to clobber otherwise.
+  - `RUSTIO_PORT` environment override on the generated test so
+    it doesn't collide with a running admin on the default 3000.
+
 - **"New this week" KPI on the dashboard.** Each model tile now
   shows the exact count of rows with `created_at` within the last
   7 days alongside the existing approximate row total. Skipped

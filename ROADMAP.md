@@ -99,7 +99,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ⚪ **Inline form in-page editing.** Add / remove / reorder child rows on the parent page without a round-trip. Requires a per-relation form context.
 - ⚪ **Field-level validation hooks.** Project closures that return validation errors before the row hits the database, surfaced in the same UI as the existing constraint-violation flash.
 - ⚪ **Rich-text widget.** Optional Tiptap-style editor for `String` fields tagged with a `widget = "richtext"` attribute.
-- ⚪ **File / image upload widget.** Tied to the upload / media system below.
+- ✅ **File / image upload widget** — `#[rustio(file)]` columns (`FieldType::FilePath` / `OptionalFilePath`) render the form input as `<input type="file">`, persist relative paths under `Admin::uploads_dir`, and serve the bytes back via `GET /admin/uploads/<rel>`. Multipart parser caps at 16 MB total / 8 MB per file; canonicalised storage root refuses path traversal.
 
 ### Bulk actions
 
@@ -146,7 +146,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ **Two-factor authentication** — TOTP + single-use backup codes
 - ✅ **Emergency-access CLI** — `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`
 - ✅ **Session management UI** — `user_view.html` sessions tab lists active sessions with a per-row Revoke button (hidden on the actor's own session). `POST /admin/users/:id/sessions/:session_id/revoke` enforces cross-rank, runs through `auth::invalidate_sessions` (Doctrine 22 single writer), emits `SessionsRevokedByOther`. Self-service variants at `/admin/account/sessions/:id/revoke`, `…/revoke-others`, `…/revoke-all`
-- ⚪ **Audit on auth events.** Failed login attempts, password changes, role changes — currently the audit log is CRUD-only.
+- ✅ **Audit on auth events** — `LoginSucceeded`, `LoginFailed` (with `reason = wrong_password | inactive | locked` in metadata), `PasswordChangedSelf`, `PasswordResetByOther`, `SessionsRevokedSelf` / `…ByOther`, `SessionLogout`, `MfaEnabled` / `MfaDisabled` / `MfaCodeConsumed`, `BackupCodesRegenerated`, `AccountLocked` / `…Unlocked`, `ForcedPasswordChangeCompleted`, `EmergencyRecovery` (CLI-only) — 58 emission sites across the framework. SIEM-friendly stable strings locked by `audit_event_existing_variants_have_stable_strings`.
 - 🔬 **WebAuthn / passkeys.** Strictly research at this point; the trade-off between framework surface area and operator value is unclear.
 
 ---
@@ -210,7 +210,7 @@ The `rustio` binary handles the operationally critical surface for new and exist
 - 🟡 **Zero-config bootstrap.** `rustio startproject` requires a project name argument and assumes a Postgres at `localhost:5432`. A truly zero-config path (auto-detect a Postgres, prompt only for a project name) is not built. *Note: SQLite as a fallback collides with the "Postgres only" non-goal — the more likely path is to ship a `docker compose up` snippet rather than abstract over backends.*
 - ⚪ **Project presets / starters.** `rustio startproject <name> --preset blog` / `e-commerce` / `crm` produces a richer skeleton with multiple models, sample data, and a tuned `AdminTheme`. Today only the minimal preset exists.
 - ⚪ **`rustio sdk-gen <lang>`.** Pairs with the OpenAPI spec.
-- ⚪ **Initial test generation.** `rustio test-init` creates a `tests/` directory with a smoke test that boots the server, hits `/admin`, and asserts a 302 to `/admin/login`. Useful as a project's first CI check.
+- ✅ **Initial test generation** — `rustio test-init` writes a stdlib-only `tests/smoke.rs` integration test that spawns `cargo run`, probes the bound HTTP port, sends a raw GET to `/admin/`, and asserts a 302/303 redirect to `/admin/login` (`Location` header inspection). `--force` to clobber; `--out <dir>` to override the destination root.
 - ⚪ **`rustio reload`.** Dev-mode watcher: on file change, send a SIGHUP to the running server (or rebuild + restart). Today operators use `cargo watch -x run` externally.
 
 ---

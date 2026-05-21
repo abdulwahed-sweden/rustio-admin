@@ -31,6 +31,7 @@ mod migrate;
 mod perm;
 mod scaffold;
 mod template_override;
+mod test_init;
 mod theme;
 mod user;
 
@@ -123,6 +124,22 @@ enum Command {
         /// (matches the `RUSTIO_TEMPLATE_DIR=./templates` convention
         /// from CLAUDE.md / `docs/architecture.md`).
         #[arg(long, default_value = "templates")]
+        out: String,
+    },
+
+    /// Generate a starter integration test at `./<out>/smoke.rs`.
+    /// The test spawns the project binary, probes the bound port,
+    /// and asserts that `/admin/` redirects to `/admin/login` —
+    /// useful as a project's first CI check.
+    #[command(name = "test-init")]
+    TestInit {
+        /// Overwrite an existing `<out>/smoke.rs`. Off by default
+        /// so the verb refuses to clobber in-progress edits.
+        #[arg(long)]
+        force: bool,
+        /// Destination root for the test file. Defaults to
+        /// `./tests` (Cargo's integration-test convention).
+        #[arg(long, default_value = "tests")]
         out: String,
     },
 
@@ -225,6 +242,7 @@ fn main() -> ExitCode {
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
         Command::Override { name, force, out } => template_override::run(name, force, &out),
+        Command::TestInit { force, out } => test_init::run(force, &out),
         Command::Theme { action } => theme::run(action),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
@@ -236,6 +254,7 @@ fn main() -> ExitCode {
                 | Command::Plan
                 | Command::Commit { .. }
                 | Command::Override { .. }
+                | Command::TestInit { .. }
                 | Command::Theme { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
