@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.16.0** | 2026-05-21 | **Operations & i18n release.** Major new operator surfaces: `/admin/docs` (rendered framework markdown), `/admin/health` (web counterpart to `rustio doctor`), `/admin/feature_flags` (with `feature_enabled` helper), `/admin/notifications` (with topbar bell + unread badge), `/admin/apis` (OpenAPI 3.0 + TypeScript SDK + interactive playground). Dashboard gains framework-wide + per-model 7-day creation sparklines and "new this week" KPI. Audit history gains per-field diff render, per-actor filter, and date grouping. CSV import (`POST /admin/<model>/import.csv`) pairs with the existing export. JSON content negotiation now covers write paths (success + validation envelopes). Postgres FTS opt-in via `ModelAdmin::search_index_column`. Per-action bulk permission gate; per-model read-only via `Admin::read_only_model`. New CLI verbs: `rustio reload`, `rustio test-init`, `rustio startproject --preset blog`. New `middleware::locale` parses `Accept-Language` → `Locale` request-context value (foundation for the future message catalog). Dark theme retired — framework is now light-only. |
 | **0.15.1** | 2026-05-16 | **Refined colour palette — dark-frame chrome.** Page canvas moved from blue-tinted slate to neutral cool grey (`#E5E7EB`); chrome (topbar / sidebar / footer) jumped to deep slate-blue (`#1F2A37`) so the operator skeleton reads as a confident dark frame around the lighter content area — the Linear / Vercel / Notion / Stripe-Dashboard pattern. Dark mode chrome deepened to near-black (`#0A0E14`) so both modes share the "chrome is darker than canvas" convention. A new chrome-scope CSS cascade in `layout/shell.css` flips `--rio-text-*`, `--rio-surface-2/3`, `--rio-border-*`, and `--rio-accent` (to the lifted `#3FAA9D` variant for contrast) within `.rio-topbar` / `.rio-sidebar` / `.rio-footer` — every component inherits light-on-dark automatically, no per-component edits. Theme-toggle button redesigned as a ghost on chrome. Principle 10 reframed to allow either chrome direction. |
 | **0.15.0** | 2026-05-16 | **Visual identity overhaul — calm with authority.** Three new doctrine principles (deeper surface ladder, chrome carries weight, typography hierarchy is a weight choice). Surface scale grows from four rungs to six (`--rio-bg`/`--rio-surface`/`--rio-surface-2`/`--rio-surface-3`/`--rio-surface-chrome`/`--rio-surface-elevated`); chrome (topbar/sidebar/footer) now sits on a distinct deeper tier so the operator skeleton has visible load-bearing weight. Buttons gain a subtle vertical gradient + inset highlight + proper focus-visible ring. Inputs ship with `--rio-shadow-inset` so fields read as "place to type" rather than "drawn rectangle". Table headers retuned to 600 + tracked-allcaps; primary cell in each row gets weight 500 + text-strong as a skim anchor. Topbar height 64 → 72 px. Pure CSS — no template HTML, no public API, no AdminTheme contract change. Existing `AdminTheme` overrides keep working unchanged. |
 | **0.14.1** | 2026-05-16 | Patch: Builder migration codegen used a hardcoded 12-char column-name width. Field names ≥ 12 chars (e.g. `engine_displacement_cc`, `detailed_description`) collapsed against the type column, producing malformed SQL like `engine_displacement_ccBIGINT` that Postgres rejected. Replaced with dynamic per-table width + two literal spaces of guaranteed separation. New regression test. No public API change; no SchemaHash input change. |
@@ -37,6 +38,11 @@ leaves the alpha track.
 
 
 ## [Unreleased]
+
+_No unreleased changes yet — see the **[0.16.0]** block below._
+
+
+## [0.16.0] — 2026-05-21
 
 ### Removed
 

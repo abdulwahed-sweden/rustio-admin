@@ -36,7 +36,7 @@ RustIO is a **small, focused admin framework for Postgres-backed Rust apps.** Th
 
 ## Current Foundation
 
-The framework currently sits at **v0.15.1** (released 2026-05-16). See [`CHANGELOG.md`](./CHANGELOG.md) for the release-by-release record. The shape:
+The framework currently sits at **v0.16.0** (released 2026-05-21). See [`CHANGELOG.md`](./CHANGELOG.md) for the release-by-release record. The shape:
 
 - Core admin runtime with list / create / edit / delete pages per registered Postgres model
 - Built-in user / group / permission management at `/admin/users/*` and `/admin/groups/*`
@@ -264,4 +264,4 @@ A few principles that should outlast any specific roadmap item.
 
 ---
 
-*Last revision: 2026-05-21 — tracks the `[Unreleased]` block in [`CHANGELOG.md`](./CHANGELOG.md) on top of the v0.15.1 release. Locale-negotiation middleware was the most recent foundational piece; remaining open items split into 🟡 partial (8), ⚪ planned (14), and 🔬 research (10). This document is rewritten as the framework evolves; the [git history](https://github.com/abdulwahed-sweden/rustio-admin/commits/main/ROADMAP.md) is the authoritative timeline of how the plan changed.*
+*Last revision: 2026-05-21 — matches the v0.16.0 release; future work tracks the fresh `[Unreleased]` block in [`CHANGELOG.md`](./CHANGELOG.md). Remaining open items split into 🟡 partial (8), ⚪ planned (14), and 🔬 research (10). This document is rewritten as the framework evolves; the [git history](https://github.com/abdulwahed-sweden/rustio-admin/commits/main/ROADMAP.md) is the authoritative timeline of how the plan changed.*
