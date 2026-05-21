@@ -1,0 +1,55 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
+    <span>CSV import</span>
+  </nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    {% if failed == 0 %}
+    <span class="rio-pill rio-pill--badge-success">All clear</span>
+    {% else %}
+    <span class="rio-pill rio-pill--badge-danger">{{ failed }} failed</span>
+    {% endif %}
+    <span class="rio-meta">{{ inserted }} inserted of {{ total }} row{% if total != 1 %}s{% endif %}.</span>
+  </p>
+  <p class="rio-page-header__lead">
+    <a class="rio-button rio-button--ghost" href="/admin/{{ admin_name }}">← Back to {{ display_name }}</a>
+  </p>
+</header>
+
+<section class="rio-card">
+  {% if outcomes %}
+  <table class="rio-table rio-table--striped">
+    <thead><tr><th>Row</th><th>Status</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for o in outcomes %}
+      <tr>
+        <td>{{ o.row_number }}</td>
+        <td>
+          {% if o.status == "inserted" %}
+          <span class="rio-pill rio-pill--badge-success">Inserted</span>
+          {% else %}
+          <span class="rio-pill rio-pill--badge-danger">Failed</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if o.id %}
+          <a href="/admin/{{ admin_name }}/{{ o.id }}/edit">#{{ o.id }}</a>
+          {% else %}
+          <ul class="rio-error-list">
+            {% for err in o.errors %}<li>{{ err }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="rio-empty">CSV had no data rows.</p>
+  {% endif %}
+</section>
+{% endblock %}

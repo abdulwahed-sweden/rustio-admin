@@ -2835,6 +2835,72 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
 }
 
 #[derive(Serialize)]
+pub(crate) struct CsvImportResultCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: String,
+    pub entries: Vec<SidebarEntry>,
+    pub admin_name: String,
+    pub display_name: String,
+    pub total: usize,
+    pub inserted: usize,
+    pub failed: usize,
+    pub outcomes: Vec<CsvOutcomeCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct CsvOutcomeCtx {
+    pub row_number: usize,
+    pub status: &'static str, // "inserted" | "failed"
+    pub id: Option<i64>,
+    pub errors: Vec<String>,
+}
+
+pub(crate) fn csv_import_result_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    entry: &AdminEntry,
+    report: crate::admin::csv_import::ImportReport,
+) -> CsvImportResultCtx {
+    use crate::admin::csv_import::RowOutcome;
+    let outcomes = report
+        .outcomes
+        .into_iter()
+        .map(|o| match o {
+            RowOutcome::Inserted { row_number, id } => CsvOutcomeCtx {
+                row_number,
+                status: "inserted",
+                id: Some(id),
+                errors: Vec::new(),
+            },
+            RowOutcome::Failed { row_number, errors } => CsvOutcomeCtx {
+                row_number,
+                status: "failed",
+                id: None,
+                errors,
+            },
+        })
+        .collect();
+    CsvImportResultCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: format!("CSV import — {}", entry.display_name),
+        admin_name: entry.admin_name.to_string(),
+        display_name: entry.display_name.to_string(),
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        total: report.total,
+        inserted: report.inserted,
+        failed: report.failed,
+        outcomes,
+    }
+}
+
+#[derive(Serialize)]
 pub(crate) struct NotificationsCtx {
     #[serde(flatten)]
     pub base: BaseContext,

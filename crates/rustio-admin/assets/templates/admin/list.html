@@ -242,6 +242,19 @@
   <a class="rio-button" href="{{ csv_export_url }}" download>
     {{ icon("download", class="rio-icon") }} CSV
   </a>
+
+  {# CSV import — sibling of export. Inline form opens a native
+   # file picker via the styled button label. Same model's
+   # `change` permission gates the POST. #}
+  <form method="post" action="/admin/{{ admin_name }}/import.csv"
+        enctype="multipart/form-data" class="rio-form-inline rio-toolbar-import">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <label class="rio-button" tabindex="0">
+      Import CSV…
+      <input type="file" name="file" accept=".csv,text/csv"
+             onchange="this.form.submit()" style="display:none">
+    </label>
+  </form>
 </div>
 
 {% if active_filter_pills %}

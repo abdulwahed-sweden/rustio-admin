@@ -7,6 +7,7 @@ pub mod audit;
 pub(crate) mod builtin;
 pub mod bulk;
 pub(crate) mod csv_export;
+pub(crate) mod csv_import;
 pub(crate) mod db_browser;
 // public:
 pub mod feature_flags;

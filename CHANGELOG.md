@@ -259,6 +259,22 @@ leaves the alpha track.
 
 ### Added
 
+- **CSV import — `POST /admin/<model>/import.csv`.** Companion
+  to the existing CSV export. Operators upload a multipart file;
+  the framework parses it RFC 4180-style (quoted fields, doubled
+  `""`, CRLF / LF / bare CR line endings) and inserts each row
+  via `AdminOps::create` — same path the HTML form uses, so
+  model validation runs unchanged. Per-row failures surface on
+  a result page alongside the success count rather than aborting
+  the batch.
+  - 8 MB / 10k-row caps; header columns matched exactly against
+    `AdminField.name` (extra columns dropped, missing columns
+    flow into `from_form` as empty strings).
+  - "Import CSV…" button on every list-page toolbar next to the
+    "CSV" download — native file picker submits on change.
+  - Requires the model's `change` permission (same gate as create).
+  - +7 unit tests for the parser (393 → 400 framework total).
+
 - **Topbar unread-count badge on the notifications bell.** Closes
   the deferred half of the previous cycle. `BaseContext` gains
   an `unread_count: i64` field (defaults `0`) wired via a chained

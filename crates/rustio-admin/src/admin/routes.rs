@@ -1834,6 +1834,24 @@ pub fn register_admin_routes(
         }
     });
 
+    // CSV import — sibling of export.csv. Requires the model's
+    // `change` permission (it inserts rows). Each CSV row goes
+    // through `AdminOps::create` so framework validation runs
+    // unchanged. Per-row failures surface on a result page;
+    // partial imports are explicit, not silent.
+    let c = ctx.clone();
+    let router = router.post("/admin/:admin_name/import.csv", move |req| {
+        let c = c.clone();
+        async move {
+            let name = model_name_from_req(&req)?;
+            let perm = perm_for(&c, &name, "change")?;
+            match perm_guard(&c, &req, &perm).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::import_model_csv(&c, ident, &name, req).await,
+            }
+        }
+    });
+
     // Saved-filter create — POST /admin/:admin_name/saved_filters.
     // Same `view` gate as the list page: any operator who can
     // reach the list can bookmark its state. Registered before the

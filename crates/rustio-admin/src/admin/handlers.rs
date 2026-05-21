@@ -2760,6 +2760,80 @@ pub(crate) async fn show_apis_index(
     Ok(Response::html(body))
 }
 
+/// `POST /admin/:admin_name/import.csv` — multipart upload of a
+/// CSV body parsed via [`super::csv_import::parse_csv`]. Each
+/// well-formed row goes through `AdminOps::create`; per-row
+/// failures are tallied alongside successes (no abort-on-first).
+/// Gated by the model's `change` permission at the route layer.
+pub(crate) async fn import_model_csv(
+    ctx: &AdminCtx,
+    identity: Identity,
+    admin_name: &str,
+    req: Request,
+) -> Result<Response> {
+    let entry = find_project_entry(&ctx.admin, admin_name)?;
+
+    // Multipart parse directly — `parse_form_with_uploads` drops
+    // file parts when uploads_dir is None (correct for the
+    // file-upload form path), but the CSV import wants the
+    // file's raw bytes in memory, not on disk.
+    let ct = req.header("content-type").unwrap_or("");
+    let boundary = crate::multipart::boundary_from_content_type(ct)
+        .ok_or_else(|| Error::BadRequest("CSV import requires multipart/form-data".into()))?;
+    if req.body().len() > MULTIPART_MAX_BODY {
+        return Err(Error::BadRequest(format!(
+            "multipart body exceeds the {MULTIPART_MAX_BODY}-byte cap"
+        )));
+    }
+    let parsed = crate::multipart::parse_multipart(req.body(), &boundary)
+        .map_err(|e| Error::BadRequest(format!("multipart: {e}")))?;
+    let body: Vec<u8> = parsed
+        .parts
+        .into_iter()
+        .find(|p| p.name == "file")
+        .map(|p| p.body)
+        .ok_or_else(|| Error::BadRequest("CSV import: missing `file` part".into()))?;
+
+    // Parse header + rows.
+    let (header, rows) = match super::csv_import::parse_csv(&body) {
+        Ok(parsed) => parsed,
+        Err(e) => return Err(Error::BadRequest(e.message())),
+    };
+    if rows.len() > super::csv_import::CSV_IMPORT_MAX_ROWS {
+        return Err(Error::BadRequest(
+            super::csv_import::ParseError::TooManyRows {
+                rows: rows.len(),
+                cap: super::csv_import::CSV_IMPORT_MAX_ROWS,
+            }
+            .message(),
+        ));
+    }
+
+    // Header columns must be a subset of declared fields — flag
+    // any unknown columns up-front so the operator notices the
+    // mismatch before per-row errors flood the result page.
+    let known: std::collections::HashSet<&str> = entry.fields.iter().map(|f| f.name).collect();
+    let unknown: Vec<String> = header
+        .iter()
+        .filter(|h| !known.contains(h.as_str()))
+        .cloned()
+        .collect();
+    if !unknown.is_empty() {
+        return Err(Error::BadRequest(
+            super::csv_import::ParseError::UnknownColumns { columns: unknown }.message(),
+        ));
+    }
+
+    let report = super::csv_import::import_csv_rows(&ctx.db, entry, &header, rows).await;
+    let mut view =
+        render::csv_import_result_ctx(&identity, &ctx.admin, csrf_token(&req), entry, report);
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx
+        .templates
+        .render("admin/csv_import_result.html", &view)?;
+    Ok(Response::html(body))
+}
+
 pub(crate) async fn show_notifications(
     ctx: &AdminCtx,
     identity: Identity,
