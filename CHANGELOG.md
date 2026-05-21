@@ -259,6 +259,16 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio startproject --preset blog`.** A two-model starter
+  (Post + Comment) for projects that want a relation demo out of
+  the box. The preset layers a `src/comment.rs` model with a
+  `post_id` FK, a `migrations/0002_create_comments.sql` table
+  with a cascading delete on Post, and a `main.rs` that
+  registers both `Post` and `Comment`. `--preset minimal`
+  (default) reproduces the existing single-model scaffold
+  byte-for-byte. Unknown preset names error out listing the
+  valid choices.
+
 - **HTML index for the API surface at `/admin/apis`.** Companion to
   the OpenAPI JSON spec: one section per registered model with an
   endpoint table (`GET /admin/<name>`, `POST …`, etc.) and a

@@ -54,6 +54,11 @@ enum Command {
         /// Name of the project — also the cargo crate name. Letters,
         /// digits, '-', and '_' only.
         name: String,
+        /// Project preset: `minimal` (default — one `Post` model) or
+        /// `blog` (adds a `Comment` model with a `post_id` FK + a
+        /// migration). Unknown presets error out with the valid list.
+        #[arg(long, default_value = "minimal")]
+        preset: String,
     },
     /// Scaffold a new model + migration inside the current project.
     #[command(name = "startapp")]
@@ -235,7 +240,7 @@ fn main() -> ExitCode {
         // Pure filesystem; no async / db needed. Builder verbs also
         // sit here — DESIGN_BUILDER.md Doctrine B9 forbids network
         // calls in plan/commit, and `new` / `add` are even simpler.
-        Command::Startproject { name } => scaffold::project(&name),
+        Command::Startproject { name, preset } => scaffold::project(&name, &preset),
         Command::Startapp { name } => scaffold::app(&name),
         Command::New { name } => builder_new(&name),
         Command::Add { action } => builder_add(action),

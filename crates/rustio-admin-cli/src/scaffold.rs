@@ -43,10 +43,54 @@ const PROJECT_TEMPLATES: &[(&str, &str)] = &[
     ),
 ];
 
-pub fn project(name: &str) -> Result<(), String> {
-    validate_name(name)?;
+/// `blog` preset — layered on top of `PROJECT_TEMPLATES`. The
+/// `src/main.rs` and (later) any other shared file is replaced
+/// wholesale by writing the preset version *after* the minimal
+/// pass (`fs::write` overwrites unconditionally), so the ordering
+/// `PROJECT_TEMPLATES` → `BLOG_OVERRIDES` matters: keep
+/// preset-owned filenames in the overrides slice and any new-only
+/// files separate from them. New-only files (`src/comment.rs`,
+/// `migrations/0002_create_comments.sql`) are listed in
+/// `BLOG_EXTRAS` to keep the rebuilt mental model from the
+/// minimal scaffold honest.
+const BLOG_OVERRIDES: &[(&str, &str)] = &[(
+    "src/main.rs",
+    include_str!("../templates/project_blog/src/main.rs.tmpl"),
+)];
 
-    let dir = Path::new(name);
+const BLOG_EXTRAS: &[(&str, &str)] = &[
+    (
+        "src/comment.rs",
+        include_str!("../templates/project_blog/src/comment.rs.tmpl"),
+    ),
+    (
+        "migrations/0002_create_comments.sql",
+        include_str!("../templates/project_blog/migrations/0002_create_comments.sql"),
+    ),
+];
+
+/// Valid preset names, surfaced verbatim in the error path so
+/// `--preset foo` reports the closed list of choices.
+const VALID_PRESETS: &[&str] = &["minimal", "blog"];
+
+pub fn project(name: &str, preset: &str) -> Result<(), String> {
+    project_in(Path::new("."), name, preset)
+}
+
+/// Workdir-parameterised variant — `project()` calls this with
+/// `Path::new(".")`. Pulled out so unit tests can scaffold under
+/// a tempdir without changing the process working directory.
+fn project_in(parent: &Path, name: &str, preset: &str) -> Result<(), String> {
+    validate_name(name)?;
+    if !VALID_PRESETS.contains(&preset) {
+        return Err(format!(
+            "unknown preset `{preset}`. Valid: {}",
+            VALID_PRESETS.join(", ")
+        ));
+    }
+
+    let dir = parent.join(name);
+    let dir = dir.as_path();
     if dir.exists() {
         return Err(format!(
             "`{name}` already exists in the current directory. Pick a fresh name or remove it first."
@@ -64,12 +108,37 @@ pub fn project(name: &str) -> Result<(), String> {
         written += 1;
     }
 
-    println!("Created `{name}/` with {written} files.");
+    if preset == "blog" {
+        for (rel, body) in BLOG_OVERRIDES.iter().chain(BLOG_EXTRAS.iter()) {
+            let target = dir.join(rel);
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
+            }
+            let body = body.replace("{{name}}", name);
+            fs::write(&target, body).map_err(|e| format!("write {}: {e}", target.display()))?;
+            // Overrides reuse a slot the minimal scaffold already
+            // wrote — don't double-count those. Extras are net-new
+            // files; bump the counter for them.
+            if BLOG_EXTRAS.iter().any(|(p, _)| *p == *rel) {
+                written += 1;
+            }
+        }
+    }
+
+    println!("Created `{name}/` ({preset} preset) with {written} files.");
     println!();
     println!("Next steps:");
     println!("  cd {name}");
     println!("  cp .env.example .env       # safe local defaults; edit before production");
-    println!("  rustio migrate apply       # creates the posts table");
+    println!(
+        "  rustio migrate apply       # creates the posts table{}",
+        if preset == "blog" {
+            " + comments table"
+        } else {
+            ""
+        }
+    );
     println!("  rustio user create --email admin@{name}.local --role administrator");
     println!("  cargo run                  # boots http://127.0.0.1:8000/admin");
     Ok(())
@@ -313,5 +382,79 @@ mod tests {
         for name in &["Post", "BOOK", "book-review", "1book", "", "book.review"] {
             assert!(validate_app_name(name).is_err(), "should reject {name:?}");
         }
+    }
+
+    // ---- project presets ----
+
+    #[allow(clippy::const_is_empty)]
+    #[test]
+    fn blog_preset_templates_are_non_empty() {
+        for (rel, body) in BLOG_OVERRIDES.iter().chain(BLOG_EXTRAS.iter()) {
+            assert!(!body.is_empty(), "blog template {rel} is empty");
+        }
+    }
+
+    #[test]
+    fn project_rejects_unknown_preset_with_valid_list_in_message() {
+        let dir = unique_tempdir();
+        let err = project_in(&dir, "proj", "definitely-not-a-preset").expect_err("must error");
+        assert!(err.contains("unknown preset"), "got: {err}");
+        assert!(err.contains("minimal"), "must list minimal: {err}");
+        assert!(err.contains("blog"), "must list blog: {err}");
+    }
+
+    #[test]
+    fn project_minimal_writes_post_but_not_comment_or_blog_main() {
+        let dir = unique_tempdir();
+        project_in(&dir, "proj", "minimal").expect("minimal should scaffold");
+        let root = dir.join("proj");
+        assert!(root.join("src/post.rs").exists(), "post.rs missing");
+        assert!(!root.join("src/comment.rs").exists(), "comment.rs leaked");
+        assert!(
+            !root.join("migrations/0002_create_comments.sql").exists(),
+            "0002 migration leaked"
+        );
+        // main.rs ships the single-model registration.
+        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+        assert!(main.contains(".model::<Post>()"), "Post must be registered");
+        assert!(
+            !main.contains("Comment"),
+            "minimal main.rs must not mention Comment"
+        );
+    }
+
+    #[test]
+    fn project_blog_layers_comment_model_and_two_model_main_over_minimal() {
+        let dir = unique_tempdir();
+        project_in(&dir, "blog", "blog").expect("blog should scaffold");
+        let root = dir.join("blog");
+        assert!(root.join("src/post.rs").exists(), "post.rs missing");
+        assert!(root.join("src/comment.rs").exists(), "comment.rs missing");
+        assert!(
+            root.join("migrations/0001_create_posts.sql").exists(),
+            "0001 migration missing"
+        );
+        assert!(
+            root.join("migrations/0002_create_comments.sql").exists(),
+            "0002 migration missing"
+        );
+        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+        assert!(main.contains(".model::<Post>()"), "Post must be registered");
+        assert!(
+            main.contains(".model::<Comment>()"),
+            "Comment must be registered"
+        );
+    }
+
+    /// Stdlib-only tempdir for scaffold tests — no `tempfile` dep
+    /// just for the scaffold suite.
+    fn unique_tempdir() -> std::path::PathBuf {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let pid = std::process::id();
+        let dir = std::env::temp_dir().join(format!("rustio-scaffold-{pid}-{n}"));
+        fs::create_dir_all(&dir).unwrap();
+        dir
     }
 }
