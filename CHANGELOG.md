@@ -259,6 +259,18 @@ leaves the alpha track.
 
 ### Added
 
+- **Per-model read-only toggle.** `Admin::read_only_model("posts")`
+  freezes one model — `POST` / `PUT` / `DELETE` under
+  `/admin/posts/...` returns 403 with `Model posts is frozen
+  (read-only)` while the rest of the admin stays writable.
+  Mirrors the existing whole-admin `Admin::read_only(true)`
+  pattern; the two compose (a frozen slug stays frozen even when
+  the admin is otherwise writable). Useful for archive tables,
+  regulatory holds, or per-model incident response without
+  flipping the whole admin to read-only. New helper
+  `extract_admin_name` parses the `:admin_name` segment for the
+  middleware gate.
+
 - **Audit diff on the global history page.** `/admin/history` now
   renders the same per-field before→after table the per-object
   history page already used. Update rows show the changed columns

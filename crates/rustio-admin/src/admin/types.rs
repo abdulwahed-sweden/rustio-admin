@@ -6,6 +6,7 @@
 // them yet (the legacy admin/macro_tests etc. land in a follow-up).
 // Keep them gated behind cfg(test) elsewhere; allow dead inside that
 // gate.
+use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -613,6 +614,14 @@ pub struct Admin {
     /// environments where you want viewers but not editors. Off by
     /// default. Project authors opt in via [`Admin::read_only`].
     pub(crate) read_only: bool,
+    /// Per-model read-only set: when an admin slug is present here,
+    /// the `read_only_guard` middleware returns 403 on mutating
+    /// requests targeting `/admin/<slug>/...` while leaving the rest
+    /// of the admin live. Off by default — set via
+    /// [`Admin::read_only_model`]. Coexists with whole-admin
+    /// [`Self::read_only`]: a model frozen here stays frozen even
+    /// when the admin is otherwise writable.
+    pub(crate) read_only_models: HashSet<String>,
 }
 
 impl Default for Admin {
@@ -643,6 +652,7 @@ impl Admin {
             mfa_policy: MfaPolicy::default(),
             uploads_dir: None,
             read_only: false,
+            read_only_models: HashSet::new(),
         }
     }
 
@@ -730,6 +740,30 @@ impl Admin {
     /// templates (suppress "Add" buttons).
     pub fn is_read_only(&self) -> bool {
         self.read_only
+    }
+
+    // public:
+    /// Freeze one model. Mutating requests under `/admin/<admin_name>/...`
+    /// return 403; the rest of the admin stays writable. Useful for
+    /// archive tables, regulatory holds, or per-model incident
+    /// response without flipping the whole admin to read-only.
+    ///
+    /// `admin_name` is the model's URL slug (the same value the
+    /// router matches `:admin_name` against — pluralised, e.g.
+    /// `"posts"`, `"users"`). Wrong slugs silently no-op; the
+    /// middleware checks set membership, so a typo simply doesn't
+    /// freeze anything.
+    pub fn read_only_model(mut self, admin_name: impl Into<String>) -> Self {
+        self.read_only_models.insert(admin_name.into());
+        self
+    }
+
+    // public:
+    /// `true` when `admin_name` was registered via
+    /// [`Self::read_only_model`]. The `read_only_guard` middleware
+    /// consults this to gate per-model mutations.
+    pub fn is_model_read_only(&self, admin_name: &str) -> bool {
+        self.read_only_models.contains(admin_name)
     }
 
     // public:

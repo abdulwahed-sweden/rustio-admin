@@ -128,7 +128,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 ### Read-only admin mode
 
 - ✅ **Whole-admin read-only mode** — `Admin::read_only(true)` builder, enforced by the `read_only_guard` middleware (every mutating route returns 403; auth-flow routes still pass through for password rotations). Templates branch on `ctx.read_only`
-- ⚪ **Per-model read-only toggle.** Today the switch is admin-wide. A per-model variant would let projects freeze archive tables while keeping the rest of the admin live.
+- ✅ **Per-model read-only toggle** — `Admin::read_only_model(slug)` builder freezes one model. The `read_only_guard` middleware extracts the `:admin_name` segment via `extract_admin_name` and returns 403 with a `Model X is frozen (read-only)` message on mutating verbs. Coexists with the whole-admin flag — a frozen slug stays frozen even when the rest of the admin is writable
 
 ---
 

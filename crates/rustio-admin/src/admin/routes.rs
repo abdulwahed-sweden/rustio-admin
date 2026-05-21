@@ -272,6 +272,21 @@ pub(crate) fn is_read_only_writable_path(path: &str) -> bool {
     is_saved_filter_path(path)
 }
 
+/// Extract the `:admin_name` URL segment from a request path of the
+/// shape `/admin/<admin_name>[/...]`. Returns `None` for paths that
+/// don't match (root `/admin/`, framework reserved `/admin/_*`, or
+/// non-admin paths). Used by the per-model read-only gate so the
+/// middleware can check `Admin::is_model_read_only` without parsing
+/// the router's `:admin_name` capture.
+pub(crate) fn extract_admin_name(path: &str) -> Option<&str> {
+    let rest = path.strip_prefix("/admin/")?;
+    let slug = rest.split('/').next()?;
+    if slug.is_empty() || slug.starts_with('_') {
+        return None;
+    }
+    Some(slug)
+}
+
 /// Paths reachable when `MfaPolicy::Required` is active and the
 /// user has not yet enrolled (R3 commit #18). Forward-only
 /// enforcement per `DESIGN_R3_MFA.md` D6: existing sessions
@@ -638,19 +653,38 @@ pub fn register_admin_routes(
     // admin isn't read-only — zero overhead for non-frozen
     // deployments.
     let ro_flag = ctx.admin.is_read_only();
+    let ro_models = std::sync::Arc::new(ctx.admin.read_only_models.clone());
     let router = router.middleware(move |req, next| {
+        let ro_models = ro_models.clone();
         Box::pin(async move {
-            if ro_flag
-                && req.path().starts_with("/admin")
+            if req.path().starts_with("/admin")
                 && is_mutating_method(req.method())
                 && !is_read_only_writable_path(req.path())
             {
-                return Err(Error::Forbidden(
-                    "This admin is currently in read-only mode. \
-                     Project-data mutations are disabled until the operator \
-                     turns read-only off."
-                        .into(),
-                ));
+                // Whole-admin read-only takes precedence: every
+                // project-data mutation is rejected.
+                if ro_flag {
+                    return Err(Error::Forbidden(
+                        "This admin is currently in read-only mode. \
+                         Project-data mutations are disabled until the operator \
+                         turns read-only off."
+                            .into(),
+                    ));
+                }
+                // Per-model read-only: extract the `:admin_name`
+                // segment and check the frozen set. A frozen slug
+                // stays frozen even if the rest of the admin is
+                // writable.
+                if !ro_models.is_empty() {
+                    if let Some(slug) = extract_admin_name(req.path()) {
+                        if ro_models.contains(slug) {
+                            return Err(Error::Forbidden(format!(
+                                "Model `{slug}` is frozen (read-only). \
+                                 Mutations on this model are disabled."
+                            )));
+                        }
+                    }
+                }
             }
             next.run(req).await
         })
@@ -2131,6 +2165,46 @@ mod tests {
                 "non-admin path {path:?} must not be writable"
             );
         }
+    }
+
+    #[test]
+    fn extract_admin_name_parses_slug_segment() {
+        assert_eq!(super::extract_admin_name("/admin/posts"), Some("posts"));
+        assert_eq!(super::extract_admin_name("/admin/posts/"), Some("posts"));
+        assert_eq!(
+            super::extract_admin_name("/admin/posts/42/edit"),
+            Some("posts")
+        );
+        assert_eq!(
+            super::extract_admin_name("/admin/users/42/sessions/99/revoke"),
+            Some("users")
+        );
+    }
+
+    #[test]
+    fn extract_admin_name_rejects_root_reserved_and_non_admin() {
+        // Root /admin and trailing slash → no model slug.
+        assert_eq!(super::extract_admin_name("/admin/"), None);
+        assert_eq!(super::extract_admin_name("/admin"), None);
+        // Underscore-prefixed slugs are framework-reserved (`_search`,
+        // `_lookup`, `healthz` etc.) — never project models.
+        assert_eq!(super::extract_admin_name("/admin/_search"), None);
+        assert_eq!(super::extract_admin_name("/admin/_lookup/posts"), None);
+        // Paths outside /admin.
+        assert_eq!(super::extract_admin_name("/login"), None);
+        assert_eq!(super::extract_admin_name("/static/admin.css"), None);
+    }
+
+    #[test]
+    fn read_only_model_builder_and_accessor_round_trip() {
+        let admin = super::super::types::Admin::new()
+            .read_only_model("archive_posts")
+            .read_only_model("legacy_invoices");
+        assert!(admin.is_model_read_only("archive_posts"));
+        assert!(admin.is_model_read_only("legacy_invoices"));
+        assert!(!admin.is_model_read_only("posts"));
+        // Whole-admin flag stays independent.
+        assert!(!admin.is_read_only());
     }
 
     #[test]
