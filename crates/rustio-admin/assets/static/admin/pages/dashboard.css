@@ -313,7 +313,7 @@
   font-size: var(--rio-fs-base);
   font-weight: var(--rio-fw-semibold);
   color: var(--rio-text);
-  margin-right: var(--rio-s1);
+  margin-inline-end: var(--rio-s1);
 }
 .rio-model-tile__meta {
   margin: 0;

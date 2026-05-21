@@ -17,6 +17,7 @@ pub(crate) mod json_api;
 pub(crate) mod mfa_handlers;
 // public:
 pub mod modeladmin;
+pub(crate) mod openapi;
 mod ops;
 pub(crate) mod recovery_handlers;
 // public:

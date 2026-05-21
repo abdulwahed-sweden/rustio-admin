@@ -1643,6 +1643,26 @@ pub fn register_admin_routes(
         }
     });
 
+    // Auto-generated OpenAPI 3.0 spec. Registered before the
+    // generic `/admin/:admin_name/…` patterns so a literal `apis`
+    // / `openapi.json` segment can't be shadowed by a model named
+    // `apis`. Role gate: Staff. The doc itself only lists endpoint
+    // shapes — clients still need per-model `view` to call the
+    // endpoints it describes.
+    let c = ctx.clone();
+    let router = router.get("/admin/apis/openapi.json", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(_) => {
+                    let spec = super::openapi::build_spec(&c.admin);
+                    super::json_api::json_response(spec)
+                }
+            }
+        }
+    });
+
     // Per-model list — needs `view` permission.
     let c = ctx.clone();
     let router = router.get("/admin/:admin_name", move |req| {

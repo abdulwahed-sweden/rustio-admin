@@ -259,6 +259,27 @@ leaves the alpha track.
 
 ### Added
 
+- **Auto-generated OpenAPI 3.0 spec at `/admin/apis/openapi.json`.**
+  A pure-functional walk over `Admin::entries()` emits per-model
+  component schemas (`Bool` → boolean, integers → integer with
+  `int32`/`int64` formats, strings → string, datetimes → string
+  with `format: date-time`, file paths → string with a
+  description; optionals carry `nullable: true`) plus full path
+  coverage for list / create / detail / update / delete on every
+  registered model. Form-encoded request body documented as
+  `application/x-www-form-urlencoded` to match the actual wire
+  shape. Role gate: Staff. Operators feed the document into API
+  browsers (Postman / Insomnia) without hand-writing schemas.
+
+### Fixed
+
+- **Drift:** `rio-model-tile__stat-secondary .rio-model-tile__stat-num`
+  used `margin-right` instead of `margin-inline-end`. Migrated to
+  the logical property so RTL flips the spacing automatically.
+  Slipped in via the "new this week" KPI commit last cycle.
+
+### Added (continued)
+
 - **7-day audit-activity sparkline on the dashboard.** Inline-SVG
   bars above the recent-activity list show admin actions per day
   for the last week, rendered server-side from a single
