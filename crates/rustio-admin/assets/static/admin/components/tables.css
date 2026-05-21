@@ -272,3 +272,22 @@
 }
 .rio-dl dt { font-weight: 600; color: var(--rio-text-muted); }
 .rio-dl dd { margin: 0; }
+
+.rio-api-model {
+  padding: var(--rio-s4) 0;
+  border-bottom: 1px solid var(--rio-border-soft);
+}
+.rio-api-model:last-child { border-bottom: 0; }
+.rio-api-model__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--rio-s3);
+  margin-bottom: var(--rio-s3);
+}
+.rio-api-model__title { margin: 0; font-size: var(--rio-fs-lg); }
+.rio-api-model__endpoints,
+.rio-api-model__fields {
+  margin-top: var(--rio-s2);
+  margin-bottom: var(--rio-s3);
+}

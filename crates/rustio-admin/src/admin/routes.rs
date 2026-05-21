@@ -1663,6 +1663,22 @@ pub fn register_admin_routes(
         }
     });
 
+    // Human-readable HTML index for the API surface. Sibling of
+    // the openapi.json endpoint above; same Staff gate. Lists
+    // every registered model's endpoint table + field shapes so
+    // operators can read the surface without opening a JSON
+    // viewer.
+    let c = ctx.clone();
+    let router = router.get("/admin/apis", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_apis_index(&c, ident, &req).await,
+            }
+        }
+    });
+
     // Per-model list — needs `view` permission.
     let c = ctx.clone();
     let router = router.get("/admin/:admin_name", move |req| {

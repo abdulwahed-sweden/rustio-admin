@@ -259,6 +259,15 @@ leaves the alpha track.
 
 ### Added
 
+- **HTML index for the API surface at `/admin/apis`.** Companion to
+  the OpenAPI JSON spec: one section per registered model with an
+  endpoint table (`GET /admin/<name>`, `POST …`, etc.) and a
+  field table (name / type label / nullable). Top of the page
+  carries a one-click "Download OpenAPI 3.0 spec →" link to the
+  JSON endpoint. Footer now exposes a permanent "API surface"
+  link next to "Audit log" so operators can reach it from any
+  page.
+
 - **Auto-generated OpenAPI 3.0 spec at `/admin/apis/openapi.json`.**
   A pure-functional walk over `Admin::entries()` emits per-model
   component schemas (`Bool` → boolean, integers → integer with

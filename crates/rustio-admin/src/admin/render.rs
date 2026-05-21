@@ -2759,6 +2759,102 @@ pub(crate) struct HistoryEntryCtx {
     pub changes: Vec<HistoryChangeCtx>,
 }
 
+// ---- /admin/apis HTML index ---------------------------------------------
+
+#[derive(Serialize)]
+pub(crate) struct ApisIndexCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    /// Sidebar nav models — same shape every other authenticated
+    /// page uses.
+    pub entries: Vec<SidebarEntry>,
+    /// One row per non-core registered model.
+    pub apis: Vec<ApiEntryCtx>,
+    pub openapi_url: &'static str,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ApiEntryCtx {
+    pub admin_name: &'static str,
+    pub singular_name: &'static str,
+    pub display_name: &'static str,
+    /// Path documenting the model in OpenAPI shorthand — same
+    /// shape the spec lists. Surfaced verbatim in the table.
+    pub list_path: String,
+    pub detail_path: String,
+    pub field_count: usize,
+    /// `(field_name, type_label, nullable)` triples for the
+    /// compact field table under each model. `type_label` is the
+    /// human-readable form ("integer", "string", "date-time",
+    /// "boolean", "file path") so the page reads at a glance
+    /// without leaking the internal `FieldType` Debug shape.
+    pub fields: Vec<ApiFieldCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ApiFieldCtx {
+    pub name: &'static str,
+    pub type_label: &'static str,
+    pub nullable: bool,
+}
+
+/// Human-friendly type label for one `AdminField`. Pulled out as
+/// a small free fn so the API-index renderer and any future
+/// schema dumper share one projection.
+pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
+    use crate::admin::types::FieldType::*;
+    match field.field_type {
+        Bool => "boolean",
+        I32 => "integer (i32)",
+        I64 | OptionalI64 => "integer (i64)",
+        String | OptionalString => "string",
+        DateTime | OptionalDateTime => "date-time",
+        FilePath | OptionalFilePath => "file path",
+    }
+}
+
+pub(crate) fn apis_index_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+) -> ApisIndexCtx {
+    let apis: Vec<ApiEntryCtx> = admin
+        .entries()
+        .iter()
+        .filter(|e| !e.core)
+        .map(|e| ApiEntryCtx {
+            admin_name: e.admin_name,
+            singular_name: e.singular_name,
+            display_name: e.display_name,
+            list_path: format!("/admin/{}", e.admin_name),
+            detail_path: format!("/admin/{}/{{id}}", e.admin_name),
+            field_count: e.fields.len(),
+            fields: e
+                .fields
+                .iter()
+                .map(|f| ApiFieldCtx {
+                    name: f.name,
+                    type_label: api_field_type_label(f),
+                    nullable: f.field_type.nullable(),
+                })
+                .collect(),
+        })
+        .collect();
+    ApisIndexCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "API surface",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        apis,
+        openapi_url: "/admin/apis/openapi.json",
+    }
+}
+
 #[derive(Serialize, Clone)]
 pub(crate) struct HistoryChangeCtx {
     /// Snake-case field identifier (`title`, `published_at`).

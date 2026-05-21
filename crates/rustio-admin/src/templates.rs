@@ -390,6 +390,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/log_entries.html"),
     ),
     (
+        "admin/apis_index.html",
+        include_str!("../assets/templates/admin/apis_index.html"),
+    ),
+    (
         "admin/password_change.html",
         include_str!("../assets/templates/admin/password_change.html"),
     ),

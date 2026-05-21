@@ -1,0 +1,60 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    Every registered project model is reachable via JSON content
+    negotiation. Read-path endpoints accept <code>Accept: application/json</code>
+    or <code>?format=json</code>; write paths return JSON envelopes on the
+    same URLs the HTML forms post to.
+  </p>
+  <p class="rio-page-header__lead">
+    <a class="rio-button rio-button--ghost" href="{{ openapi_url }}">
+      Download OpenAPI 3.0 spec →
+    </a>
+  </p>
+</header>
+
+<section class="rio-card">
+  {% if apis %}
+  {% for m in apis %}
+  <article class="rio-api-model">
+    <header class="rio-api-model__head">
+      <h2 class="rio-api-model__title">
+        <a href="/admin/{{ m.admin_name }}">{{ m.display_name }}</a>
+        <span class="rio-meta">· {{ m.singular_name }}</span>
+      </h2>
+      <span class="rio-meta">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
+    </header>
+
+    <table class="rio-table rio-table--compact rio-api-model__endpoints">
+      <thead><tr><th>Method</th><th>Path</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET</code></td><td><code>{{ m.list_path }}</code></td><td>List rows</td></tr>
+        <tr><td><code>POST</code></td><td><code>{{ m.list_path }}</code></td><td>Create</td></tr>
+        <tr><td><code>GET</code></td><td><code>{{ m.detail_path }}</code></td><td>Detail</td></tr>
+        <tr><td><code>POST</code></td><td><code>{{ m.detail_path }}/edit</code></td><td>Update</td></tr>
+        <tr><td><code>POST</code></td><td><code>{{ m.detail_path }}/delete</code></td><td>Delete</td></tr>
+      </tbody>
+    </table>
+
+    <table class="rio-table rio-table--compact rio-api-model__fields">
+      <thead><tr><th>Field</th><th>Type</th><th>Nullable</th></tr></thead>
+      <tbody>
+        {% for f in m.fields %}
+        <tr>
+          <td><code>{{ f.name }}</code></td>
+          <td>{{ f.type_label }}</td>
+          <td>{% if f.nullable %}yes{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  {% endfor %}
+  {% else %}
+  <p class="rio-empty">No project models registered yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
