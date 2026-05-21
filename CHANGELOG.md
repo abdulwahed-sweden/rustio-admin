@@ -259,6 +259,14 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio reload` CLI verb.** Thin wrapper around
+  `cargo watch -x run` — the standard Rust hot-iterate loop.
+  Probes for `cargo-watch` first so a missing dependency surfaces
+  a one-line install instruction instead of cargo's default
+  "no such subcommand" error. Stdio is forwarded transparently
+  so compile errors + project stdout/stderr land in the
+  terminal exactly as the bare command would.
+
 - **CSV import — `POST /admin/<model>/import.csv`.** Companion
   to the existing CSV export. Operators upload a multipart file;
   the framework parses it RFC 4180-style (quoted fields, doubled

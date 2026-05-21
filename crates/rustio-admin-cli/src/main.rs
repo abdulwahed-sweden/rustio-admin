@@ -29,6 +29,7 @@ mod emergency_ui;
 mod group;
 mod migrate;
 mod perm;
+mod reload;
 mod scaffold;
 mod template_override;
 mod test_init;
@@ -131,6 +132,12 @@ enum Command {
         #[arg(long, default_value = "templates")]
         out: String,
     },
+
+    /// Watch the project's source tree and re-run `cargo run` on
+    /// change. Thin wrapper around `cargo watch -x run`. Requires
+    /// `cargo-watch` to be installed; the verb surfaces a friendly
+    /// install message when it isn't.
+    Reload,
 
     /// Generate a starter integration test at `./<out>/smoke.rs`.
     /// The test spawns the project binary, probes the bound port,
@@ -247,6 +254,7 @@ fn main() -> ExitCode {
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
         Command::Override { name, force, out } => template_override::run(name, force, &out),
+        Command::Reload => reload::run(),
         Command::TestInit { force, out } => test_init::run(force, &out),
         Command::Theme { action } => theme::run(action),
         // Everything else opens a Postgres connection.
@@ -259,6 +267,7 @@ fn main() -> ExitCode {
                 | Command::Plan
                 | Command::Commit { .. }
                 | Command::Override { .. }
+                | Command::Reload
                 | Command::TestInit { .. }
                 | Command::Theme { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,

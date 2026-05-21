@@ -211,7 +211,7 @@ The `rustio` binary handles the operationally critical surface for new and exist
 - 🟡 **Project presets / starters.** `rustio startproject <name> --preset blog` ships a richer two-model skeleton (Post + Comment with a `post_id` FK, two migrations, both models registered in `main.rs`). The `--preset minimal` default reproduces today's single-model scaffold byte-for-byte. Additional presets (`e-commerce`, `crm`, …) and tuned `AdminTheme` snippets per preset are still planned.
 - ⚪ **`rustio sdk-gen <lang>`.** Pairs with the OpenAPI spec.
 - ✅ **Initial test generation** — `rustio test-init` writes a stdlib-only `tests/smoke.rs` integration test that spawns `cargo run`, probes the bound HTTP port, sends a raw GET to `/admin/`, and asserts a 302/303 redirect to `/admin/login` (`Location` header inspection). `--force` to clobber; `--out <dir>` to override the destination root.
-- ⚪ **`rustio reload`.** Dev-mode watcher: on file change, send a SIGHUP to the running server (or rebuild + restart). Today operators use `cargo watch -x run` externally.
+- ✅ **`rustio reload`** — thin wrapper around `cargo watch -x run`. Probes for `cargo-watch` first and surfaces a one-line install instruction when it isn't present, so operators get a clean message instead of cargo's default "no such subcommand" error. Stdio is forwarded transparently so the watcher's compile output and the project's stdout / stderr both land in the terminal as the bare command would.
 
 ---
 
