@@ -1,0 +1,47 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    Same probes the <code>rustio doctor</code> CLI runs, exposed
+    on the admin chrome. Reload to re-run.
+  </p>
+</header>
+
+<section class="rio-card rio-health">
+  <header class="rio-health__summary">
+    {% if all_ok %}
+    <span class="rio-pill rio-pill--badge-success">All clear</span>
+    {% elif error_count > 0 %}
+    <span class="rio-pill rio-pill--badge-danger">{{ error_count }} error{% if error_count != 1 %}s{% endif %}</span>
+    {% else %}
+    <span class="rio-pill rio-pill--badge-neutral">{{ warn_count }} warning{% if warn_count != 1 %}s{% endif %}</span>
+    {% endif %}
+    <span class="rio-meta">
+      {{ ok_count }} ok · {{ warn_count }} warn · {{ error_count }} error
+    </span>
+  </header>
+
+  <table class="rio-table rio-health__table">
+    <thead><tr><th>Status</th><th>Check</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for c in checks %}
+      <tr class="rio-health__row rio-health__row--{{ c.status }}">
+        <td>
+          {% if c.status == "ok" %}
+          <span class="rio-pill rio-pill--badge-success">OK</span>
+          {% elif c.status == "warn" %}
+          <span class="rio-pill rio-pill--badge-neutral">Warn</span>
+          {% else %}
+          <span class="rio-pill rio-pill--badge-danger">Error</span>
+          {% endif %}
+        </td>
+        <td><strong>{{ c.label }}</strong></td>
+        <td>{{ c.message }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

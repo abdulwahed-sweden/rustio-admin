@@ -310,6 +310,15 @@
   font-family: var(--rio-font-mono, ui-monospace, SFMono-Regular, monospace);
   font-size: var(--rio-fs-sm);
 }
+
+.rio-health__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s3);
+  margin-bottom: var(--rio-s4);
+}
+.rio-health__row--error td { background: rgba(220, 38, 38, 0.04); }
+.rio-health__row--warn td { background: rgba(217, 119, 6, 0.04); }
 .rio-playground__actions {
   grid-column: 1 / -1;
   display: flex;

@@ -2755,6 +2755,17 @@ pub(crate) async fn show_apis_index(
     Ok(Response::html(body))
 }
 
+pub(crate) async fn show_health(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let checks = super::health_dashboard::gather_checks(&ctx.db).await;
+    let view = render::health_ctx(&identity, &ctx.admin, csrf_token(req), checks);
+    let body = ctx.templates.render("admin/health.html", &view)?;
+    Ok(Response::html(body))
+}
+
 pub(crate) async fn show_apis_playground(
     ctx: &AdminCtx,
     identity: Identity,

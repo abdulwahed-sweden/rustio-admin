@@ -887,6 +887,22 @@ pub fn register_admin_routes(
         }
     });
 
+    // Health dashboard — Administrator-only web counterpart to
+    // `rustio doctor`. Runs the same DB probes the CLI does
+    // (Postgres reachable, auth tables present, ≥1 active admin,
+    // RUSTIO_SECRET_KEY shape). Distinct from `/admin/healthz`
+    // which is the public liveness probe.
+    let c = ctx.clone();
+    let router = router.get("/admin/health", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Administrator).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_health(&c, ident, &req).await,
+            }
+        }
+    });
+
     // Global history log (admin-only; high-signal page).
     let c = ctx.clone();
     let router = router.get("/admin/history", move |req| {

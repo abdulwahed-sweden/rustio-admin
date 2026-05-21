@@ -11,6 +11,7 @@ pub(crate) mod db_browser;
 // public:
 pub mod filters;
 mod handlers;
+pub(crate) mod health_dashboard;
 pub(crate) mod healthz;
 pub(crate) mod icons;
 pub(crate) mod json_api;

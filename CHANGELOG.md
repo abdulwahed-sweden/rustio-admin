@@ -259,6 +259,17 @@ leaves the alpha track.
 
 ### Added
 
+- **Health dashboard at `/admin/health`.** Browser counterpart
+  to the `rustio doctor` CLI verb: runs the same probes (Postgres
+  reachable, auth tables present, ≥1 active administrator,
+  `RUSTIO_SECRET_KEY` shape) and renders a status-pill table with
+  per-check detail messages and an overall-health banner.
+  Administrator-gated. A "Health" link in the footer surfaces the
+  page from any authenticated view alongside "Audit log" and
+  "API surface". Distinct from the existing
+  `/admin/healthz` public liveness probe — that endpoint stays
+  machine-readable for load balancers.
+
 - **API playground writes — `create / update / delete`.**
   `/admin/apis/playground` now closes the loop with a method
   selector (`list / detail / create / update / delete`) and

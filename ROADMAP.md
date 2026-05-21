@@ -226,7 +226,7 @@ Each item below is real and on the planning surface, but not yet scheduled for a
 - ⚪ **Background jobs / queue.** General-purpose async job runner — today's `background.rs` carries only the session sweeper. Goal is a `Job` trait, a `rustio_jobs` table, and one runner per admin process. Multi-worker scaling is out of scope until single-process limits show up.
 - ⚪ **Export / import.** CSV and JSON for any model, gated on the model's `view` permission. Streaming export so large tables don't OOM the worker. Import is opt-in per model and goes through the same validation as form-create.
 - ⚪ **Feature flags.** A simple `rustio_feature_flags` table + a `feature_enabled("…")` helper for project code. Flags toggleable from the admin UI by administrators.
-- ⚪ **Health dashboard (web UI).** Browser-renderable counterpart to `rustio doctor` — DB latency, audit-table size, recent error counts, session count.
+- 🟡 **Health dashboard (web UI)** — `/admin/health` runs the same DB probes the CLI doctor does (Postgres reachable, auth tables present, ≥1 active administrator, `RUSTIO_SECRET_KEY` shape) and renders a status-pill table. Administrator-gated. Latency / audit-table size / session-count readouts are still planned; the v1 page focuses on "is this admin deployable?".
 - ⚪ **Search systems.** Ship a Postgres full-text option (`tsvector` columns, `phraseto_tsquery`) as the next tier above the current ILIKE fallback. Listed under "long term" because it intersects with the explicit "no search backend" non-goal — the implementation has to live entirely inside Postgres.
 - ✅ **Database browser** — `/admin/db` ships a read-only schema explorer (tables, columns, foreign keys, row counts) under the Developer role gate.
 

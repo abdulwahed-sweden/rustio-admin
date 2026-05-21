@@ -2815,6 +2815,73 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
 }
 
 #[derive(Serialize)]
+pub(crate) struct HealthCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub checks: Vec<HealthCheckCtx>,
+    /// `true` when every check returned `Ok` — drives the
+    /// overall-status banner.
+    pub all_ok: bool,
+    /// Pre-computed counts for the banner copy.
+    pub ok_count: usize,
+    pub warn_count: usize,
+    pub error_count: usize,
+}
+
+#[derive(Serialize)]
+pub(crate) struct HealthCheckCtx {
+    pub label: &'static str,
+    /// `ok` / `warn` / `error` — mirrors `HealthStatus::as_str`.
+    pub status: &'static str,
+    pub message: String,
+}
+
+pub(crate) fn health_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    checks: Vec<crate::admin::health_dashboard::HealthCheck>,
+) -> HealthCtx {
+    use crate::admin::health_dashboard::HealthStatus;
+    let mut ok_count = 0;
+    let mut warn_count = 0;
+    let mut error_count = 0;
+    for c in &checks {
+        match c.status {
+            HealthStatus::Ok => ok_count += 1,
+            HealthStatus::Warn => warn_count += 1,
+            HealthStatus::Error => error_count += 1,
+        }
+    }
+    let all_ok = warn_count == 0 && error_count == 0;
+    let ctx_checks: Vec<HealthCheckCtx> = checks
+        .into_iter()
+        .map(|c| HealthCheckCtx {
+            label: c.label,
+            status: c.status.as_str(),
+            message: c.message,
+        })
+        .collect();
+    HealthCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "Health",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        checks: ctx_checks,
+        all_ok,
+        ok_count,
+        warn_count,
+        error_count,
+    }
+}
+
+#[derive(Serialize)]
 pub(crate) struct PlaygroundCtx {
     #[serde(flatten)]
     pub base: BaseContext,
