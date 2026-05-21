@@ -48,6 +48,11 @@ serde_json = "1"
 
 # templates
 minijinja = { version = "2", features = ["loader"] }
+# Markdown renderer for the built-in `/admin/docs` page (project
+# operators read framework docs inside the admin chrome). Pure
+# Rust, no C deps, MIT/Apache-2.0. Used only at render time —
+# no Cargo build-step touch.
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 
 # middleware
 flate2 = "1"

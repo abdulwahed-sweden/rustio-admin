@@ -9,6 +9,7 @@ pub mod bulk;
 pub(crate) mod csv_export;
 pub(crate) mod csv_import;
 pub(crate) mod db_browser;
+pub(crate) mod docs;
 // public:
 pub mod feature_flags;
 // public:

@@ -1,0 +1,28 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    Read the framework's own documentation inside the admin chrome.
+    Source lives at <code>docs/*.md</code> in the
+    <code>rustio-admin</code> repository; rendered server-side via
+    pulldown-cmark.
+  </p>
+</header>
+
+<section class="rio-card">
+  {% if docs %}
+  <ul class="rio-doc-list">
+    {% for d in docs %}
+    <li><a href="/admin/docs/{{ d.slug }}" class="rio-doc-list__link">
+      <strong>{{ d.title }}</strong>
+      <span class="rio-meta">/admin/docs/{{ d.slug }}</span>
+    </a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="rio-empty">No embedded docs registered.</p>
+  {% endif %}
+</section>
+{% endblock %}

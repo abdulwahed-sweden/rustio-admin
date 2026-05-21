@@ -2808,6 +2808,30 @@ pub(crate) async fn show_object_history(
     Ok(Response::html(body))
 }
 
+pub(crate) async fn show_docs_index(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let mut view = render::docs_index_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/docs_index.html", &view)?;
+    Ok(Response::html(body))
+}
+
+pub(crate) async fn show_doc_page(
+    ctx: &AdminCtx,
+    identity: Identity,
+    slug: &str,
+    req: &Request,
+) -> Result<Response> {
+    let doc = super::docs::find(slug).ok_or_else(|| Error::NotFound(format!("docs/{slug}")))?;
+    let mut view = render::doc_page_ctx(&identity, &ctx.admin, csrf_token(req), doc);
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/doc_page.html", &view)?;
+    Ok(Response::html(body))
+}
+
 pub(crate) async fn show_apis_index(
     ctx: &AdminCtx,
     identity: Identity,

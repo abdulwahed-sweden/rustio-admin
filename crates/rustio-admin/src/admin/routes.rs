@@ -1725,6 +1725,38 @@ pub fn register_admin_routes(
         }
     });
 
+    // Built-in framework docs — Staff-gated read-only pages
+    // rendering the embedded markdown sources from `docs/*.md`.
+    // Mounted before the generic `/admin/:admin_name` pattern so
+    // a literal `docs` segment can't be shadowed by a model
+    // named `docs`. The per-doc route uses `:slug` which is
+    // matched against the static `EMBEDDED_DOCS` list — unknown
+    // slugs 404 cleanly.
+    let c = ctx.clone();
+    let router = router.get("/admin/docs", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_docs_index(&c, ident, &req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.get("/admin/docs/:slug", move |req| {
+        let c = c.clone();
+        async move {
+            let slug = req
+                .param("slug")
+                .ok_or_else(|| Error::BadRequest("missing doc slug".into()))?
+                .to_string();
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_doc_page(&c, ident, &slug, &req).await,
+            }
+        }
+    });
+
     // Auto-generated OpenAPI 3.0 spec. Registered before the
     // generic `/admin/:admin_name/…` patterns so a literal `apis`
     // / `openapi.json` segment can't be shadowed by a model named

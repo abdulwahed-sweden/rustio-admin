@@ -414,6 +414,14 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/csv_import_result.html"),
     ),
     (
+        "admin/docs_index.html",
+        include_str!("../assets/templates/admin/docs_index.html"),
+    ),
+    (
+        "admin/doc_page.html",
+        include_str!("../assets/templates/admin/doc_page.html"),
+    ),
+    (
         "admin/password_change.html",
         include_str!("../assets/templates/admin/password_change.html"),
     ),

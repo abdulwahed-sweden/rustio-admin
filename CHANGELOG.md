@@ -259,6 +259,23 @@ leaves the alpha track.
 
 ### Added
 
+- **Built-in framework docs at `/admin/docs`.** Operators read
+  the framework's own markdown documentation inside the admin
+  chrome — no GitHub round-trip. Three top-level docs ship in v1:
+  `architecture.md` (module map), `modeladmin.md` (customisation
+  surface), `public-api.md` (the `pub` surface). All three baked
+  into the binary via `include_str!` so the single-binary deploy
+  is preserved. Rendered server-side via `pulldown-cmark` with
+  GFM extensions enabled (tables, fenced code, strikethrough,
+  tasklists, smart punctuation). Staff-gated. Footer link from
+  every authenticated page.
+  - New dep: `pulldown-cmark 0.13`, pure Rust, no C deps.
+  - Larger `docs/design/*.md` doctrine files stay out — those
+    are PR-review surface, not in-app reading.
+  - +5 unit tests: non-empty sources, unique slugs, unknown-slug
+    lookup, markdown → HTML rendering, raw-HTML pass-through
+    (pins the trusted-source policy; 401 → 406 framework total).
+
 - **Per-model 7-day creation sparkline on every dashboard tile.**
   Each model that declares a `created_at` column now renders a
   tight inline-SVG bar chart below the row count + "new this

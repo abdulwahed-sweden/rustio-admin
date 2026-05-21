@@ -319,6 +319,49 @@
 }
 .rio-health__row--error td { background: rgba(220, 38, 38, 0.04); }
 .rio-health__row--warn td { background: rgba(217, 119, 6, 0.04); }
+
+.rio-doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rio-doc-list__link {
+  display: flex;
+  flex-direction: column;
+  padding: var(--rio-s3) var(--rio-s4);
+  border: 1px solid var(--rio-border-soft);
+  border-radius: var(--rio-radius);
+  margin-bottom: var(--rio-s2);
+  text-decoration: none;
+  color: var(--rio-text);
+}
+.rio-doc-list__link:hover { background: var(--rio-surface-2); }
+
+.rio-doc {
+  max-width: 880px;
+  line-height: var(--rio-line-height, 1.55);
+}
+.rio-doc h1, .rio-doc h2, .rio-doc h3 { margin-top: var(--rio-s5); }
+.rio-doc pre {
+  background: var(--rio-surface-2);
+  padding: var(--rio-s3);
+  border-radius: var(--rio-radius);
+  overflow-x: auto;
+  font-size: var(--rio-fs-sm);
+}
+.rio-doc code {
+  background: var(--rio-surface-2);
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.rio-doc pre code { background: transparent; padding: 0; }
+.rio-doc table { width: 100%; border-collapse: collapse; margin: var(--rio-s3) 0; }
+.rio-doc th, .rio-doc td {
+  border-bottom: 1px solid var(--rio-border-soft);
+  padding: var(--rio-s2) var(--rio-s3);
+  text-align: start;
+}
 .rio-playground__actions {
   grid-column: 1 / -1;
   display: flex;

@@ -1,0 +1,14 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> ·
+    <a href="/admin/docs">Framework docs</a> ·
+    <span>{{ doc_title }}</span>
+  </nav>
+</header>
+
+<article class="rio-card rio-doc">
+  {{ body_html | safe }}
+</article>
+{% endblock %}

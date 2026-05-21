@@ -2861,6 +2861,79 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
 }
 
 #[derive(Serialize)]
+pub(crate) struct DocsIndexCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub docs: Vec<DocSummaryCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct DocSummaryCtx {
+    pub slug: &'static str,
+    pub title: &'static str,
+}
+
+#[derive(Serialize)]
+pub(crate) struct DocPageCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: String,
+    pub entries: Vec<SidebarEntry>,
+    pub doc_title: &'static str,
+    /// Pre-rendered HTML fragment from `docs::render_markdown`.
+    /// The template marks it `|safe` because this is the
+    /// trusted boundary — markdown source is framework-owned,
+    /// never user-supplied.
+    pub body_html: String,
+}
+
+pub(crate) fn docs_index_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+) -> DocsIndexCtx {
+    DocsIndexCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "Framework docs",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        docs: crate::admin::docs::EMBEDDED_DOCS
+            .iter()
+            .map(|d| DocSummaryCtx {
+                slug: d.slug,
+                title: d.title,
+            })
+            .collect(),
+    }
+}
+
+pub(crate) fn doc_page_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    doc: &crate::admin::docs::EmbeddedDoc,
+) -> DocPageCtx {
+    DocPageCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: format!("Docs — {}", doc.title),
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        doc_title: doc.title,
+        body_html: crate::admin::docs::render_markdown(doc.source),
+    }
+}
+
+#[derive(Serialize)]
 pub(crate) struct CsvImportResultCtx {
     #[serde(flatten)]
     pub base: BaseContext,
