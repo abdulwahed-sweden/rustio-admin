@@ -3340,8 +3340,7 @@ pub(crate) async fn show_account_sessions(
         current_session_id,
         csrf_token(req),
     );
-    view.base.unread_count =
-        super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/account_sessions.html", &view)?;
     Ok(Response::html(body))
 }
