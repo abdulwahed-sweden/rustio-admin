@@ -473,7 +473,7 @@ pub(crate) async fn dashboard(
     // is selective). Failure-soft: empty vec on error so the
     // dashboard still renders.
     let activity_sparkline = fetch_activity_last_7_days(ctx).await;
-    let dash = render::dashboard_ctx(
+    let mut dash = render::dashboard_ctx(
         &identity,
         &ctx.admin,
         recent_actions,
@@ -482,6 +482,7 @@ pub(crate) async fn dashboard(
         &new_this_week,
         activity_sparkline,
     );
+    dash.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/index.html", &dash)?;
     Ok(Response::html(body))
 }
@@ -1130,7 +1131,7 @@ pub(crate) async fn list_model(
                 Vec::new()
             });
 
-    let list = render::list_ctx(
+    let mut list = render::list_ctx(
         &identity,
         &ctx.admin,
         entry,
@@ -1146,6 +1147,7 @@ pub(crate) async fn list_model(
         saved_filters,
         req.query_string().to_string(),
     );
+    list.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx
         .templates
         .render_for_model(entry.admin_name, "admin/list.html", &list)?;
@@ -2721,8 +2723,10 @@ pub(crate) async fn show_object_history(
         .await
         .unwrap_or_default();
 
+    let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::ObjectHistoryCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
+            .with_unread_count(unread),
         page_title: format!("History: {} — {}", entry.singular_name, label),
         admin_name: admin_name.to_string(),
         display_name: entry.display_name.to_string(),
@@ -2750,7 +2754,8 @@ pub(crate) async fn show_apis_index(
     identity: Identity,
     req: &Request,
 ) -> Result<Response> {
-    let view = render::apis_index_ctx(&identity, &ctx.admin, csrf_token(req));
+    let mut view = render::apis_index_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/apis_index.html", &view)?;
     Ok(Response::html(body))
 }
@@ -2761,7 +2766,10 @@ pub(crate) async fn show_notifications(
     req: &Request,
 ) -> Result<Response> {
     let notifications = super::notifications::list_for_user(&ctx.db, identity.user_id).await;
-    let view = render::notifications_ctx(&identity, &ctx.admin, csrf_token(req), notifications);
+    let mut view = render::notifications_ctx(&identity, &ctx.admin, csrf_token(req), notifications);
+    // The badge count = list_for_user's unread subset. Reuse the
+    // ctx field instead of an extra round-trip.
+    view.base.unread_count = view.unread_count;
     let body = ctx.templates.render("admin/notifications.html", &view)?;
     Ok(Response::html(body))
 }
@@ -2783,7 +2791,8 @@ pub(crate) async fn show_feature_flags(
     let flags = super::feature_flags::list_flags(&ctx.db)
         .await
         .unwrap_or_default();
-    let view = render::feature_flags_ctx(&identity, &ctx.admin, csrf_token(req), flags, None);
+    let mut view = render::feature_flags_ctx(&identity, &ctx.admin, csrf_token(req), flags, None);
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/feature_flags.html", &view)?;
     Ok(Response::html(body))
 }
@@ -2827,7 +2836,8 @@ pub(crate) async fn show_health(
     req: &Request,
 ) -> Result<Response> {
     let checks = super::health_dashboard::gather_checks(&ctx.db).await;
-    let view = render::health_ctx(&identity, &ctx.admin, csrf_token(req), checks);
+    let mut view = render::health_ctx(&identity, &ctx.admin, csrf_token(req), checks);
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/health.html", &view)?;
     Ok(Response::html(body))
 }
@@ -2837,7 +2847,8 @@ pub(crate) async fn show_apis_playground(
     identity: Identity,
     req: &Request,
 ) -> Result<Response> {
-    let view = render::playground_ctx(&identity, &ctx.admin, csrf_token(req));
+    let mut view = render::playground_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let body = ctx.templates.render("admin/apis_playground.html", &view)?;
     Ok(Response::html(body))
 }
@@ -2875,8 +2886,10 @@ pub(crate) async fn show_log_entries(
     } else {
         None
     };
+    let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::LogEntriesCtx {
-        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin),
+        base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
+            .with_unread_count(unread),
         page_title: "Recent admin actions",
         entries: ctx
             .admin

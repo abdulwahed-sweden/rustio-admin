@@ -259,6 +259,20 @@ leaves the alpha track.
 
 ### Added
 
+- **Topbar unread-count badge on the notifications bell.** Closes
+  the deferred half of the previous cycle. `BaseContext` gains
+  an `unread_count: i64` field (defaults `0`) wired via a chained
+  `BaseContext::new(...).with_unread_count(n)` setter so the
+  framework's 58 existing `BaseContext::new` call sites stay
+  untouched. The topbar template renders a red-dot badge on the
+  bell when the count is `> 0` (capped at `99+` for readability).
+  Page handlers that operators actually visit — dashboard, list
+  page, history, per-object history, API surface, playground,
+  health, feature flags, notifications — pre-fetch the count via
+  `notifications::unread_count(db, user_id)` and chain it. Pages
+  that don't bother stay at the default 0 and render the bare
+  bell (no regression).
+
 - **Notifications — `rustio_notifications` + topbar bell.** Project
   code emits per-operator notifications via
   `rustio_admin::send_notification(db, user_id, message, url)`;

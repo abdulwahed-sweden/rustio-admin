@@ -113,6 +113,13 @@ pub(crate) struct BaseContext {
     /// banner in `_base.html` and the suppression of top-level
     /// "Add" buttons on the dashboard and list pages.
     pub read_only: bool,
+    /// Unread-notification count for the active operator. `0` when
+    /// the page didn't pre-fetch (default) or there's no signed-in
+    /// identity. Drives the topbar bell's red-dot badge —
+    /// `_topbar.html` renders the badge only when this is `> 0`.
+    /// Page handlers that want the badge live on their page chain
+    /// `.with_unread_count(n)` after [`BaseContext::new`].
+    pub unread_count: i64,
 }
 
 /// Convert an `#rrggbb` (or `rrggbb`) hex string into the
@@ -196,7 +203,20 @@ impl BaseContext {
             theme_text_muted: theme.text_muted.clone(),
             theme_border: theme.border.clone(),
             read_only: admin.is_read_only(),
+            unread_count: 0,
         }
+    }
+
+    // internal:
+    /// Builder helper — chain after [`Self::new`] to pin the
+    /// operator's unread-notification count for the topbar badge.
+    /// Handlers that want the badge to render on their page
+    /// pre-fetch via [`crate::admin::notifications::unread_count`]
+    /// and pass it in. Pages that skip this stay at the default
+    /// `0` and the topbar shows just the bare bell.
+    pub(crate) fn with_unread_count(mut self, n: i64) -> Self {
+        self.unread_count = n.max(0);
+        self
     }
 }
 

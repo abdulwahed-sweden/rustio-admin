@@ -49,6 +49,27 @@
   font-weight: var(--rio-fw-medium);
 }
 .rio-topbar-link:hover { color: var(--rio-text); }
+.rio-topbar-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.rio-topbar-bell__badge {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--rio-accent, #b22222);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--rio-fw-bold);
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 .rio-topbar-logout { display: inline; }
 .rio-sidebar-toggle {
   display: none;

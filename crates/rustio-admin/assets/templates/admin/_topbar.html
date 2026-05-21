@@ -21,8 +21,12 @@
   <nav class="rio-topbar-nav" aria-label="Account">
     {% if identity %}
       <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
-      <a href="/admin/notifications" class="rio-topbar-link" aria-label="Notifications">
+      <a href="/admin/notifications" class="rio-topbar-link rio-topbar-bell"
+         aria-label="{% if unread_count > 0 %}{{ unread_count }} unread notifications{% else %}Notifications{% endif %}">
         {{ icon("bell", class="rio-icon") }}
+        {% if unread_count > 0 %}
+        <span class="rio-topbar-bell__badge" aria-hidden="true">{% if unread_count > 99 %}99+{% else %}{{ unread_count }}{% endif %}</span>
+        {% endif %}
       </a>
       {# Two-factor self-service surface. Pre-0.8.1 the R3 MFA
        # enrol / regenerate / disable pages were reachable only by

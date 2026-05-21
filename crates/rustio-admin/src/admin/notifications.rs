@@ -94,10 +94,22 @@ pub async fn send(db: &Db, user_id: i64, message: &str, url: &str) -> Result<i64
     Ok(id)
 }
 
-// `unread_count(db, user_id) -> i64` will land here once
-// BaseContext::new is refactored to support an async fetch
-// across its 58 call sites. The list page renders the count
-// from the already-fetched Vec — no extra query.
+/// Unread count for `user_id`. Page handlers fetch this once
+/// per render and pin it on `BaseContext` via
+/// `with_unread_count`; the topbar badge in `_topbar.html`
+/// branches on the result. Failure-soft — returns `0` on any
+/// DB hiccup so the topbar stays mute rather than 500ing.
+pub(crate) async fn unread_count(db: &Db, user_id: i64) -> i64 {
+    let _ = ensure_table(db).await;
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM rustio_notifications \
+         WHERE user_id = $1 AND read_at IS NULL",
+    )
+    .bind(user_id)
+    .fetch_one(db.pool())
+    .await
+    .unwrap_or(0)
+}
 
 /// List every notification for `user_id`, newest first. Empties
 /// to an empty vec on error so the page renders.
