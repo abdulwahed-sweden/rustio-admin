@@ -36,38 +36,32 @@ RustIO is a **small, focused admin framework for Postgres-backed Rust apps.** Th
 
 ## Current Foundation
 
-The framework currently sits at **v0.2.1** (released 2026-05-07). The shape:
+The framework currently sits at **v0.15.1** (released 2026-05-16). See [`CHANGELOG.md`](./CHANGELOG.md) for the release-by-release record. The shape:
 
 - Core admin runtime with list / create / edit / delete pages per registered Postgres model
 - Built-in user / group / permission management at `/admin/users/*` and `/admin/groups/*`
 - 5-tier role ladder (`User → Staff → Editor → Administrator → Developer`)
-- Server-side filters + ILIKE search + sortable columns + per-page picker + numbered pagination, all in a single SQL query with column-name validation
+- Full list-page widget set: search + DateRange + multi-select + FK autocomplete + status dropdowns + sortable columns + per-page picker + numbered pagination, all composed via `build_list_url` so every interaction preserves the rest of the URL state. `<mark>` highlight on `?q=` matches; saved-filter bookmarks per operator
+- Inline forms on edit pages (parent-with-children), `readonly_fields()` + `fieldsets()` honoured on every form
+- Cascade-aware bulk delete + project-defined `ModelAdmin::bulk_actions()`
+- `?format=json` / `Accept: application/json` content negotiation on list + detail endpoints with JSON error envelopes; CSV export on the list endpoint (`/admin/:model/export.csv`, capped at 10k rows)
+- `GET /admin/_search` global ⌘K palette (per-model `view`-permission gated), `GET /admin/_lookup/:admin_name` FK typeahead, `GET /admin/healthz` public liveness probe
 - Audit log table (`rustio_admin_actions`) surfaced in the dashboard, the global history page, and per-object history
-- Hand-written single stylesheet (~1.9 k LOC) with a six-token override surface, three responsive breakpoints, and a deep-slate chrome on a light page canvas
-- Self-hosted fonts (Geist + Geist Mono + Tajawal + Noto Naskh Arabic, ~270 KB embedded, SIL OFL-1.1)
+- Admin-driven password recovery + self-service reset + TOTP + backup codes + emergency-access CLI; framework-emitted email with project branding
+- Read-only admin mode via `Admin::read_only(true)`, enforced by `read_only_guard` middleware
+- Hand-written multi-file stylesheet under `assets/static/admin/` with a six-token override surface and a chrome-scope cascade. Light-only — the parallel dark palette was retired in `[Unreleased]`
+- Self-hosted fonts (Geist + Geist Mono + Tajawal + Noto Naskh Arabic + Inter + Thai + Devanagari, locale-gated) with `unicode-range` filtering
 - Migrations runner that walks numerically prefixed `*.sql` files transactionally
-- Operator CLI (`rustio`) with `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`
+- Operator CLI (`rustio`) with `startproject`, `startapp`, `override`, `theme`, `migrate`, `user` (incl. `perms --email`), `group` (incl. `show --name`), `perm`, `audit tail [--since]`, `doctor` (incl. `doctor email`). Builder verbs (`new` / `add model` / `add field` / `plan` / `commit`) live in the same binary as a pre-MVP build-time layer — see `docs/design/DESIGN_BUILDER.md`
 - Three crates published on crates.io: [`rustio-admin`](https://crates.io/crates/rustio-admin), [`rustio-admin-macros`](https://crates.io/crates/rustio-admin-macros), [`rustio-admin-cli`](https://crates.io/crates/rustio-admin-cli)
 
 For module-level architecture, see [`docs/architecture.md`](./docs/architecture.md). For the `ModelAdmin` customisation surface, see [`docs/modeladmin.md`](./docs/modeladmin.md).
 
 ---
 
-## Recent Work — 0.2 Admin Refresh
+## Recent Work
 
-Summary of the design-and-feature work that landed in v0.2.0 / v0.2.1. Each item is also recorded in `CHANGELOG.md` with full detail.
-
-- **Graphite design language.** Dark mode rebuilt on a soft graphite ladder (`#2B313C → #444D5E`); accent lifted in dark for legibility while preserving the warm crimson hue family; text scale rebalanced for clear hierarchy. The whole admin reads as a calm professional workspace, not a hacker terminal.
-- **List view architecture.** Toolbar with search (input glyph), filters dropdown, sort dropdown (field-type-aware copy), per-page picker, active-filter pills, and numbered pagination. Generic `[data-rio-dropdown]` primitive backs all four widgets so future ones reuse the same machinery.
-- **URL state preservation.** Every interactive widget composes its `href` through a single `build_list_url` helper. Clicking sort never silently drops the active filter or query. The search form carries hidden inputs for filters / sort / per-page so submitting a query keeps the rest of the state.
-- **Filters / sort / pagination dispatch.** `ModelAdmin::list_display()` now actually filters columns (was being silently ignored — a real bug fix). Datetime cells render in monospace tabular nums with `nowrap`; text cells single-line ellipsize with hover-reveal `title`.
-- **Bulk select + bulk delete.** Per-row checkboxes, master checkbox with indeterminate state, sticky bulk action bar, two-step confirm flow. Each row deletes individually so per-row hooks and audit entries fire. Without JS the bar stays hidden and per-row Delete remains the fallback.
-- **Custom bulk actions.** New `ModelAdmin::bulk_actions()` registration surface; runtime dispatcher on `AdminOps::execute_bulk_action` with a default `Err` so a forgotten override surfaces as a clear teaching error rather than a silent no-op.
-- **Form view refresh.** Editorial 880 px form shell with grouped action bar (primary save left, destructive + Cancel right). Single-column field flow. Section legends rendered as small uppercase muted labels matching the table-header treatment.
-- **Auth-page parity.** `users_list`, `groups_list`, all `*_edit` / `*_new` / `*_view` / `*_confirm_delete` templates now wear the same chrome as model pages.
-- **Dark mode refinement.** `text-strong` is pure white in dark for clear hierarchy above the body; danger shifted from pastel pink to a saturated red that actually communicates destructive intent; accent lifted from `#A0341A` to `#C84934` so primary buttons pop on graphite.
-- **Single-source-of-truth theme architecture** (breaking change). `AdminTheme` is now an override-patch type with `Option<String>` fields. Out of the box the framework emits no inline `<style>` block at all — `admin.css` is the only style source. `_theme.html` loads after the link tag and uses a multi-state selector list so project overrides win the cascade without `!important`.
-- **Release verification improvements.** The release process now includes a real CLI install smoke test (`cargo install` to a sandboxed `--root`, `rustio startproject` against the installed binary, `grep` for the framework version pin in the generated `Cargo.toml`). The 0.2.1 patch came directly from this check — the 0.2.0 CLI's scaffold template was still pinning new projects to `rustio-admin = "0.1"`. Future releases run this check before announcing.
+See [`CHANGELOG.md`](./CHANGELOG.md) for the canonical per-release notes. This file is no longer a rolling summary of shipped work — that path produced drift. Sections below describe **direction**, not history.
 
 ---
 
@@ -86,21 +80,23 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ URL state preservation across every widget
 - ✅ `list_display()` honoured (column filtering)
 - ✅ Datetime nowrap + text truncation with hover reveal
-- 🟡 **Filter widget kinds.** `BoolYesNo` is the only widget shipping today. The framework's `FilterKind` enum names other variants but only `BoolYesNo` has a render path. *Related: `crates/rustio-admin/src/admin/filters.rs`.*
-- ⚪ **Date range filter widget.** `DateRange` filter + URL parser + dropdown with two date inputs.
-- ⚪ **Multi-select filter widget.** Checkboxes inside the dropdown, OR-joined in SQL, comma-separated in the URL.
-- ⚪ **Foreign-key autocomplete filter.** Reuses the `RelationRegistry`. Type-ahead dropdown that filters `?fk_id=` against a paginated lookup endpoint.
-- ⚪ **Search highlight.** Wrap the matched substring in `<mark>` in cell content for `?q=…` results.
-- ⚪ **Saved filters.** Bookmarkable named filter presets per user. Stored on `rustio_users` or a new join table.
+- ✅ **DateRange filter widget** — `?<col>__gte=YYYY-MM-DD&__lte=YYYY-MM-DD`, two `<input type="date">` controls, combined "from → to" pill
+- ✅ **Multi-select filter widget** — checkboxes in the dropdown, repeated `?<col>=v` per option, value domain closed against the field's declared `choices`
+- ✅ **FK autocomplete filter** — `/admin/_lookup/:admin_name` endpoint, typeahead input, pill carries hydrated row label with `#id` fallback
+- ✅ **Search highlight** — matched substring wrapped in `<mark>` for `?q=…` results
+- ✅ **Saved filters** — per-operator bookmarks, dropdown in the toolbar, `POST /admin/:model/saved_filters` + `…/saved_filters/:id/delete`
+- ✅ **CSV export** — `/admin/:model/export.csv` with the current filter query, 10k-row cap, RFC 4180 quoting
+- ⚪ **Distinct-text dropdown widget.** Today `Status`-typed fields render `DropdownText`, but the runtime doesn't yet populate it from a `SELECT DISTINCT` against the column. Inline text-input fallback ships now.
 
 ### Form view
 
 - ✅ Generic create / edit form with field grouping
 - ✅ Editorial form shell (880 px width cap, grouped action bar)
 - ✅ `RustioAdmin` derive auto-generates field metadata
-- 🟡 **`readonly_fields()`** declared on `ModelAdmin` but not yet honoured by `form_ctx`. The macro's per-field `editable: false` flag still owns the strict gate.
-- 🟡 **`fieldsets()`** declared but not yet honoured — falls back to the framework's name-heuristic grouping (`Default` / `System` / `Advanced`).
-- ⚪ **Inline forms.** Edit related rows (e.g., comments on a post edit page) without leaving the parent page. Requires a per-relation form context and a JS-driven add/remove flow.
+- ✅ **`readonly_fields()`** honoured — disabled input + reload-from-DB on update so the persisted value can't be smuggled past via a hand-crafted POST
+- ✅ **`fieldsets()`** honoured — `group_fields_by_fieldsets` in `render.rs`; falls back to name-heuristic grouping only when the model declares none
+- ✅ **Inline forms** — parent edit pages render child rows via `fetch_inline_sections`; click-through navigation today, in-page row editing still pending
+- ⚪ **Inline form in-page editing.** Add / remove / reorder child rows on the parent page without a round-trip. Requires a per-relation form context.
 - ⚪ **Field-level validation hooks.** Project closures that return validation errors before the row hits the database, surfaced in the same UI as the existing constraint-violation flash.
 - ⚪ **Rich-text widget.** Optional Tiptap-style editor for `String` fields tagged with a `widget = "richtext"` attribute.
 - ⚪ **File / image upload widget.** Tied to the upload / media system below.
@@ -131,7 +127,8 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 
 ### Read-only admin mode
 
-- ⚪ **Read-only mode.** Whole-admin or per-model toggle that disables every mutating UI (no Add / Edit / Delete buttons, all forms render as read-only) without removing the underlying permissions. Useful for incident response and demo environments.
+- ✅ **Whole-admin read-only mode** — `Admin::read_only(true)` builder, enforced by the `read_only_guard` middleware (every mutating route returns 403; auth-flow routes still pass through for password rotations). Templates branch on `ctx.read_only`
+- ⚪ **Per-model read-only toggle.** Today the switch is admin-wide. A per-model variant would let projects freeze archive tables while keeping the rest of the admin live.
 
 ---
 
@@ -145,8 +142,9 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ CSRF (double-submit cookie)
 - ✅ Rate limit middleware (DashMap token bucket)
 - ✅ Security-headers middleware
-- ⚪ **Email-based password reset flow.** Generate a single-use signed token, email it via the configured SMTP transport, accept it on a `/admin/password_reset/<token>` page. Depends on the email subsystem below.
-- ⚪ **Two-factor authentication.** TOTP via authenticator apps; backup codes; per-user enforcement.
+- ✅ **Email-based password reset flow** — admin-driven + self-service variants, single-use signed token, real SMTP transport, project-branded HTML email
+- ✅ **Two-factor authentication** — TOTP + single-use backup codes
+- ✅ **Emergency-access CLI** — `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`
 - ⚪ **Session management UI.** The `user_view.html` page already lists active sessions; add a "revoke this session" affordance.
 - ⚪ **Audit on auth events.** Failed login attempts, password changes, role changes — currently the audit log is CRUD-only.
 - 🔬 **WebAuthn / passkeys.** Strictly research at this point; the trade-off between framework surface area and operator value is unclear.
@@ -155,10 +153,13 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 
 ## APIs & Documentation
 
-The framework currently has no JSON API surface — every endpoint returns HTML. The roadmap adds a parallel API path without changing the admin's HTML defaults.
+JSON content negotiation ships today on list + detail endpoints; CSV export ships on the list endpoint. Write paths are still HTML-only.
 
-- 🟡 **Built-in docs pages.** The strategic-reset planning document mentions a `/admin/docs` route; the surface itself isn't built yet. Goal: render the `docs/*.md` files inside the admin chrome so operators can read framework docs without leaving the panel.
-- ⚪ **CRUD API generation.** A `?format=json` URL switch (or `Accept: application/json`) on existing list / detail / create / update / delete routes. Same permission gates, same audit, JSON request/response shape derived from the model.
+- ✅ **JSON content negotiation on read paths** — `?format=json` or `Accept: application/json` on `/admin/:model` and `/admin/:model/:id`. Same permission gates. JSON shape derived from the model. JSON error envelopes on the detail endpoint
+- ✅ **CSV export** — `/admin/:model/export.csv` (also reachable via `Accept: text/csv`), reuses the current filter query, capped at 10k rows
+- ✅ **Liveness probe** — `GET /admin/healthz` (public, no auth, DB ping)
+- ⚪ **JSON on write paths.** Mirror the read-path negotiation onto create / update / delete so a JSON `POST` is accepted on the same URL the HTML form posts to. Same permission, same audit row, same constraint-violation surfacing.
+- ⚪ **Built-in docs pages.** Render the `docs/*.md` files inside the admin chrome at `/admin/docs` so operators can read framework docs without leaving the panel.
 - ⚪ **Auto-generated OpenAPI page.** `/admin/apis/openapi.json` + a human-readable `/admin/apis` index listing every registered model's endpoints with their schema.
 - ⚪ **Interactive API playground.** Embedded request-builder per endpoint — choose a method, fill in JSON, see the response. Implemented as a server-rendered page, no third-party JS dependency.
 - ⚪ **SDK generation.** `rustio sdk-gen rust|typescript|python` builds a typed client from the OpenAPI spec. Out-of-tree initially; a CLI subcommand once the OpenAPI spec stabilises.
@@ -171,10 +172,10 @@ The framework currently has no JSON API surface — every endpoint returns HTML.
 - ✅ Hand-written `admin.css` with a six-token override surface
 - ✅ Disk override path — set `RUSTIO_TEMPLATE_DIR=…` and any embedded template can be overridden file-for-file
 - ✅ Single-source-of-truth theme architecture (`AdminTheme` is an override patch, not a snapshot — light-only)
-- ✅ Self-hosted fonts (Geist, Tajawal, Noto Naskh Arabic) with `unicode-range` filtering
-- ⚪ **Generated override scaffold.** `rustio override <template-name>` copies the named embedded template into the project's `templates/admin/` directory so the project can edit it. Currently the operator does this by hand.
-- ⚪ **Per-model template override.** `templates/admin/posts/list.html` overrides only the `Post` list page; everything else falls back to the framework default. Hook lives in `Templates::render_for_model` — partially wired but not consumed by the handler yet.
-- ⚪ **Theme presets.** A `rustio theme apply <preset-name>` CLI verb that writes a curated `AdminTheme` patch into the project's `main.rs`. Out-of-the-box presets: ocean / forest / sunset / monochrome.
+- ✅ Self-hosted fonts (Geist, Tajawal, Noto Naskh Arabic, Inter, Thai, Devanagari) with `unicode-range` filtering
+- ✅ **Per-model template override** — `templates/admin/<model>/list.html` wins over the framework default for that model only; covered by `Templates::render_for_model` tests
+- ✅ **`rustio override <template>`** — CLI verb that copies a named embedded template into the project's `templates/` dir (refuses to clobber without `--force`); pair with `RUSTIO_TEMPLATE_DIR=./templates` at runtime
+- ✅ **`rustio theme` presets** — curated `AdminTheme` palettes; subcommand prints a Rust snippet for the operator to paste into their `Admin::new()` chain
 
 ---
 
@@ -201,10 +202,13 @@ The `rustio` binary handles the operationally critical surface for new and exist
 - ✅ `rustio user create` / `list` / `role` / `delete` (honours the developer-orphan guard)
 - ✅ `rustio group create` / `list` / `add-user` / `remove-user`
 - ✅ `rustio perm grant-user` / `grant-group` / `list`
-- ✅ `rustio doctor` — read-only health check (DB reachable, auth tables present, ≥1 administrator)
-- 🟡 **Zero-config bootstrap.** `rustio startproject` requires a project name argument and assumes a Postgres at `localhost:5432`. A truly zero-config path (auto-detect a Postgres, prompt only for a project name, default to a sandbox SQLite-via-pglite if no PG is present) is not built. *Note: SQLite as a fallback collides with the "Postgres only" non-goal — the more likely path is to ship a `docker compose up` snippet rather than abstract over backends.*
+- ✅ `rustio doctor` — read-only health check (DB reachable, auth tables present, ≥1 administrator); `doctor email` for SMTP self-validation (incl. `--html-preview`)
+- ✅ `rustio audit tail [--since <duration>]` — read-only audit-trail viewer
+- ✅ `rustio override <template>` — copy an embedded template into the project's `templates/` dir
+- ✅ `rustio theme` — curated `AdminTheme` preset snippets
+- ✅ Builder verbs (`rustio new / add model / add field / plan / commit`) — pre-MVP build-time scaffolder; see `docs/design/DESIGN_BUILDER.md`
+- 🟡 **Zero-config bootstrap.** `rustio startproject` requires a project name argument and assumes a Postgres at `localhost:5432`. A truly zero-config path (auto-detect a Postgres, prompt only for a project name) is not built. *Note: SQLite as a fallback collides with the "Postgres only" non-goal — the more likely path is to ship a `docker compose up` snippet rather than abstract over backends.*
 - ⚪ **Project presets / starters.** `rustio startproject <name> --preset blog` / `e-commerce` / `crm` produces a richer skeleton with multiple models, sample data, and a tuned `AdminTheme`. Today only the minimal preset exists.
-- ⚪ **`rustio override <template>`.** Copy a named embedded template into the project's `templates/admin/` directory. Pairs with the per-model template override above.
 - ⚪ **`rustio sdk-gen <lang>`.** Pairs with the OpenAPI spec.
 - ⚪ **Initial test generation.** `rustio test-init` creates a `tests/` directory with a smoke test that boots the server, hits `/admin`, and asserts a 302 to `/admin/login`. Useful as a project's first CI check.
 - ⚪ **`rustio reload`.** Dev-mode watcher: on file change, send a SIGHUP to the running server (or rebuild + restart). Today operators use `cargo watch -x run` externally.
@@ -260,4 +264,4 @@ A few principles that should outlast any specific roadmap item.
 
 ---
 
-*Last revision: 2026-05-08. This document is rewritten as the framework evolves; the [git history](https://github.com/abdulwahed-sweden/rustio-admin/commits/main/ROADMAP.md) is the authoritative timeline of how the plan changed.*
+*Last revision: 2026-05-21 — drift sync against v0.15.1. This document is rewritten as the framework evolves; the [git history](https://github.com/abdulwahed-sweden/rustio-admin/commits/main/ROADMAP.md) is the authoritative timeline of how the plan changed.*
