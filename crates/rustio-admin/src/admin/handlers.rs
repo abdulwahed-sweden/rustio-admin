@@ -473,6 +473,10 @@ pub(crate) async fn dashboard(
     // is selective). Failure-soft: empty vec on error so the
     // dashboard still renders.
     let activity_sparkline = fetch_activity_last_7_days(ctx).await;
+    // Per-model creation series — one inline mini-sparkline on
+    // each model tile. Same shape the framework-wide audit
+    // sparkline uses, but scoped to each model's own table.
+    let per_model_series = fetch_dashboard_per_model_series(ctx).await;
     let mut dash = render::dashboard_ctx(
         &identity,
         &ctx.admin,
@@ -480,6 +484,7 @@ pub(crate) async fn dashboard(
         csrf_token(req),
         &row_estimates,
         &new_this_week,
+        &per_model_series,
         activity_sparkline,
     );
     dash.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
@@ -546,6 +551,56 @@ async fn fetch_dashboard_row_estimates(ctx: &AdminCtx) -> HashMap<&'static str, 
 /// entry for them, and the template falls back to showing only the
 /// row total. Failures on individual models are logged and skipped
 /// so one broken table doesn't take down the whole dashboard.
+/// Per-model 7-day creation counts. One row per model that
+/// declares a `created_at` column; value is a 7-element vec
+/// indexed today-6..today (UTC), padded with zeros where the
+/// day has no activity. Drives the inline mini-sparkline on
+/// each dashboard model tile.
+///
+/// One `SELECT DATE(created_at), COUNT(*) GROUP BY day` per
+/// qualifying model — same shape `fetch_activity_last_7_days`
+/// uses for the framework-wide audit sparkline, scoped to
+/// each project model's own table. Failure-soft: a per-model
+/// query failure logs and skips that model rather than
+/// breaking the dashboard.
+async fn fetch_dashboard_per_model_series(ctx: &AdminCtx) -> HashMap<&'static str, Vec<i64>> {
+    use chrono::NaiveDate;
+
+    let mut out: HashMap<&'static str, Vec<i64>> = HashMap::new();
+    let today = chrono::Utc::now().date_naive();
+
+    for entry in ctx.admin.entries() {
+        if entry.core {
+            continue;
+        }
+        if !entry.fields.iter().any(|f| f.name == "created_at") {
+            continue;
+        }
+        let sql = format!(
+            "SELECT DATE(created_at) AS day, COUNT(*) FROM {} \
+             WHERE created_at > NOW() - INTERVAL '7 days' \
+             GROUP BY day ORDER BY day",
+            entry.table
+        );
+        let rows: Vec<(NaiveDate, i64)> = match sqlx::query_as(&sql).fetch_all(ctx.db.pool()).await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                log::warn!("dashboard per-model series failed for {}: {e}", entry.table);
+                continue;
+            }
+        };
+        let by_day: HashMap<NaiveDate, i64> = rows.into_iter().collect();
+        let mut series = Vec::with_capacity(7);
+        for offset in (0..7).rev() {
+            let day = today - chrono::Duration::days(offset);
+            series.push(by_day.get(&day).copied().unwrap_or(0).max(0));
+        }
+        out.insert(entry.table, series);
+    }
+    out
+}
+
 async fn fetch_dashboard_new_this_week(ctx: &AdminCtx) -> HashMap<&'static str, i64> {
     let mut out: HashMap<&'static str, i64> = HashMap::new();
     for entry in ctx.admin.entries() {

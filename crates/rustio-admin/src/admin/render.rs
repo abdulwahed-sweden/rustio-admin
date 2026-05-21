@@ -382,6 +382,16 @@ pub(crate) struct DashboardModel {
     /// `created_at` column. Surfaced on the dashboard tile as
     /// "N new this week" when set.
     pub new_this_week: Option<i64>,
+    /// 7-day creation series for this model (`today-6 .. today`
+    /// UTC, zero-padded). `None` for models without a
+    /// `created_at` column. Drives the inline mini-sparkline
+    /// next to the row count.
+    pub weekly_series: Option<Vec<i64>>,
+    /// Peak value in `weekly_series` — pre-computed so the
+    /// template sizes bars without a `max` filter. Stays 0
+    /// when the series is absent or all-zero; the template
+    /// clamps the divisor.
+    pub weekly_series_max: i64,
 }
 
 #[derive(Serialize)]
@@ -413,6 +423,7 @@ pub(crate) fn group_entries_by_app(
     entries: &[AdminEntry],
     row_estimates: &HashMap<&str, i64>,
     new_this_week: &HashMap<&str, i64>,
+    per_model_series: &HashMap<&str, Vec<i64>>,
 ) -> Vec<DashboardApp> {
     let mut apps: Vec<DashboardApp> = Vec::new();
     for entry in entries {
@@ -435,12 +446,20 @@ pub(crate) fn group_entries_by_app(
         };
         let estimate = row_estimates.get(entry.table).copied().unwrap_or(0).max(0);
         let week = new_this_week.get(entry.table).copied().map(|n| n.max(0));
+        let series = per_model_series.get(entry.table).cloned();
+        let series_max = series
+            .as_ref()
+            .and_then(|s| s.iter().copied().max())
+            .unwrap_or(0)
+            .max(0);
         app.models.push(DashboardModel {
             admin_name: entry.admin_name,
             display_name: entry.display_name,
             field_count: entry.fields.len(),
             row_estimate: estimate,
             new_this_week: week,
+            weekly_series: series,
+            weekly_series_max: series_max,
         });
     }
     apps
@@ -459,6 +478,7 @@ fn capitalise(s: &str) -> String {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn dashboard_ctx(
     identity: &Identity,
     admin: &Admin,
@@ -466,6 +486,7 @@ pub(crate) fn dashboard_ctx(
     csrf_token: String,
     row_estimates: &HashMap<&str, i64>,
     new_this_week: &HashMap<&str, i64>,
+    per_model_series: &HashMap<&str, Vec<i64>>,
     activity_sparkline: Vec<DaySparkPoint>,
 ) -> DashboardCtx {
     let recent: Vec<RecentActionCtx> = recent_actions
@@ -482,7 +503,12 @@ pub(crate) fn dashboard_ctx(
         })
         .collect();
 
-    let apps = group_entries_by_app(admin.entries(), row_estimates, new_this_week);
+    let apps = group_entries_by_app(
+        admin.entries(),
+        row_estimates,
+        new_this_week,
+        per_model_series,
+    );
     let total_models = apps.iter().map(|a| a.models.len()).sum();
     let total_rows = apps
         .iter()

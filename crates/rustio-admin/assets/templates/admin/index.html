@@ -81,6 +81,21 @@
           new this week
         </p>
         {% endif %}
+        {% if model.weekly_series %}
+        <svg class="rio-model-tile__sparkline" viewBox="0 0 140 20"
+             preserveAspectRatio="none" role="img"
+             aria-label="7-day creation history for {{ model.display_name }}">
+          {% for v in model.weekly_series %}
+          {% set bar_w = 16 %}
+          {% set gap = 4 %}
+          {% set x = loop.index0 * (bar_w + gap) %}
+          {% set max_h = 16 %}
+          {% set h = (v * max_h) // (model.weekly_series_max or 1) %}
+          <rect class="rio-model-tile__sparkline-bar"
+                x="{{ x }}" y="{{ max_h - h }}" width="{{ bar_w }}" height="{{ h }}" rx="1"></rect>
+          {% endfor %}
+        </svg>
+        {% endif %}
         <p class="rio-model-tile__meta" title="Approximate — from pg_class.reltuples, refreshed by ANALYZE">
           {{ model.field_count }} field{% if model.field_count != 1 %}s{% endif %} · approx. count
         </p>

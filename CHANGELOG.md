@@ -259,6 +259,17 @@ leaves the alpha track.
 
 ### Added
 
+- **Per-model 7-day creation sparkline on every dashboard tile.**
+  Each model that declares a `created_at` column now renders a
+  tight inline-SVG bar chart below the row count + "new this
+  week" stat — same chart shape as the framework-wide audit
+  sparkline, scoped to the model's own table. One
+  `SELECT DATE(created_at), COUNT(*) GROUP BY day` query per
+  qualifying model, padded to seven entries (today-6 .. today
+  UTC). Models without `created_at` skip the chart silently —
+  the rest of the tile is unchanged. Per-model query failures
+  log + skip without breaking the dashboard.
+
 - **Postgres FTS opt-in via `ModelAdmin::search_index_column`.**
   Models that declare a tsvector column (e.g. a `GENERATED ALWAYS
   AS (to_tsvector('english', coalesce(title,'') || ' ' ||
