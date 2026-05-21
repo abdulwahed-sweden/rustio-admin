@@ -114,7 +114,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ Per-app model index with quick "Add" / "View" links
 - ✅ "Recent actions" widget (last 10 audit entries)
 - 🟡 **Per-model KPIs.** Total row counts (from `pg_class.reltuples`) and "new this week" (exact count of rows with `created_at` within the last 7 days, when the model declares that column) ship on the dashboard. "Pending" counts and other domain-specific KPIs are still project-side concerns — a generic `AdminOps::stats()` extension is pending.
-- ⚪ **Charts.** Time-series and category breakdowns, server-rendered SVG so no JS chart library ships in the binary.
+- 🟡 **Charts.** A 7-day audit-activity sparkline ships on the dashboard — inline-SVG bars rendered from a single `SELECT DATE(timestamp), COUNT(*) … GROUP BY day` query, padded to seven entries. Category breakdowns and per-model time-series are still planned.
 - ⚪ **Pinnable widgets.** User-customisable layout — pin / unpin / reorder.
 
 ### Audit log + activity feed

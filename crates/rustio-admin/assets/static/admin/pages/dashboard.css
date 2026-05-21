@@ -342,6 +342,34 @@
 .rio-dashboard-activity,
 .rio-dashboard-tools { min-width: 0; }
 
+.rio-sparkline {
+  margin: 0 0 var(--rio-s4);
+  padding: var(--rio-s4) var(--rio-s5);
+  border: 1px solid var(--rio-border-soft);
+  border-radius: var(--rio-radius);
+  background: var(--rio-surface);
+}
+.rio-sparkline__caption {
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text-muted);
+  margin: 0 0 var(--rio-s3);
+}
+.rio-sparkline__svg {
+  display: block;
+  width: 100%;
+  height: 64px;
+  overflow: visible;
+}
+.rio-sparkline__bar {
+  fill: var(--rio-accent);
+  opacity: 0.85;
+}
+.rio-sparkline__tick {
+  fill: var(--rio-text-muted);
+  font-size: 10px;
+  font-family: var(--rio-font-sans, system-ui);
+}
+
 .rio-activity-feed {
   list-style: none;
   margin: 0;

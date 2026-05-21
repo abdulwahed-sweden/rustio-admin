@@ -312,6 +312,31 @@ pub(crate) struct DashboardCtx {
     /// `recent_actions.len()` — pre-computed so the template can
     /// show "Recent activity (N)" without a `length` filter.
     pub recent_actions_count: usize,
+    /// 7-day audit-action counts (today − 6 .. today, UTC),
+    /// padded with zeros for days with no activity. Drives an
+    /// inline-SVG sparkline above the recent-activity list.
+    pub activity_sparkline: Vec<DaySparkPoint>,
+    /// Peak count in `activity_sparkline`, pre-computed so the
+    /// template can size bars without a `max` filter. `0` when
+    /// the audit table is empty or the query failed — the
+    /// template clamps the divisor to 1 so the SVG still renders.
+    pub activity_sparkline_max: i64,
+    /// Total count across `activity_sparkline` — a one-liner
+    /// "N actions in the last 7 days" caption.
+    pub activity_sparkline_total: i64,
+}
+
+/// One bar in the dashboard's 7-day activity sparkline.
+#[derive(Serialize)]
+pub(crate) struct DaySparkPoint {
+    /// `YYYY-MM-DD` of the day this point covers (UTC).
+    pub date_iso: String,
+    /// Short weekday label (`Mon`, `Tue`, …) — locale-neutral,
+    /// suitable for the x-axis legend.
+    pub label: &'static str,
+    /// Audit-action count for the day; `0` when there's no
+    /// activity.
+    pub count: i64,
 }
 
 #[derive(Serialize)]
@@ -421,6 +446,7 @@ pub(crate) fn dashboard_ctx(
     csrf_token: String,
     row_estimates: &HashMap<&str, i64>,
     new_this_week: &HashMap<&str, i64>,
+    activity_sparkline: Vec<DaySparkPoint>,
 ) -> DashboardCtx {
     let recent: Vec<RecentActionCtx> = recent_actions
         .into_iter()
@@ -445,6 +471,13 @@ pub(crate) fn dashboard_ctx(
         .sum();
     let recent_actions_count = recent.len();
     let greeting_name = greeting_from_email(&identity.email);
+    let activity_sparkline_max = activity_sparkline
+        .iter()
+        .map(|p| p.count)
+        .max()
+        .unwrap_or(0)
+        .max(0);
+    let activity_sparkline_total = activity_sparkline.iter().map(|p| p.count).sum();
 
     DashboardCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
@@ -461,6 +494,9 @@ pub(crate) fn dashboard_ctx(
         total_models,
         total_rows,
         recent_actions_count,
+        activity_sparkline,
+        activity_sparkline_max,
+        activity_sparkline_total,
     }
 }
 

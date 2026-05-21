@@ -467,6 +467,12 @@ pub(crate) async fn dashboard(
     // dashboard renders with the row already cached by the row-
     // estimate pass above so the round-trips are cheap.
     let new_this_week = fetch_dashboard_new_this_week(ctx).await;
+    // 7-day audit-activity sparkline. Pure time-series, no FK
+    // joins — fast enough to run inline on every dashboard render
+    // even on large `rustio_admin_actions` tables (the date range
+    // is selective). Failure-soft: empty vec on error so the
+    // dashboard still renders.
+    let activity_sparkline = fetch_activity_last_7_days(ctx).await;
     let dash = render::dashboard_ctx(
         &identity,
         &ctx.admin,
@@ -474,6 +480,7 @@ pub(crate) async fn dashboard(
         csrf_token(req),
         &row_estimates,
         &new_this_week,
+        activity_sparkline,
     );
     let body = ctx.templates.render("admin/index.html", &dash)?;
     Ok(Response::html(body))
@@ -567,6 +574,66 @@ async fn fetch_dashboard_new_this_week(ctx: &AdminCtx) -> HashMap<&'static str, 
         }
     }
     out
+}
+
+/// Fetch the audit-action count for each of the last 7 days
+/// (today minus 6 days through today, UTC), padded so the returned
+/// vec always has exactly 7 entries in chronological order. Days
+/// with no activity get a `0` count. Powers the dashboard's
+/// 7-day activity sparkline.
+///
+/// Failure-soft: a DB hiccup logs and returns 7 zero-padded
+/// entries, so the dashboard always renders a chart shape even
+/// when the audit table is unreachable.
+async fn fetch_activity_last_7_days(ctx: &AdminCtx) -> Vec<render::DaySparkPoint> {
+    use chrono::{Datelike, NaiveDate};
+
+    let rows = sqlx::query_as::<_, (NaiveDate, i64)>(
+        "SELECT DATE(timestamp) AS day, COUNT(*)
+         FROM rustio_admin_actions
+         WHERE timestamp > NOW() - INTERVAL '7 days'
+         GROUP BY day
+         ORDER BY day",
+    )
+    .fetch_all(ctx.db.pool())
+    .await
+    .unwrap_or_else(|e| {
+        log::warn!("dashboard 7-day sparkline: {e}");
+        Vec::new()
+    });
+
+    let by_day: HashMap<NaiveDate, i64> = rows.into_iter().collect();
+    let today = chrono::Utc::now().date_naive();
+    let mut out: Vec<render::DaySparkPoint> = Vec::with_capacity(7);
+    for offset in (0..7).rev() {
+        let day = today - chrono::Duration::days(offset);
+        let count = by_day.get(&day).copied().unwrap_or(0).max(0);
+        out.push(render::DaySparkPoint {
+            date_iso: day.format("%Y-%m-%d").to_string(),
+            // Short weekday label ("Mon", "Tue", …) for the
+            // x-axis legend — `chrono`'s `Weekday::short_name`
+            // returns 3-char ASCII, locale-neutral.
+            label: short_weekday(day.weekday()),
+            count,
+        });
+    }
+    out
+}
+
+/// Locale-neutral 3-letter weekday label for the sparkline x-axis.
+/// Chrono's `Weekday::Display` impl yields long names; this
+/// projection keeps the chart compact.
+fn short_weekday(w: chrono::Weekday) -> &'static str {
+    use chrono::Weekday::*;
+    match w {
+        Mon => "Mon",
+        Tue => "Tue",
+        Wed => "Wed",
+        Thu => "Thu",
+        Fri => "Fri",
+        Sat => "Sat",
+        Sun => "Sun",
+    }
 }
 
 // ---- Saved filters -------------------------------------------------------

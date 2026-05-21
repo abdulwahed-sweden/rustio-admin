@@ -121,6 +121,29 @@
       <a class="rio-dashboard-section-link" href="/admin/history">View full history →</a>
       {% endif %}
     </header>
+    {% if activity_sparkline %}
+    <figure class="rio-sparkline" aria-label="Admin actions over the last 7 days">
+      <figcaption class="rio-sparkline__caption">
+        {{ activity_sparkline_total }} action{% if activity_sparkline_total != 1 %}s{% endif %} in the last 7 days
+      </figcaption>
+      <svg class="rio-sparkline__svg" viewBox="0 0 280 64" preserveAspectRatio="none" role="img" aria-hidden="true">
+        {% for p in activity_sparkline %}
+        {% set bar_w = 32 %}
+        {% set gap = 8 %}
+        {% set x = loop.index0 * (bar_w + gap) %}
+        {% set max_h = 48 %}
+        {% set h = (p.count * max_h) // (activity_sparkline_max or 1) %}
+        <rect class="rio-sparkline__bar" x="{{ x }}" y="{{ max_h - h }}" width="{{ bar_w }}" height="{{ h }}" rx="2"></rect>
+        <text class="rio-sparkline__tick" x="{{ x + (bar_w / 2) }}" y="62" text-anchor="middle">{{ p.label }}</text>
+        {% endfor %}
+      </svg>
+      <ul class="rio-sparkline__data" hidden>
+        {% for p in activity_sparkline %}
+        <li>{{ p.date_iso }} ({{ p.label }}): {{ p.count }}</li>
+        {% endfor %}
+      </ul>
+    </figure>
+    {% endif %}
     {% if recent_actions %}
     <ul class="rio-activity-feed">
       {% for a in recent_actions %}

@@ -259,6 +259,15 @@ leaves the alpha track.
 
 ### Added
 
+- **7-day audit-activity sparkline on the dashboard.** Inline-SVG
+  bars above the recent-activity list show admin actions per day
+  for the last week, rendered server-side from a single
+  `SELECT DATE(timestamp), COUNT(*)` query padded to seven entries.
+  Caption reads "N actions in the last 7 days". No JS chart
+  library — the SVG is plain Rust→template output that consumes
+  the framework's existing accent colour token. Failure-soft on
+  the query: empty bars but the rest of the dashboard renders.
+
 - **`rustio test-init` CLI verb.** Writes a stdlib-only
   `tests/smoke.rs` integration test that boots the project binary
   via `cargo run`, polls the bound port via `TcpStream::connect`,
