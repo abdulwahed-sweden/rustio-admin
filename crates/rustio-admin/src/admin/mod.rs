@@ -19,6 +19,8 @@ pub(crate) mod icons;
 pub(crate) mod json_api;
 pub(crate) mod mfa_handlers;
 // public:
+pub mod notifications;
+// public:
 pub mod modeladmin;
 pub(crate) mod openapi;
 mod ops;
@@ -41,6 +43,8 @@ pub use audit::{
 pub use bulk::{BulkActionContext, BulkActionFailure, BulkActionResult};
 // public:
 pub use feature_flags::{feature_enabled, FeatureFlag};
+// public:
+pub use notifications::{send as send_notification, Notification};
 // public:
 pub use filters::{
     classify_field, field_ui_metadata, field_ui_metadata_with_relation, format_relation_cell,

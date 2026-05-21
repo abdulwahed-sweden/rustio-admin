@@ -1,0 +1,53 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    {% if unread_count > 0 %}
+    <strong>{{ unread_count }} unread</strong>
+    {% else %}
+    All caught up.
+    {% endif %}
+    Project code emits notifications via
+    <code>rustio_admin::send_notification(db, user_id, message, url)</code>.
+  </p>
+  {% if unread_count > 0 %}
+  <form method="post" action="/admin/notifications/mark_all_read" class="rio-form-inline">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button type="submit" class="rio-button rio-button--primary">Mark all read</button>
+  </form>
+  {% endif %}
+</header>
+
+<section class="rio-card">
+  {% if notifications %}
+  <table class="rio-table rio-table--striped">
+    <thead><tr><th>When</th><th>Message</th><th>State</th></tr></thead>
+    <tbody>
+      {% for n in notifications %}
+      <tr>
+        <td title="{{ n.created_iso }}">{{ n.when_relative }}</td>
+        <td>
+          {% if n.url %}
+          <a href="{{ n.url }}">{{ n.message }}</a>
+          {% else %}
+          {{ n.message }}
+          {% endif %}
+        </td>
+        <td>
+          {% if n.unread %}
+          <span class="rio-pill rio-pill--badge-neutral">Unread</span>
+          {% else %}
+          <span class="rio-meta">read</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="rio-empty">No notifications yet. They appear here as project code emits them.</p>
+  {% endif %}
+</section>
+{% endblock %}

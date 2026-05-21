@@ -259,6 +259,24 @@ leaves the alpha track.
 
 ### Added
 
+- **Notifications — `rustio_notifications` + topbar bell.** Project
+  code emits per-operator notifications via
+  `rustio_admin::send_notification(db, user_id, message, url)`;
+  operators see them at `/admin/notifications`, reachable via a
+  bell icon in the topbar from every authenticated page. The
+  list page surfaces the unread count + a "Mark all read"
+  button that stamps every unread row with the dismissal
+  timestamp.
+  - Schema: `id BIGSERIAL PK, user_id BIGINT FK rustio_users
+    CASCADE, message TEXT, url TEXT, read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ`.
+  - Partial index `(user_id, read_at) WHERE read_at IS NULL`
+    keeps unread-count queries fast.
+  - New `bell` icon added to the inline-SVG catalog.
+  - Real-time topbar count badge is still pending — refactoring
+    `BaseContext::new` across 58 call sites is too invasive for
+    this cut.
+
 - **Feature flags — `rustio_feature_flags` + admin UI.** Project
   code calls `rustio_admin::feature_enabled(db, "new_signup_flow")`
   from anywhere a `Db` is in scope; reads hit a 60-second per-key

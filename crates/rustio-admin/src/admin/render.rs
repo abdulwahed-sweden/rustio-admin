@@ -2815,6 +2815,60 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
 }
 
 #[derive(Serialize)]
+pub(crate) struct NotificationsCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub notifications: Vec<NotificationRowCtx>,
+    pub unread_count: i64,
+}
+
+#[derive(Serialize)]
+pub(crate) struct NotificationRowCtx {
+    pub id: i64,
+    pub message: String,
+    pub url: String,
+    /// `true` while the notification is unread; controls the
+    /// row's visual emphasis in the template.
+    pub unread: bool,
+    pub when_relative: String,
+    pub created_iso: String,
+}
+
+pub(crate) fn notifications_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    notifications: Vec<crate::admin::notifications::Notification>,
+) -> NotificationsCtx {
+    let unread_count = notifications.iter().filter(|n| n.read_at.is_none()).count() as i64;
+    let rows = notifications
+        .into_iter()
+        .map(|n| NotificationRowCtx {
+            id: n.id,
+            message: n.message,
+            url: n.url,
+            unread: n.read_at.is_none(),
+            when_relative: relative_time(n.created_at),
+            created_iso: n.created_at.to_rfc3339(),
+        })
+        .collect();
+    NotificationsCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "Notifications",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        notifications: rows,
+        unread_count,
+    }
+}
+
+#[derive(Serialize)]
 pub(crate) struct FeatureFlagsCtx {
     #[serde(flatten)]
     pub base: BaseContext,

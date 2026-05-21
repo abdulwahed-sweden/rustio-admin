@@ -2755,6 +2755,26 @@ pub(crate) async fn show_apis_index(
     Ok(Response::html(body))
 }
 
+pub(crate) async fn show_notifications(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let notifications = super::notifications::list_for_user(&ctx.db, identity.user_id).await;
+    let view = render::notifications_ctx(&identity, &ctx.admin, csrf_token(req), notifications);
+    let body = ctx.templates.render("admin/notifications.html", &view)?;
+    Ok(Response::html(body))
+}
+
+pub(crate) async fn do_mark_all_notifications_read(
+    ctx: &AdminCtx,
+    identity: Identity,
+    _req: Request,
+) -> Result<Response> {
+    super::notifications::mark_all_read(&ctx.db, identity.user_id).await;
+    Ok(Response::redirect("/admin/notifications"))
+}
+
 pub(crate) async fn show_feature_flags(
     ctx: &AdminCtx,
     identity: Identity,

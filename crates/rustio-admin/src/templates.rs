@@ -406,6 +406,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/feature_flags.html"),
     ),
     (
+        "admin/notifications.html",
+        include_str!("../assets/templates/admin/notifications.html"),
+    ),
+    (
         "admin/password_change.html",
         include_str!("../assets/templates/admin/password_change.html"),
     ),

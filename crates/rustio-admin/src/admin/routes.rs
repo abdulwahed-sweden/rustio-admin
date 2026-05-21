@@ -887,6 +887,33 @@ pub fn register_admin_routes(
         }
     });
 
+    // Notifications — per-operator list page. Any signed-in
+    // operator sees their own notifications (filtered by user_id
+    // in the handler), so the gate is just Staff. The topbar
+    // bell links here from every authenticated page.
+    let c = ctx.clone();
+    let router = router.get("/admin/notifications", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_notifications(&c, ident, &req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.post("/admin/notifications/mark_all_read", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => {
+                    handlers::do_mark_all_notifications_read(&c, ident, req).await
+                }
+            }
+        }
+    });
+
     // Feature flags — Administrator-only management page.
     // Lists existing flags with toggle buttons + a "create"
     // form. Reads in project code via
