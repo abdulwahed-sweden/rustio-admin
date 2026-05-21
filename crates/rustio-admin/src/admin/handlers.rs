@@ -2390,6 +2390,23 @@ pub(crate) async fn handle_bulk_action(
             ))
         })?;
 
+    // Per-action permission gate (BulkAction.permission). The bulk
+    // route already enforced the model's `change` permission; this
+    // is a second, stricter gate so destructive actions can require
+    // a scoped permission (e.g. `delete`) without making `change`
+    // itself harder. Same role-bypass semantics as `perm_guard`.
+    if let Some(action_perm) = action.permission {
+        if !identity.role.bypasses_group_checks() {
+            let singular = entry.singular_name.to_ascii_lowercase();
+            let required = format!("{admin_name}.{action_perm}_{singular}");
+            if !crate::auth::check_permission(&ctx.db, &identity, &required).await? {
+                return Err(Error::Forbidden(format!(
+                    "Bulk action `{action_name}` requires the `{required}` permission."
+                )));
+            }
+        }
+    }
+
     let form = req.form()?;
     let raw_ids = form.get("_ids").unwrap_or_default();
     let ids = parse_bulk_ids(raw_ids);

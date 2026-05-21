@@ -326,6 +326,7 @@ pub trait ModelAdmin: AdminModel {
     ///             label: "Mark overdue",
     ///             destructive: false,
     ///             confirm: true,
+    ///             permission: None,
     ///         }]
     ///     }
     ///
@@ -390,6 +391,19 @@ pub struct BulkAction {
     /// execute on the first POST. Default in the recommended call
     /// pattern is `true` for any action a user might regret.
     pub confirm: bool,
+    /// Per-action permission gate. When `Some("foo")`, the actor
+    /// must additionally hold `<admin_name>.foo_<singular>` (or
+    /// bypass group checks via role) on top of the model's `change`
+    /// permission that the bulk route already gates. `None`
+    /// inherits — the route's `change` gate is the only check.
+    ///
+    /// Use this to scope destructive bulk actions to a narrower set
+    /// of operators than full edit access. Example: a `purge`
+    /// action that wipes a year of archive rows might set
+    /// `permission: Some("delete")` so only operators with the
+    /// model's `delete` permission can fire it, even though
+    /// `change` is enough to flip ordinary fields.
+    pub permission: Option<&'static str>,
 }
 
 // public:

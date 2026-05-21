@@ -259,6 +259,20 @@ leaves the alpha track.
 
 ### Added
 
+- **Per-action permission gate on bulk actions.** New
+  `BulkAction.permission: Option<&'static str>` field. When `Some`,
+  the bulk handler enforces `<admin_name>.<permission>_<singular>`
+  on top of the route's `change` gate. Lets destructive actions
+  (e.g. `purge`, `archive`) require a scoped permission like
+  `delete` without making ordinary edits harder.
+  Role-bypass semantics match `perm_guard` —
+  Developer/Administrator skip the check. `None` inherits and
+  preserves prior behaviour.
+  - **Source-compatibility break:** every existing `BulkAction {
+    ... }` literal needs an explicit `permission: None,`. The two
+    in-repo call sites (clinic-appointments example) plus the
+    docstring example were updated.
+
 - **DropdownText filter widget populates from `SELECT DISTINCT`.**
   `Status`-typed columns (`status`, `*_status`) now surface a chip-
   layout dropdown of distinct values queried from the column itself

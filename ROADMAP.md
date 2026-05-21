@@ -107,7 +107,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ Built-in cascade-aware bulk delete
 - ✅ Project-defined bulk actions via `ModelAdmin::bulk_actions()` + `AdminOps::execute_bulk_action`
 - ⚪ **Bulk progress UI.** For long-running actions (>~500 rows), show progress server-rendered via a dedicated `/bulk_action_progress` page.
-- ⚪ **Per-action permission gate.** Currently bulk actions inherit the model's `change` permission. A `BulkAction.permission` field would let projects gate destructive actions on a stricter permission.
+- ✅ **Per-action permission gate** — `BulkAction.permission: Option<&'static str>`. When set, the handler enforces `<admin_name>.<permission>_<singular>` on top of the route's `change` gate. Mirrors `perm_guard` semantics: developers/administrators bypass via role; everyone else needs the scoped grant. `None` inherits — `change` is the only check.
 
 ### Dashboard
 

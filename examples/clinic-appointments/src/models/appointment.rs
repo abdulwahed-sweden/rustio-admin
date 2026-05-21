@@ -83,12 +83,14 @@ impl ModelAdmin for Appointment {
                 label: "Mark no-show",
                 destructive: false,
                 confirm: true,
+                permission: None,
             },
             BulkAction {
                 name: "mark_completed",
                 label: "Mark completed",
                 destructive: false,
                 confirm: true,
+                permission: None,
             },
         ]
     }
