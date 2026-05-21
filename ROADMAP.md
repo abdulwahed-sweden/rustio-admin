@@ -264,4 +264,4 @@ A few principles that should outlast any specific roadmap item.
 
 ---
 
-*Last revision: 2026-05-21 — drift sync against v0.15.1. This document is rewritten as the framework evolves; the [git history](https://github.com/abdulwahed-sweden/rustio-admin/commits/main/ROADMAP.md) is the authoritative timeline of how the plan changed.*
+*Last revision: 2026-05-21 — tracks the `[Unreleased]` block in [`CHANGELOG.md`](./CHANGELOG.md) on top of the v0.15.1 release. Locale-negotiation middleware was the most recent foundational piece; remaining open items split into 🟡 partial (8), ⚪ planned (14), and 🔬 research (10). This document is rewritten as the framework evolves; the [git history](https://github.com/abdulwahed-sweden/rustio-admin/commits/main/ROADMAP.md) is the authoritative timeline of how the plan changed.*
