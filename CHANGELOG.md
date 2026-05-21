@@ -259,6 +259,15 @@ leaves the alpha track.
 
 ### Added
 
+- **Date grouping on history pages.** Both `/admin/history` and
+  per-object history (`/admin/<model>/<id>/history`) now emit a
+  `YYYY-MM-DD` divider row whenever the calendar day changes
+  between consecutive audit entries. Computed in
+  `map_audit_actions` via two new `HistoryEntryCtx` fields
+  (`date_iso`, `is_new_day`); templates branch on `is_new_day` to
+  render the divider. Closes the activity-feed item alongside
+  the per-actor filter shipped previously.
+
 - **Per-actor filter on `/admin/history`.** `?user_id=N` narrows
   the audit feed to one operator's actions. Every row's `By`
   column is now a click-through to its actor's filtered view

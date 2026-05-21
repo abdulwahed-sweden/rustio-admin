@@ -2683,6 +2683,16 @@ pub(crate) fn render_forbidden_body(
 pub(crate) struct HistoryEntryCtx {
     pub timestamp_iso: String,
     pub when_relative: String,
+    /// `YYYY-MM-DD` of the audit timestamp (UTC). Drives the
+    /// day-divider rows in the history templates — when this
+    /// changes between consecutive entries, `is_new_day` is
+    /// `true` and the template emits a divider before the row.
+    pub date_iso: String,
+    /// `true` when this entry's `date_iso` differs from the
+    /// previous entry's (or this is the first entry). Computed by
+    /// `map_audit_actions`; template uses it to render a
+    /// `YYYY-MM-DD` divider above the row.
+    pub is_new_day: bool,
     pub user_id: i64,
     pub user_email: String,
     pub action_type: String,
@@ -2755,13 +2765,19 @@ pub(crate) struct LogEntriesCtx {
 }
 
 pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCtx> {
+    let mut prev_date_iso: Option<String> = None;
     actions
         .into_iter()
         .map(|a| {
             let changes = extract_changes_from_metadata(a.metadata.as_ref());
+            let date_iso = a.timestamp.format("%Y-%m-%d").to_string();
+            let is_new_day = prev_date_iso.as_deref() != Some(date_iso.as_str());
+            prev_date_iso = Some(date_iso.clone());
             HistoryEntryCtx {
                 timestamp_iso: a.timestamp.to_rfc3339(),
                 when_relative: relative_time(a.timestamp),
+                date_iso,
+                is_new_day,
                 user_id: a.user_id,
                 user_email: a.user_email.unwrap_or_else(|| "—".to_string()),
                 label: action_label(&a.action_type),
