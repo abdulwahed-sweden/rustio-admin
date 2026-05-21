@@ -259,6 +259,21 @@ leaves the alpha track.
 
 ### Added
 
+- **TypeScript SDK skeleton at `/admin/apis/sdk.ts`.** Server-
+  rendered companion to the OpenAPI spec — one `export interface`
+  per registered project model with TypeScript types projected
+  from `FieldType` (`Bool` → `boolean`, integers → `number`,
+  strings / datetimes / file paths → `string`, optionals union
+  with `| null`). Snake_case field names preserved verbatim to
+  match the JSON envelope shape. Staff-gated, content-type
+  `text/typescript; charset=utf-8` with a
+  `content-disposition: attachment; filename="rustio-sdk.ts"`
+  header so browsers save it directly. Linked from `/admin/apis`
+  alongside the OpenAPI download and the playground. Rust /
+  Python language targets and a fetch-client wrapper are still
+  pending — v1 is type-only so operators wrap their own
+  networking.
+
 - **Health dashboard at `/admin/health`.** Browser counterpart
   to the `rustio doctor` CLI verb: runs the same probes (Postgres
   reachable, auth tables present, ≥1 active administrator,

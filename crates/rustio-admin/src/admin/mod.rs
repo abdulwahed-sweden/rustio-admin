@@ -21,6 +21,7 @@ pub mod modeladmin;
 pub(crate) mod openapi;
 mod ops;
 pub(crate) mod recovery_handlers;
+pub(crate) mod sdk_gen;
 // public:
 pub mod redact;
 // public:

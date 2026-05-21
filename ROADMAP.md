@@ -162,7 +162,7 @@ JSON content negotiation ships today on list + detail endpoints; CSV export ship
 - ⚪ **Built-in docs pages.** Render the `docs/*.md` files inside the admin chrome at `/admin/docs` so operators can read framework docs without leaving the panel.
 - ✅ **Auto-generated OpenAPI surface** — `GET /admin/apis/openapi.json` serves an OpenAPI 3.0 document with per-model component schemas and full path coverage (list / create / detail / update / delete). `GET /admin/apis` is the HTML companion: one section per model with an endpoint table, a field table (name / type label / nullable), and a one-click download link to the JSON spec. Footer carries a permanent "API surface" link next to "Audit log".
 - ✅ **Interactive API playground** — `/admin/apis/playground` ships read + write coverage: list / detail / create / update / delete with method-conditional inputs (ID for detail/update/delete, form-encoded body textarea for create/update). CSRF token injected automatically on POST. Vanilla `fetch()` inline in the template; no third-party JS dependency.
-- ⚪ **SDK generation.** `rustio sdk-gen rust|typescript|python` builds a typed client from the OpenAPI spec. Out-of-tree initially; a CLI subcommand once the OpenAPI spec stabilises.
+- 🟡 **SDK generation** — `GET /admin/apis/sdk.ts` returns an auto-generated TypeScript skeleton (one `export interface` per registered model with field types projected from `FieldType`). Server-rendered, Staff-gated, downloadable from `/admin/apis`. Rust + Python language targets and a full fetch client wrapper are still planned.
 - 🔬 **GraphQL surface.** Open question — the framework's CRUD shape is regular enough that a typed GraphQL endpoint is feasible, but it's a sizeable maintenance commitment for unclear demand.
 
 ---

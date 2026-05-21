@@ -1679,6 +1679,30 @@ pub fn register_admin_routes(
         }
     });
 
+    // Auto-generated TypeScript SDK skeleton. Sibling of the
+    // OpenAPI spec endpoint above; same Staff gate. Emits one
+    // `export interface` per registered project model with field
+    // types projected from `FieldType`. Operators wrap their own
+    // fetch around the documented JSON envelopes.
+    let c = ctx.clone();
+    let router = router.get("/admin/apis/sdk.ts", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(_) => {
+                    let body = super::sdk_gen::build_typescript(&c.admin);
+                    Ok(crate::http::Response::ok(body)
+                        .with_header("content-type", "text/typescript; charset=utf-8")
+                        .with_header(
+                            "content-disposition",
+                            "attachment; filename=\"rustio-sdk.ts\"",
+                        ))
+                }
+            }
+        }
+    });
+
     // Human-readable HTML index for the API surface. Sibling of
     // the openapi.json endpoint above; same Staff gate. Lists
     // every registered model's endpoint table + field shapes so
