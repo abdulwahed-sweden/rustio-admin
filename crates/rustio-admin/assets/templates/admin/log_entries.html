@@ -16,7 +16,25 @@
         <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
         <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
         <td>{{ e.user_email }}</td>
-        <td>{{ e.summary }}</td>
+        <td>
+          {{ e.summary }}
+          {% if e.changes %}
+          <dl class="rio-history-diff" aria-label="Changed fields">
+            {% for c in e.changes %}
+            <div class="rio-history-diff__row" data-field="{{ c.field }}">
+              <dt class="rio-history-diff__label">{{ c.label }}</dt>
+              <dd class="rio-history-diff__value rio-history-diff__value--from">
+                {% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
+              </dd>
+              <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
+              <dd class="rio-history-diff__value rio-history-diff__value--to">
+                {% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
+              </dd>
+            </div>
+            {% endfor %}
+          </dl>
+          {% endif %}
+        </td>
         <td>{{ e.ip_address }}</td>
       </tr>
       {% endfor %}

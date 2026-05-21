@@ -259,6 +259,18 @@ leaves the alpha track.
 
 ### Added
 
+- **Audit diff on the global history page.** `/admin/history` now
+  renders the same per-field before→after table the per-object
+  history page already used. Update rows show the changed columns
+  inline under the summary (`Title: old → new`, `Status: draft →
+  published`); rows without a populated `metadata.changes` (create,
+  delete, auth-flow events) render plain. Storage shape, producer
+  (`do_update` → `compute_row_diff`), pure extractor
+  (`extract_changes_from_metadata`), and per-object template were
+  already in place — this commit mirrors the markup into
+  `log_entries.html` so an operator can answer "what exactly
+  changed?" without opening the object.
+
 - **Global `⌘K` search palette — cross-model topbar search.**
   A new topbar trigger ("Search…  ⌘K") and modal palette let an
   operator search across every registered admin model from any
