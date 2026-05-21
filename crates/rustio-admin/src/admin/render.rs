@@ -332,6 +332,11 @@ pub(crate) struct DashboardModel {
     /// been analysed yet (fresh DB) or when the lookup query
     /// failed.
     pub row_estimate: i64,
+    /// Exact count of rows whose `created_at > NOW() - INTERVAL
+    /// '7 days'`. `None` for models that don't declare a
+    /// `created_at` column. Surfaced on the dashboard tile as
+    /// "N new this week" when set.
+    pub new_this_week: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -355,10 +360,14 @@ pub(crate) struct RecentActionCtx {
 ///
 /// `row_estimates` is keyed by `entry.table`; missing entries default
 /// to `0` (fresh DB, never analysed, or query failed). Pass an empty
-/// map to skip the per-model count column.
+/// map to skip the per-model count column. `new_this_week` is keyed
+/// by `entry.table` and carries an exact count for models that
+/// declare `created_at`; absence (the common case for tables without
+/// that column) renders the tile without the secondary stat.
 pub(crate) fn group_entries_by_app(
     entries: &[AdminEntry],
     row_estimates: &HashMap<&str, i64>,
+    new_this_week: &HashMap<&str, i64>,
 ) -> Vec<DashboardApp> {
     let mut apps: Vec<DashboardApp> = Vec::new();
     for entry in entries {
@@ -380,11 +389,13 @@ pub(crate) fn group_entries_by_app(
             }
         };
         let estimate = row_estimates.get(entry.table).copied().unwrap_or(0).max(0);
+        let week = new_this_week.get(entry.table).copied().map(|n| n.max(0));
         app.models.push(DashboardModel {
             admin_name: entry.admin_name,
             display_name: entry.display_name,
             field_count: entry.fields.len(),
             row_estimate: estimate,
+            new_this_week: week,
         });
     }
     apps
@@ -409,6 +420,7 @@ pub(crate) fn dashboard_ctx(
     recent_actions: Vec<AdminAction>,
     csrf_token: String,
     row_estimates: &HashMap<&str, i64>,
+    new_this_week: &HashMap<&str, i64>,
 ) -> DashboardCtx {
     let recent: Vec<RecentActionCtx> = recent_actions
         .into_iter()
@@ -424,7 +436,7 @@ pub(crate) fn dashboard_ctx(
         })
         .collect();
 
-    let apps = group_entries_by_app(admin.entries(), row_estimates);
+    let apps = group_entries_by_app(admin.entries(), row_estimates, new_this_week);
     let total_models = apps.iter().map(|a| a.models.len()).sum();
     let total_rows = apps
         .iter()

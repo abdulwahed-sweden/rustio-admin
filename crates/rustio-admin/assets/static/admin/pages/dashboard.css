@@ -304,6 +304,17 @@
   font-weight: var(--rio-fw-regular);
   color: var(--rio-text-muted);
 }
+.rio-model-tile__stat-secondary {
+  margin: var(--rio-s1) 0 0;
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text-muted);
+}
+.rio-model-tile__stat-secondary .rio-model-tile__stat-num {
+  font-size: var(--rio-fs-base);
+  font-weight: var(--rio-fw-semibold);
+  color: var(--rio-text);
+  margin-right: var(--rio-s1);
+}
 .rio-model-tile__meta {
   margin: 0;
   font-size: var(--rio-fs-xs);

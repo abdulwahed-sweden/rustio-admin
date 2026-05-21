@@ -460,12 +460,20 @@ pub(crate) async fn dashboard(
     // query for every registered model. Failures are non-fatal: the
     // dashboard renders with `~ 0` placeholders rather than 500ing.
     let row_estimates = fetch_dashboard_row_estimates(ctx).await;
+    // Per-model "new this week" KPI — exact count, not an estimate.
+    // Only emitted for models that declare a `created_at` field;
+    // skipped silently for everything else. One query per model in
+    // sequence — fast on indexed `created_at` columns, and the
+    // dashboard renders with the row already cached by the row-
+    // estimate pass above so the round-trips are cheap.
+    let new_this_week = fetch_dashboard_new_this_week(ctx).await;
     let dash = render::dashboard_ctx(
         &identity,
         &ctx.admin,
         recent_actions,
         csrf_token(req),
         &row_estimates,
+        &new_this_week,
     );
     let body = ctx.templates.render("admin/index.html", &dash)?;
     Ok(Response::html(body))
@@ -514,6 +522,48 @@ async fn fetch_dashboard_row_estimates(ctx: &AdminCtx) -> HashMap<&'static str, 
         // expectations.
         if let Some(static_name) = project_tables.iter().find(|t| **t == name) {
             out.insert(*static_name, estimate.max(0));
+        }
+    }
+    out
+}
+
+/// Fetch the per-model "new this week" count for every registered
+/// project model that declares a `created_at` field. One sequential
+/// query per qualifying model — `SELECT COUNT(*) FROM <table> WHERE
+/// created_at > NOW() - INTERVAL '7 days'`. The table name comes
+/// from `entry.table` (static identifier baked at compile time) so
+/// the query is format-interpolation-safe.
+///
+/// Models without `created_at` are skipped — the map carries no
+/// entry for them, and the template falls back to showing only the
+/// row total. Failures on individual models are logged and skipped
+/// so one broken table doesn't take down the whole dashboard.
+async fn fetch_dashboard_new_this_week(ctx: &AdminCtx) -> HashMap<&'static str, i64> {
+    let mut out: HashMap<&'static str, i64> = HashMap::new();
+    for entry in ctx.admin.entries() {
+        if entry.core {
+            continue;
+        }
+        if !entry.fields.iter().any(|f| f.name == "created_at") {
+            continue;
+        }
+        let sql = format!(
+            "SELECT COUNT(*) FROM {} WHERE created_at > NOW() - INTERVAL '7 days'",
+            entry.table
+        );
+        match sqlx::query_scalar::<_, i64>(&sql)
+            .fetch_one(ctx.db.pool())
+            .await
+        {
+            Ok(n) => {
+                out.insert(entry.table, n.max(0));
+            }
+            Err(e) => {
+                log::warn!(
+                    "dashboard new-this-week count failed for {}: {e}",
+                    entry.table
+                );
+            }
         }
     }
     out

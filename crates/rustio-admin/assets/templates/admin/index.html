@@ -75,6 +75,12 @@
           <span class="rio-model-tile__stat-num">{{ model.row_estimate }}</span>
           <span class="rio-model-tile__stat-suffix">{% if model.row_estimate == 1 %}row{% else %}rows{% endif %}</span>
         </p>
+        {% if model.new_this_week is not none %}
+        <p class="rio-model-tile__stat-secondary" title="Exact count — rows with created_at within the last 7 days">
+          <span class="rio-model-tile__stat-num">{{ model.new_this_week }}</span>
+          new this week
+        </p>
+        {% endif %}
         <p class="rio-model-tile__meta" title="Approximate — from pg_class.reltuples, refreshed by ANALYZE">
           {{ model.field_count }} field{% if model.field_count != 1 %}s{% endif %} · approx. count
         </p>

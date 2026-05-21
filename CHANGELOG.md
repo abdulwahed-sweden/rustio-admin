@@ -259,6 +259,14 @@ leaves the alpha track.
 
 ### Added
 
+- **"New this week" KPI on the dashboard.** Each model tile now
+  shows the exact count of rows with `created_at` within the last
+  7 days alongside the existing approximate row total. Skipped
+  silently for models that don't declare a `created_at` column.
+  One `SELECT COUNT(*)` per qualifying model on dashboard render
+  — fast on indexed `created_at`; failures log and skip rather
+  than break the page.
+
 - **Date grouping on history pages.** Both `/admin/history` and
   per-object history (`/admin/<model>/<id>/history`) now emit a
   `YYYY-MM-DD` divider row whenever the calendar day changes
