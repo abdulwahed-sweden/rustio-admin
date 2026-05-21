@@ -86,7 +86,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ **Search highlight** — matched substring wrapped in `<mark>` for `?q=…` results
 - ✅ **Saved filters** — per-operator bookmarks, dropdown in the toolbar, `POST /admin/:model/saved_filters` + `…/saved_filters/:id/delete`
 - ✅ **CSV export** — `/admin/:model/export.csv` with the current filter query, 10k-row cap, RFC 4180 quoting
-- ⚪ **Distinct-text dropdown widget.** Today `Status`-typed fields render `DropdownText`, but the runtime doesn't yet populate it from a `SELECT DISTINCT` against the column. Inline text-input fallback ships now.
+- ✅ **Distinct-text dropdown widget** — `Status`-typed columns now populate the filter dropdown from `SELECT DISTINCT col::text FROM <table> WHERE col IS NOT NULL ORDER BY col::text LIMIT 50`. Column name validated against `entry.fields` before interpolation; clicking a chip composes a filter URL via the existing `build_list_url` machinery. CSV-export filter parser mirrors the same arm.
 
 ### Form view
 

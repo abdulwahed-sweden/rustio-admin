@@ -259,6 +259,19 @@ leaves the alpha track.
 
 ### Added
 
+- **DropdownText filter widget populates from `SELECT DISTINCT`.**
+  `Status`-typed columns (`status`, `*_status`) now surface a chip-
+  layout dropdown of distinct values queried from the column itself
+  (`SELECT DISTINCT col::text FROM <table> WHERE col IS NOT NULL
+  ORDER BY col::text LIMIT 50`). The column name is validated
+  against `entry.fields` before format-string interpolation;
+  clicking a chip composes a filter URL via the existing
+  `build_list_url` so search / sort / per-page state survives.
+  CSV-export filter parser mirrors the same arm. Verified
+  end-to-end against `clinic-appointments`: the appointments list
+  filter exposes `cancelled / completed / no_show / scheduled`
+  with correct row counts (3 / 9 / 2 / 16 of 30).
+
 - **Per-model read-only toggle.** `Admin::read_only_model("posts")`
   freezes one model — `POST` / `PUT` / `DELETE` under
   `/admin/posts/...` returns 403 with `Model posts is frozen

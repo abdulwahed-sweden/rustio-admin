@@ -821,6 +821,73 @@ pub(crate) async fn list_model(
                     fk_target_label: target_model.clone(),
                 });
             }
+            super::filters::FilterKind::DropdownText => {
+                // Status-shape columns: populate the dropdown from
+                // `SELECT DISTINCT col::text FROM table WHERE col IS
+                // NOT NULL ORDER BY col::text LIMIT N`. The column
+                // name is validated against `entry.fields` first so a
+                // hand-crafted URL can't smuggle SQL through the
+                // format!() interpolation. `::text` cast keeps the
+                // query general — works for varchar / text / enum /
+                // any column type with a sensible text projection.
+                if !entry.fields.iter().any(|af| af.name == f.field) {
+                    continue;
+                }
+                let current = qs
+                    .get(&f.field)
+                    .map(str::to_string)
+                    .filter(|s| !s.is_empty());
+                if let Some(ref val) = current {
+                    sql_filters.push((f.field.clone(), val.clone()));
+                }
+                let distinct_sql = format!(
+                    "SELECT DISTINCT {col}::text AS v FROM {tbl} \
+                     WHERE {col} IS NOT NULL \
+                     ORDER BY v LIMIT {lim}",
+                    col = f.field,
+                    tbl = entry.table,
+                    lim = DROPDOWN_TEXT_OPTION_CAP,
+                );
+                let values: Vec<String> = sqlx::query_scalar::<_, String>(&distinct_sql)
+                    .fetch_all(ctx.db.pool())
+                    .await
+                    .unwrap_or_else(|e| {
+                        log::warn!(
+                            "dropdown_text distinct query failed for {}.{}: {e}",
+                            entry.admin_name,
+                            f.field
+                        );
+                        Vec::new()
+                    });
+                let options: Vec<render::FilterOptionCtx> = values
+                    .into_iter()
+                    .map(|v| render::FilterOptionCtx {
+                        selected: current.as_deref() == Some(v.as_str()),
+                        value: v.clone(),
+                        label: v,
+                        link: String::new(),
+                    })
+                    .collect();
+                filter_groups.push(render::FilterGroupCtx {
+                    field: f.field,
+                    label: f.label,
+                    kind: "chips",
+                    options,
+                    current,
+                    all_link: String::new(),
+                    date_from_name: String::new(),
+                    date_from_value: String::new(),
+                    date_to_name: String::new(),
+                    date_to_value: String::new(),
+                    hidden_pairs: Vec::new(),
+                    has_active_range: false,
+                    multi_selected: Vec::new(),
+                    fk_selected_id: String::new(),
+                    fk_selected_label: String::new(),
+                    fk_lookup_url: String::new(),
+                    fk_target_label: String::new(),
+                });
+            }
             // Other filter kinds need richer widgets — later phases.
             _ => {}
         }
@@ -1077,6 +1144,11 @@ fn parse_sql_filter_query(
                     filters.push((f.field, id.to_string()));
                 }
             }
+            super::filters::FilterKind::DropdownText => {
+                if let Some(val) = qs.get(&f.field).filter(|s| !s.is_empty()) {
+                    filters.push((f.field.clone(), val.to_string()));
+                }
+            }
             _ => {}
         }
     }
@@ -1086,6 +1158,13 @@ fn parse_sql_filter_query(
         multi_filters,
     }
 }
+
+/// Cap on the number of options surfaced in a `DropdownText`
+/// filter widget. Distinct-value queries that exceed this are
+/// truncated — operators with high-cardinality columns should fall
+/// back to the search box. 50 keeps the dropdown legible without
+/// pretending to be a search-replacement.
+const DROPDOWN_TEXT_OPTION_CAP: i64 = 50;
 
 /// Maximum rows a single CSV download will emit. Caps the memory
 /// footprint of the bulk `entry.ops.list(...)` call — the runtime
