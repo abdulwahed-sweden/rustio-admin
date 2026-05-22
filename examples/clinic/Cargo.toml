@@ -18,18 +18,21 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
-# Smoke binary — `cargo run -p clinic` opens DATABASE_URL, counts
-# every table, exits non-zero if any are unreachable. Pure proof of
-# wiring; not a real application. See src/main.rs for the rationale.
+# HTTP server — `cargo run -p clinic` boots an axum web app that
+# renders four HTML pages (dashboard, appointments, patients,
+# worklist) and four JSON endpoints. Inline CSS, no template
+# engine, no JS — minimum-dep production-shape demo. See src/main.rs.
 [[bin]]
 name = "clinic"
 path = "src/main.rs"
 
 [dependencies]
+axum         = "0.7"
 chrono       = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 dotenvy      = "0.15"
 rust_decimal = { version = "1", features = ["serde"] }
 serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
 sqlx         = { version = "0.8", default-features = false, features = [
     "runtime-tokio",
     "postgres",
@@ -39,5 +42,5 @@ sqlx         = { version = "0.8", default-features = false, features = [
     "macros",
 ] }
 thiserror    = "1"
-tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio        = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
 uuid         = { version = "1", features = ["v4", "serde"] }
