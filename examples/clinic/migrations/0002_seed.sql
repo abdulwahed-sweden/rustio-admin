@@ -232,14 +232,16 @@ INSERT INTO appointments (id, appointment_number, patient_id, doctor_id, branch_
    NULL, NULL,
    'mobile_app', NULL, '2026-05-15 11:00:00+02', '2026-05-21 09:00:00+02'),
 
-  -- CHECKED_IN — today, Lukas Bergman with Dr. Bergström (Peds vaccination)
+  -- COMPLETED — today (2026-05-22), Lukas Bergman with Dr. Bergström (Peds vaccination)
+  -- 12-minute MMR booster: checked in 5 min early, jab + no reaction observed,
+  -- discharged the same morning.
   ('99999999-9999-9999-9999-000000000005', 'APT-2026-0005',
    '77777777-7777-7777-7777-000000000004', '88888888-8888-8888-8888-000000000003', '22222222-2222-2222-2222-000000000002',
    '33333333-3333-3333-3333-000000000005', '55555555-5555-5555-5555-000000000007',
-   '2026-05-22 10:30:00+02', '2026-05-22 10:45:00+02', 'in_person', 'checked_in',
+   '2026-05-22 10:30:00+02', '2026-05-22 10:45:00+02', 'in_person', 'completed',
    'MMR booster vaccination.', NULL,
-   '2026-05-22 10:25:00+02', NULL,
-   'phone', NULL, '2026-05-15 12:00:00+02', '2026-05-22 10:25:00+02'),
+   '2026-05-22 10:25:00+02', '2026-05-22 10:42:00+02',
+   'phone', NULL, '2026-05-15 12:00:00+02', '2026-05-22 10:42:00+02'),
 
   -- CONFIRMED — this week, Sofia Andersson with Dr. Lindberg (GP)
   ('99999999-9999-9999-9999-000000000006', 'APT-2026-0006',
@@ -309,11 +311,18 @@ INSERT INTO appointments (id, appointment_number, patient_id, doctor_id, branch_
 -- -----------------------------------------------------------------------------
 
 INSERT INTO appointment_status_history (id, appointment_id, from_status, to_status, changed_by, reason, changed_at) VALUES
-  ('cccccccc-cccc-cccc-cccc-000000000001', '99999999-9999-9999-9999-000000000001', NULL,         'booked',      NULL, 'Initial booking',  '2026-04-30 11:00:00+02'),
-  ('cccccccc-cccc-cccc-cccc-000000000002', '99999999-9999-9999-9999-000000000001', 'booked',     'confirmed',   NULL, 'Confirmed by SMS', '2026-05-03 09:00:00+02'),
-  ('cccccccc-cccc-cccc-cccc-000000000003', '99999999-9999-9999-9999-000000000001', 'confirmed',  'checked_in',  NULL, 'Walked in',        '2026-05-04 08:55:00+02'),
-  ('cccccccc-cccc-cccc-cccc-000000000004', '99999999-9999-9999-9999-000000000001', 'checked_in', 'in_progress', NULL, 'Doctor seeing',    '2026-05-04 09:00:00+02'),
-  ('cccccccc-cccc-cccc-cccc-000000000005', '99999999-9999-9999-9999-000000000001', 'in_progress','completed',   NULL, 'Visit complete',   '2026-05-04 09:28:00+02');
+  -- Anna's URI visit (APT-2026-0001) — full transition chain
+  ('cccccccc-cccc-cccc-cccc-000000000001', '99999999-9999-9999-9999-000000000001', NULL,         'booked',      NULL, 'Initial booking',                                '2026-04-30 11:00:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000002', '99999999-9999-9999-9999-000000000001', 'booked',     'confirmed',   NULL, 'Confirmed by SMS',                               '2026-05-03 09:00:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000003', '99999999-9999-9999-9999-000000000001', 'confirmed',  'checked_in',  NULL, 'Walked in',                                      '2026-05-04 08:55:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000004', '99999999-9999-9999-9999-000000000001', 'checked_in', 'in_progress', NULL, 'Doctor seeing',                                  '2026-05-04 09:00:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000005', '99999999-9999-9999-9999-000000000001', 'in_progress','completed',   NULL, 'Visit complete',                                 '2026-05-04 09:28:00+02'),
+  -- Lukas's MMR vaccination (APT-2026-0005) — full transition chain
+  ('cccccccc-cccc-cccc-cccc-000000000006', '99999999-9999-9999-9999-000000000005', NULL,         'booked',      NULL, 'Initial booking',                                '2026-05-15 12:00:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000007', '99999999-9999-9999-9999-000000000005', 'booked',     'confirmed',   NULL, 'Confirmed by SMS',                               '2026-05-19 09:00:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000008', '99999999-9999-9999-9999-000000000005', 'confirmed',  'checked_in',  NULL, 'Walked in',                                      '2026-05-22 10:25:00+02'),
+  ('cccccccc-cccc-cccc-cccc-000000000009', '99999999-9999-9999-9999-000000000005', 'checked_in', 'in_progress', NULL, 'Doctor called patient in',                       '2026-05-22 10:30:00+02'),
+  ('cccccccc-cccc-cccc-cccc-00000000000a', '99999999-9999-9999-9999-000000000005', 'in_progress','completed',   NULL, 'MMR booster administered, no reaction observed', '2026-05-22 10:42:00+02');
 
 -- -----------------------------------------------------------------------------
 -- Appointment reminders — pending sends for confirmed future appointments
