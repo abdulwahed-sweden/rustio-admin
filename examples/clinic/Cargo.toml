@@ -18,8 +18,16 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
+# Smoke binary — `cargo run -p clinic` opens DATABASE_URL, counts
+# every table, exits non-zero if any are unreachable. Pure proof of
+# wiring; not a real application. See src/main.rs for the rationale.
+[[bin]]
+name = "clinic"
+path = "src/main.rs"
+
 [dependencies]
 chrono       = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+dotenvy      = "0.15"
 rust_decimal = { version = "1", features = ["serde"] }
 serde        = { version = "1", features = ["derive"] }
 sqlx         = { version = "0.8", default-features = false, features = [
@@ -31,4 +39,5 @@ sqlx         = { version = "0.8", default-features = false, features = [
     "macros",
 ] }
 thiserror    = "1"
+tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
 uuid         = { version = "1", features = ["v4", "serde"] }

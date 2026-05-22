@@ -444,10 +444,12 @@ name = "clinic"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dotenvy",
  "rust_decimal",
  "serde",
  "sqlx",
  "thiserror 1.0.69",
+ "tokio",
  "uuid",
 ]
 
