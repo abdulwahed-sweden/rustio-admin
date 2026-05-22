@@ -656,7 +656,7 @@ fn sev_pill(severity: &str) -> String {
 }
 fn money(d: Option<Decimal>) -> String {
     match d {
-        Some(v) => format!("{} SEK", v),
+        Some(v) => format!("{v} SEK"),
         None => "—".into(),
     }
 }
@@ -928,13 +928,13 @@ async fn page_dashboard(State(s): State<Arc<AppState>>) -> Result<Html<String>, 
         "list-check",
         "Open items",
         &items.len().to_string(),
-        &format!("{} overdue", overdue_count),
+        &format!("{overdue_count} overdue"),
         if overdue_count > 0 { "danger" } else { "" },
     ));
     body.push_str(&kpi(
         "dollar",
         "Pending money",
-        &format!("{} SEK", total_pending),
+        &format!("{total_pending} SEK"),
         "across all invoices",
         "accent",
     ));
@@ -1176,7 +1176,9 @@ fn redact_password(url: &str) -> String {
         return url.to_string();
     };
     let colon_pos = after_scheme + colon_offset;
-    format!("{}:***{}", &url[..colon_pos], &url[at_pos..])
+    let head = &url[..colon_pos];
+    let tail = &url[at_pos..];
+    format!("{head}:***{tail}")
 }
 
 #[cfg(test)]
