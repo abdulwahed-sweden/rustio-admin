@@ -217,14 +217,20 @@ INSERT INTO appointments (id, appointment_number, patient_id, doctor_id, branch_
    '2026-05-14 08:50:00+02', '2026-05-14 09:58:00+02',
    'web', NULL, '2026-04-25 10:00:00+02', '2026-05-14 09:58:00+02'),
 
-  -- IN_PROGRESS — today (2026-05-22), Fatima Karim with Dr. Bergström (Peds, asthma)
+  -- CONFIRMED — Tue 2026-05-26, Fatima Karim (35y adult) with Dr. Lindberg (GP)
+  -- for her asthma review. Originally seeded against Dr. Bergström (Peds)
+  -- which was a clinical mismatch — a 35-year-old wouldn't normally see a
+  -- paediatrician. Now routed to GP, the correct primary-care path for
+  -- routine adult asthma management. The 09:30 slot fits Dr. Lindberg's
+  -- Tuesday 09:00–13:00 schedule and doesn't overlap her existing
+  -- 10:00–10:30 slot with Hassan Al-Mahmoud.
   ('99999999-9999-9999-9999-000000000004', 'APT-2026-0004',
-   '77777777-7777-7777-7777-000000000003', '88888888-8888-8888-8888-000000000003', '22222222-2222-2222-2222-000000000002',
-   '33333333-3333-3333-3333-000000000005', '55555555-5555-5555-5555-000000000004',
-   '2026-05-22 09:30:00+02', '2026-05-22 10:00:00+02', 'in_person', 'in_progress',
+   '77777777-7777-7777-7777-000000000003', '88888888-8888-8888-8888-000000000001', '22222222-2222-2222-2222-000000000001',
+   '33333333-3333-3333-3333-000000000001', '55555555-5555-5555-5555-000000000001',
+   '2026-05-26 09:30:00+02', '2026-05-26 10:00:00+02', 'in_person', 'confirmed',
    'Asthma review; needs new prescription.', NULL,
-   '2026-05-22 09:20:00+02', NULL,
-   'mobile_app', NULL, '2026-05-15 11:00:00+02', '2026-05-22 09:30:00+02'),
+   NULL, NULL,
+   'mobile_app', NULL, '2026-05-15 11:00:00+02', '2026-05-21 09:00:00+02'),
 
   -- CHECKED_IN — today, Lukas Bergman with Dr. Bergström (Peds vaccination)
   ('99999999-9999-9999-9999-000000000005', 'APT-2026-0005',
