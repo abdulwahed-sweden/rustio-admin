@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.17.1** | 2026-05-23 | Patch: `rio-theme`'s `soft_bg` derivation was a flat 92% white mix, which produced an amber `--rio-warning-bg` that left the warning foreground at 2.94 contrast — below AA-large 3.0. Verification against the live framework's WCAG pairings surfaced the regression; engine output is now at full parity. Replaced with a contrast-aware loop that walks lighter in 1% increments until the foreground clears `AA_NON_TEXT` (3.0) against the resulting background. New property test runs 7 brand inputs × 3 semantic colors and asserts the WCAG guarantee. |
 | **0.17.0** | 2026-05-23 | **Theme engine release.** New build-time crate `rio-theme` turns raw client brand colors into a safe, computed `tokens.css` via a six-case decision pipeline (contrast guard, palette derivation, vivid taming, brand/state collision avoidance, light/dark mode adaptation, multi-color role assignment). Internal math runs in OKLCH; every emitted token is contrast-measured against the page bg before it leaves the engine. New CLI verb `rustio theme generate --brand <hex> --out <path>` (repeatable `--brand`, zero is valid → safe default) prints a per-case effect report including all seven measured contrast ratios. Output carries both the canonical `--rio-brand-*` vocabulary the engine reasons in and drop-in aliases for the live admin template's `--rio-*` tokens, so the generated file can replace `tokens/colors.css` without changes to consumers. Vivid inputs are guarded — neon brands that would fail `AA_NON_TEXT` against the bg are substituted by the tamed surface and the substitution is logged. Achromatic brands short-circuit the semantic-collision resolver (no spurious rotation off the meaningless stored hue). |
 | **0.16.0** | 2026-05-21 | **Operations & i18n release.** Major new operator surfaces: `/admin/docs` (rendered framework markdown), `/admin/health` (web counterpart to `rustio doctor`), `/admin/feature_flags` (with `feature_enabled` helper), `/admin/notifications` (with topbar bell + unread badge), `/admin/apis` (OpenAPI 3.0 + TypeScript SDK + interactive playground). Dashboard gains framework-wide + per-model 7-day creation sparklines and "new this week" KPI. Audit history gains per-field diff render, per-actor filter, and date grouping. CSV import (`POST /admin/<model>/import.csv`) pairs with the existing export. JSON content negotiation now covers write paths (success + validation envelopes). Postgres FTS opt-in via `ModelAdmin::search_index_column`. Per-action bulk permission gate; per-model read-only via `Admin::read_only_model`. New CLI verbs: `rustio reload`, `rustio test-init`, `rustio startproject --preset blog`. New `middleware::locale` parses `Accept-Language` → `Locale` request-context value (foundation for the future message catalog). Dark theme retired — framework is now light-only. |
 | **0.15.1** | 2026-05-16 | **Refined colour palette — dark-frame chrome.** Page canvas moved from blue-tinted slate to neutral cool grey (`#E5E7EB`); chrome (topbar / sidebar / footer) jumped to deep slate-blue (`#1F2A37`) so the operator skeleton reads as a confident dark frame around the lighter content area — the Linear / Vercel / Notion / Stripe-Dashboard pattern. Dark mode chrome deepened to near-black (`#0A0E14`) so both modes share the "chrome is darker than canvas" convention. A new chrome-scope CSS cascade in `layout/shell.css` flips `--rio-text-*`, `--rio-surface-2/3`, `--rio-border-*`, and `--rio-accent` (to the lifted `#3FAA9D` variant for contrast) within `.rio-topbar` / `.rio-sidebar` / `.rio-footer` — every component inherits light-on-dark automatically, no per-component edits. Theme-toggle button redesigned as a ghost on chrome. Principle 10 reframed to allow either chrome direction. |
@@ -40,7 +41,34 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.17.0]** block below._
+_No unreleased changes yet — see the **[0.17.1]** block below._
+
+
+## [0.17.1] — 2026-05-23
+
+### Fixed
+
+- **`rio-theme::emit::soft_bg` was contrast-blind.** The flat 92%
+  white mix used to derive `--rio-success-bg` / `--rio-warning-bg`
+  / `--rio-danger-bg` from their respective foregrounds left
+  amber warning at 2.94 contrast — below `AA_NON_TEXT` (3.0).
+  Verification against the live framework's WCAG pairings
+  surfaced the regression. Replaced with a contrast-aware loop
+  that walks lighter in 1% increments (bounded at 99%) until the
+  foreground clears 3.0 against the resulting background.
+- Engine output is now at full WCAG parity with the live
+  `colors.css` on every realistic text-on-surface pairing the
+  admin templates use (text/strong/muted/subtle on surface/bg;
+  brand affordances on bg; chrome text on slate-900; semantic
+  foregrounds on derived backgrounds).
+
+### Added
+
+- New property test `soft_bg_always_clears_aa_non_text_against_its_foreground`:
+  resolves 7 brand inputs (default, calm teal, neon lime, dark
+  navy, terracotta, grey, red) and asserts every semantic
+  foreground clears AA against its derived background. Guards
+  against regressing the fix.
 
 
 ## [0.17.0] — 2026-05-23

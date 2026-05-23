@@ -151,12 +151,26 @@ fn rgb_triple(color: &Color) -> String {
     format!("{r} {g} {b}")
 }
 
-/// Soft pill background derived from a semantic foreground. Mixes the
-/// foreground 92% into white so the background sits in the same hue
-/// family as the foreground — what the live `*-bg` tokens visually do.
+/// Soft pill background derived from a semantic foreground.
+///
+/// Starts at 92% white (visually a soft tint in the foreground's hue
+/// family) and walks lighter in 1% increments until the foreground
+/// clears `AA_NON_TEXT` (3.0) against the resulting background.
+/// Bounded at 99% so we never collapse to pure white. The
+/// hand-tuned tailwind `-50` colors (`#ECFDF5`, `#FFFBEB`,
+/// `#FEF2F2`) pass at slightly lighter mixes than a flat 92% would
+/// produce — without the loop, amber warning-on-bg lands at 2.94,
+/// below the 3.0 threshold for pill text.
 fn soft_bg(fg: &Color) -> Color {
     let white = Color::from_hex("#ffffff").expect("constant");
-    fg.mix(&white, 0.92)
+    let mut amount = 0.92_f64;
+    loop {
+        let bg = fg.mix(&white, amount);
+        if amount >= 0.99 || crate::contrast::contrast_ratio(fg, &bg) >= crate::contrast::AA_NON_TEXT {
+            return bg;
+        }
+        amount += 0.01;
+    }
 }
 
 #[cfg(test)]
@@ -243,6 +257,38 @@ mod tests {
     fn dark_block_is_always_emitted() {
         let css = emit(&resolve_theme(ThemeInput::empty()));
         assert!(css.contains(":root[data-theme=\"dark\"]"));
+    }
+
+    #[test]
+    fn soft_bg_always_clears_aa_non_text_against_its_foreground() {
+        // Property test for the contrast-aware `soft_bg` loop.
+        // Regression for the bug verification surfaced: a flat 92%
+        // white mix left amber warning at 2.94 (below AA-large 3.0)
+        // against its derived background. Every semantic bg must
+        // now clear 3.0 against its fg.
+        use crate::color::Color;
+        use crate::contrast::{contrast_ratio, AA_NON_TEXT};
+        for brand_hex in [
+            "#3f6089", "#0d9488", "#39ff14", "#0a1a2e", "#c9572e", "#888888", "#dc2626",
+        ] {
+            let tokens = resolve_theme(ThemeInput {
+                brand_colors: vec![Color::from_hex(brand_hex).unwrap()],
+            });
+            for (name, fg) in [
+                ("success", tokens.success),
+                ("warning", tokens.warning),
+                ("danger", tokens.danger),
+            ] {
+                let bg = super::soft_bg(&fg);
+                let r = contrast_ratio(&fg, &bg);
+                assert!(
+                    r >= AA_NON_TEXT - 0.01,
+                    "brand {brand_hex}: {name} {} on derived bg {} only {r:.2}",
+                    fg.to_hex(),
+                    bg.to_hex(),
+                );
+            }
+        }
     }
 
     #[test]
