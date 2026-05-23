@@ -332,6 +332,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/_theme.html"),
     ),
     (
+        "admin/_row_actions.html",
+        include_str!("../assets/templates/admin/_row_actions.html"),
+    ),
+    (
         "admin/includes/_form_field.html",
         include_str!("../assets/templates/admin/includes/_form_field.html"),
     ),

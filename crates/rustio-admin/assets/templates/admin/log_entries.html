@@ -2,58 +2,82 @@
 {% block content %}
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
-  <h1>{{ page_title }}</h1>
+  <div class="rio-page-actions">
+    <h1>{{ page_title }}</h1>
+  </div>
+  <p class="rio-page-header__lead">Full history of every authority mutation. Filter by user via the link in any row's "By" column.</p>
 </header>
 
 {% if user_filter_label %}
 <section class="rio-active-filters" aria-label="Active history filters">
-  <span class="rio-filter-pill">
-    Showing actions by <strong>{{ user_filter_label }}</strong>
-    <a href="/admin/history" class="rio-filter-pill__clear" aria-label="Clear user filter">×</a>
+  <span class="rio-active-filters-label">Filtered</span>
+  <span class="rio-active-pill">
+    <span class="rio-active-pill-key">By:</span>
+    {{ user_filter_label }}
+    <a href="/admin/history" class="rio-active-pill-x" aria-label="Clear user filter">×</a>
   </span>
 </section>
 {% endif %}
 
-<section class="rio-card">
-  {% if history_entries %}
-  <table class="rio-table rio-table--striped">
-    <thead><tr><th>When</th><th>Action</th><th>Model</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
-    <tbody>
-      {% for e in history_entries %}
-      {% if e.is_new_day %}
-      <tr class="rio-history-date-divider"><th colspan="6" scope="rowgroup">{{ e.date_iso }}</th></tr>
-      {% endif %}
-      <tr>
-        <td title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
-        <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
-        <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
-        <td><a href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}">{{ e.user_email }}</a></td>
-        <td>
-          {{ e.summary }}
-          {% if e.changes %}
-          <dl class="rio-history-diff" aria-label="Changed fields">
-            {% for c in e.changes %}
-            <div class="rio-history-diff__row" data-field="{{ c.field }}">
-              <dt class="rio-history-diff__label">{{ c.label }}</dt>
-              <dd class="rio-history-diff__value rio-history-diff__value--from">
-                {% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
-              </dd>
-              <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
-              <dd class="rio-history-diff__value rio-history-diff__value--to">
-                {% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
-              </dd>
-            </div>
-            {% endfor %}
-          </dl>
-          {% endif %}
-        </td>
-        <td>{{ e.ip_address }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="rio-empty">No actions recorded yet.</p>
-  {% endif %}
+<section class="rio-section" aria-label="Audit history">
+  <header class="rio-section__header">
+    <div class="rio-section__heading">
+      <span class="rio-section__label">Audit log</span>
+      <h2 class="rio-section__title">{{ history_entries|length }} entr{% if history_entries|length == 1 %}y{% else %}ies{% endif %}</h2>
+    </div>
+  </header>
+  <div class="rio-card rio-card--quiet rio-list">
+    {% if history_entries %}
+    <table class="rio-table rio-table--striped">
+      <thead><tr><th>When</th><th>Action</th><th>Model</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
+      <tbody>
+        {% for e in history_entries %}
+        {% if e.is_new_day %}
+        <tr class="rio-history-date-divider"><th colspan="6" scope="rowgroup">{{ e.date_iso }}</th></tr>
+        {% endif %}
+        <tr>
+          <td title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
+          <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
+          <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
+          <td><a href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}">{{ e.user_email }}</a></td>
+          <td>
+            {{ e.summary }}
+            {% if e.changes %}
+            <dl class="rio-history-diff" aria-label="Changed fields">
+              {% for c in e.changes %}
+              <div class="rio-history-diff__row" data-field="{{ c.field }}">
+                <dt class="rio-history-diff__label">{{ c.label }}</dt>
+                <dd class="rio-history-diff__value rio-history-diff__value--from">
+                  {% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
+                </dd>
+                <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
+                <dd class="rio-history-diff__value rio-history-diff__value--to">
+                  {% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
+                </dd>
+              </div>
+              {% endfor %}
+            </dl>
+            {% endif %}
+          </td>
+          <td>{{ e.ip_address }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="rio-empty-state">
+      <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
+      <h3 class="rio-empty-state__title">No actions recorded</h3>
+      <p class="rio-empty-state__lead">
+        {% if user_filter_label %}
+        No history entries for <strong>{{ user_filter_label }}</strong>. <a href="/admin/history">Clear filter</a> to see every actor.
+        {% else %}
+        Once operators start creating, editing, or deleting rows,
+        the audit feed lights up here.
+        {% endif %}
+      </p>
+    </div>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

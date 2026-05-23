@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.18.6** | 2026-05-23 | **Professional polish pass on top of 0.18.5.** Six refinements after side-by-side screenshot review: (1) topbar search trigger goes wide — `flex:1` so search visually dominates the chrome instead of sitting as a small pill (Linear / Stripe / Vercel pattern). (2) List toolbar reflows to a 2-row pattern — Row 1 = full-width search; Row 2 = secondary controls (Filters / Saved / View) — addresses the "search bar is crowded" feedback at a deeper structural level than 0.18.5. (3) Per-row table actions collapse into a kebab `⋯` dropdown — Linear / Notion / Stripe / GitHub pattern; new `more-horizontal` icon plus `--rio-row-actions` toggle CSS, plus a `.rio-dropdown-item--danger` variant for the Delete row. (4) Dashboard greeting tightens from a 3-line Slack-style hello (emoji + filler "Manage X from one console") to a single page title + app name. (5) Recent-activity sparkline replaced — bars give way to a smooth area chart with gradient fill, polyline data line, baseline rule, and a circle dot at each measurement (Vercel / Grafana / Stripe analytics pattern). (6) DEVELOPMENT badge color confirmed amber (was already correct in the CSS — false-alarm). All features preserved; no library API change. |
 | **0.18.5** | 2026-05-23 | **Topbar + list-toolbar redesign + sparkline fix + Post seed.** The topbar's pre-0.18.5 inline strip (Signed-in · 🔔 · Enable MFA · Sessions · Change password · Log out) folded into a single account dropdown anchored on a one-letter avatar + the user email — bell stays on the chrome. List-page toolbar collapsed from 8 controls (Search input · Search btn · Filters · Sort · Per-page · Saved · CSV · Import CSV) to 4 (Search · Filters · Saved · View), with Sort / Per-page / CSV-export / CSV-import folded into a new "View" overflow menu — no features lost. Dashboard sparkline gains a baseline rail per day so empty days anchor the chart; nonzero bars get a 4-px minimum so small counts don't disappear next to large ones. Scaffold template's `Post` migration ships 5 demo rows spread across the last week so a freshly-bootstrapped admin isn't a blank slate. Three new inline-SVG icons (`sliders`, `upload`, plus reused `download`). New utility class `.rio-visually-hidden`. |
 | **0.18.4** | 2026-05-23 | **First publish since v0.13.0.** `admin::docs` was reaching `include_str!("../../../../docs/<file>.md")` outside the crate root — fine in-tree, but `cargo publish` builds from a tarball that contains only the crate's own files, so the verification failed. Latent since v0.16.0 (no version since v0.13.0 was published). Fix copies `architecture.md` / `modeladmin.md` / `public-api.md` into `crates/rustio-admin/assets/docs/` and updates the three `include_str!` paths. Workspace docs remain at `docs/` as the canonical source; the in-crate copies are bundled at release time. All four workspace crates (`rustio-admin`, `rustio-admin-macros`, `rustio-admin-cli`, plus the new `rio-theme` — first claim of the name) published to crates.io at 0.18.4 in dependency order. |
 | **0.18.3** | 2026-05-23 | Patch: ships green CI. v0.18.2's release commit pushed through but the tagged tree itself had two pre-existing failures — pre-existing rustfmt drift in `crates/rio-theme/` (never run through `cargo fmt` since the crate landed in 0.17.0) and a `clippy::uninlined-format-args` violation in `color.rs` that CI's pinned `rustc 1.88` rejects but newer local toolchains let through (same lint class as `bcdf9b6`). Both fixed (`e5e4900`, `dbe4951`); CI now runs all 15 steps green including the new scaffold-template-pin guard verified end-to-end against simulated drift on PR #2. |
@@ -47,7 +48,87 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.18.5]** block below._
+_No unreleased changes yet — see the **[0.18.6]** block below._
+
+
+## [0.18.6] — 2026-05-23
+
+A second redesign pass on top of 0.18.5 after a side-by-side
+screenshot review against Linear / Stripe Dashboard / Vercel /
+Notion. 0.18.5's account-dropdown + view-overflow + sparkline-rail
+shipped the right structural moves; 0.18.6 takes them further to
+match the discipline a daily-driven admin tool needs.
+
+### Changed
+
+- **Topbar search trigger goes wide.** Was a 300-px pill squeezed
+  between brand and bell; now `flex: 1` with a 640-px cap so it
+  fills the topbar's slack and reads as the primary chrome
+  action. Brand left, search center (flex-grow), bell + account
+  dropdown right — the canonical Linear / Stripe / Vercel layout.
+- **List toolbar reflows to a 2-row stack.** Pre-0.18.6 layout put
+  search + 3 dropdowns in one row (4 controls competing for
+  attention). New layout: Row 1 = full-width search bar
+  (`.rio-toolbar` is now `flex-direction: column`); Row 2 = a
+  new `.rio-toolbar__controls` flex row holding Filters / Saved /
+  View. Search is unambiguously the primary affordance; the
+  rest visually subordinate without losing any feature.
+- **Per-row table actions collapse to a kebab dropdown.** Each
+  row's `Actions` column used to render Edit + Delete buttons
+  inline (~140-px column at default zoom). Now a single `⋯`
+  toggle (`.rio-row-actions`) opens a small dropdown menu with
+  Edit + Delete. The column shrinks to ~32 px so row data
+  dominates. Delete is marked `.rio-dropdown-item--danger` —
+  a new variant that stays muted at rest and picks up
+  `--rio-danger` color + `--rio-danger-bg` tint on hover.
+- **Dashboard greeting trimmed.** Pre-0.18.6 emitted three
+  lines: "Hello, Admin 👋" + "Site administration" + "Manage X
+  from one console.". Enterprise admin chrome is read every day —
+  emoji + filler copy wore thin fast. Now: the page title +
+  the project name as a subtitle. The "who am I?" answer lives
+  in the chrome's account dropdown; the dashboard owns the data.
+- **Recent-activity sparkline replaced with an area chart.**
+  0.18.5 fixed the bar chart's empty-day rendering, but bars on
+  a 7-day axis are inherently low-fidelity for low-density data.
+  New: smooth polyline + gradient-filled area underneath +
+  a circle dot at each measurement + a horizontal baseline rule.
+  Matches Vercel deploys / Grafana time-series / Stripe analytics
+  charts. SVG uses `vector-effect: non-scaling-stroke` so the
+  line stays a crisp 2-px regardless of the horizontal stretch.
+
+### Added
+
+- **Two new inline-SVG icons** in
+  `crates/rustio-admin/src/admin/icons.rs`:
+  - `more-horizontal` — kebab glyph for per-row dropdown
+    triggers (three dots in a horizontal line).
+  - (`sliders` and `upload` already added in 0.18.5.)
+- **`.rio-dropdown-item--danger` menu-row variant** in
+  `assets/static/admin/components/dropdowns.css`. Muted at
+  rest; picks up `--rio-danger` + `--rio-danger-bg` on hover.
+  Used by the per-row kebab's Delete entry.
+- **`.rio-toolbar__controls` wrapper class** for the new
+  two-row toolbar's secondary-control row.
+
+### Removed (CSS only — visual rule retired)
+
+- `.rio-dashboard-greeting__hello` and its `strong` selector
+  in `assets/static/admin/pages/dashboard.css`. The emoji
+  greeting element is gone; the rules had no remaining users.
+- `.rio-sparkline__bar` and `.rio-sparkline__track` are kept
+  in the cascade unchanged (any third-party template that
+  still emits them keeps working) — the framework's index.html
+  no longer renders either element.
+
+### Notes
+
+- All preserved features: search query roundtrip, hidden-input
+  filter state, CSRF on POST forms, per-model permissions,
+  Saved-filters per-operator bookmarks, CSV import/export,
+  bulk actions, MFA / Sessions / password-change routing.
+- No public API change.
+- Same `colors.css` engine-generated palette as 0.18.4 — the
+  redesign is pure layout + component refinement.
 
 
 ## [0.18.5] — 2026-05-23

@@ -1,0 +1,31 @@
+{# Shared row-actions kebab. Imported as a macro so every list
+ # page renders the same Edit/Delete menu without copy-pasting
+ # the dropdown markup three places (list.html, users_list.html,
+ # groups_list.html).
+ #
+ # Usage:
+ #   {% from "admin/_row_actions.html" import row_actions %}
+ #   {{ row_actions("users", u.id) }}
+ #
+ # Parameters:
+ #   admin_name — URL segment (e.g. "users", "groups", model slug)
+ #   row_id     — primary key of the row
+ #   edit_path  — defaults to "edit"; pass a custom value for
+ #                models that don't use the standard /<id>/edit route
+ #   delete_path — defaults to "delete"; same pattern
+ # #}
+{% macro row_actions(admin_name, row_id, edit_path="edit", delete_path="delete") -%}
+<div class="rio-dropdown rio-row-actions" data-rio-dropdown>
+  <button type="button" class="rio-row-actions__toggle"
+          aria-haspopup="true" aria-expanded="false"
+          aria-label="Actions for row {{ row_id }}">
+    {{ icon("more-horizontal", class="rio-icon") }}
+  </button>
+  <div class="rio-dropdown-panel rio-row-actions__panel" role="dialog" aria-label="Row actions">
+    <div class="rio-dropdown-menu">
+      <a class="rio-dropdown-item" href="/admin/{{ admin_name }}/{{ row_id }}/{{ edit_path }}">{{ icon("pencil", class="rio-icon") }} Edit</a>
+      <a class="rio-dropdown-item rio-dropdown-item--danger" href="/admin/{{ admin_name }}/{{ row_id }}/{{ delete_path }}">{{ icon("trash", class="rio-icon") }} Delete</a>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

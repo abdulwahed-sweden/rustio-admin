@@ -2158,7 +2158,7 @@ dependencies = [
 
 [[package]]
 name = "rio-theme"
-version = "0.18.5"
+version = "0.18.6"
 dependencies = [
  "log",
 ]
@@ -2252,7 +2252,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin"
-version = "0.18.5"
+version = "0.18.6"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-cli"
-version = "0.18.5"
+version = "0.18.6"
 dependencies = [
  "chrono",
  "clap",
@@ -2310,7 +2310,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-macros"
-version = "0.18.5"
+version = "0.18.6"
 dependencies = [
  "proc-macro2",
  "quote",

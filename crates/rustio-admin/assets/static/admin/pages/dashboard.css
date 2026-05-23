@@ -23,60 +23,28 @@
  * cycle adds visual variety without departing from the palette.
  * ============================================================ */
 
-/* ---- Greeting header ------------------------------------------ */
+/* v0.19 — `.rio-dashboard-greeting` and its descendant selectors
+ * (`__text`, `__title`, `__deck`, `__badges`, `__env*`, `__ver`)
+ * are retired. The dashboard now uses the unified
+ * `.rio-page-header` primitive (cards.css). Status chips were
+ * extracted into `.rio-env-chip` below so other pages can drop
+ * them next to their page titles too. */
 
-.rio-dashboard-greeting {
-  display: flex;
-  align-items: center;
-  gap: var(--rio-s5);
-  padding: var(--rio-s5) 0 var(--rio-s4);
-  border-bottom: 1px solid var(--rio-border-soft);
-  margin-bottom: var(--rio-s5);
-  flex-wrap: wrap;
-}
-.rio-dashboard-greeting__text { flex: 1; min-width: 0; }
-.rio-dashboard-greeting__hello {
-  margin: 0 0 var(--rio-s1);
-  font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-medium);
-  color: var(--rio-text-muted);
-}
-.rio-dashboard-greeting__hello strong {
-  color: var(--rio-text-strong);
-  font-weight: var(--rio-fw-semibold);
-}
-.rio-dashboard-greeting__title {
-  margin: 0 0 var(--rio-s2);
-  font-size: 1.6rem;
-  font-weight: var(--rio-fw-bold);
-  letter-spacing: var(--rio-tracking-display);
-  color: var(--rio-text-strong);
-  line-height: 1.2;
-}
-.rio-dashboard-greeting__deck {
-  margin: 0;
-  font-size: var(--rio-fs-md);
-  color: var(--rio-text-muted);
-}
-.rio-dashboard-greeting__deck strong {
-  color: var(--rio-text);
-  font-weight: var(--rio-fw-semibold);
-}
-
-/* Small inline badges on the right of the greeting header.
- * Environment tag inherits the same colour family as the footer
- * env dot; the `v0.15.1` chip is a quiet meta. */
-.rio-dashboard-greeting__badges {
+/* Env / version chip — small, quiet metadata next to a page
+ * title. Used by the dashboard's header and (in later turns) any
+ * page that wants to surface the environment or framework
+ * version inline. */
+.rio-page-header__chips {
   display: inline-flex;
   align-items: center;
   gap: var(--rio-s2);
   flex-shrink: 0;
 }
-.rio-dashboard-greeting__env {
+.rio-env-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
+  padding: 3px 10px;
   font-size: var(--rio-fs-xs);
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
@@ -84,63 +52,84 @@
   border-radius: 999px;
   background: var(--rio-surface-2);
   color: var(--rio-text-muted);
+  border: 1px solid var(--rio-border-soft);
 }
-.rio-dashboard-greeting__env::before {
+.rio-env-chip::before {
   content: "";
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
 }
-.rio-dashboard-greeting__env--prod {
+.rio-env-chip--prod {
   background: var(--rio-success-bg);
   color: var(--rio-success);
+  border-color: transparent;
 }
-.rio-dashboard-greeting__env--dev {
+.rio-env-chip--dev {
   background: var(--rio-warning-bg);
   color: var(--rio-warning);
+  border-color: transparent;
 }
-.rio-dashboard-greeting__ver {
+.rio-env-chip--ver {
   font-family: var(--rio-font-mono);
-  font-size: var(--rio-fs-xs);
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--rio-text-subtle);
 }
+.rio-env-chip--ver::before { display: none; }
 
 /* ---- Stats strip ---------------------------------------------- */
 
+/* v0.19 — Unified stat tile. Pre-0.19 cycled four pastel
+ * background fills (`--rio-info-bg` / `--rio-success-bg` /
+ * `--rio-warning-bg` / `--rio-accent`-tint) for visual variety,
+ * but the result read as "festive" rather than "professional".
+ * The new tile is one consistent white surface with a 3-px
+ * top accent bar — Stripe Dashboard / Linear / Vercel
+ * convention. Color is reserved for SEMANTIC meaning
+ * (success/warning) rather than per-tile decoration.
+ *
+ * Variants (`.rio-stat--info` etc.) are preserved as kept
+ * selectors so existing markup keeps working; they only flip
+ * the top accent bar's color now, not the whole tile fill.
+ */
 .rio-dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--rio-s3);
-  margin-bottom: var(--rio-s6);
+  margin-bottom: var(--rio-s5);
 }
 .rio-stat {
-  padding: var(--rio-s4) var(--rio-s5);
+  position: relative;
+  padding: var(--rio-s5);
   border-radius: var(--rio-radius);
   border: 1px solid var(--rio-border-soft);
   background: var(--rio-surface);
-  position: relative;
+  box-shadow: var(--rio-shadow-xs);
   overflow: hidden;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
 .rio-stat::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
+  inset-inline-end: 0;
   top: 0;
-  bottom: 0;
-  width: 4px;
+  height: 3px;
+  background: var(--rio-border);
+  /* Default rail: a quiet neutral line so all tiles share the same
+   * top edge silhouette. Variants below repaint it with semantic
+   * colors — used as accent dots, not whole-tile floods. */
 }
-.rio-stat--info    { background: var(--rio-info-bg); }
-.rio-stat--success { background: var(--rio-success-bg); }
-.rio-stat--warning { background: var(--rio-warning-bg); }
-.rio-stat--accent  { background: rgb(var(--rio-accent-rgb) / 0.08); }
 .rio-stat--info::before    { background: var(--rio-accent); }
 .rio-stat--success::before { background: var(--rio-success); }
 .rio-stat--warning::before { background: var(--rio-warning); }
 .rio-stat--accent::before  { background: var(--rio-accent); }
+.rio-stat--danger::before  { background: var(--rio-danger); }
 
 .rio-stat__label {
-  margin: 0 0 var(--rio-s2);
+  margin: 0 0 var(--rio-s3);
   font-size: var(--rio-fs-xs);
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
@@ -148,56 +137,44 @@
   color: var(--rio-text-muted);
 }
 .rio-stat__value {
-  margin: 0 0 var(--rio-s1);
-  font-size: 2rem;
+  margin: 0 0 var(--rio-s2);
+  /* v0.19 — 2.25rem (~36 px) up from 2rem so the number reads
+   * as the primary data point of the tile. */
+  font-size: 2.25rem;
   font-weight: var(--rio-fw-bold);
-  line-height: 1.1;
+  line-height: 1.05;
   color: var(--rio-text-strong);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
 }
 .rio-stat__value--text {
-  font-size: 1.15rem;
+  font-size: 1.125rem;
   letter-spacing: var(--rio-tracking-heading);
+  font-weight: var(--rio-fw-semibold);
 }
 .rio-stat__meta {
   margin: 0;
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-subtle);
 }
 
-/* ---- Section header pattern (shared) -------------------------- */
-
-.rio-dashboard-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--rio-s4);
-  margin-bottom: var(--rio-s3);
-  padding-bottom: var(--rio-s2);
-  border-bottom: 1px solid var(--rio-border-soft);
-}
-.rio-dashboard-section-label {
-  margin: 0;
-  font-size: var(--rio-fs-lg);
-  font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-strong);
-  letter-spacing: var(--rio-tracking-heading);
-}
-.rio-dashboard-section-count {
-  font-size: var(--rio-fs-sm);
-  color: var(--rio-text-muted);
-}
-.rio-dashboard-section-link {
+/* v0.19 — `.rio-dashboard-section-{head,label,count,link}`
+ * selectors are retired. The dashboard's section headers now use
+ * the shared `.rio-section` primitive in cards.css. Section-level
+ * link (e.g. "View full history →") moves to the new
+ * `.rio-section__link` selector below. */
+.rio-section__link {
   font-size: var(--rio-fs-sm);
   color: var(--rio-accent);
   text-decoration: none;
   font-weight: var(--rio-fw-medium);
+  white-space: nowrap;
 }
-.rio-dashboard-section-link:hover { text-decoration: underline; }
+.rio-section__link:hover { text-decoration: underline; }
 
 /* ---- Model tile grid ------------------------------------------ */
-
-.rio-dashboard-models { margin-bottom: var(--rio-s6); }
+/* v0.19 — `.rio-dashboard-models` wrapper retired; the dashboard
+ * now wraps the grid in the shared `.rio-section`. */
 .rio-model-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -371,18 +348,48 @@
   height: 64px;
   overflow: visible;
 }
-.rio-sparkline__bar {
-  fill: var(--rio-accent);
-  opacity: 0.85;
+/* v0.18.6 — bar chart replaced by an area chart. .rio-sparkline__bar
+ * and .rio-sparkline__track from 0.18.5 are intentionally left in
+ * the cascade unchanged so any third-party templates that still
+ * render them keep working; the framework's index.html no longer
+ * emits either element. */
+.rio-sparkline__bar { fill: var(--rio-accent); opacity: 0.85; }
+.rio-sparkline__track { fill: var(--rio-border); opacity: 0.55; }
+
+/* Area-chart elements — baseline rule + gradient-filled polygon
+ * under the data line, the line itself, and a dot at every
+ * measurement. Matches the analytics-tool convention (Vercel /
+ * Linear / Stripe Dashboard / Grafana). */
+.rio-sparkline__baseline {
+  stroke: var(--rio-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
-/* Baseline rail — one 2-px track per day so empty days still
- * anchor the chart visually. Without the rail a single tall
- * bar in a freshly-seeded admin (one active day surrounded by
- * zeros) reads as a layout glitch rather than "only one day
- * had activity". */
-.rio-sparkline__track {
-  fill: var(--rio-border);
-  opacity: 0.55;
+.rio-sparkline__area {
+  fill: url(#rio-sparkline-grad);
+  /* `preserveAspectRatio="none"` on the parent <svg> stretches
+   * the polygon horizontally; that's intended (it's a sparkline
+   * sized by its container) but it means the *vertical* gradient
+   * still resolves correctly. */
+}
+.rio-sparkline__grad-stop-top { stop-color: var(--rio-accent); stop-opacity: 0.28; }
+.rio-sparkline__grad-stop-bot { stop-color: var(--rio-accent); stop-opacity: 0; }
+.rio-sparkline__line {
+  fill: none;
+  stroke: var(--rio-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Keep the stroke 2-px on screen regardless of the horizontal
+   * stretch — without this, the line would visually thin out as
+   * the chart widens beyond the 280-unit viewBox. */
+  vector-effect: non-scaling-stroke;
+}
+.rio-sparkline__dot {
+  fill: var(--rio-surface);
+  stroke: var(--rio-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 .rio-sparkline__tick {
   fill: var(--rio-text-muted);

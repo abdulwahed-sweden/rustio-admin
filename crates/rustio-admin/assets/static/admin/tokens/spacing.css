@@ -25,4 +25,18 @@
    * 1440px lets a 4-column dashboard sit comfortably with 32px page
    * padding either side. */
   --rio-content-max: 1440px;
+
+  /* v0.18.6 — z-index scale. One ordered ladder for every
+   * positioned surface in the admin so chrome stays predictable
+   * across pages. Pre-token state: topbar 10, sidebar 20
+   * (unscoped inherit at desktop), dropdown 40, palette 100 —
+   * sidebar > topbar was the root cause of the "sidebar
+   * overlaps topbar on scroll" bug (responsive.css's desktop
+   * media query omitted z-index, so the mobile rule's 20
+   * leaked through). The ladder below puts the topbar firmly
+   * above the sidebar at every breakpoint. */
+  --rio-z-sidebar:   100;
+  --rio-z-topbar:    200;
+  --rio-z-dropdown:  300;
+  --rio-z-modal:     400;
 }

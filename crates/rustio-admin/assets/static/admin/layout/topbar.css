@@ -24,7 +24,10 @@
   border-bottom: 1px solid var(--rio-border-soft);
   position: sticky;
   top: 0;
-  z-index: 10;
+  /* v0.18.6 — use the new z-index ladder so the topbar always
+   * sits above the sidebar. Pre-0.18.6: hard-coded 10 against
+   * the sidebar's leaked 20 → sidebar covered the topbar. */
+  z-index: var(--rio-z-topbar);
 }
 .rio-topbar-brand {
   font-weight: var(--rio-fw-bold);

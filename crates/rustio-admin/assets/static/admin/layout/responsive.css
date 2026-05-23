@@ -38,7 +38,12 @@
   top: var(--rio-topbar-h);
   inset-inline-start: 0;
   bottom: 0;
-  z-index: 20;
+  /* v0.18.6 — explicit z-index from the new ladder. Mobile
+   * drawer sits below the topbar (still visible above it for
+   * dismissal). Pre-0.18.6: hard-coded 20 here leaked into
+   * the desktop media query below (which omitted z-index) and
+   * caused the sidebar to paint over the topbar on scroll. */
+  z-index: var(--rio-z-sidebar);
   width: 80vw;
   max-width: 320px;
   border-inline-end: 1px solid var(--rio-border);
@@ -65,6 +70,13 @@
     width: auto;
     max-width: none;
     box-shadow: none;
+    /* v0.18.6 — re-declare z-index here so the desktop sticky
+     * sidebar uses the new ladder. Without this, the mobile
+     * rule's z-index leaks into desktop unchanged, and a
+     * sub-pixel paint can land the sidebar over the topbar
+     * at scroll. Topbar (--rio-z-topbar = 200) >
+     * sidebar (--rio-z-sidebar = 100). */
+    z-index: var(--rio-z-sidebar);
   }
   .rio-sidebar-toggle { display: none; }
   .rio-checkbox-list { grid-template-columns: 1fr 1fr; }

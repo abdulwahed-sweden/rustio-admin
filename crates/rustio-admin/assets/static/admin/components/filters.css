@@ -124,18 +124,26 @@
  * dropdown toggles. Search bar flexes; dropdowns sit fixed-width
  * on the trailing edge. */
 
+/* v0.18.6 — toolbar is a 2-row stack now: search dominates
+ * Row 1 at full width; secondary controls (Filters / Saved /
+ * View) live in Row 2. Pre-0.18.6 single-row layout put
+ * search + 3 dropdowns + 2 standalone buttons into one
+ * flex row, which read as "wall of controls" and was the
+ * basis of the "search bar is crowded" feedback. */
 .rio-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-s3);
+  margin-bottom: var(--rio-s4);
+}
+.rio-toolbar .rio-search-bar {
+  margin-bottom: 0;
+}
+.rio-toolbar__controls {
   display: flex;
   align-items: center;
   gap: var(--rio-s2);
-  margin-bottom: var(--rio-s4);
   flex-wrap: wrap;
-}
-
-.rio-toolbar .rio-search-bar {
-  flex: 1;
-  min-width: 280px;
-  margin-bottom: 0;
 }
 
 /* ----- Active filters strip ---------------------------------------

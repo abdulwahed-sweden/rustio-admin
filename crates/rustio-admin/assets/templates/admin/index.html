@@ -1,26 +1,28 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 
-{# ---- Welcome header --------------------------------------------
- # Friendly greeting + page title in one row. The greeting reads
- # the identity email's local part (capitalised) so a long
- # address doesn't dominate the header. The deck below pairs the
- # framework's product name with the project app_name. #}
-<header class="rio-dashboard-greeting">
-  <div class="rio-dashboard-greeting__text">
-    <p class="rio-dashboard-greeting__hello">Hello, <strong>{{ greeting_name }}</strong> 👋</p>
-    <h1 class="rio-dashboard-greeting__title">{{ index_title }}</h1>
-    <p class="rio-dashboard-greeting__deck">Manage <strong>{{ app_name }}</strong> from one console.</p>
-  </div>
-  <div class="rio-dashboard-greeting__badges">
-    <span class="rio-dashboard-greeting__env rio-dashboard-greeting__env--{{ environment_kind }}">{{ environment_label }}</span>
-    <span class="rio-dashboard-greeting__ver">v{{ framework_version }}</span>
+{# v0.19 — page header now uses the unified `.rio-page-header`
+ # primitive (cards.css) shared by every list / detail / settings
+ # page. Pre-0.19 the dashboard had a bespoke `.rio-dashboard-
+ # greeting` element with its own padding ladder; cross-page
+ # inconsistency was a real source of "feels random" feedback. #}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">{{ app_name }}</nav>
+  <div class="rio-page-actions">
+    <h1>{{ index_title }}</h1>
+    <div class="rio-page-header__chips">
+      <span class="rio-env-chip rio-env-chip--{{ environment_kind }}" title="Runtime environment">{{ environment_label }}</span>
+      <span class="rio-env-chip rio-env-chip--ver" title="Framework version">v{{ framework_version }}</span>
+    </div>
   </div>
 </header>
 
-{# ---- Stats strip — four pastel tiles ---------------------------
- # Each pulls a number from the dashboard context. Tints use the
- # framework's semantic `-bg` tokens so colour stays WCAG-aligned. #}
+{# ---- KPI strip ---------------------------------------------------
+ # v0.19 — same four data points, but the tile treatment is now
+ # the unified `.rio-stat` (single white surface + 3-px top
+ # accent rail). The festive cycling background fills are gone;
+ # color is reserved for semantic meaning, not per-tile
+ # decoration. See pages/dashboard.css. #}
 <section class="rio-dashboard-stats" aria-label="At a glance">
   <article class="rio-stat rio-stat--info">
     <p class="rio-stat__label">Registered models</p>
@@ -30,12 +32,12 @@
   <article class="rio-stat rio-stat--success">
     <p class="rio-stat__label">Total rows</p>
     <p class="rio-stat__value">{{ total_rows }}</p>
-    <p class="rio-stat__meta">approx. (pg_class stats)</p>
+    <p class="rio-stat__meta">Approx. — pg_class.reltuples</p>
   </article>
   <article class="rio-stat rio-stat--warning">
     <p class="rio-stat__label">Recent activity</p>
     <p class="rio-stat__value">{{ recent_actions_count }}</p>
-    <p class="rio-stat__meta">latest events</p>
+    <p class="rio-stat__meta">Audit events in window</p>
   </article>
   <article class="rio-stat rio-stat--accent">
     <p class="rio-stat__label">Environment</p>
@@ -44,27 +46,23 @@
   </article>
 </section>
 
-{# ---- Flat model grid ------------------------------------------
- # Every registered project model in one CSS-grid. Tiles tile
- # horizontally on wide screens (3-4 columns), collapse gracefully
- # on narrow. Each tile cycles through four accent palettes via
- # `:nth-child` so the grid has visual rhythm. The app label
- # surfaces as a subtle chip when the project has more than one
- # app group (avoids redundancy when every model IS its own app). #}
-<section class="rio-dashboard-models" aria-label="Browse data">
-  <header class="rio-dashboard-section-head">
-    <h2 class="rio-dashboard-section-label">Browse data</h2>
-    <span class="rio-dashboard-section-count">{{ total_models }} model{% if total_models != 1 %}s{% endif %} · {{ total_rows }} row{% if total_rows != 1 %}s{% endif %} total</span>
+{# ---- Browse data section ----------------------------------------
+ # v0.19 — wrapped in the shared `.rio-section` primitive so the
+ # eyebrow label, title, and right-aligned meta all share one
+ # rhythm with every other section on the page. #}
+<section class="rio-section" aria-label="Browse data">
+  <header class="rio-section__header">
+    <div class="rio-section__heading">
+      <span class="rio-section__label">Browse data</span>
+      <h2 class="rio-section__title">Models</h2>
+    </div>
+    <span class="rio-section__meta">{{ total_models }} model{% if total_models != 1 %}s{% endif %} · {{ total_rows }} row{% if total_rows != 1 %}s{% endif %} total</span>
   </header>
   {% if apps %}
   <div class="rio-model-grid">
     {% for app in apps %}
       {% for model in app.models %}
       <article class="rio-model-tile">
-        {# Only show the app-group chip when it adds information —
-         # i.e. when the app label differs from the model title.
-         # In a project where every model is its own app (no `.`
-         # in admin_name) the chip would just duplicate the title. #}
         {% if app.label != model.display_name %}
         <span class="rio-model-tile__app" title="App group">{{ app.label }}</span>
         {% endif %}
@@ -114,26 +112,35 @@
     {% endfor %}
   </div>
   {% else %}
-  <p class="rio-card rio-empty">
-    No models registered yet. Call <code>Admin::new().model::&lt;YourModel&gt;()</code> in your <code>main.rs</code>.
-  </p>
+  {# v0.19 — proper empty state (icon + headline + meta + CTA-style
+   # explanation) instead of the pre-0.19 one-paragraph .rio-empty. #}
+  <div class="rio-card rio-card--quiet">
+    <div class="rio-empty-state">
+      <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
+      <h3 class="rio-empty-state__title">No models registered yet</h3>
+      <p class="rio-empty-state__lead">
+        Call <code>Admin::new().model::&lt;YourModel&gt;()</code> in your
+        <code>main.rs</code> to register a model — it will appear here.
+      </p>
+    </div>
+  </div>
   {% endif %}
 </section>
 
-{# ---- Two-column split: activity + framework tools --------------
- # Wide screens: activity 2/3 left, tools 1/3 right.
- # Narrow: stacks. The Framework Tools card gates each link by the
- # operator's role — Administrator-only items hide for Staff. #}
+{# ---- Activity + Tools split ------------------------------------
+ # v0.19 — both halves use `.rio-section` headers + `.rio-card`
+ # bodies so they share visual weight with the Browse data section
+ # above. Wide ≥1024 px: split 2/3 + 1/3. Narrow: stacks. #}
 <div class="rio-dashboard-split">
 
-  <section class="rio-dashboard-activity">
-    <header class="rio-dashboard-section-head">
-      <h2 class="rio-dashboard-section-label">Recent activity</h2>
-      {# /admin/history is Administrator-gated (routes.rs) — hide the
-       # affordance for Staff/Editor so we don't ship clickable links
-       # that 403 on follow-through. #}
+  <section class="rio-section" aria-label="Recent activity">
+    <header class="rio-section__header">
+      <div class="rio-section__heading">
+        <span class="rio-section__label">Activity</span>
+        <h2 class="rio-section__title">Recent</h2>
+      </div>
       {% if recent_actions and identity.is_admin %}
-      <a class="rio-dashboard-section-link" href="/admin/history">View full history →</a>
+      <a class="rio-section__link" href="/admin/history">View full history →</a>
       {% endif %}
     </header>
     {% if activity_sparkline %}
@@ -141,34 +148,33 @@
       <figcaption class="rio-sparkline__caption">
         {{ activity_sparkline_total }} action{% if activity_sparkline_total != 1 %}s{% endif %} in the last 7 days
       </figcaption>
+      {# v0.18.6 area chart unchanged in v0.19 — math + markup
+       # already match the analytics-tool convention. #}
+      {% set max_h = 48 %}
+      {% set spark_max = activity_sparkline_max or 1 %}
+      {% set ns = namespace(line="") %}
+      {% for p in activity_sparkline %}
+        {% set x = loop.index0 * 40 + 16 %}
+        {% set y = max_h - ((p.count * max_h) // spark_max) %}
+        {% set ns.line = ns.line ~ x ~ "," ~ y ~ " " %}
+      {% endfor %}
+      {% set first_x = 16 %}
+      {% set last_x = (activity_sparkline|length - 1) * 40 + 16 %}
       <svg class="rio-sparkline__svg" viewBox="0 0 280 64" preserveAspectRatio="none" role="img" aria-hidden="true">
-        {# Baseline rail — a thin track for every day so empty
-         # days still anchor the chart visually. Without it, a
-         # single tall bar on a freshly-seeded admin (one active
-         # day surrounded by zeros) reads as a layout glitch
-         # rather than "only one day had activity". #}
+        <defs>
+          <linearGradient id="rio-sparkline-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop class="rio-sparkline__grad-stop-top" offset="0%"/>
+            <stop class="rio-sparkline__grad-stop-bot" offset="100%"/>
+          </linearGradient>
+        </defs>
+        <line class="rio-sparkline__baseline" x1="{{ first_x }}" x2="{{ last_x }}" y1="{{ max_h }}" y2="{{ max_h }}"/>
+        <polygon class="rio-sparkline__area" points="{{ ns.line|trim }} {{ last_x }},{{ max_h }} {{ first_x }},{{ max_h }}"/>
+        <polyline class="rio-sparkline__line" points="{{ ns.line|trim }}"/>
         {% for p in activity_sparkline %}
-        {% set bar_w = 32 %}
-        {% set gap = 8 %}
-        {% set x = loop.index0 * (bar_w + gap) %}
-        {% set max_h = 48 %}
-        <rect class="rio-sparkline__track" x="{{ x }}" y="{{ max_h - 2 }}" width="{{ bar_w }}" height="2" rx="1"></rect>
-        {% endfor %}
-        {# Active bars — drawn over the rail. Nonzero counts get
-         # a minimum 4-px height so a count of 1 is still readable
-         # alongside a count of 50; the proportional scale resumes
-         # above the minimum. #}
-        {% for p in activity_sparkline %}
-        {% set bar_w = 32 %}
-        {% set gap = 8 %}
-        {% set x = loop.index0 * (bar_w + gap) %}
-        {% set max_h = 48 %}
-        {% if p.count > 0 %}
-        {% set scaled = (p.count * max_h) // (activity_sparkline_max or 1) %}
-        {% set h = scaled if scaled >= 4 else 4 %}
-        <rect class="rio-sparkline__bar" x="{{ x }}" y="{{ max_h - h }}" width="{{ bar_w }}" height="{{ h }}" rx="2"></rect>
-        {% endif %}
-        <text class="rio-sparkline__tick" x="{{ x + (bar_w / 2) }}" y="62" text-anchor="middle">{{ p.label }}</text>
+        {% set x = loop.index0 * 40 + 16 %}
+        {% set y = max_h - ((p.count * max_h) // spark_max) %}
+        <circle class="rio-sparkline__dot" cx="{{ x }}" cy="{{ y }}" r="2.5"/>
+        <text class="rio-sparkline__tick" x="{{ x }}" y="62" text-anchor="middle">{{ p.label }}</text>
         {% endfor %}
       </svg>
       <ul class="rio-sparkline__data" hidden>
@@ -194,19 +200,27 @@
       {% endfor %}
     </ul>
     {% else %}
-    <p class="rio-card rio-empty">No actions yet — once operators start creating, editing, or deleting rows, the feed lights up here.</p>
+    <div class="rio-card rio-card--quiet">
+      <div class="rio-empty-state">
+        <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
+        <h3 class="rio-empty-state__title">No actions yet</h3>
+        <p class="rio-empty-state__lead">
+          Once operators start creating, editing, or deleting rows,
+          the audit feed lights up here.
+        </p>
+      </div>
+    </div>
     {% endif %}
   </section>
 
-  <aside class="rio-dashboard-tools" aria-label="Framework tools">
-    <header class="rio-dashboard-section-head">
-      <h2 class="rio-dashboard-section-label">Framework tools</h2>
+  <aside class="rio-section" aria-label="Framework tools">
+    <header class="rio-section__header">
+      <div class="rio-section__heading">
+        <span class="rio-section__label">Quick links</span>
+        <h2 class="rio-section__title">Framework tools</h2>
+      </div>
     </header>
     <ul class="rio-tool-list">
-      {# Audit log + Users + Groups are all Administrator-gated
-       # on the server side. Merge them into one is_admin block
-       # so Staff/Editor operators don't see clickable affordances
-       # that 403 on follow-through. #}
       {% if identity.is_admin %}
       <li><a class="rio-tool-link" href="/admin/history">
         {{ icon("clock", class="rio-tool-link__icon") }}
