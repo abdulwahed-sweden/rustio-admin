@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.18.5** | 2026-05-23 | **Topbar + list-toolbar redesign + sparkline fix + Post seed.** The topbar's pre-0.18.5 inline strip (Signed-in · 🔔 · Enable MFA · Sessions · Change password · Log out) folded into a single account dropdown anchored on a one-letter avatar + the user email — bell stays on the chrome. List-page toolbar collapsed from 8 controls (Search input · Search btn · Filters · Sort · Per-page · Saved · CSV · Import CSV) to 4 (Search · Filters · Saved · View), with Sort / Per-page / CSV-export / CSV-import folded into a new "View" overflow menu — no features lost. Dashboard sparkline gains a baseline rail per day so empty days anchor the chart; nonzero bars get a 4-px minimum so small counts don't disappear next to large ones. Scaffold template's `Post` migration ships 5 demo rows spread across the last week so a freshly-bootstrapped admin isn't a blank slate. Three new inline-SVG icons (`sliders`, `upload`, plus reused `download`). New utility class `.rio-visually-hidden`. |
 | **0.18.4** | 2026-05-23 | **First publish since v0.13.0.** `admin::docs` was reaching `include_str!("../../../../docs/<file>.md")` outside the crate root — fine in-tree, but `cargo publish` builds from a tarball that contains only the crate's own files, so the verification failed. Latent since v0.16.0 (no version since v0.13.0 was published). Fix copies `architecture.md` / `modeladmin.md` / `public-api.md` into `crates/rustio-admin/assets/docs/` and updates the three `include_str!` paths. Workspace docs remain at `docs/` as the canonical source; the in-crate copies are bundled at release time. All four workspace crates (`rustio-admin`, `rustio-admin-macros`, `rustio-admin-cli`, plus the new `rio-theme` — first claim of the name) published to crates.io at 0.18.4 in dependency order. |
 | **0.18.3** | 2026-05-23 | Patch: ships green CI. v0.18.2's release commit pushed through but the tagged tree itself had two pre-existing failures — pre-existing rustfmt drift in `crates/rio-theme/` (never run through `cargo fmt` since the crate landed in 0.17.0) and a `clippy::uninlined-format-args` violation in `color.rs` that CI's pinned `rustc 1.88` rejects but newer local toolchains let through (same lint class as `bcdf9b6`). Both fixed (`e5e4900`, `dbe4951`); CI now runs all 15 steps green including the new scaffold-template-pin guard verified end-to-end against simulated drift on PR #2. |
 | **0.18.2** | 2026-05-23 | Patch: new CI guard `scaffold template pin tracks workspace minor` extracts `[workspace.package].version` from `Cargo.toml` and the `rustio-admin = "X"` pin from `crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl`, fails the build with an actionable `::error::` line when they disagree. Backstop for the drift that bit 0.17.0 / 0.17.1 / 0.18.0; v0.18.1 patched the immediate drift, this guard prevents the recurrence. Tested locally by temporarily reverting the template pin — guard tripped with the expected message. |
@@ -46,7 +47,69 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.18.4]** block below._
+_No unreleased changes yet — see the **[0.18.5]** block below._
+
+
+## [0.18.5] — 2026-05-23
+
+### Changed
+
+- **Topbar account area folded into a single dropdown.** The
+  pre-0.18.5 inline strip rendered five separate links / buttons
+  next to the bell (`Signed in as <email>`, MFA, Sessions,
+  Change password, Log out) — visually cramped at desktop
+  widths and overflowing onto a second row at narrow viewports.
+  Replaced with one `.rio-topbar-account` dropdown anchored on
+  a circular monogram avatar + the user email; menu rows host
+  the four account actions, with the Log out button promoted to
+  a footer-spanning danger-ghost affordance. Notification bell
+  stays on the chrome as a status indicator.
+- **List-page toolbar collapsed from 8 controls to 4.** Per
+  user feedback ("the search bar is crowded"). The new
+  ordering is **Search · Filters · Saved · View**:
+  - Search input now flex-grows to fill the row; the redundant
+    "Search" button is hidden via the new
+    `.rio-visually-hidden` utility (Enter on the input submits
+    in every modern browser, and a no-JS submit fallback
+    remains in the accessibility tree).
+  - Sort, Per-page, CSV-export, and CSV-import folded into a
+    new "View" overflow dropdown (`.rio-toolbar-view`) with a
+    `sliders` icon. Each former toolbar control becomes a
+    section inside the dropdown panel: Sort menu, Per-page chip
+    row, Data section containing Export CSV link + Import CSV
+    file-picker label. No feature lost — same URLs, same CSRF,
+    same per-model permissions; only the affordance moved.
+- **Dashboard sparkline shows empty days as a baseline rail.**
+  Pre-0.18.5: days with zero count rendered no bar; a freshly-
+  seeded admin's chart looked like one tall bar in empty
+  whitespace (one active day, six invisible days). Now every
+  day gets a 2-px baseline track; nonzero bars stack on the
+  rail with a 4-px minimum height so a count of 1 is still
+  visible next to a count of 50.
+
+### Added
+
+- **Scaffold template ships 5 demo `Post` rows** spread across
+  the last week. A blank `posts` table on first boot made the
+  dashboard sparkline look broken, the model tile read `0 rows`,
+  and the Posts list view felt like an error state. The demo
+  rows are explicit, easy to delete, and date-spread so the
+  sparkline renders multiple bars out of the box.
+- Three icon catalogue entries (`crates/rustio-admin/src/admin/icons.rs`):
+  - `sliders` — list-toolbar "View" dropdown trigger.
+  - `upload` — mirror of `download`, for the Import CSV row.
+  - (`download` reused for Export CSV inside the View menu.)
+- **`.rio-visually-hidden` utility class** in
+  `assets/static/admin/base/utilities.css`. Standard
+  Bootstrap/Tailwind `.sr-only` pattern — used by the search
+  form's hidden submit button.
+
+### Fixed
+
+- The cluttered topbar overflowed onto a second row at narrow
+  viewports, breaking the sticky-header expectation. Account
+  dropdown brings the chrome back to a single row at every
+  width.
 
 
 ## [0.18.4] — 2026-05-23

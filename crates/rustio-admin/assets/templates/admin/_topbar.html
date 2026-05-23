@@ -20,7 +20,11 @@
   {% endif %}
   <nav class="rio-topbar-nav" aria-label="Account">
     {% if identity %}
-      <span class="rio-topbar-identity">Signed in as <strong>{{ identity.email }}</strong></span>
+      {# Bell stays on the chrome — status indicator deserves its
+       # own affordance. Everything else (MFA, sessions, password,
+       # log out) folds into one account dropdown anchored on the
+       # user identity. The old inline strip ran out of horizontal
+       # room and visually competed with the page title. #}
       <a href="/admin/notifications" class="rio-topbar-link rio-topbar-bell"
          aria-label="{% if unread_count > 0 %}{{ unread_count }} unread notifications{% else %}Notifications{% endif %}">
         {{ icon("bell", class="rio-icon") }}
@@ -28,26 +32,42 @@
         <span class="rio-topbar-bell__badge" aria-hidden="true">{% if unread_count > 99 %}99+{% else %}{{ unread_count }}{% endif %}</span>
         {% endif %}
       </a>
-      {# Two-factor self-service surface. Pre-0.8.1 the R3 MFA
-       # enrol / regenerate / disable pages were reachable only by
-       # typing the URL — every navigational surface was missing
-       # (`VISIBILITY_AUDIT.md` finding B1). The link below is
-       # unconditional: enrolled users see "Two-factor" and land
-       # on a chooser between regenerate / disable; un-enrolled
-       # users land on the enrol QR-code flow. The framework
-       # routes already exist; this link is the chrome that makes
-       # them discoverable. #}
-      {% if identity.mfa_enabled %}
-        <a href="/admin/account/mfa/regenerate-codes" class="rio-topbar-link">Two-factor</a>
-      {% else %}
-        <a href="/admin/account/mfa/enroll" class="rio-topbar-link">Enable MFA</a>
-      {% endif %}
-      <a href="/admin/account/sessions" class="rio-topbar-link">Sessions</a>
-      <a href="/admin/password_change" class="rio-topbar-link">Change password</a>
-      <form method="post" action="/admin/logout" class="rio-topbar-logout">
-        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-        <button type="submit" class="rio-button rio-button--ghost">Log out</button>
-      </form>
+      <div class="rio-dropdown rio-topbar-account" data-rio-dropdown>
+        <button type="button" class="rio-dropdown-toggle rio-topbar-account__toggle"
+                aria-haspopup="true" aria-expanded="false"
+                aria-label="Account menu for {{ identity.email }}">
+          <span class="rio-topbar-account__avatar" aria-hidden="true">{{ identity.email[:1]|upper }}</span>
+          <span class="rio-topbar-account__email">{{ identity.email }}</span>
+          {{ icon("chevron-down", class="rio-chev") }}
+        </button>
+        <div class="rio-dropdown-panel rio-topbar-account__panel" role="dialog" aria-label="Account">
+          <div class="rio-dropdown-section">
+            <span class="rio-dropdown-label">Signed in as</span>
+            <p class="rio-topbar-account__who">{{ identity.email }}</p>
+          </div>
+          <div class="rio-dropdown-section">
+            <div class="rio-dropdown-menu">
+              {# Two-factor self-service surface — same routing as
+               # the previous inline link: enrolled users get the
+               # regenerate/disable chooser, un-enrolled users get
+               # the enrol QR-code flow. #}
+              {% if identity.mfa_enabled %}
+                <a href="/admin/account/mfa/regenerate-codes" class="rio-dropdown-item">Two-factor</a>
+              {% else %}
+                <a href="/admin/account/mfa/enroll" class="rio-dropdown-item">Enable MFA</a>
+              {% endif %}
+              <a href="/admin/account/sessions" class="rio-dropdown-item">Sessions</a>
+              <a href="/admin/password_change" class="rio-dropdown-item">Change password</a>
+            </div>
+          </div>
+          <div class="rio-dropdown-footer">
+            <form method="post" action="/admin/logout" class="rio-topbar-logout">
+              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+              <button type="submit" class="rio-button rio-button--ghost">Log out</button>
+            </form>
+          </div>
+        </div>
+      </div>
     {% else %}
       <a href="/admin/login" class="rio-topbar-link">Log in</a>
     {% endif %}

@@ -169,6 +169,31 @@
   flex-shrink: 0;
 }
 
+/* File-input menu row — used by the list-page "View" dropdown's
+ * "Import CSV…" entry. The dropdown row IS the file picker:
+ * the <label> wraps a hidden <input type=file>, so clicking
+ * anywhere on the row opens the OS picker. `tabindex=0` keeps
+ * it keyboard-reachable. Style matches a regular menu item but
+ * justify-content stays start (the row carries an icon + label,
+ * no trailing affordance). */
+.rio-dropdown-item--file {
+  justify-content: flex-start;
+  gap: var(--rio-s2);
+  cursor: pointer;
+  /* Reset the form's default margin so the row aligns with
+   * sibling .rio-dropdown-item entries above it. */
+  margin: 0;
+}
+.rio-dropdown-item--file:focus-visible {
+  outline: 2px solid var(--rio-accent);
+  outline-offset: -2px;
+}
+/* The inline import form wrapping the label shouldn't add its
+ * own layout — the label IS the visible row. */
+.rio-dropdown-menu > .rio-toolbar-import {
+  margin: 0;
+}
+
 .rio-dropdown-footer {
   display: flex;
   justify-content: flex-end;

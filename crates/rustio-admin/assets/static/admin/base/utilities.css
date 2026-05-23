@@ -35,3 +35,17 @@
   width: 1em;
   height: 1em;
 }
+
+/* Visually hide an element while keeping it in the accessibility
+ * tree. Used by forms that need a no-JS submit fallback whose
+ * visible affordance is the input itself (Enter-to-submit). Same
+ * pattern as Bootstrap's / Tailwind's `.sr-only`. */
+.rio-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

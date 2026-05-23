@@ -15,10 +15,16 @@
    # the current sort, so submitting a query keeps the rest of the
    # list-view state intact. Page intentionally resets to 1 — a new
    # query against page N rarely makes sense. #}
+  {# Search input is flex-grow inside .rio-toolbar so it takes
+   # all the slack left by the trailing dropdowns. Enter submits;
+   # no separate Search button — the magnifier in the input is
+   # the visual affordance. Hidden inputs carry the rest of the
+   # list-view state so submitting a query keeps filters/sort
+   # intact. Page intentionally resets to 1. #}
   <form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar" role="search">
     <span class="rio-search-input-wrap">
       {{ icon("search", class="rio-search-icon") }}
-      <input type="search" name="q" value="{{ search_query }}" placeholder="Search…" class="rio-search-input" aria-label="Search">
+      <input type="search" name="q" value="{{ search_query }}" placeholder="Search {{ display_name|lower }}…" class="rio-search-input" aria-label="Search">
     </span>
     {% for pair in active_filter_pairs %}
     <input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">
@@ -30,7 +36,12 @@
     {% if active_per_page_override %}
     <input type="hidden" name="per_page" value="{{ active_per_page_override }}">
     {% endif %}
-    <button type="submit" class="rio-button">Search</button>
+    {# Keep a submit button in the form for accessibility / no-JS
+     # submission, but hide it visually — Enter on the input
+     # submits in every modern browser, and a dedicated button
+     # was the single biggest source of toolbar visual crowding
+     # (one big and four medium-width buttons in a row). #}
+    <button type="submit" class="rio-visually-hidden" tabindex="-1">Search</button>
   </form>
 
   {% if filters %}
@@ -161,33 +172,65 @@
   </div>
   {% endif %}
 
-  {% if sort_options %}
-  <div class="rio-dropdown" data-rio-dropdown>
+  {# "View" overflow menu — consolidates Sort, Per-page, CSV
+   # export, and CSV import into one toggle. Toolbar used to
+   # render these as four siblings + Filters + Saved + Search
+   # = 7 controls in one row (pre-0.18.5 complaint:
+   # "the search bar is crowded"). Folding the rarely-mutated
+   # view settings here keeps the toolbar's first row to
+   # Search + Filters + Saved + View. #}
+  {% if sort_options or per_page_options or true %}
+  <div class="rio-dropdown rio-toolbar-view" data-rio-dropdown>
     <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-      Sort: <strong style="font-weight: 600; color: var(--rio-text-strong);">{{ current_sort_label }}</strong>
+      {{ icon("sliders", class="rio-icon") }}
+      View
       {{ icon("chevron-down", class="rio-chev") }}
     </button>
-    <div class="rio-dropdown-panel" role="dialog" aria-label="Sort">
-      <div class="rio-dropdown-menu">
-        {% for opt in sort_options %}
-        <a href="{{ opt.link }}" class="rio-dropdown-item{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
-        {% endfor %}
+    <div class="rio-dropdown-panel" role="dialog" aria-label="View settings">
+      {% if sort_options %}
+      <div class="rio-dropdown-section">
+        <span class="rio-dropdown-label">Sort by — current: {{ current_sort_label }}</span>
+        <div class="rio-dropdown-menu">
+          {% for opt in sort_options %}
+          <a href="{{ opt.link }}" class="rio-dropdown-item{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
+          {% endfor %}
+        </div>
       </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if per_page_options %}
-  <div class="rio-dropdown" data-rio-dropdown>
-    <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-      {{ current_per_page_label }}
-      {{ icon("chevron-down", class="rio-chev") }}
-    </button>
-    <div class="rio-dropdown-panel" role="dialog" aria-label="Rows per page">
-      <div class="rio-dropdown-menu">
-        {% for opt in per_page_options %}
-        <a href="{{ opt.link }}" class="rio-dropdown-item{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
-        {% endfor %}
+      {% endif %}
+      {% if per_page_options %}
+      <div class="rio-dropdown-section">
+        <span class="rio-dropdown-label">Rows per page — current: {{ current_per_page_label }}</span>
+        <div class="rio-dropdown-options">
+          {% for opt in per_page_options %}
+          <a href="{{ opt.link }}" class="rio-dropdown-chip{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="rio-dropdown-section">
+        <span class="rio-dropdown-label">Data</span>
+        <div class="rio-dropdown-menu">
+          {# CSV export — carries the current filter/search/sort
+           # state, capped server-side at 10_000 rows. download
+           # attr nudges the browser to save rather than navigate. #}
+          <a class="rio-dropdown-item" href="{{ csv_export_url }}" download>
+            {{ icon("download", class="rio-icon") }} Export CSV
+          </a>
+          {# CSV import is a POST with a file input. The label
+           # wraps the (hidden) file input so the dropdown row
+           # opens the OS file picker on click; onchange submits
+           # the form. Same model's `change` permission gates the
+           # POST. #}
+          <form method="post" action="/admin/{{ admin_name }}/import.csv"
+                enctype="multipart/form-data" class="rio-form-inline rio-toolbar-import">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+            <label class="rio-dropdown-item rio-dropdown-item--file" tabindex="0">
+              {{ icon("upload", class="rio-icon") }} Import CSV…
+              <input type="file" name="file" accept=".csv,text/csv"
+                     onchange="this.form.submit()" style="display:none">
+            </label>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -236,25 +279,10 @@
     </div>
   </div>
 
-  {# CSV export — same filter/search/sort state as the list page,
-   # capped server-side at 10_000 rows. download attr nudges the
-   # browser to save rather than navigate. #}
-  <a class="rio-button" href="{{ csv_export_url }}" download>
-    {{ icon("download", class="rio-icon") }} CSV
-  </a>
-
-  {# CSV import — sibling of export. Inline form opens a native
-   # file picker via the styled button label. Same model's
-   # `change` permission gates the POST. #}
-  <form method="post" action="/admin/{{ admin_name }}/import.csv"
-        enctype="multipart/form-data" class="rio-form-inline rio-toolbar-import">
-    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <label class="rio-button" tabindex="0">
-      Import CSV…
-      <input type="file" name="file" accept=".csv,text/csv"
-             onchange="this.form.submit()" style="display:none">
-    </label>
-  </form>
+  {# CSV export + import previously lived as standalone toolbar
+   # buttons; both now live inside the "View" dropdown's Data
+   # section. The reroute keeps the same URLs / CSRF / file-picker
+   # mechanism — see the .rio-toolbar-view block above. #}
 </div>
 
 {% if active_filter_pills %}

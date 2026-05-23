@@ -73,6 +73,60 @@
   font-variant-numeric: tabular-nums;
 }
 .rio-topbar-logout { display: inline; }
+
+/* ── Account dropdown ───────────────────────────────────────
+ * Single-button user menu replacing the pre-0.18.5 inline strip
+ * of Signed-in / MFA / Sessions / Change-password / Log-out.
+ * Reuses .rio-dropdown machinery — JS hook lives in admin.js
+ * (`[data-rio-dropdown]`). The avatar is a one-letter
+ * monogram derived from the email's first char (no remote
+ * fetch, no extra storage). */
+.rio-topbar-account__toggle {
+  /* Pull padding tighter than the generic dropdown toggle —
+   * topbar gravity is less than a content card. */
+  padding: 0.35rem 0.55rem 0.35rem 0.4rem;
+  gap: 0.5rem;
+  font-weight: var(--rio-fw-medium);
+}
+.rio-topbar-account__avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--rio-brand-tint, var(--rio-accent-soft));
+  color: var(--rio-brand-text, var(--rio-accent));
+  font-weight: var(--rio-fw-bold);
+  font-size: var(--rio-fs-sm);
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.rio-topbar-account__email {
+  font-size: var(--rio-fs-md);
+  color: var(--rio-text);
+  /* Cap the email at one ratio of the topbar so very long
+   * addresses don't push the toggle into the page title. */
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rio-topbar-account__who {
+  margin: 0;
+  font-size: var(--rio-fs-sm);
+  color: var(--rio-text);
+  font-weight: var(--rio-fw-semibold);
+  word-break: break-all;
+}
+/* The account panel is narrower than a filter panel — the menu
+ * items are short labels and a long panel would float oddly
+ * away from the toggle. */
+.rio-topbar-account__panel {
+  min-width: 240px;
+}
+/* The logout form lives in the panel footer; the button is the
+ * "real" affordance, so let it span the row. */
+.rio-topbar-account__panel .rio-topbar-logout { flex: 1; }
+.rio-topbar-account__panel .rio-topbar-logout .rio-button { width: 100%; }
+
 .rio-sidebar-toggle {
   display: none;
   background: none;

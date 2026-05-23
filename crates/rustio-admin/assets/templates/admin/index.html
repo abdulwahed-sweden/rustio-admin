@@ -142,13 +142,32 @@
         {{ activity_sparkline_total }} action{% if activity_sparkline_total != 1 %}s{% endif %} in the last 7 days
       </figcaption>
       <svg class="rio-sparkline__svg" viewBox="0 0 280 64" preserveAspectRatio="none" role="img" aria-hidden="true">
+        {# Baseline rail — a thin track for every day so empty
+         # days still anchor the chart visually. Without it, a
+         # single tall bar on a freshly-seeded admin (one active
+         # day surrounded by zeros) reads as a layout glitch
+         # rather than "only one day had activity". #}
         {% for p in activity_sparkline %}
         {% set bar_w = 32 %}
         {% set gap = 8 %}
         {% set x = loop.index0 * (bar_w + gap) %}
         {% set max_h = 48 %}
-        {% set h = (p.count * max_h) // (activity_sparkline_max or 1) %}
+        <rect class="rio-sparkline__track" x="{{ x }}" y="{{ max_h - 2 }}" width="{{ bar_w }}" height="2" rx="1"></rect>
+        {% endfor %}
+        {# Active bars — drawn over the rail. Nonzero counts get
+         # a minimum 4-px height so a count of 1 is still readable
+         # alongside a count of 50; the proportional scale resumes
+         # above the minimum. #}
+        {% for p in activity_sparkline %}
+        {% set bar_w = 32 %}
+        {% set gap = 8 %}
+        {% set x = loop.index0 * (bar_w + gap) %}
+        {% set max_h = 48 %}
+        {% if p.count > 0 %}
+        {% set scaled = (p.count * max_h) // (activity_sparkline_max or 1) %}
+        {% set h = scaled if scaled >= 4 else 4 %}
         <rect class="rio-sparkline__bar" x="{{ x }}" y="{{ max_h - h }}" width="{{ bar_w }}" height="{{ h }}" rx="2"></rect>
+        {% endif %}
         <text class="rio-sparkline__tick" x="{{ x + (bar_w / 2) }}" y="62" text-anchor="middle">{{ p.label }}</text>
         {% endfor %}
       </svg>

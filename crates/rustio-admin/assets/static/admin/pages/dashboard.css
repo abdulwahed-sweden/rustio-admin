@@ -375,6 +375,15 @@
   fill: var(--rio-accent);
   opacity: 0.85;
 }
+/* Baseline rail — one 2-px track per day so empty days still
+ * anchor the chart visually. Without the rail a single tall
+ * bar in a freshly-seeded admin (one active day surrounded by
+ * zeros) reads as a layout glitch rather than "only one day
+ * had activity". */
+.rio-sparkline__track {
+  fill: var(--rio-border);
+  opacity: 0.55;
+}
 .rio-sparkline__tick {
   fill: var(--rio-text-muted);
   font-size: 10px;
