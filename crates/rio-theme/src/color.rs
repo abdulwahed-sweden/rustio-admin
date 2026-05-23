@@ -105,7 +105,7 @@ impl Color {
         let r = quantize(r);
         let g = quantize(g);
         let b = quantize(b);
-        format!("#{:02x}{:02x}{:02x}", r, g, b)
+        format!("#{r:02x}{g:02x}{b:02x}")
     }
 
     /// Mix toward `other` by `amount` (0.0 = self, 1.0 = other).
