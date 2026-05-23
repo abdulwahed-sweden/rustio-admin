@@ -50,7 +50,11 @@ pub fn emit(tokens: &ThemeTokens) -> String {
     line(&mut s, "--rio-brand-light", &tokens.brand_light.to_hex());
     line(&mut s, "--rio-brand-dark", &tokens.brand_dark.to_hex());
     s.push_str("  --rio-brand-adaptive: var(--rio-brand-light);\n");
-    line(&mut s, "--rio-brand-surface", &tokens.brand_surface.to_hex());
+    line(
+        &mut s,
+        "--rio-brand-surface",
+        &tokens.brand_surface.to_hex(),
+    );
     line(&mut s, "--rio-brand-accent", &tokens.brand_accent.to_hex());
     line(
         &mut s,
@@ -76,7 +80,11 @@ pub fn emit(tokens: &ThemeTokens) -> String {
     // one.
     line(&mut s, "--rio-accent", &tokens.brand_surface.to_hex());
     line(&mut s, "--rio-accent-hover", &tokens.brand_hover.to_hex());
-    line(&mut s, "--rio-accent-rgb", &rgb_triple(&tokens.brand_surface));
+    line(
+        &mut s,
+        "--rio-accent-rgb",
+        &rgb_triple(&tokens.brand_surface),
+    );
     line(&mut s, "--rio-accent-soft", &tokens.brand_tint.to_hex());
     // accent-border: a mid-light brand tint. Live framework uses
     // this for focus rings + input borders, where the visual job is
@@ -114,8 +122,16 @@ pub fn emit(tokens: &ThemeTokens) -> String {
     line(&mut s, "--rio-success", &tokens.success.to_hex());
     line(&mut s, "--rio-warning", &tokens.warning.to_hex());
     line(&mut s, "--rio-danger", &tokens.danger.to_hex());
-    line(&mut s, "--rio-success-bg", &soft_bg(&tokens.success).to_hex());
-    line(&mut s, "--rio-warning-bg", &soft_bg(&tokens.warning).to_hex());
+    line(
+        &mut s,
+        "--rio-success-bg",
+        &soft_bg(&tokens.success).to_hex(),
+    );
+    line(
+        &mut s,
+        "--rio-warning-bg",
+        &soft_bg(&tokens.warning).to_hex(),
+    );
     line(&mut s, "--rio-danger-bg", &soft_bg(&tokens.danger).to_hex());
     line(&mut s, "--rio-info-bg", &tokens.brand_tint.to_hex());
 
@@ -166,7 +182,9 @@ fn soft_bg(fg: &Color) -> Color {
     let mut amount = 0.92_f64;
     loop {
         let bg = fg.mix(&white, amount);
-        if amount >= 0.99 || crate::contrast::contrast_ratio(fg, &bg) >= crate::contrast::AA_NON_TEXT {
+        if amount >= 0.99
+            || crate::contrast::contrast_ratio(fg, &bg) >= crate::contrast::AA_NON_TEXT
+        {
             return bg;
         }
         amount += 0.01;
@@ -247,10 +265,7 @@ mod tests {
         let g = u8::from_str_radix(&hex[3..5], 16).unwrap();
         let b = u8::from_str_radix(&hex[5..7], 16).unwrap();
         let expected = format!("--rio-accent-rgb: {r} {g} {b};");
-        assert!(
-            css.contains(&expected),
-            "expected `{expected}` in:\n{css}"
-        );
+        assert!(css.contains(&expected), "expected `{expected}` in:\n{css}");
     }
 
     #[test]

@@ -151,9 +151,7 @@ impl Color {
 
 fn byte(s: &str, i: usize) -> Result<u8, ColorError> {
     let c = s.as_bytes()[i] as char;
-    c.to_digit(16)
-        .map(|d| d as u8)
-        .ok_or(ColorError::BadDigit)
+    c.to_digit(16).map(|d| d as u8).ok_or(ColorError::BadDigit)
 }
 
 fn pair(s: &str, i: usize) -> Result<u8, ColorError> {

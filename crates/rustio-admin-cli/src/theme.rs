@@ -118,8 +118,8 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
 fn run_generate(brand: &[String], out: &std::path::Path) -> Result<(), String> {
     let mut colors = Vec::with_capacity(brand.len());
     for raw in brand {
-        let parsed = rio_theme::Color::from_hex(raw)
-            .map_err(|e| format!("invalid --brand {raw:?}: {e}"))?;
+        let parsed =
+            rio_theme::Color::from_hex(raw).map_err(|e| format!("invalid --brand {raw:?}: {e}"))?;
         colors.push(parsed);
     }
 
@@ -209,10 +209,22 @@ fn print_generate_report(
     println!("contrast (post-resolution):");
     println!("  brand_light   vs #ffffff : {:.2}", report.light_contrast);
     println!("  brand_dark    vs #15161a : {:.2}", report.dark_contrast);
-    println!("  brand_text    vs bg      : {:.2}", report.text_on_bg_contrast);
-    println!("  brand_accent  vs bg      : {:.2}", report.accent_on_bg_contrast);
-    println!("  success       vs #ffffff : {:.2}", report.success_contrast);
-    println!("  warning       vs #ffffff : {:.2}", report.warning_contrast);
+    println!(
+        "  brand_text    vs bg      : {:.2}",
+        report.text_on_bg_contrast
+    );
+    println!(
+        "  brand_accent  vs bg      : {:.2}",
+        report.accent_on_bg_contrast
+    );
+    println!(
+        "  success       vs #ffffff : {:.2}",
+        report.success_contrast
+    );
+    println!(
+        "  warning       vs #ffffff : {:.2}",
+        report.warning_contrast
+    );
     println!("  danger        vs #ffffff : {:.2}", report.danger_contrast);
 }
 

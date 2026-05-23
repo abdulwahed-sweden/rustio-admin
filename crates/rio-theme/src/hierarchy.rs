@@ -77,8 +77,7 @@ pub fn assign_roles(brand_colors: &[Color]) -> RoleAssignment {
 
     // Stable-sort by fitness, descending. Sort key preserves the
     // client's input order on ties (Vec::sort_by is stable).
-    let mut ranked: Vec<(usize, Color)> =
-        brand_colors.iter().copied().enumerate().collect();
+    let mut ranked: Vec<(usize, Color)> = brand_colors.iter().copied().enumerate().collect();
     ranked.sort_by(|a, b| {
         surface_fitness(&b.1)
             .partial_cmp(&surface_fitness(&a.1))

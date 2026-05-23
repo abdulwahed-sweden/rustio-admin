@@ -39,8 +39,10 @@ pub fn adaptive_brand(brand: &Color) -> AdaptiveBrand {
     let light_bg = Color::from_hex(LIGHT_BG).expect("constant");
     let dark_bg = Color::from_hex(DARK_BG).expect("constant");
 
-    let (light, light_adjusted, light_clears_aa) = adjust_for_bg(brand, &light_bg, /*lighten=*/ false);
-    let (dark, dark_adjusted, dark_clears_aa) = adjust_for_bg(brand, &dark_bg, /*lighten=*/ true);
+    let (light, light_adjusted, light_clears_aa) =
+        adjust_for_bg(brand, &light_bg, /*lighten=*/ false);
+    let (dark, dark_adjusted, dark_clears_aa) =
+        adjust_for_bg(brand, &dark_bg, /*lighten=*/ true);
 
     AdaptiveBrand {
         light,
