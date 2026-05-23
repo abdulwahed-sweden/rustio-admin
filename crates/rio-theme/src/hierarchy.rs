@@ -7,7 +7,6 @@
 
 use crate::color::Color;
 use crate::contrast::{contrast_ratio, LIGHT_BG};
-use crate::derive::derive_palette;
 
 /// Output of [`assign_roles`].
 #[derive(Debug, Clone)]
@@ -51,22 +50,27 @@ pub fn surface_fitness(color: &Color) -> f64 {
 pub fn assign_roles(brand_colors: &[Color]) -> RoleAssignment {
     // Edge: zero inputs. Caller (engine.rs) should have substituted
     // the Case 7 default before reaching here, but guard anyway.
+    // Returns `secondary == primary` as a sentinel — the engine then
+    // substitutes its own (post-tame) hover as the secondary token,
+    // which is the right thing for "I have no real second colour".
     if brand_colors.is_empty() {
         let fallback = Color::from_hex("#3f6089").expect("constant");
         return RoleAssignment {
             primary: fallback,
-            secondary: derive_palette(&fallback).brand_hover,
+            secondary: fallback,
             chart: Vec::new(),
         };
     }
 
-    // Edge: single input. Both primary and secondary are derived from
-    // it; chart is empty.
+    // Edge: single input. Same sentinel — engine substitutes hover.
+    // This avoids deriving the secondary from the *raw* (possibly
+    // vivid) input; the engine's own hover is derived from the
+    // *tamed* surface and is the right value to surface.
     if brand_colors.len() == 1 {
         let only = brand_colors[0];
         return RoleAssignment {
             primary: only,
-            secondary: derive_palette(&only).brand_hover,
+            secondary: only,
             chart: Vec::new(),
         };
     }
@@ -115,11 +119,14 @@ mod tests {
     }
 
     #[test]
-    fn one_input_yields_empty_chart() {
+    fn one_input_uses_sentinel_secondary_equal_to_primary() {
+        // The engine reads `secondary == primary` as "no real second
+        // colour" and substitutes its own post-tame hover. Keeping
+        // the sentinel explicit avoids deriving from the raw input
+        // (which for vivid inputs would be unusable).
         let r = assign_roles(&[c("#0d9488")]);
         assert!(r.chart.is_empty());
-        // Secondary must exist (no Option in the API) — derived.
-        assert!(r.secondary.l > 0.0);
+        assert_eq!(r.primary.to_hex(), r.secondary.to_hex());
     }
 
     #[test]

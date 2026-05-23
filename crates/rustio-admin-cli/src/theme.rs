@@ -159,8 +159,13 @@ fn print_generate_report(
     }
     if report.vivid_tamed {
         println!(
-            "  Case 3  vivid taming: surface {} (accent kept at {})",
+            "  Case 3  vivid taming: surface {} (raw input above chroma threshold)",
             tokens.brand_surface.to_hex(),
+        );
+    }
+    if report.accent_substituted {
+        println!(
+            "  Case 1  brand_accent substituted to {} (raw input failed AA_NON_TEXT on bg)",
             tokens.brand_accent.to_hex(),
         );
     }
@@ -176,6 +181,12 @@ fn print_generate_report(
             tokens.brand_dark.to_hex()
         );
     }
+    if report.light_still_failing {
+        println!("  WARNING light variant still fails AA after adjustment");
+    }
+    if report.dark_still_failing {
+        println!("  WARNING dark variant still fails AA after adjustment");
+    }
     if report.text_substituted {
         println!(
             "  Case 1  brand_text substituted to {} to clear AA on page bg",
@@ -187,14 +198,22 @@ fn print_generate_report(
         && !report.light_adjusted
         && !report.dark_adjusted
         && !report.text_substituted
+        && !report.accent_substituted
+        && !report.light_still_failing
+        && !report.dark_still_failing
     {
         println!("  (none — inputs needed no repair)");
     }
 
     println!();
     println!("contrast (post-resolution):");
-    println!("  brand_light  vs #ffffff : {:.2}", report.light_contrast);
-    println!("  brand_dark   vs #15161a : {:.2}", report.dark_contrast);
+    println!("  brand_light   vs #ffffff : {:.2}", report.light_contrast);
+    println!("  brand_dark    vs #15161a : {:.2}", report.dark_contrast);
+    println!("  brand_text    vs bg      : {:.2}", report.text_on_bg_contrast);
+    println!("  brand_accent  vs bg      : {:.2}", report.accent_on_bg_contrast);
+    println!("  success       vs #ffffff : {:.2}", report.success_contrast);
+    println!("  warning       vs #ffffff : {:.2}", report.warning_contrast);
+    println!("  danger        vs #ffffff : {:.2}", report.danger_contrast);
 }
 
 fn print_list() {

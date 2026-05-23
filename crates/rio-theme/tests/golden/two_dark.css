@@ -6,6 +6,7 @@
   --rio-brand-adaptive: var(--rio-brand-light);
   --rio-brand-surface: #0a1a2e;
   --rio-brand-accent: #0a1a2e;
+  --rio-brand-secondary: #101a2c;
   --rio-brand-hover: #0b192a;
   --rio-brand-active: #0c1827;
   --rio-brand-tint: #e3e5e8;
@@ -28,7 +29,6 @@
   --rio-text: #1e293b;
   --rio-text-muted: #475569;
   --rio-text-subtle: #64748b;
-  --rio-text-secondary: #64748b;
   --rio-border-soft: #e2e8f0;
   --rio-border: #d8dbdf;
   --rio-border-strong: #94a3b8;

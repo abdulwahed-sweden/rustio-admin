@@ -5,7 +5,8 @@
   --rio-brand-dark: #63a15b;
   --rio-brand-adaptive: var(--rio-brand-light);
   --rio-brand-surface: #63a15b;
-  --rio-brand-accent: #39ff14;
+  --rio-brand-accent: #63a15b;
+  --rio-brand-secondary: #598e52;
   --rio-brand-hover: #598e52;
   --rio-brand-active: #4d7948;
   --rio-brand-tint: #eff6ee;
@@ -13,11 +14,11 @@
   --rio-muted: #698376;
 
   /* drop-in aliases for the live admin template */
-  --rio-accent: #39ff14;
+  --rio-accent: #63a15b;
   --rio-accent-hover: #598e52;
-  --rio-accent-rgb: 57 255 20;
+  --rio-accent-rgb: 99 161 91;
   --rio-accent-soft: #eff6ee;
-  --rio-accent-border: #cbffc3;
+  --rio-accent-border: #c8dec5;
   --rio-bg: #fafcfa;
   --rio-surface: #ffffff;
   --rio-surface-2: #f8fafc;
@@ -28,14 +29,13 @@
   --rio-text: #1e293b;
   --rio-text-muted: #475569;
   --rio-text-subtle: #64748b;
-  --rio-text-secondary: #64748b;
   --rio-border-soft: #e2e8f0;
   --rio-border: #e9f2e7;
   --rio-border-strong: #94a3b8;
-  --rio-success: #00a799;
+  --rio-success: #16a34a;
   --rio-warning: #d97706;
   --rio-danger: #dc2626;
-  --rio-success-bg: #ecf8f6;
+  --rio-success-bg: #eff8f0;
   --rio-warning-bg: #fdf4ee;
   --rio-danger-bg: #fff0ee;
   --rio-info-bg: #eff6ee;

@@ -71,12 +71,18 @@ mod tests {
         let split = split_vivid_roles(&lime);
         assert!(split.was_tamed);
         assert!(split.surface.c < split.accent.c);
-        // Hue must drift less than ~2 degrees.
+        // Hue must drift less than ~5° after a full sRGB roundtrip —
+        // the internal hue value would compare equal to itself
+        // trivially, so re-parse the emitted hex to measure what a
+        // downstream consumer will actually see.
+        let surface_roundtrip = Color::from_hex(&split.surface.to_hex()).unwrap();
+        let accent_roundtrip = Color::from_hex(&split.accent.to_hex()).unwrap();
+        let drift = hue_distance(surface_roundtrip.h, accent_roundtrip.h);
         assert!(
-            hue_distance(split.surface.h, split.accent.h) < 2.0,
-            "hue drifted {} -> {}",
-            split.accent.h,
-            split.surface.h
+            drift < 5.0,
+            "hue drifted {drift}° after roundtrip ({} -> {})",
+            split.accent.to_hex(),
+            split.surface.to_hex()
         );
     }
 

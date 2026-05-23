@@ -52,6 +52,11 @@ pub fn emit(tokens: &ThemeTokens) -> String {
     s.push_str("  --rio-brand-adaptive: var(--rio-brand-light);\n");
     line(&mut s, "--rio-brand-surface", &tokens.brand_surface.to_hex());
     line(&mut s, "--rio-brand-accent", &tokens.brand_accent.to_hex());
+    line(
+        &mut s,
+        "--rio-brand-secondary",
+        &tokens.brand_secondary.to_hex(),
+    );
     line(&mut s, "--rio-brand-hover", &tokens.brand_hover.to_hex());
     line(&mut s, "--rio-brand-active", &tokens.brand_active.to_hex());
     line(&mut s, "--rio-brand-tint", &tokens.brand_tint.to_hex());
@@ -62,17 +67,26 @@ pub fn emit(tokens: &ThemeTokens) -> String {
     s.push('\n');
     s.push_str("  /* drop-in aliases for the live admin template */\n");
 
-    // Brand-derived aliases.
-    line(&mut s, "--rio-accent", &tokens.brand_accent.to_hex());
+    // Brand-derived aliases. The live admin uses `--rio-accent` for
+    // BUTTONS and other large affordances, so it must track the
+    // tamed `brand_surface` (canonical "large fills" role), not the
+    // raw `brand_accent` (canonical "small touches"). For non-vivid
+    // inputs the two are equal so this is a no-op; for neon inputs
+    // it's the difference between a usable button and an unreadable
+    // one.
+    line(&mut s, "--rio-accent", &tokens.brand_surface.to_hex());
     line(&mut s, "--rio-accent-hover", &tokens.brand_hover.to_hex());
-    line(&mut s, "--rio-accent-rgb", &rgb_triple(&tokens.brand_accent));
+    line(&mut s, "--rio-accent-rgb", &rgb_triple(&tokens.brand_surface));
     line(&mut s, "--rio-accent-soft", &tokens.brand_tint.to_hex());
-    // accent-border: a mid-light brand tint, sits between tint and
-    // brand. Mirrors the live `teal-200` role.
+    // accent-border: a mid-light brand tint. Live framework uses
+    // this for focus rings + input borders, where the visual job is
+    // "lighter than the brand but the same family". Always lightened
+    // brand-surface — secondary brand colors don't fit this role
+    // (they're for badges/dots, surfaced as `--rio-brand-secondary`).
     line(
         &mut s,
         "--rio-accent-border",
-        &tokens.brand_accent.lighten(0.65).to_hex(),
+        &tokens.brand_surface.lighten(0.65).to_hex(),
     );
     line(&mut s, "--rio-bg", &tokens.bg.to_hex());
 
@@ -89,7 +103,6 @@ pub fn emit(tokens: &ThemeTokens) -> String {
     line(&mut s, "--rio-text", "#1e293b");
     line(&mut s, "--rio-text-muted", "#475569");
     line(&mut s, "--rio-text-subtle", "#64748b");
-    line(&mut s, "--rio-text-secondary", "#64748b");
 
     line(&mut s, "--rio-border-soft", "#e2e8f0");
     line(&mut s, "--rio-border", &tokens.border.to_hex());
@@ -160,6 +173,7 @@ mod tests {
             "--rio-brand-adaptive",
             "--rio-brand-surface",
             "--rio-brand-accent",
+            "--rio-brand-secondary",
             "--rio-brand-hover",
             "--rio-brand-active",
             "--rio-brand-tint",
@@ -191,7 +205,6 @@ mod tests {
             "--rio-text",
             "--rio-text-muted",
             "--rio-text-subtle",
-            "--rio-text-secondary",
             "--rio-border-soft",
             "--rio-border",
             "--rio-border-strong",
@@ -209,11 +222,13 @@ mod tests {
 
     #[test]
     fn accent_rgb_triple_agrees_with_accent_hex() {
-        // The triple is what `rgb(var(--rio-accent-rgb) / α)` uses, so
-        // it must quantize to the same bytes as `--rio-accent`'s hex.
+        // The triple is what `rgb(var(--rio-accent-rgb) / α)` uses,
+        // so it must quantize to the same bytes as `--rio-accent`'s
+        // hex. Drop-in `--rio-accent` aliases `brand_surface` (see
+        // the comment in `emit`).
         let tokens = resolve_theme(ThemeInput::empty());
         let css = emit(&tokens);
-        let hex = tokens.brand_accent.to_hex();
+        let hex = tokens.brand_surface.to_hex();
         let r = u8::from_str_radix(&hex[1..3], 16).unwrap();
         let g = u8::from_str_radix(&hex[3..5], 16).unwrap();
         let b = u8::from_str_radix(&hex[5..7], 16).unwrap();

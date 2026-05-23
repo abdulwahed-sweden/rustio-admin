@@ -22,8 +22,15 @@ use std::fmt;
 ///   but we always store a value (typically 0) for `Copy`/`PartialEq`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Color {
+    /// Lightness in `0.0..=1.0`. 0 is black, 1 is white. Perceptually
+    /// uniform — equal steps in `l` look equally bright to the eye.
     pub l: f64,
+    /// Chroma in `0.0..~0.4`. 0 is achromatic; ~0.37 is a vivid
+    /// sRGB-gamut red. Values above the gamut clip on emission.
     pub c: f64,
+    /// Hue in degrees `0.0..360.0`. Undefined when `c` is 0 but
+    /// always stored (typically 0) so the struct remains `Copy` and
+    /// `PartialEq`.
     pub h: f64,
 }
 
