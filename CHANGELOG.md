@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.17.0** | 2026-05-23 | **Theme engine release.** New build-time crate `rio-theme` turns raw client brand colors into a safe, computed `tokens.css` via a six-case decision pipeline (contrast guard, palette derivation, vivid taming, brand/state collision avoidance, light/dark mode adaptation, multi-color role assignment). Internal math runs in OKLCH; every emitted token is contrast-measured against the page bg before it leaves the engine. New CLI verb `rustio theme generate --brand <hex> --out <path>` (repeatable `--brand`, zero is valid → safe default) prints a per-case effect report including all seven measured contrast ratios. Output carries both the canonical `--rio-brand-*` vocabulary the engine reasons in and drop-in aliases for the live admin template's `--rio-*` tokens, so the generated file can replace `tokens/colors.css` without changes to consumers. Vivid inputs are guarded — neon brands that would fail `AA_NON_TEXT` against the bg are substituted by the tamed surface and the substitution is logged. Achromatic brands short-circuit the semantic-collision resolver (no spurious rotation off the meaningless stored hue). |
 | **0.16.0** | 2026-05-21 | **Operations & i18n release.** Major new operator surfaces: `/admin/docs` (rendered framework markdown), `/admin/health` (web counterpart to `rustio doctor`), `/admin/feature_flags` (with `feature_enabled` helper), `/admin/notifications` (with topbar bell + unread badge), `/admin/apis` (OpenAPI 3.0 + TypeScript SDK + interactive playground). Dashboard gains framework-wide + per-model 7-day creation sparklines and "new this week" KPI. Audit history gains per-field diff render, per-actor filter, and date grouping. CSV import (`POST /admin/<model>/import.csv`) pairs with the existing export. JSON content negotiation now covers write paths (success + validation envelopes). Postgres FTS opt-in via `ModelAdmin::search_index_column`. Per-action bulk permission gate; per-model read-only via `Admin::read_only_model`. New CLI verbs: `rustio reload`, `rustio test-init`, `rustio startproject --preset blog`. New `middleware::locale` parses `Accept-Language` → `Locale` request-context value (foundation for the future message catalog). Dark theme retired — framework is now light-only. |
 | **0.15.1** | 2026-05-16 | **Refined colour palette — dark-frame chrome.** Page canvas moved from blue-tinted slate to neutral cool grey (`#E5E7EB`); chrome (topbar / sidebar / footer) jumped to deep slate-blue (`#1F2A37`) so the operator skeleton reads as a confident dark frame around the lighter content area — the Linear / Vercel / Notion / Stripe-Dashboard pattern. Dark mode chrome deepened to near-black (`#0A0E14`) so both modes share the "chrome is darker than canvas" convention. A new chrome-scope CSS cascade in `layout/shell.css` flips `--rio-text-*`, `--rio-surface-2/3`, `--rio-border-*`, and `--rio-accent` (to the lifted `#3FAA9D` variant for contrast) within `.rio-topbar` / `.rio-sidebar` / `.rio-footer` — every component inherits light-on-dark automatically, no per-component edits. Theme-toggle button redesigned as a ghost on chrome. Principle 10 reframed to allow either chrome direction. |
 | **0.15.0** | 2026-05-16 | **Visual identity overhaul — calm with authority.** Three new doctrine principles (deeper surface ladder, chrome carries weight, typography hierarchy is a weight choice). Surface scale grows from four rungs to six (`--rio-bg`/`--rio-surface`/`--rio-surface-2`/`--rio-surface-3`/`--rio-surface-chrome`/`--rio-surface-elevated`); chrome (topbar/sidebar/footer) now sits on a distinct deeper tier so the operator skeleton has visible load-bearing weight. Buttons gain a subtle vertical gradient + inset highlight + proper focus-visible ring. Inputs ship with `--rio-shadow-inset` so fields read as "place to type" rather than "drawn rectangle". Table headers retuned to 600 + tracked-allcaps; primary cell in each row gets weight 500 + text-strong as a skim anchor. Topbar height 64 → 72 px. Pure CSS — no template HTML, no public API, no AdminTheme contract change. Existing `AdminTheme` overrides keep working unchanged. |
@@ -39,7 +40,80 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.16.0]** block below._
+_No unreleased changes yet — see the **[0.17.0]** block below._
+
+
+## [0.17.0] — 2026-05-23
+
+### Added
+
+- **`rio-theme` — theme engine crate.** New build-time crate that
+  takes a client's raw brand colors and emits a safe, computed
+  `tokens.css`. The pipeline is a pure function over six decision
+  cases:
+  - **Case 1** — contrast guard. Every emitted text-on-surface
+    pairing is checked against WCAG AA. Failing pairings are
+    substituted with a guaranteed-readable fallback; the rejected
+    color is logged, not silently dropped.
+  - **Case 2** — palette derive. Hover, active, tint, text, bg,
+    border, and brand-tinted muted are computed from the tamed
+    surface brand. Semantics (success/warning/danger) are *not*
+    derived from brand.
+  - **Case 3** — vivid taming. Brands with OKLCH chroma above
+    `0.16` are split into a small-touches `brand_accent` (raw) and
+    a large-surfaces `brand_surface` (chroma-reduced, lightness
+    pinned to a mid band, hue preserved).
+  - **Case 4** — brand-vs-state collision resolver. Success,
+    warning, danger anchor hues are pushed away from the brand hue
+    when they collide. Rotation is bounded to `MAX_STATE_ROTATION
+    = 30°` so states stay in their conventional bands (no teal
+    "success" for a green brand); brands sitting inside a state's
+    family accept coexistence rather than rotate the state out of
+    band; achromatic brands (`chroma < 0.02`) short-circuit so the
+    meaningless stored hue never triggers a rotation.
+  - **Case 5** — mode-adaptive brand. Light and dark variants are
+    measured independently against `LIGHT_BG`/`DARK_BG`; only the
+    failing mode is adjusted. The token structure ships both
+    `--rio-brand-light` and `--rio-brand-dark` (plus
+    `--rio-brand-adaptive`) so a future dark-mode return is a
+    configuration flip, not a refactor.
+  - **Case 6** — multi-color role assignment. `surface_fitness`
+    ranks input colors; ranked[0] → primary, ranked[1] →
+    secondary (surfaced as `--rio-brand-secondary`), the rest →
+    `--rio-chart-N`.
+  - **Case 7** — safe default brand `#3f6089` when zero colors
+    are supplied.
+- **New CLI verb `rustio theme generate`.** Takes `--brand <hex>`
+  (repeatable) and `--out <path>`. Writes the generated CSS and
+  prints a per-case effect report — which cases fired, what was
+  substituted, plus all seven contrast ratios measured during the
+  pipeline (`brand_light vs #ffffff`, `brand_dark vs #15161a`,
+  `brand_text vs bg`, `brand_accent vs bg`, semantic foregrounds
+  vs white). Determinism is property-tested.
+- **New `--rio-*` tokens** in the engine's output (none consumed by
+  the live framework today — emitted for projects that wire the
+  generated file in directly):
+  - `--rio-brand-light`, `--rio-brand-dark`, `--rio-brand-adaptive`
+  - `--rio-brand-surface`, `--rio-brand-accent`, `--rio-brand-secondary`
+  - `--rio-brand-hover`, `--rio-brand-active`, `--rio-brand-tint`
+  - `--rio-brand-text`, `--rio-muted`
+  - `--rio-success-bg`, `--rio-warning-bg`, `--rio-danger-bg`,
+    `--rio-info-bg` (in the drop-in compatibility block — match
+    the same-named live tokens)
+  - `--rio-chart-N` (variable count per input)
+
+### Notes
+
+- The live `crates/rustio-admin/assets/static/admin/tokens/colors.css`
+  is **unchanged** by this release — the engine is opt-in for now.
+  Operators who want the engine's output can replace the file with
+  `rustio theme generate --brand "#0d9488" --out
+  crates/rustio-admin/assets/static/admin/tokens/colors.css`, but
+  some hand-tuned values (the brand-agnostic slate canvas
+  `--rio-bg`, the deliberately-emerald success that visually
+  rhymes with the teal brand) will shift.
+- `rio-theme` is build-time only. The runtime library
+  (`crates/rustio-admin`) does *not* depend on it.
 
 
 ## [0.16.0] — 2026-05-21
