@@ -139,3 +139,31 @@ jobs:
             echo "$offenders"
             exit 1
           fi
+
+      - name: scaffold template pin tracks workspace minor
+        run: |
+          set -eu
+          # The bundled `rustio startproject` template
+          # (crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl)
+          # must pin the same `rustio-admin` version the workspace
+          # ships. Three releases (0.17.0, 0.17.1, 0.18.0) drifted
+          # silently — every fresh scaffold failed to resolve until
+          # v0.18.1 patched the template. This guard prevents the
+          # recurrence.
+          workspace=$(awk '
+            /^\[workspace\.package\]/ { in_section = 1; next }
+            /^\[/                     { in_section = 0 }
+            in_section && $1 == "version" { gsub(/"/, "", $3); print $3; exit }
+          ' Cargo.toml)
+          template=$(grep -E '^rustio-admin\s*=\s*"' \
+            crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl \
+            | head -1 | cut -d'"' -f2)
+          if [ -z "$workspace" ] || [ -z "$template" ]; then
+            echo "::error::scaffold-template-pin guard could not extract both values (workspace='$workspace', template='$template'). Fix the regex or the file format."
+            exit 1
+          fi
+          if [ "$workspace" != "$template" ]; then
+            echo "::error::Workspace version ($workspace) and scaffold template pin ($template) have drifted. Update crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl to read 'rustio-admin = \"$workspace\"'. See v0.18.1 release notes for the convention."
+            exit 1
+          fi
+          echo "OK: workspace and scaffold template both pin $workspace"
