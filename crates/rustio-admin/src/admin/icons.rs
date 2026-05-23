@@ -38,6 +38,8 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
 
     // Action buttons
     m.insert("plus", r#"<path d="M5 12h14"/><path d="M12 5v14"/>"#);
+    m.insert("more-horizontal",
+        r#"<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>"#);
     m.insert("pencil",
         r#"<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>"#);
     m.insert("trash",
@@ -88,14 +90,6 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     // tick handles, the universal "tweak settings" glyph.
     m.insert("sliders",
         r#"<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>"#);
-
-    // More-horizontal (kebab) — table row actions. Three dots in
-    // a horizontal line, the standard "open this row's menu"
-    // glyph. Linear / Notion / Stripe / GitHub all use this same
-    // shape; the alternative `more-vertical` reads as "open a
-    // column menu" instead.
-    m.insert("more-horizontal",
-        r#"<circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/>"#);
 
     // Bookmark — list-page toolbar "Saved" dropdown trigger.
     m.insert(

@@ -124,26 +124,44 @@
  * dropdown toggles. Search bar flexes; dropdowns sit fixed-width
  * on the trailing edge. */
 
-/* v0.18.6 — toolbar is a 2-row stack now: search dominates
- * Row 1 at full width; secondary controls (Filters / Saved /
- * View) live in Row 2. Pre-0.18.6 single-row layout put
- * search + 3 dropdowns + 2 standalone buttons into one
- * flex row, which read as "wall of controls" and was the
- * basis of the "search bar is crowded" feedback. */
+/* ----- List-page toolbar ------------------------------------------
+ * One row: a flex-grow search field on the leading edge, then the
+ * control cluster (Filters / View / Saved) pushed to the trailing
+ * edge. Before v0.18.6 every child was a bare flex sibling with
+ * `flex-wrap`, so the dropdowns drifted apart and the row never
+ * read as a designed group. The search bar keeps the slack; the
+ * dropdowns travel together as one unit. */
 .rio-toolbar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--rio-s3);
   margin-bottom: var(--rio-s4);
+  flex-wrap: wrap;
 }
+
 .rio-toolbar .rio-search-bar {
+  flex: 1 1 320px;
+  min-width: 260px;
   margin-bottom: 0;
 }
-.rio-toolbar__controls {
-  display: flex;
-  align-items: center;
-  gap: var(--rio-s2);
-  flex-wrap: wrap;
+
+/* The trailing dropdowns share one consistent gap and never split
+ * across lines independently — they wrap as a block under the
+ * search field on a narrow viewport. `margin-inline-start: auto`
+ * is the single push that pins the cluster to the trailing edge. */
+.rio-toolbar > .rio-dropdown {
+  margin-inline-start: 0;
+}
+.rio-toolbar > .rio-dropdown:first-of-type {
+  margin-inline-start: auto;
+}
+
+/* Every toolbar control (search field and dropdown toggles) lands
+ * on the same 44px height so the row has one clean baseline. The
+ * dropdown toggle is otherwise sized for in-card use, where it sits
+ * a touch shorter. */
+.rio-toolbar .rio-dropdown-toggle {
+  min-height: 44px;
 }
 
 /* ----- Active filters strip ---------------------------------------

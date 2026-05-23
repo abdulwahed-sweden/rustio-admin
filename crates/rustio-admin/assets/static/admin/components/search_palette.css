@@ -32,23 +32,14 @@
  * GitHub / Linear / Vercel pattern. */
 
 .rio-search-trigger {
-  /* v0.18.6 — search trigger expands to fill the topbar's slack
-   * (flex:1) and is capped at a comfortable reading width (640px).
-   * Pre-0.18.6 the trigger was a 300-px pill that read as
-   * secondary chrome; widening it to dominate the topbar mirrors
-   * what Linear / Stripe / Vercel do — search is the primary
-   * action, not a small button.
-   *
-   * The flex:1 only does work because the parent .rio-topbar uses
-   * flex with the account nav `margin-inline-start: auto`. The
-   * trigger sits between brand and the (auto-margin'd) nav, so
-   * any extra room flows to it. */
-  display: flex;
+  /* v0.16 — 40px tall (was 34) so it sits comfortably on the 72px
+   * topbar. Wider minimum (300px) and 16px text — search reads as
+   * the primary affordance in the topbar instead of a cramped pill. */
+  display: inline-flex;
   align-items: center;
   gap: var(--rio-s2);
-  flex: 1 1 auto;
-  max-width: 640px;
   height: 40px;
+  min-width: 300px;
   padding: 0 var(--rio-s3);
   background: var(--rio-bg);
   border: 1px solid var(--rio-border);
@@ -117,9 +108,8 @@
   /* Hidden by default; JS sets aria-hidden="false" to reveal. */
   position: fixed;
   inset: 0;
-  /* v0.18.6 — search palette is the modal overlay; it sits at
-   * the top of the z-index ladder so it can dim and intercept
-   * the entire chrome (topbar, sidebar, dropdowns). */
+  /* Top of the stacking ladder — the global search modal covers
+   * topbar, sidebar, and any open dropdown. */
   z-index: var(--rio-z-modal);
   display: none;
   align-items: flex-start;

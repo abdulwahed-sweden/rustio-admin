@@ -30,77 +30,22 @@
   }
 
   // ---- Generic dropdown wiring ------------------------------------
-  // Any `[data-rio-dropdown]` wrapper containing a button that
-  // declares `aria-haspopup="true"` (and a `.rio-dropdown-panel`)
-  // gets the same open/close machinery: click the toggle to flip
-  // `is-open`, click outside to close, Esc to close. The CSS reads
-  // `.is-open` and shows the panel + rotates the chevron.
-  //
-  // Selector widened in v0.18.6: pre-0.18.6 the JS looked for
-  // `.rio-dropdown-toggle` specifically, which missed per-row
-  // table kebabs that used the bespoke `.rio-row-actions__toggle`
-  // class. The aria-haspopup contract is the right discriminator —
-  // it's what the dropdown role demands anyway, and every existing
-  // toggle in the framework already sets it.
-  //
-  // Row-action kebabs are flagged with `.rio-row-actions` on the
-  // wrapper; their panel needs to escape the list card's
-  // `overflow: hidden`, so we position it `fixed` against the
-  // toggle's bounding rect on open + reposition / close on scroll
-  // and resize.
+  // Any `[data-rio-dropdown]` wrapper that contains a
+  // `.rio-dropdown-toggle` and a `.rio-dropdown-panel` gets the same
+  // open/close machinery: click the toggle to flip `is-open`, click
+  // outside to close, Esc to close. The CSS reads `.is-open` and
+  // shows the panel + rotates the chevron.
   function initDropdowns() {
     const dropdowns = document.querySelectorAll("[data-rio-dropdown]");
     if (!dropdowns.length) return;
 
-    function findToggle(dd) {
-      return (
-        dd.querySelector(":scope > button[aria-haspopup='true']") ||
-        dd.querySelector(":scope > .rio-dropdown-toggle") ||
-        dd.querySelector("button[aria-haspopup='true']") ||
-        dd.querySelector(".rio-dropdown-toggle")
-      );
-    }
-
-    function positionFloatingPanel(dd) {
-      if (!dd.classList.contains("rio-row-actions")) return;
-      const toggle = findToggle(dd);
-      const panel = dd.querySelector(".rio-dropdown-panel");
-      if (!toggle || !panel) return;
-      const r = toggle.getBoundingClientRect();
-      // Panel is rendered `position: fixed` (see dropdowns.css
-      // `.rio-row-actions.is-open .rio-row-actions__panel`).
-      // Anchor the panel's top to the toggle's bottom (+6px to
-      // match the absolute-positioned panel's gap) and its
-      // trailing inline edge to the toggle's trailing edge.
-      panel.style.top = `${r.bottom + 6}px`;
-      panel.style.insetInlineEnd = `${window.innerWidth - r.right}px`;
-      panel.style.insetInlineStart = "auto";
-    }
-
-    function closeAll(except) {
-      dropdowns.forEach((dd) => {
-        if (dd === except) return;
-        if (!dd.classList.contains("is-open")) return;
-        dd.classList.remove("is-open");
-        const t = findToggle(dd);
-        if (t) t.setAttribute("aria-expanded", "false");
-      });
-    }
-
     dropdowns.forEach((dd) => {
-      const toggle = findToggle(dd);
+      const toggle = dd.querySelector(".rio-dropdown-toggle");
       if (!toggle) return;
       toggle.addEventListener("click", (e) => {
         e.stopPropagation();
-        // Only one dropdown open at a time — matches the user
-        // expectation everywhere else in the framework (search
-        // palette, account dropdown, etc.).
-        const wasOpen = dd.classList.contains("is-open");
-        closeAll(dd);
-        const open = !wasOpen;
-        dd.classList.toggle("is-open", open);
+        const open = dd.classList.toggle("is-open");
         toggle.setAttribute("aria-expanded", String(open));
-        if (open) positionFloatingPanel(dd);
       });
     });
 
@@ -108,7 +53,7 @@
       dropdowns.forEach((dd) => {
         if (dd.classList.contains("is-open") && !dd.contains(e.target)) {
           dd.classList.remove("is-open");
-          const t = findToggle(dd);
+          const t = dd.querySelector(".rio-dropdown-toggle");
           if (t) t.setAttribute("aria-expanded", "false");
         }
       });
@@ -119,30 +64,13 @@
       dropdowns.forEach((dd) => {
         if (!dd.classList.contains("is-open")) return;
         dd.classList.remove("is-open");
-        const t = findToggle(dd);
+        const t = dd.querySelector(".rio-dropdown-toggle");
         if (t) {
           t.setAttribute("aria-expanded", "false");
           t.focus();
         }
       });
     });
-
-    // Close any open row-kebab on scroll/resize — its fixed-
-    // positioned panel can't follow a scrolling viewport without
-    // re-anchoring, and the simpler UX is "scroll dismisses".
-    // Other dropdowns (toolbar Filters, account) live in normal
-    // flow and don't need this — they scroll with their parent.
-    const closeRowKebabs = () => {
-      dropdowns.forEach((dd) => {
-        if (!dd.classList.contains("rio-row-actions")) return;
-        if (!dd.classList.contains("is-open")) return;
-        dd.classList.remove("is-open");
-        const t = findToggle(dd);
-        if (t) t.setAttribute("aria-expanded", "false");
-      });
-    };
-    window.addEventListener("scroll", closeRowKebabs, { passive: true });
-    window.addEventListener("resize", closeRowKebabs, { passive: true });
   }
 
   // ---- Bulk select ------------------------------------------------
@@ -210,6 +138,132 @@
     });
 
     refresh();
+  }
+
+  // ---- Row-actions kebab menu -------------------------------------
+  // Each list-table row carries a <details class="rio-row-actions">
+  // whose <summary> is the "⋯" toggle. The native <details> already
+  // opens the menu (and the links work) with JS off — this function
+  // upgrades the experience when JS runs:
+  //
+  //   * the open menu is positioned `fixed`, anchored to the toggle's
+  //     bounding rect, so it escapes the list card's `overflow:
+  //     hidden` instead of being clipped below the last row;
+  //   * only one row menu is open at a time;
+  //   * outside-click, Esc, scroll, and resize all close it;
+  //   * ArrowUp/ArrowDown move between menu items.
+  //
+  // Positioning is recomputed on open only — the scroll handler
+  // closes the menu rather than chasing the toggle, which is the
+  // calmer behaviour for a transient row menu.
+  function initRowActions() {
+    const menus = Array.from(document.querySelectorAll("[data-rio-row-actions]"));
+    if (!menus.length) return;
+
+    let openMenu = null;
+
+    function placeMenu(details) {
+      const toggle = details.querySelector(".rio-row-actions__toggle");
+      const panel = details.querySelector(".rio-row-actions__menu");
+      if (!toggle || !panel) return;
+
+      panel.classList.add("is-floating");
+      // Measure after the panel is displayed so width/height are real.
+      const btn = toggle.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const gap = 4;
+      const margin = 8;
+
+      // Default: menu hangs below the toggle, right edges aligned.
+      let top = btn.bottom + gap;
+      let left = btn.right - panelRect.width;
+
+      // Flip above the toggle if it would run past the viewport.
+      if (top + panelRect.height > window.innerHeight - margin) {
+        top = btn.top - panelRect.height - gap;
+      }
+      // Keep the menu inside the viewport horizontally.
+      if (left < margin) left = margin;
+      const maxLeft = window.innerWidth - panelRect.width - margin;
+      if (left > maxLeft) left = maxLeft;
+
+      panel.style.top = `${Math.max(margin, top)}px`;
+      panel.style.left = `${left}px`;
+    }
+
+    function closeMenu() {
+      if (!openMenu) return;
+      const details = openMenu;
+      openMenu = null;
+      details.removeAttribute("open");
+      const panel = details.querySelector(".rio-row-actions__menu");
+      if (panel) {
+        panel.classList.remove("is-floating");
+        panel.style.top = "";
+        panel.style.left = "";
+      }
+      const toggle = details.querySelector(".rio-row-actions__toggle");
+      if (toggle) toggle.setAttribute("aria-expanded", "false");
+    }
+
+    function openOne(details) {
+      if (openMenu && openMenu !== details) closeMenu();
+      details.setAttribute("open", "");
+      openMenu = details;
+      const toggle = details.querySelector(".rio-row-actions__toggle");
+      if (toggle) toggle.setAttribute("aria-expanded", "true");
+      placeMenu(details);
+    }
+
+    menus.forEach((details) => {
+      const toggle = details.querySelector(".rio-row-actions__toggle");
+      if (!toggle) return;
+      toggle.setAttribute("aria-expanded", "false");
+
+      // Intercept the native <details> toggle so we drive open/close
+      // ourselves — the browser would otherwise open the menu
+      // before we can position it as `fixed`.
+      toggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (details.hasAttribute("open")) closeMenu();
+        else openOne(details);
+      });
+
+      // Arrow-key navigation between the menu items once open.
+      details.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+        const items = Array.from(
+          details.querySelectorAll(".rio-row-actions__item")
+        );
+        if (!items.length) return;
+        e.preventDefault();
+        const current = items.indexOf(document.activeElement);
+        const step = e.key === "ArrowDown" ? 1 : -1;
+        const next = (current + step + items.length) % items.length;
+        items[next].focus();
+      });
+    });
+
+    // Outside-click closes the open menu (clicks on the menu's own
+    // links fall through so navigation still happens).
+    document.addEventListener("click", (e) => {
+      if (!openMenu) return;
+      if (!openMenu.contains(e.target)) closeMenu();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && openMenu) {
+        const toggle = openMenu.querySelector(".rio-row-actions__toggle");
+        closeMenu();
+        if (toggle) toggle.focus();
+      }
+    });
+
+    // A `fixed` menu would visually detach from its row on scroll —
+    // closing is the honest behaviour. `capture: true` catches
+    // scrolls on any nested scroller, not just the window.
+    window.addEventListener("scroll", closeMenu, true);
+    window.addEventListener("resize", closeMenu);
   }
 
   // ---- FK autocomplete --------------------------------------------
@@ -540,6 +594,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       initSidebar();
       initDropdowns();
+      initRowActions();
       initBulkSelect();
       initFkAutocomplete();
       initSearchPalette();
@@ -547,6 +602,7 @@
   } else {
     initSidebar();
     initDropdowns();
+    initRowActions();
     initBulkSelect();
     initFkAutocomplete();
     initSearchPalette();

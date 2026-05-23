@@ -1,5 +1,4 @@
 {% extends "admin/_base.html" %}
-{% from "admin/_row_actions.html" import row_actions %}
 {% block content %}
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ display_name }}</span></nav>
@@ -12,20 +11,16 @@
 </header>
 
 <div class="rio-toolbar">
-  {# v0.18.6 — 2-row toolbar. Row 1 hosts ONLY the search input,
-   # full width. Row 2 hosts the secondary controls (Filters,
-   # Saved, View). Pre-0.18.6 layout (search + 3 buttons in one
-   # row) read as 4 competing affordances; the new layout makes
-   # search the obvious primary action and demotes the rest to
-   # subordinate controls — Linear / Stripe / Vercel pattern.
-   #
-   # The search form carries hidden inputs for every active
-   # filter + the current sort, so submitting a query keeps the
-   # rest of the list-view state intact. Page intentionally
-   # resets to 1 — a new query against page N rarely makes sense.
-   # Enter on the input submits; the visible "Search" button
-   # was the single biggest source of toolbar visual crowding,
-   # replaced by an a11y-only hidden submit. #}
+  {# The search form carries hidden inputs for every active filter +
+   # the current sort, so submitting a query keeps the rest of the
+   # list-view state intact. Page intentionally resets to 1 — a new
+   # query against page N rarely makes sense. #}
+  {# Search input is flex-grow inside .rio-toolbar so it takes
+   # all the slack left by the trailing dropdowns. Enter submits;
+   # no separate Search button — the magnifier in the input is
+   # the visual affordance. Hidden inputs carry the rest of the
+   # list-view state so submitting a query keeps filters/sort
+   # intact. Page intentionally resets to 1. #}
   <form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar" role="search">
     <span class="rio-search-input-wrap">
       {{ icon("search", class="rio-search-icon") }}
@@ -41,11 +36,13 @@
     {% if active_per_page_override %}
     <input type="hidden" name="per_page" value="{{ active_per_page_override }}">
     {% endif %}
+    {# Keep a submit button in the form for accessibility / no-JS
+     # submission, but hide it visually — Enter on the input
+     # submits in every modern browser, and a dedicated button
+     # was the single biggest source of toolbar visual crowding
+     # (one big and four medium-width buttons in a row). #}
     <button type="submit" class="rio-visually-hidden" tabindex="-1">Search</button>
   </form>
-
-  <div class="rio-toolbar__controls">
-
 
   {% if filters %}
   <div class="rio-dropdown" data-rio-dropdown>
@@ -286,8 +283,6 @@
    # buttons; both now live inside the "View" dropdown's Data
    # section. The reroute keeps the same URLs / CSRF / file-picker
    # mechanism — see the .rio-toolbar-view block above. #}
-
-  </div><!-- /.rio-toolbar__controls -->
 </div>
 
 {% if active_filter_pills %}
@@ -376,9 +371,26 @@
           {% if read_only %}
           <span class="rio-meta">read-only</span>
           {% else %}
-          {# Shared kebab — markup lives in admin/_row_actions.html
-           # so users/groups/model list pages all render identically. #}
-          {{ row_actions(admin_name, row.id) }}
+          {# Row actions fold into one kebab menu so the actions
+           # column stays a fixed narrow width regardless of how
+           # many actions a model exposes. The menu is JS-driven
+           # (admin.js :: initRowActions) and renders `position:
+           # fixed` so the list card's `overflow: hidden` can't
+           # clip it. Without JS the <details> fallback still
+           # opens the same Edit / Delete links. #}
+          <details class="rio-row-actions" data-rio-row-actions>
+            <summary class="rio-row-actions__toggle" aria-haspopup="menu" aria-label="Actions for row {{ row.id }}">
+              {{ icon("more-horizontal", class="rio-icon") }}
+            </summary>
+            <div class="rio-row-actions__menu" role="menu">
+              <a class="rio-row-actions__item" role="menuitem" href="/admin/{{ admin_name }}/{{ row.id }}/edit">
+                {{ icon("pencil", class="rio-icon") }} Edit
+              </a>
+              <a class="rio-row-actions__item rio-row-actions__item--danger" role="menuitem" href="/admin/{{ admin_name }}/{{ row.id }}/delete">
+                {{ icon("trash", class="rio-icon") }} Delete
+              </a>
+            </div>
+          </details>
           {% endif %}
         </td>
       </tr>
@@ -386,25 +398,10 @@
     </tbody>
   </table>
   {% else %}
-  {# v0.19 — proper empty state replaces the pre-0.19 one-line
-   # paragraph. Same routing target; the CTA stays read-only-aware. #}
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">
-      {% if search_query %}No matches for "{{ search_query }}"{% else %}No {{ display_name|lower }} yet{% endif %}
-    </h3>
-    <p class="rio-empty-state__lead">
-      {% if search_query %}
-        Try a different search, or clear the query to see every row.
-      {% else %}
-        Add the first {{ singular_name|lower }} to get started — rows
-        you create will show up in this table.
-      {% endif %}
-    </p>
-    {% if not read_only and not search_query %}
-    <a class="rio-button rio-button--primary" href="/admin/{{ admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add {{ singular_name }}</a>
-    {% endif %}
-  </div>
+  <p class="rio-empty">
+    No {{ display_name|lower }} yet.
+    {% if not read_only %}<a href="/admin/{{ admin_name }}/new">Add the first one.</a>{% endif %}
+  </p>
   {% endif %}
 </section>
 

@@ -24,9 +24,9 @@
   border-bottom: 1px solid var(--rio-border-soft);
   position: sticky;
   top: 0;
-  /* v0.18.6 — use the new z-index ladder so the topbar always
-   * sits above the sidebar. Pre-0.18.6: hard-coded 10 against
-   * the sidebar's leaked 20 → sidebar covered the topbar. */
+  /* Topbar always wins over the sticky sidebar. Before v0.18.6 this
+   * was a bare `10`, lower than the sidebar's `20`, so scrolling a
+   * long page slid the sidebar up over the identity strip. */
   z-index: var(--rio-z-topbar);
 }
 .rio-topbar-brand {

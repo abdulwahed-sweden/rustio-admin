@@ -9,6 +9,19 @@
  * Mobile-first off-canvas overrides live in layout/responsive.css.
  * ============================================================ */
 
+/* Unified stacking order — one place that decides who sits above
+ * whom. Before v0.18.6 the topbar (z-index:10), sidebar (z-index:20),
+ * dropdown panels (z-index:40) and FK results (z-index:50) each
+ * picked their own number, so the sticky sidebar scrolled up over
+ * the sticky topbar. The ladder below is the single source of
+ * truth; every chrome/overlay rule references these tokens. */
+:root {
+  --rio-z-sidebar:  100;
+  --rio-z-topbar:   200;
+  --rio-z-dropdown: 300;
+  --rio-z-modal:    400;
+}
+
 .rio-shell {
   min-height: 100vh;
   display: flex;

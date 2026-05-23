@@ -33,14 +33,6 @@
   border-color: var(--rio-border-strong);
   color: var(--rio-text-strong);
 }
-/* v0.18.6 — keyboard focus ring. Matches the input focus pattern
- * (accent border + 4-px accent-border halo) so all interactive
- * controls share a single focus language. */
-.rio-dropdown-toggle:focus-visible {
-  outline: none;
-  border-color: var(--rio-accent);
-  box-shadow: 0 0 0 4px var(--rio-accent-border);
-}
 .rio-dropdown-toggle .rio-icon { width: 16px; height: 16px; opacity: 0.85; }
 .rio-dropdown-toggle .rio-chev {
   width: 13px; height: 13px;
@@ -83,10 +75,6 @@
   border-radius: var(--rio-radius);
   box-shadow: var(--rio-shadow-lg);
   padding: var(--rio-s4);
-  /* v0.18.6 — use the shared z-index ladder. Dropdowns sit
-   * above the topbar (otherwise an open dropdown would clip
-   * under the sticky chrome) and below the search palette
-   * modal (which acts as a true overlay). */
   z-index: var(--rio-z-dropdown);
 }
 .rio-dropdown.is-open .rio-dropdown-panel { display: block; }
@@ -179,64 +167,6 @@
   border-radius: 50%;
   background: var(--rio-accent);
   flex-shrink: 0;
-}
-
-/* Danger-flavoured menu row — destructive action variant.
- * Used by the table row kebab's "Delete" entry. Stays muted
- * until hover/focus, then the row picks up the danger color
- * and tint. Avoids the always-red affordance that would
- * over-warn an idle menu. */
-.rio-dropdown-item--danger { color: var(--rio-text); }
-.rio-dropdown-item--danger:hover,
-.rio-dropdown-item--danger:focus-visible {
-  background: var(--rio-danger-bg);
-  color: var(--rio-danger);
-}
-
-/* ── Table row kebab ────────────────────────────────────────
- * Per-row "..." dropdown that replaces the pre-0.18.6 inline
- * Edit + Delete buttons. The toggle is a 28-px square icon
- * button; the panel anchors flush to the row's trailing edge
- * (`inset-inline-end: 0` already on the generic
- * `.rio-dropdown-panel`). Reuses .rio-dropdown machinery so
- * keyboard + click + outside-click semantics are identical
- * to the toolbar dropdowns. */
-.rio-row-actions { display: inline-block; }
-.rio-row-actions__toggle {
-  display: inline-flex;
-  align-items: center; justify-content: center;
-  width: 28px; height: 28px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--rio-radius-sm);
-  color: var(--rio-text-muted);
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.rio-row-actions__toggle:hover,
-.rio-row-actions__toggle:focus-visible {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border);
-  color: var(--rio-text-strong);
-  outline: none;
-}
-.rio-row-actions.is-open .rio-row-actions__toggle {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
-}
-.rio-row-actions__toggle .rio-icon { width: 18px; height: 18px; }
-.rio-row-actions__panel {
-  min-width: 180px;
-}
-/* v0.18.6 — escape `.rio-list { overflow: hidden }` (tables.css)
- * by switching the panel to `position: fixed` once the kebab is
- * open. admin.js's positionFloatingPanel() writes top + inset-
- * inline-end from the toggle's bounding rect so the menu hugs
- * the row kebab regardless of scroll position. Scroll / resize
- * dismiss the menu (no re-anchor cost). */
-.rio-row-actions.is-open .rio-row-actions__panel {
-  position: fixed;
 }
 
 /* File-input menu row — used by the list-page "View" dropdown's
@@ -370,7 +300,9 @@
   box-shadow: var(--rio-shadow-2, 0 4px 16px rgb(0 0 0 / 0.12));
   max-height: 240px;
   overflow-y: auto;
-  z-index: 50;
+  /* One step above the dropdown panel — these results render
+   * inside the Filters panel and must float over its content. */
+  z-index: calc(var(--rio-z-dropdown) + 1);
 }
 .rio-fk-autocomplete-results[hidden] { display: none; }
 .rio-fk-autocomplete-result {
@@ -448,4 +380,117 @@
   min-width: 0;
   padding: 0.35rem 0.5rem;
   font-size: var(--rio-fs-sm);
+}
+
+/* ============================================================
+ * Row-actions kebab menu
+ *
+ * The per-row "⋯" menu on list tables. Built on a native
+ * <details>/<summary> so it opens and the links work even with
+ * JS disabled. When JS IS present (admin.js :: initRowActions)
+ * the open menu is re-parented to `position: fixed` and anchored
+ * to the toggle's bounding rect — that lifts it out of the list
+ * card's `overflow: hidden`, which would otherwise clip a menu
+ * that drops below the last visible row.
+ * ============================================================ */
+
+.rio-row-actions {
+  position: relative;
+  display: inline-block;
+}
+
+/* The toggle is a 32px square icon button. `list-style: none`
+ * (plus the WebKit pseudo) strips the native <summary> triangle. */
+.rio-row-actions__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text-muted);
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.rio-row-actions__toggle::-webkit-details-marker { display: none; }
+.rio-row-actions__toggle:hover {
+  background: var(--rio-surface-2);
+  border-color: var(--rio-border);
+  color: var(--rio-text-strong);
+}
+.rio-row-actions[open] .rio-row-actions__toggle {
+  background: var(--rio-surface-2);
+  border-color: var(--rio-border-strong);
+  color: var(--rio-text-strong);
+}
+.rio-row-actions__toggle:focus-visible {
+  outline: 2px solid var(--rio-accent);
+  outline-offset: 1px;
+}
+.rio-row-actions__toggle .rio-icon { width: 18px; height: 18px; }
+
+/* Default (no-JS) placement: absolute, anchored to the toggle and
+ * pulled to the trailing edge so the menu hangs under the kebab.
+ * JS overrides `position`/`top`/`left` inline when it promotes the
+ * menu to `fixed`. */
+.rio-row-actions__menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-end: 0;
+  min-width: 168px;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius);
+  box-shadow: var(--rio-shadow-lg);
+  padding: var(--rio-s1);
+  z-index: var(--rio-z-dropdown);
+}
+.rio-row-actions[open] .rio-row-actions__menu { display: block; }
+
+/* When JS promotes the menu, it sets this class — `position: fixed`
+ * is then driven entirely by inline `top` / `left` from the
+ * toggle's getBoundingClientRect(). */
+.rio-row-actions__menu.is-floating {
+  position: fixed;
+  top: auto;
+  inset-inline-end: auto;
+}
+
+.rio-row-actions__item {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-s2);
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text);
+  font-size: var(--rio-fs-md);
+  font-weight: var(--rio-fw-medium);
+  line-height: var(--rio-lh-ui);
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+.rio-row-actions__item:hover {
+  text-decoration: none;
+  background: var(--rio-surface-2);
+  color: var(--rio-text-strong);
+}
+.rio-row-actions__item:focus-visible {
+  outline: 2px solid var(--rio-accent);
+  outline-offset: -2px;
+}
+.rio-row-actions__item .rio-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--rio-text-subtle);
+  flex-shrink: 0;
+}
+/* Destructive action — red label + red icon, red wash on hover. */
+.rio-row-actions__item--danger { color: var(--rio-danger); }
+.rio-row-actions__item--danger .rio-icon { color: var(--rio-danger); }
+.rio-row-actions__item--danger:hover {
+  background: var(--rio-danger-bg, rgb(220 38 38 / 0.08));
+  color: var(--rio-danger);
 }
