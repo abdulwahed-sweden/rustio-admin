@@ -47,7 +47,7 @@ jobs:
           # focused on Rust source / TOML / templates.
           forbidden='HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel'
           if git grep -nE "($forbidden)" \
-              -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude)crates/*/assets/'; then
+              -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'; then
             echo "::error::Forbidden Tier 2 symbol detected. Tier 1 must not reference Tier 2 metadata."
             exit 1
           fi
