@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.18.4** | 2026-05-23 | **First publish since v0.13.0.** `admin::docs` was reaching `include_str!("../../../../docs/<file>.md")` outside the crate root — fine in-tree, but `cargo publish` builds from a tarball that contains only the crate's own files, so the verification failed. Latent since v0.16.0 (no version since v0.13.0 was published). Fix copies `architecture.md` / `modeladmin.md` / `public-api.md` into `crates/rustio-admin/assets/docs/` and updates the three `include_str!` paths. Workspace docs remain at `docs/` as the canonical source; the in-crate copies are bundled at release time. All four workspace crates (`rustio-admin`, `rustio-admin-macros`, `rustio-admin-cli`, plus the new `rio-theme` — first claim of the name) published to crates.io at 0.18.4 in dependency order. |
 | **0.18.3** | 2026-05-23 | Patch: ships green CI. v0.18.2's release commit pushed through but the tagged tree itself had two pre-existing failures — pre-existing rustfmt drift in `crates/rio-theme/` (never run through `cargo fmt` since the crate landed in 0.17.0) and a `clippy::uninlined-format-args` violation in `color.rs` that CI's pinned `rustc 1.88` rejects but newer local toolchains let through (same lint class as `bcdf9b6`). Both fixed (`e5e4900`, `dbe4951`); CI now runs all 15 steps green including the new scaffold-template-pin guard verified end-to-end against simulated drift on PR #2. |
 | **0.18.2** | 2026-05-23 | Patch: new CI guard `scaffold template pin tracks workspace minor` extracts `[workspace.package].version` from `Cargo.toml` and the `rustio-admin = "X"` pin from `crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl`, fails the build with an actionable `::error::` line when they disagree. Backstop for the drift that bit 0.17.0 / 0.17.1 / 0.18.0; v0.18.1 patched the immediate drift, this guard prevents the recurrence. Tested locally by temporarily reverting the template pin — guard tripped with the expected message. |
 | **0.18.1** | 2026-05-23 | Patch: the `rustio startproject` scaffold template pinned `rustio-admin = "0.16.0"` through three releases (0.17.0, 0.17.1, 0.18.0) — and `0.16.0` is not on crates.io anyway (latest published: 0.13.0), so any fresh scaffold hit a registry resolve failure. The template now tracks the workspace minor. Surfaced during local verification of the v0.18.0 engine-generated `colors.css` render. |
@@ -45,7 +46,36 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.18.3]** block below._
+_No unreleased changes yet — see the **[0.18.4]** block below._
+
+
+## [0.18.4] — 2026-05-23
+
+### Fixed
+
+- **`admin::docs` `include_str!` paths reached outside the crate
+  root.** Lines like `include_str!("../../../../docs/<file>.md")`
+  worked in-tree but `cargo publish` builds the crate from a
+  tarball that contains only the crate's own files, so the
+  paths failed verification. Pre-existing since v0.16.0 — never
+  surfaced because no version >= 0.14.0 had been published.
+- Fix: copied `architecture.md`, `modeladmin.md`, and
+  `public-api.md` into `crates/rustio-admin/assets/docs/` and
+  updated the three `include_str!` lines to read
+  `../../assets/docs/<file>.md` (paths now stay inside the
+  crate). Workspace `docs/` remains the canonical source for the
+  human-facing site / IDE access; the in-crate copies are
+  release-bundled.
+
+### Published
+
+- First publish since v0.13.0. All four workspace crates ship to
+  crates.io at 0.18.4:
+  - `rustio-admin-macros`
+  - `rio-theme` (first claim of the name; new build-time crate
+    that ships the theme engine added in v0.17.0)
+  - `rustio-admin`
+  - `rustio-admin-cli`
 
 
 ## [0.18.3] — 2026-05-23

@@ -790,7 +790,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2158,7 +2158,7 @@ dependencies = [
 
 [[package]]
 name = "rio-theme"
-version = "0.18.3"
+version = "0.18.4"
 dependencies = [
  "log",
 ]
@@ -2252,7 +2252,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin"
-version = "0.18.3"
+version = "0.18.4"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -2287,7 +2287,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-cli"
-version = "0.18.3"
+version = "0.18.4"
 dependencies = [
  "chrono",
  "clap",
@@ -2310,7 +2310,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-macros"
-version = "0.18.3"
+version = "0.18.4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2327,7 +2327,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

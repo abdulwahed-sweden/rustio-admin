@@ -31,21 +31,29 @@ pub(crate) struct EmbeddedDoc {
 }
 
 /// Stable list of embedded docs. Ordered for the index page.
+///
+/// Sources live under `crates/rustio-admin/assets/docs/`, copied
+/// from the workspace-level `docs/` directory at release time.
+/// Keeping a copy inside the crate is what makes
+/// `cargo publish` happy — `include_str!` paths must stay inside
+/// the crate tarball, so we cannot reach `../../../../docs/`
+/// (which would walk above the crate root). Update both copies
+/// when the canonical workspace docs change.
 pub(crate) const EMBEDDED_DOCS: &[EmbeddedDoc] = &[
     EmbeddedDoc {
         slug: "architecture",
         title: "Architecture",
-        source: include_str!("../../../../docs/architecture.md"),
+        source: include_str!("../../assets/docs/architecture.md"),
     },
     EmbeddedDoc {
         slug: "modeladmin",
         title: "ModelAdmin customisation",
-        source: include_str!("../../../../docs/modeladmin.md"),
+        source: include_str!("../../assets/docs/modeladmin.md"),
     },
     EmbeddedDoc {
         slug: "public-api",
         title: "Public API surface",
-        source: include_str!("../../../../docs/public-api.md"),
+        source: include_str!("../../assets/docs/public-api.md"),
     },
 ];
 
