@@ -2157,6 +2157,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rio-theme"
+version = "0.16.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "rkyv"
 version = "0.7.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2288,6 +2295,7 @@ dependencies = [
  "env_logger",
  "lettre",
  "log",
+ "rio-theme",
  "rpassword",
  "rustio-admin",
  "serde",

@@ -18,6 +18,11 @@ path = "src/main.rs"
 
 [dependencies]
 rustio-admin = { workspace = true }
+# Theme engine (DESIGN_THEME). Build-time only — the `rustio theme
+# generate` subcommand turns raw brand colors into a static tokens.css.
+# Runtime CSS is the generated file; the library does not depend on
+# this crate.
+rio-theme = { path = "../rio-theme", version = "0.16.0" }
 
 # CLI surface
 clap      = { version = "4", features = ["derive"] }

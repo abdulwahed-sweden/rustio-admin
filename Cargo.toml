@@ -4,6 +4,7 @@ members = [
     "crates/rustio-admin",
     "crates/rustio-admin-macros",
     "crates/rustio-admin-cli",
+    "crates/rio-theme",
     "examples/clinic",
 ]
 

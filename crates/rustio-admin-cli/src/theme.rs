@@ -14,6 +14,8 @@
 //! oled-black. Each preset is a six-field hex tuple; project authors
 //! can tweak any single field after pasting.
 
+use std::path::PathBuf;
+
 use clap::Subcommand;
 
 #[derive(Subcommand)]
@@ -25,6 +27,22 @@ pub(crate) enum Action {
         /// Preset identifier (e.g. `ocean`, `forest`, `sunset`,
         /// `monochrome`). Case-insensitive.
         name: String,
+    },
+    /// Generate a `tokens.css` from raw brand colors. The engine
+    /// measures contrast, tames vivid colors, derives shades, and
+    /// pushes state colors out of the brand's way before writing.
+    /// Zero `--brand` flags emits the safe default (Case 7).
+    Generate {
+        /// Brand color in `#rrggbb` form. Repeatable; order is the
+        /// client's priority order. Engine ranks by fitness rather
+        /// than trusting the order blindly — see DESIGN_THEME §9.
+        #[arg(long = "brand")]
+        brand: Vec<String>,
+        /// Destination path for the emitted CSS. Existing files are
+        /// overwritten without prompting — the engine is deterministic
+        /// and regenerable.
+        #[arg(long = "out", default_value = "tokens.css")]
+        out: PathBuf,
     },
 }
 
@@ -93,7 +111,90 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
             Ok(())
         }
         Action::Show { name } => print_show(&name),
+        Action::Generate { brand, out } => run_generate(&brand, &out),
     }
+}
+
+fn run_generate(brand: &[String], out: &std::path::Path) -> Result<(), String> {
+    let mut colors = Vec::with_capacity(brand.len());
+    for raw in brand {
+        let parsed = rio_theme::Color::from_hex(raw)
+            .map_err(|e| format!("invalid --brand {raw:?}: {e}"))?;
+        colors.push(parsed);
+    }
+
+    let input = rio_theme::ThemeInput {
+        brand_colors: colors.clone(),
+    };
+    let (tokens, report) = rio_theme::resolve_theme_with_report(input);
+    let css = rio_theme::emit::emit(&tokens);
+
+    std::fs::write(out, &css).map_err(|e| format!("could not write {}: {e}", out.display()))?;
+
+    print_generate_report(&colors, &tokens, &report, out);
+    Ok(())
+}
+
+fn print_generate_report(
+    inputs: &[rio_theme::Color],
+    tokens: &rio_theme::ThemeTokens,
+    report: &rio_theme::ResolveReport,
+    out: &std::path::Path,
+) {
+    println!("rio-theme: wrote {}", out.display());
+    println!();
+    println!("inputs:");
+    if inputs.is_empty() {
+        println!("  (none — Case 7 default brand used)");
+    } else {
+        for (i, c) in inputs.iter().enumerate() {
+            println!("  [{}] {}", i + 1, c.to_hex());
+        }
+    }
+
+    println!();
+    println!("cases fired:");
+    if report.default_brand_used {
+        println!("  Case 7  default brand inserted (no input)");
+    }
+    if report.vivid_tamed {
+        println!(
+            "  Case 3  vivid taming: surface {} (accent kept at {})",
+            tokens.brand_surface.to_hex(),
+            tokens.brand_accent.to_hex(),
+        );
+    }
+    if report.light_adjusted {
+        println!(
+            "  Case 5  light variant adjusted to {} for contrast on white",
+            tokens.brand_light.to_hex()
+        );
+    }
+    if report.dark_adjusted {
+        println!(
+            "  Case 5  dark variant adjusted to {} for contrast on dark bg",
+            tokens.brand_dark.to_hex()
+        );
+    }
+    if report.text_substituted {
+        println!(
+            "  Case 1  brand_text substituted to {} to clear AA on page bg",
+            tokens.brand_text.to_hex()
+        );
+    }
+    if !report.default_brand_used
+        && !report.vivid_tamed
+        && !report.light_adjusted
+        && !report.dark_adjusted
+        && !report.text_substituted
+    {
+        println!("  (none — inputs needed no repair)");
+    }
+
+    println!();
+    println!("contrast (post-resolution):");
+    println!("  brand_light  vs #ffffff : {:.2}", report.light_contrast);
+    println!("  brand_dark   vs #15161a : {:.2}", report.dark_contrast);
 }
 
 fn print_list() {

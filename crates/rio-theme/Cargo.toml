@@ -1,0 +1,18 @@
+[package]
+name = "rio-theme"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Theme engine for rustio-admin: turns raw brand colors into a safe, computed tokens.css."
+readme = "../../README.md"
+
+[dependencies]
+# `log::warn!` from the contrast guard. The only dep on purpose —
+# the engine is otherwise std-only. OKLab matrices, WCAG luminance,
+# and hex IO are hand-rolled (see DESIGN_THEME §2 — keep the
+# dependency footprint visible).
+log = "0.4"
