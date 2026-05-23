@@ -39,8 +39,15 @@ jobs:
       - name: forbid Tier 2 symbols
         run: |
           set -eu
+          # The guard scans code, not documentation. Asset dirs
+          # (e.g. crates/rustio-admin/assets/docs/) bundle the
+          # canonical workspace docs which legitimately *mention*
+          # these symbols in passages explaining the guard itself
+          # — excluding `crates/*/assets/` keeps the guard
+          # focused on Rust source / TOML / templates.
           forbidden='HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel'
-          if git grep -nE "($forbidden)" -- 'crates/' 'examples/' 'Cargo.toml'; then
+          if git grep -nE "($forbidden)" \
+              -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude)crates/*/assets/'; then
             echo "::error::Forbidden Tier 2 symbol detected. Tier 1 must not reference Tier 2 metadata."
             exit 1
           fi
