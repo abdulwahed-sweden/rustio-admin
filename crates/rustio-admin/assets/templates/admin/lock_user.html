@@ -9,13 +9,13 @@
     <a href="/admin/users/{{ target_user_id }}/edit">{{ target_email }}</a> ·
     <span>Lock</span>
   </nav>
-  <h1>Lock account — {{ target_email }}</h1>
+  <h1>Lock account</h1>
+  <p class="rio-page-header__lead">
+    Applies a manual lock to <strong>{{ target_email }}</strong>. Sessions
+    revoke immediately; sign-in is refused until the lock expires (or an
+    admin unlocks the account).
+  </p>
 </header>
-
-<p class="rio-meta">
-  Apply a manual lock. Sessions are revoked immediately; sign-in is refused
-  until the lock expires (or an admin unlocks the account).
-</p>
 
 {% if errors %}
 <div class="rio-flash rio-flash--error" role="alert">

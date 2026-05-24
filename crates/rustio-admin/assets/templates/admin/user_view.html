@@ -78,7 +78,11 @@
   </nav>
   {% endif %}
   {% else %}
-  <p class="rio-empty">No activity recorded.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No activity recorded</h3>
+    <p class="rio-empty-state__lead">Anything this user does in the admin will appear here.</p>
+  </div>
   {% endif %}
 </section>
 
@@ -93,7 +97,11 @@
     </tbody>
   </table>
   {% else %}
-  <p class="rio-empty">No permissions granted.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("key", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No permissions granted</h3>
+    <p class="rio-empty-state__lead">Add this user to a group, or grant a direct permission, to see entries here.</p>
+  </div>
   {% endif %}
 </section>
 
@@ -128,7 +136,11 @@
     </tbody>
   </table>
   {% else %}
-  <p class="rio-empty">No active sessions.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("log-out", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No active sessions</h3>
+    <p class="rio-empty-state__lead">When this user signs in, their sessions appear here for revocation.</p>
+  </div>
   {% endif %}
 </section>
 {% endif %}

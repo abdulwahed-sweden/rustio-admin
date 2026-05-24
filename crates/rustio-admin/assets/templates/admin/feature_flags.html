@@ -10,58 +10,80 @@
   </p>
 </header>
 
-<section class="rio-card">
-  {% if flags %}
-  <table class="rio-table">
-    <thead>
-      <tr><th>Key</th><th>State</th><th>Description</th><th>Updated</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for f in flags %}
-      <tr>
-        <td><code>{{ f.key }}</code></td>
-        <td>
-          {% if f.enabled %}
-          <span class="rio-pill rio-pill--badge-success">enabled</span>
-          {% else %}
-          <span class="rio-pill rio-pill--badge-neutral">disabled</span>
-          {% endif %}
-        </td>
-        <td>{{ f.description }}</td>
-        <td title="{{ f.updated_iso }}"><span class="rio-meta">{{ f.updated_iso }}</span></td>
-        <td>
-          <form method="post" action="/admin/feature_flags/{{ f.key }}/toggle" class="rio-form-inline">
-            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-            <input type="hidden" name="enabled" value="{% if f.enabled %}0{% else %}1{% endif %}">
-            <button type="submit" class="rio-button rio-button--ghost rio-button--sm">
-              {% if f.enabled %}Disable{% else %}Enable{% endif %}
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="rio-empty">No flags yet — register one below.</p>
-  {% endif %}
+<section class="rio-section" aria-label="Registered flags">
+  <header class="rio-section__header">
+    <div class="rio-section__heading">
+      <span class="rio-section__label">Flags</span>
+      <h2 class="rio-section__title">{{ flags|length }} registered</h2>
+    </div>
+  </header>
+  <div class="rio-card rio-card--quiet rio-list">
+    {% if flags %}
+    <table class="rio-table rio-table--striped">
+      <thead>
+        <tr><th>Key</th><th>State</th><th>Description</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for f in flags %}
+        <tr>
+          <td><code>{{ f.key }}</code></td>
+          <td>
+            {% if f.enabled %}
+            <span class="rio-pill rio-pill--badge-success">enabled</span>
+            {% else %}
+            <span class="rio-pill rio-pill--badge-neutral">disabled</span>
+            {% endif %}
+          </td>
+          <td>{{ f.description }}</td>
+          <td title="{{ f.updated_iso }}"><span class="rio-meta">{{ f.updated_iso }}</span></td>
+          <td>
+            <form method="post" action="/admin/feature_flags/{{ f.key }}/toggle" class="rio-form-inline">
+              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+              <input type="hidden" name="enabled" value="{% if f.enabled %}0{% else %}1{% endif %}">
+              <button type="submit" class="rio-button rio-button--ghost rio-button--sm">
+                {% if f.enabled %}Disable{% else %}Enable{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="rio-empty-state">
+      <div class="rio-empty-state__icon">{{ icon("flag", class="rio-icon") }}</div>
+      <h3 class="rio-empty-state__title">No flags yet</h3>
+      <p class="rio-empty-state__lead">
+        Register your first flag below — your code reads it via
+        <code>feature_enabled(db, "key")</code>.
+      </p>
+    </div>
+    {% endif %}
+  </div>
 </section>
 
-<section class="rio-card">
-  <h2>Add a flag</h2>
-  <form method="post" action="/admin/feature_flags" class="rio-form rio-form--inline">
-    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <label class="rio-form-field">
-      <span>Key</span>
-      <input type="text" name="key" required pattern="[a-z0-9_]+"
-             placeholder="snake_case_identifier"
-             class="rio-input">
-    </label>
-    <label class="rio-form-field">
-      <span>Description</span>
-      <input type="text" name="description" placeholder="What flips when this is on?" class="rio-input">
-    </label>
-    <button type="submit" class="rio-button rio-button--primary">Add flag</button>
-  </form>
+<section class="rio-section" aria-label="Register a flag">
+  <header class="rio-section__header">
+    <div class="rio-section__heading">
+      <span class="rio-section__label">Add</span>
+      <h2 class="rio-section__title">Register a new flag</h2>
+    </div>
+  </header>
+  <div class="rio-card">
+    <form method="post" action="/admin/feature_flags" class="rio-form rio-form--inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <label class="rio-form-field">
+        <span>Key</span>
+        <input type="text" name="key" required pattern="[a-z0-9_]+"
+               placeholder="snake_case_identifier"
+               class="rio-input">
+      </label>
+      <label class="rio-form-field">
+        <span>Description</span>
+        <input type="text" name="description" placeholder="What flips when this is on?" class="rio-input">
+      </label>
+      <button type="submit" class="rio-button rio-button--primary">Add flag</button>
+    </form>
+  </div>
 </section>
 {% endblock %}

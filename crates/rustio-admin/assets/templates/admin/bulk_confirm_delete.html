@@ -8,22 +8,32 @@
     <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
     <span>Delete {{ items|length }} {{ singular_name }}{% if items|length != 1 %}s{% endif %}</span>
   </nav>
-  <h1>Are you sure?</h1>
+  <h1>Delete {{ items|length }} {{ singular_name }}{% if items|length != 1 %}s{% endif %}</h1>
 </header>
 
-<section class="rio-card rio-confirm">
-  <p>You are about to delete <strong>{{ items|length }}</strong> {{ singular_name }}{% if items|length != 1 %}s{% endif %}:</p>
+<section class="rio-confirm rio-confirm--danger">
+  <header class="rio-confirm__header">
+    <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
+    <div>
+      <h2 class="rio-confirm__title">Are you sure?</h2>
+      <p class="rio-confirm__lead">
+        You are about to delete <strong>{{ items|length }}</strong>
+        {{ singular_name }}{% if items|length != 1 %}s{% endif %}. This
+        action cannot be undone.
+      </p>
+    </div>
+  </header>
 
-  <ul class="rio-cascade-list">
+  <p class="rio-confirm__section-title">Affected rows</p>
+  <ul class="rio-confirm__items">
     {% for it in items %}
-    <li>
-      <a href="/admin/{{ admin_name }}/{{ it.id }}/edit">#{{ it.id }}</a>
-      &mdash; <em>{{ it.label }}</em>
-    </li>
+    <li><a href="/admin/{{ admin_name }}/{{ it.id }}/edit">#{{ it.id }}</a> &mdash; <em>{{ it.label }}</em></li>
     {% endfor %}
   </ul>
 
-  <p class="rio-meta">This cannot be undone. Each row is deleted individually so per-row hooks and audit entries fire as expected.</p>
+  <p class="rio-confirm__small">
+    Each row is deleted individually so per-row hooks and audit entries fire as expected.
+  </p>
 
   {% if read_only %}
   <div class="rio-form-actions">
@@ -36,9 +46,9 @@
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <input type="hidden" name="_ids" value="{{ ids_csv }}">
     <input type="hidden" name="_confirmed" value="1">
-    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete {{ items|length }} {{ singular_name }}{% if items|length != 1 %}s{% endif %}</button>
+    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">No, cancel</a>
+    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete {{ items|length }} {{ singular_name }}{% if items|length != 1 %}s{% endif %}</button>
   </form>
   {% endif %}
 </section>

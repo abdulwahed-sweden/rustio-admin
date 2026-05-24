@@ -1,29 +1,46 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<div class="rio-login">
-  <h1 class="rio-login-title">Disable two-factor authentication</h1>
-  <p class="rio-login-intro">
-    Disabling will <strong>sign you out of every device</strong>,
-    including this one. The next sign-in only requires your
-    password.
-  </p>
-  <p class="rio-login-intro">
+<div class="rio-form-shell">
+
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <span>Disable two-factor</span>
+  </nav>
+  <h1>Disable two-factor authentication</h1>
+</header>
+
+{% if error %}
+<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>
+{% endif %}
+
+<section class="rio-confirm rio-confirm--danger">
+  <header class="rio-confirm__header">
+    <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
+    <div>
+      <h2 class="rio-confirm__title">Are you sure?</h2>
+      <p class="rio-confirm__lead">
+        Disabling two-factor will <strong>sign you out of every device</strong>,
+        including this one. The next sign-in only requires your
+        password.
+      </p>
+    </div>
+  </header>
+
+  <p class="rio-confirm__small">
     Your TOTP secret and any unused backup codes are permanently
-    deleted. To re-enable, you would set up a new authenticator
-    from scratch.
+    deleted. To re-enable, you would set up a new authenticator from
+    scratch.
   </p>
 
-  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
-
-  <form method="post" action="/admin/account/mfa/disable" class="rio-form rio-form--login">
+  <form method="post" action="/admin/account/mfa/disable" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <a href="/admin" class="rio-button rio-button--ghost">Cancel</a>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <button type="submit" class="rio-button rio-button--danger">
       Disable and sign out everywhere
     </button>
   </form>
+</section>
 
-  <p class="rio-login-footer">
-    <a href="/admin">Cancel</a>
-  </p>
 </div>
 {% endblock %}

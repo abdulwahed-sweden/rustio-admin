@@ -9,10 +9,9 @@
     <a href="/admin/users/{{ target_user_id }}/edit">{{ target_email }}</a> ·
     <span>{{ action_title }}</span>
   </nav>
-  <h1>{{ action_title }} — {{ target_email }}</h1>
+  <h1>{{ action_title }}</h1>
+  <p class="rio-page-header__lead">{{ action_description }} — applied to <strong>{{ target_email }}</strong>.</p>
 </header>
-
-<p class="rio-meta">{{ action_description }}</p>
 
 {% if errors %}
 <div class="rio-flash rio-flash--error" role="alert">

@@ -6,7 +6,8 @@
   <nav class="rio-breadcrumbs">
     <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>{{ email }}</span>
   </nav>
-  <h1>Edit user #{{ user_id }}</h1>
+  <h1>Edit user</h1>
+  <p class="rio-page-header__lead">Editing <strong>{{ email }}</strong> — identity, role, and group memberships.</p>
 </header>
 
 {% if is_last_developer %}

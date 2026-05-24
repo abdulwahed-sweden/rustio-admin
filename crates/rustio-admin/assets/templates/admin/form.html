@@ -8,7 +8,10 @@
     <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
     <span>{% if mode == "new" %}Add {{ singular_name }}{% else %}#{{ object_id }}{% endif %}</span>
   </nav>
-  <h1>{% if mode == "new" %}Add {{ singular_name }}{% else %}Change {{ singular_name }} #{{ object_id }}{% endif %}</h1>
+  <h1>{% if mode == "new" %}Add {{ singular_name }}{% else %}Edit {{ singular_name }} #{{ object_id }}{% endif %}</h1>
+  {% if mode == "edit" %}
+  <p class="rio-page-header__lead">Editing fields below — saves are atomic and audited.</p>
+  {% endif %}
 </header>
 
 {% if errors %}
@@ -86,7 +89,14 @@
     </tbody>
   </table>
   {% else %}
-  <p class="rio-empty">No related {{ inline.target_display_name|lower }} yet.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("table", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No related {{ inline.target_display_name|lower }} yet</h3>
+    {% if not read_only %}
+    <p class="rio-empty-state__lead">Add the first one — it will link back to this row automatically.</p>
+    <a class="rio-button rio-button--primary rio-button--sm" href="{{ inline.add_url }}">{{ icon("plus", class="rio-icon") }} Add {{ inline.target_display_name|lower }}</a>
+    {% endif %}
+  </div>
   {% endif %}
   <div class="rio-inline-section__actions">
     {% if not read_only %}

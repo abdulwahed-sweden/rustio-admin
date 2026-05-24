@@ -1,14 +1,23 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<div class="rio-login">
-  <h1 class="rio-login-title">Set up two-factor authentication</h1>
-  <p class="rio-login-intro">
-    Scan this code with your authenticator app, or enter the manual
-    setup key. Then type the 6-digit code your app shows you to
-    finish setup.
-  </p>
-  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+<div class="rio-form-shell">
 
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <span>Two-factor authentication</span>
+  </nav>
+  <h1>Set up two-factor authentication</h1>
+  <p class="rio-page-header__lead">
+    Scan the code with your authenticator app or enter the manual key,
+    then type the 6-digit code your app shows you to finish setup.
+  </p>
+</header>
+
+{% if error %}
+<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>
+{% endif %}
+
+<section class="rio-card">
   <div class="rio-form-row">
     <span class="rio-label">Authenticator URL</span>
     <a href="{{ otpauth_url }}" class="rio-link rio-link--otpauth" rel="noopener">
@@ -21,7 +30,7 @@
     <code class="rio-code-block">{{ secret_base32 }}</code>
   </div>
 
-  <form method="post" action="/admin/account/mfa/enroll" class="rio-form rio-form--login" autocomplete="off">
+  <form method="post" action="/admin/account/mfa/enroll" class="rio-form" autocomplete="off">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <input type="hidden" name="secret_base32" value="{{ secret_base32 }}">
     <div class="rio-form-row">
@@ -40,11 +49,13 @@
         class="rio-input"
       >
     </div>
-    <button type="submit" class="rio-button rio-button--primary">Verify and enable</button>
+    <div class="rio-form-actions">
+      <a href="/admin" class="rio-button rio-button--ghost">Cancel</a>
+      <span class="rio-form-actions-spacer" aria-hidden="true"></span>
+      <button type="submit" class="rio-button rio-button--primary">Verify and enable</button>
+    </div>
   </form>
+</section>
 
-  <p class="rio-login-footer">
-    <a href="/admin">Cancel</a>
-  </p>
 </div>
 {% endblock %}

@@ -1,28 +1,45 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<div class="rio-login">
-  <h1 class="rio-login-title">Generate new backup codes</h1>
-  <p class="rio-login-intro">
-    Generating a new batch <strong>invalidates every existing
-    backup code</strong>. Use this if you have lost your saved
-    codes or suspect they have been seen by someone else.
-  </p>
-  <p class="rio-login-intro">
-    Your authenticator app remains paired — only the backup
-    codes change.
-  </p>
+<div class="rio-form-shell">
 
-  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <span>Regenerate backup codes</span>
+  </nav>
+  <h1>Generate new backup codes</h1>
+  <p class="rio-page-header__lead">
+    Use this if you have lost your saved codes or suspect they have
+    been seen by someone else. Your authenticator app stays paired —
+    only the backup codes change.
+  </p>
+</header>
 
-  <form method="post" action="/admin/account/mfa/regenerate-codes" class="rio-form rio-form--login">
+{% if error %}
+<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>
+{% endif %}
+
+<section class="rio-confirm rio-confirm--neutral">
+  <header class="rio-confirm__header">
+    <div class="rio-confirm__icon">{{ icon("key", class="rio-icon") }}</div>
+    <div>
+      <h2 class="rio-confirm__title">Generate new codes</h2>
+      <p class="rio-confirm__lead">
+        Generating a new batch <strong>invalidates every existing
+        backup code</strong>. The current set will stop working as soon
+        as you continue.
+      </p>
+    </div>
+  </header>
+
+  <form method="post" action="/admin/account/mfa/regenerate-codes" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <a href="/admin" class="rio-button rio-button--ghost">Cancel</a>
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <button type="submit" class="rio-button rio-button--primary">
       Generate new codes
     </button>
   </form>
+</section>
 
-  <p class="rio-login-footer">
-    <a href="/admin">Cancel</a>
-  </p>
 </div>
 {% endblock %}

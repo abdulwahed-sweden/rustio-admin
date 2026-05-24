@@ -11,7 +11,7 @@
   </p>
 </header>
 
-<section class="rio-card">
+<section class="rio-card rio-card--quiet">
   {% if docs %}
   <ul class="rio-doc-list">
     {% for d in docs %}
@@ -22,7 +22,14 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="rio-empty">No embedded docs registered.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No embedded docs registered</h3>
+    <p class="rio-empty-state__lead">
+      Drop a markdown file under <code>crates/rustio-admin/assets/docs/</code>
+      and register it in <code>src/admin/docs.rs</code> — it appears here next build.
+    </p>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

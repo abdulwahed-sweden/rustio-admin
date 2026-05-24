@@ -8,16 +8,28 @@
     <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
     <span>Delete {{ singular_name }} #{{ object_id }}</span>
   </nav>
-  <h1>Are you sure?</h1>
+  <h1>Delete {{ singular_name }}</h1>
 </header>
 
-<section class="rio-card rio-confirm">
-  <p>You are about to delete the <strong>{{ singular_name }}</strong> &ldquo;<em>{{ object_label }}</em>&rdquo;.</p>
+<section class="rio-confirm rio-confirm--danger">
+  <header class="rio-confirm__header">
+    <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
+    <div>
+      <h2 class="rio-confirm__title">Are you sure?</h2>
+      <p class="rio-confirm__lead">
+        You are about to delete the {{ singular_name }} <strong>&ldquo;{{ object_label }}&rdquo;</strong>.
+        This action cannot be undone.
+      </p>
+    </div>
+  </header>
 
   {% if cascading %}
-  <h2 class="rio-confirm-section">Related records that may be affected</h2>
-  <p class="rio-meta">Other models reference this row. Whether the database deletes them too depends on each FK's <code>ON DELETE</code> rule.</p>
-  <ul class="rio-cascade-list">
+  <p class="rio-confirm__section-title">Related records that may be affected</p>
+  <p class="rio-confirm__small">
+    Other models reference this row. Whether the database deletes them too
+    depends on each foreign key's <code>ON DELETE</code> rule.
+  </p>
+  <ul class="rio-confirm__items">
     {% for c in cascading %}
     <li><a href="/admin/{{ c.source_admin_name }}">{{ c.source_display_name }}</a> via <code>{{ c.source_field }}</code></li>
     {% endfor %}
@@ -33,9 +45,9 @@
   {% else %}
   <form method="post" action="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
+    <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-button rio-button--ghost">Cancel</a>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
+    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
   </form>
   {% endif %}
 </section>

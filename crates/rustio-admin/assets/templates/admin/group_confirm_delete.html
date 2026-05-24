@@ -9,20 +9,29 @@
   <h1>Delete group</h1>
 </header>
 
-<section class="rio-card rio-confirm">
-  <p>You are about to delete group <strong>{{ name }}</strong>{% if description %} — <em>{{ description }}</em>{% endif %}.</p>
+<section class="rio-confirm rio-confirm--danger">
+  <header class="rio-confirm__header">
+    <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
+    <div>
+      <h2 class="rio-confirm__title">Are you sure?</h2>
+      <p class="rio-confirm__lead">
+        You are about to delete group <strong>{{ name }}</strong>{% if description %} — <em>{{ description }}</em>{% endif %}.
+        This action cannot be undone.
+      </p>
+    </div>
+  </header>
 
-  <h2 class="rio-confirm-section">Cascade impact</h2>
-  <ul class="rio-cascade-list">
-    <li>{{ user_count }} user memberships will be removed.</li>
-    <li>{{ perm_count }} permission attachments will be removed.</li>
+  <p class="rio-confirm__section-title">Cascade impact</p>
+  <ul class="rio-confirm__items">
+    <li>{{ user_count }} user membership{% if user_count != 1 %}s{% endif %} will be removed.</li>
+    <li>{{ perm_count }} permission attachment{% if perm_count != 1 %}s{% endif %} will be removed.</li>
   </ul>
 
   <form method="post" action="/admin/groups/{{ group_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
+    <a href="/admin/groups/{{ group_id }}/edit" class="rio-button rio-button--ghost">Cancel</a>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/groups/{{ group_id }}/edit" class="rio-button rio-button--ghost">No, cancel</a>
+    <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Yes, delete</button>
   </form>
 </section>
 

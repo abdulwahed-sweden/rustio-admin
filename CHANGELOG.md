@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.19.0** | 2026-05-24 | **Visual overhaul — "Quiet Expert" design language.** Six-turn pass over every admin template: foundational primitives (`.rio-section`, `.rio-empty-state`, `.rio-confirm` block w/ `--danger`/`--neutral`, `.rio-env-chip`, `.rio-page-actions__group`), unified stat tile (single white surface + 3-px accent rail instead of cycling pastel fills), unified page-header pattern across every list / detail / form / confirm / settings / admin-tool page, area-chart sparkline replacing bars (gradient fill + baseline rule + per-day dots), shared `_row_actions.html` kebab partial powered by `<details>` + JS upgrade that escapes `.rio-list { overflow: hidden }` via `position: fixed` anchored to the toggle, `--rio-z-*` z-index ladder (sidebar/topbar/dropdown/modal) fixing the "sidebar overlaps topbar on scroll" bug, demo-row seed in the scaffold so freshly-bootstrapped projects aren't a blank slate, dashboard greeting trimmed (no emoji, no filler), MFA settings pages migrated from auth-style `.rio-login` shell to the in-chrome settings pattern. **No backend change** — every Rust handler, route, model, SQLx query, and migration is identical to 0.18.x. Diff is CSS / templates / JS / one new icon (`more-horizontal`). |
 | **0.18.6** | 2026-05-23 | **Professional polish pass on top of 0.18.5.** Six refinements after side-by-side screenshot review: (1) topbar search trigger goes wide — `flex:1` so search visually dominates the chrome instead of sitting as a small pill (Linear / Stripe / Vercel pattern). (2) List toolbar reflows to a 2-row pattern — Row 1 = full-width search; Row 2 = secondary controls (Filters / Saved / View) — addresses the "search bar is crowded" feedback at a deeper structural level than 0.18.5. (3) Per-row table actions collapse into a kebab `⋯` dropdown — Linear / Notion / Stripe / GitHub pattern; new `more-horizontal` icon plus `--rio-row-actions` toggle CSS, plus a `.rio-dropdown-item--danger` variant for the Delete row. (4) Dashboard greeting tightens from a 3-line Slack-style hello (emoji + filler "Manage X from one console") to a single page title + app name. (5) Recent-activity sparkline replaced — bars give way to a smooth area chart with gradient fill, polyline data line, baseline rule, and a circle dot at each measurement (Vercel / Grafana / Stripe analytics pattern). (6) DEVELOPMENT badge color confirmed amber (was already correct in the CSS — false-alarm). All features preserved; no library API change. |
 | **0.18.5** | 2026-05-23 | **Topbar + list-toolbar redesign + sparkline fix + Post seed.** The topbar's pre-0.18.5 inline strip (Signed-in · 🔔 · Enable MFA · Sessions · Change password · Log out) folded into a single account dropdown anchored on a one-letter avatar + the user email — bell stays on the chrome. List-page toolbar collapsed from 8 controls (Search input · Search btn · Filters · Sort · Per-page · Saved · CSV · Import CSV) to 4 (Search · Filters · Saved · View), with Sort / Per-page / CSV-export / CSV-import folded into a new "View" overflow menu — no features lost. Dashboard sparkline gains a baseline rail per day so empty days anchor the chart; nonzero bars get a 4-px minimum so small counts don't disappear next to large ones. Scaffold template's `Post` migration ships 5 demo rows spread across the last week so a freshly-bootstrapped admin isn't a blank slate. Three new inline-SVG icons (`sliders`, `upload`, plus reused `download`). New utility class `.rio-visually-hidden`. |
 | **0.18.4** | 2026-05-23 | **First publish since v0.13.0.** `admin::docs` was reaching `include_str!("../../../../docs/<file>.md")` outside the crate root — fine in-tree, but `cargo publish` builds from a tarball that contains only the crate's own files, so the verification failed. Latent since v0.16.0 (no version since v0.13.0 was published). Fix copies `architecture.md` / `modeladmin.md` / `public-api.md` into `crates/rustio-admin/assets/docs/` and updates the three `include_str!` paths. Workspace docs remain at `docs/` as the canonical source; the in-crate copies are bundled at release time. All four workspace crates (`rustio-admin`, `rustio-admin-macros`, `rustio-admin-cli`, plus the new `rio-theme` — first claim of the name) published to crates.io at 0.18.4 in dependency order. |
@@ -48,7 +49,121 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.18.6]** block below._
+_No unreleased changes yet — see the **[0.19.0]** block below._
+
+
+## [0.19.0] — 2026-05-24
+
+A six-turn visual overhaul of the entire admin UI under the "Quiet
+Expert" design language. Calm, dense, professional — Stripe Dashboard
+/ Linear / Vercel discipline applied to every page. **No backend
+change**: every Rust handler, route, model, SQLx query, and migration
+is identical to 0.18.x. Diff is CSS / templates / JS / one new icon.
+
+### Added — design primitives
+
+- **`.rio-section`** (cards.css) — page-level content rhythm primitive
+  with `__header` / `__heading` / `__label` (uppercase eyebrow) /
+  `__title` (H2-sized) / `__lead` / `__meta` / `__link` parts. Every
+  major page region adopts it for consistent vertical pacing.
+- **`.rio-empty-state`** — proper empty state with icon badge,
+  headline, lead copy, and optional CTA. Replaces the pre-0.19
+  one-paragraph `.rio-empty` text across every list, form-inline,
+  detail-tab, dashboard, and admin-tool template.
+- **`.rio-confirm`** (cards.css) — destructive / mutating-action
+  confirmation block with `__header` (icon badge + title + lead),
+  `__warnings` cluster, `__items` cascade list, `__small` caveat,
+  `__section-title` eyebrow. `--danger` and `--neutral` variants
+  (left-edge stripe in the variant color, icon-badge tint in the
+  variant family). Every `confirm_delete` / `bulk_confirm_*` /
+  `lock_user` / `mfa_disable` / `password_change` success template
+  uses it.
+- **`.rio-env-chip`** — small env/version chip for page-header
+  metadata (Development pill, vX.Y.Z monospace badge). Extracted
+  from the bespoke `.rio-dashboard-greeting` selectors so other
+  pages can reuse it.
+- **`.rio-page-actions__group`** — button cluster for multiple
+  secondary affordances next to a primary CTA on the page header.
+  Used by `apis_index` (OpenAPI / SDK / Playground) and
+  `csv_import_result` ("Back" button).
+
+### Changed — unified vocabulary
+
+- **Page header**: every list / detail / form / confirm / settings /
+  tool page now uses one `.rio-page-header` shape (breadcrumb · title
+  · optional primary action · optional `__lead` deck). Pre-0.19 each
+  template had bespoke header HTML; cross-page consistency was the
+  biggest "feels random" complaint.
+- **Stat tiles**: pre-0.19 cycled through four pastel background
+  fills (`--rio-info-bg` / `--rio-success-bg` / `--rio-warning-bg` /
+  `--rio-accent`-tint) which read as festive. v0.19 uses one
+  consistent white surface with a 3-px top accent rail; color
+  is reserved for semantic meaning, not per-tile decoration.
+  Variants kept (`.rio-stat--info` etc.) for back-compat — they
+  now only repaint the top rail.
+- **Cards**: lighter shadow ambient (`--rio-shadow-xs` instead of
+  `--rio-shadow`); opt-in `.rio-card--quiet` (no shadow, just border,
+  for inline cards inside sections) and `.rio-card--elevated` (heavier
+  shadow, for floating panels).
+- **Recent-activity sparkline**: bars → smooth area chart with
+  gradient fill, polyline line, baseline rule, per-day dots
+  (Vercel / Grafana / Stripe analytics convention).
+  `vector-effect: non-scaling-stroke` keeps the line crisp.
+- **Dashboard greeting**: pre-0.19 emitted "Hello, Admin 👋" + "Site
+  administration" + "Manage X from one console." 3-line Slack-style
+  block. v0.19: just the page title + project name as a subtitle.
+
+### Changed — pages
+
+- **Dashboard** (`index.html`): unified header, stat tiles use new
+  treatment, model grid wrapped in `.rio-section`, activity feed
+  and tools split also use `.rio-section`, empty states get proper
+  `.rio-empty-state` shapes.
+- **List pages** (`list.html`, `users_list`, `groups_list`,
+  `log_entries`, `notifications`): unified header w/ lead, counted
+  section title, table cards switch to `.rio-card--quiet`, every
+  empty state upgraded.
+- **Form + confirm** (`form.html`, `user_new/edit/view`,
+  `group_new/edit`, `confirm_delete`, `user_confirm_delete`,
+  `group_confirm_delete`, `lock_user`, `bulk_confirm_delete`,
+  `bulk_confirm_action`, `confirm_admin_action`): page-header leads,
+  inline-form empty states, every confirm template adopts the
+  `.rio-confirm` block with danger / neutral variants.
+- **Settings + auth** (`account_sessions`, `password_change`,
+  `mfa_enroll`, `mfa_disable`, `mfa_regenerate`,
+  `mfa_enroll_complete`, `mfa_regenerate_complete`): MFA settings
+  pages **migrated from the auth-style `.rio-login` centered shell
+  to the in-chrome settings pattern** — they're in-chrome pages
+  (the user is signed in), not pre-auth flows. Sidebar shows
+  correctly now. Login / forgot / reset / reauth / mfa_verify /
+  must_change unchanged (correct as-is — those ARE pre-auth flows).
+- **Admin tools** (`docs_index`, `apis_index`, `feature_flags`,
+  `db_browser`, `object_history`, `csv_import_result`): unified
+  header, leads where missing, secondary-button clusters moved into
+  `.rio-page-actions__group`, every empty state upgraded,
+  `.rio-section` wraps where appropriate.
+
+### Earlier in-progress work folded into this release
+
+- v0.18.6 polish pass (committed under `a875ec4`): topbar search
+  trigger goes wide, list-toolbar 2-row reflow, per-row kebab
+  dropdown, dashboard greeting trimmed, smooth area-chart
+  sparkline.
+- v0.18.6 bug-fix bundle (committed under `2a43d59` as drop-in
+  pre-tested files): `--rio-z-*` ladder, kebab JS via `<details>`
+  + JS upgrade to escape table overflow, shared `_row_actions.html`
+  partial, focus-visible polish, post-seed demo rows.
+
+### Migration
+
+- Projects that override `--rio-*` tokens in their own stylesheet:
+  no change. Overrides still cascade.
+- Templates that use the dropped `.rio-dashboard-greeting*` or
+  `.rio-dashboard-section-*` selectors need to switch to the
+  unified `.rio-page-header` / `.rio-section`. None of the
+  framework's own templates still emit them.
+- `.rio-empty` is kept in the cascade for back-compat but the
+  framework's own templates all use `.rio-empty-state` now.
 
 
 ## [0.18.6] — 2026-05-23

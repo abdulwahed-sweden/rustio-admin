@@ -3,7 +3,7 @@
 <header class="rio-page-header">
   <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>Database</span></nav>
   <h1>{{ page_title }}</h1>
-  <p class="rio-meta">
+  <p class="rio-page-header__lead">
     Read-only schema explorer for the <code>public</code> schema. Row counts are the planner's
     estimate (<code>pg_class.reltuples</code>) — accurate after an <code>ANALYZE</code>,
     approximate otherwise.
@@ -92,8 +92,15 @@
 </section>
 {% endfor %}
 {% else %}
-<section class="rio-card rio-empty">
-  <p>No tables in the <code>public</code> schema. Run your migrations to populate this view.</p>
+<section class="rio-card rio-card--quiet">
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No tables in the public schema</h3>
+    <p class="rio-empty-state__lead">
+      Run <code>rustio migrate apply</code> to create your project's tables — they
+      appear here once the schema lands.
+    </p>
+  </div>
 </section>
 {% endif %}
 {% endblock %}

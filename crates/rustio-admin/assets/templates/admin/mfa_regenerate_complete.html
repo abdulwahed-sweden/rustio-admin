@@ -1,28 +1,33 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<div class="rio-login">
-  <h1 class="rio-login-title">New backup codes generated</h1>
+<div class="rio-form-shell">
 
-  <div class="rio-flash rio-flash--success" role="status">
-    Save these new codes somewhere safe. Each one can be used
-    exactly once if you lose access to your authenticator app.
-    They will not be shown again, and the previous batch of
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <span>New backup codes</span>
+  </nav>
+  <h1>New backup codes generated</h1>
+  <p class="rio-page-header__lead">
+    Save these new codes somewhere safe. Each can be used exactly
+    once if you lose access to your authenticator app — they
+    <strong>will not be shown again</strong>, and the previous batch of
     {{ previous_codes_invalidated }} code{% if previous_codes_invalidated != 1 %}s{% endif %}
     is no longer valid.
-  </div>
-
-  <p class="rio-login-intro">
-    <strong>Backup codes</strong>
   </p>
+</header>
 
+<section class="rio-card">
+  <p class="rio-section__label">Backup codes</p>
   <ul class="rio-backup-codes">
     {% for code in plain_backup_codes %}
       <li><code class="rio-code-block">{{ code }}</code></li>
     {% endfor %}
   </ul>
-
-  <p class="rio-login-footer">
+  <div class="rio-form-actions">
+    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin" class="rio-button rio-button--primary">Continue to dashboard</a>
-  </p>
+  </div>
+</section>
+
 </div>
 {% endblock %}

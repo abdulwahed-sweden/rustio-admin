@@ -6,17 +6,17 @@
     <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
     <span>CSV import</span>
   </nav>
-  <h1>{{ page_title }}</h1>
+  <div class="rio-page-actions">
+    <h1>{{ page_title }}</h1>
+    <a class="rio-button rio-button--ghost" href="/admin/{{ admin_name }}">← Back to {{ display_name }}</a>
+  </div>
   <p class="rio-page-header__lead">
     {% if failed == 0 %}
     <span class="rio-pill rio-pill--badge-success">All clear</span>
     {% else %}
     <span class="rio-pill rio-pill--badge-danger">{{ failed }} failed</span>
     {% endif %}
-    <span class="rio-meta">{{ inserted }} inserted of {{ total }} row{% if total != 1 %}s{% endif %}.</span>
-  </p>
-  <p class="rio-page-header__lead">
-    <a class="rio-button rio-button--ghost" href="/admin/{{ admin_name }}">← Back to {{ display_name }}</a>
+    &nbsp;{{ inserted }} inserted of {{ total }} row{% if total != 1 %}s{% endif %}.
   </p>
 </header>
 
@@ -49,7 +49,14 @@
     </tbody>
   </table>
   {% else %}
-  <p class="rio-empty">CSV had no data rows.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("upload", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">CSV had no data rows</h3>
+    <p class="rio-empty-state__lead">
+      The file parsed but contained only a header (or was empty). Add at least
+      one data row and try again.
+    </p>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

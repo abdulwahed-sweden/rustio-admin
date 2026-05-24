@@ -8,9 +8,10 @@
     <span>History</span>
   </nav>
   <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">Every recorded mutation to this row, newest first.</p>
 </header>
 
-<section class="rio-card">
+<section class="rio-card rio-card--quiet rio-list">
   {% if history_entries %}
   <table class="rio-table rio-table--striped">
     <thead><tr><th>When</th><th>Action</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
@@ -48,7 +49,13 @@
     </tbody>
   </table>
   {% else %}
-  <p class="rio-empty">No history recorded for this row.</p>
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No history yet for this row</h3>
+    <p class="rio-empty-state__lead">
+      Edits and deletes appear here automatically as they happen.
+    </p>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

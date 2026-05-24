@@ -7,8 +7,8 @@
     <a href="/admin">Home</a> · <span>Active sessions</span>
   </nav>
   <h1>{{ page_title }}</h1>
-  <p class="rio-meta">
-    Sessions currently signed in to your account. Revoke any session you don't recognise.
+  <p class="rio-page-header__lead">
+    Every device currently signed in to your account. Revoke any session you don't recognise.
   </p>
 </header>
 
@@ -56,7 +56,13 @@
 </div>
 
 {% else %}
-<p class="rio-empty">No active sessions. Sign in fresh to see this page populate.</p>
+<div class="rio-empty-state">
+  <div class="rio-empty-state__icon">{{ icon("log-out", class="rio-icon") }}</div>
+  <h3 class="rio-empty-state__title">No active sessions</h3>
+  <p class="rio-empty-state__lead">
+    Sign in fresh on another device to see this page populate.
+  </p>
+</div>
 {% endif %}
 
 </div>
