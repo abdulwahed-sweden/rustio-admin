@@ -59,7 +59,7 @@ fn animation_allowed() -> bool {
 ///
 /// Stream convention: the spinner ticks on stderr (progress is
 /// feedback, not data). The `✓ <summary>` result line is always
-/// emitted on stdout, the `✗ <summary>` failure line on stderr —
+/// emitted on stdout, the `✗ <summary>` failure line on stderr -----
 /// matching the rest of the CLI, so scripts that grep stdout for
 /// `✓` keep working in both animated and non-animated modes.
 pub(crate) struct Step {
@@ -76,7 +76,12 @@ impl Step {
             pb.set_style(
                 ProgressStyle::with_template("{spinner:.cyan} {msg}")
                     .expect("static template")
-                    .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+                    // Conservative ASCII spinner ----- the Braille block
+                    // (U+2800-U+28FF) triggers font fallback in some
+                    // terminals with mixed RTL/LTR locales and can
+                    // produce garbled output. Plain ASCII renders
+                    // identically everywhere.
+                    .tick_strings(&["|", "/", "-", "\\"]),
             );
             pb.set_message(format!("{label}…"));
             pb.enable_steady_tick(Duration::from_millis(80));
@@ -153,6 +158,6 @@ mod tests {
         configure(false, true);
         assert!(!animation_allowed());
         // We deliberately don't try to flip the flag back to false
-        // here — the static is set-once for the process lifetime.
+        // here ----- the static is set-once for the process lifetime.
     }
 }

@@ -49,6 +49,43 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Fixed — terminal compatibility (mixed RTL/LTR rendering)
+
+PR 1.4 introduced terminal rendering problems on systems using
+Arabic locales and other mixed RTL/LTR font fallback configurations.
+Root cause: the Braille spinner block (U+2800–U+28FF) and U+2014
+em-dashes can both trigger font fallback to RTL-aware fonts, which
+in turn invokes the BiDi algorithm and corrupts column alignment.
+Not a framework bug; a terminal compatibility issue.
+
+Conservative cleanup of CLI-emitted strings:
+
+- **Braille spinner replaced** with the ASCII frames `| / - \`
+  (one location: `cli::progress::Step::start`). All other spinner
+  semantics — `Step` API, NO_COLOR / CI / non-TTY / `--quiet` /
+  `--no-progress` bypass — are unchanged.
+- **Em-dash `—` (U+2014) replaced** with five ASCII hyphens (`-----`)
+  in every CLI-source string across `crates/rustio-admin-cli/src/`.
+  Doc comments, framework templates, and admin HTML are untouched
+  (those surfaces have proper Unicode rendering).
+- **Emergency banner alignment preserved** — the boxed banner in
+  `emergency_ui::render` had its trailing-space padding reduced by
+  four columns to keep the right `│` aligned after the em-dash
+  expanded to five ASCII chars.
+- **Kept Unicode that is widely safe** per spec: `✓`, `✗`, `…`,
+  `→`. Box-drawing characters (`─`, `│`, `┌` …) stayed too — not
+  in the user-listed change scope; widely supported.
+
+### Preserved
+
+- Exit codes unchanged.
+- NO_COLOR / CI / non-TTY / `--quiet` / `--no-progress` bypass
+  behaviour unchanged.
+- Stdout/stderr separation unchanged (spinner on stderr, result on
+  stdout).
+- Per-file migration `✓` list intact.
+- No output formatting redesign — only character substitution.
+
 ### Added — onboarding PR 1.4 (Progress & Feedback Layer)
 
 - **`cli::progress` module** — single-spinner-style status feedback

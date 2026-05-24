@@ -19,7 +19,7 @@
 //!
 //! - The raw backend error is preserved verbatim in an optional
 //!   `Details:` section so senior engineers still see what actually
-//!   failed (`DESIGN_ONBOARDING.md` §8 — "do not hide real errors").
+//!   failed (`DESIGN_ONBOARDING.md` §8 ----- "do not hide real errors").
 //! - No giant abstraction. One struct, one classifier function per
 //!   error path, plain `String` everywhere else.
 //! - No emoji, no hype, no `Oops!` / `Something went wrong!`
@@ -103,7 +103,7 @@ pub(crate) fn database_url_missing() -> OnboardingError {
 /// the underlying TCP error (refused, host unreachable) is usually
 /// surfaced as `"pool timed out"`. We treat both of those, plus the
 /// raw `"connection refused"` shape, as the same "service is not
-/// reachable" case — the fix is the same regardless.
+/// reachable" case ----- the fix is the same regardless.
 pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> OnboardingError {
     let lower = raw.to_ascii_lowercase();
     let unreachable = lower.contains("connection refused")
@@ -158,7 +158,7 @@ pub(crate) fn classify_migration_error(raw: &str) -> OnboardingError {
     OnboardingError {
         problem: format!("Migration `{stem}` failed."),
         why: "PostgreSQL rejected a statement in the migration file. The raw SQL error is preserved in the Details block below; line numbers, if present, refer to the file as PostgreSQL parsed it.".into(),
-        fix: format!("Edit the migration `{stem}` in your `migrations/` directory (the file ends in `_{stem}.sql`) and correct the failing statement. Migrations are append-only — never edit one that already ran on another database; write a new numerically prefixed migration instead."),
+        fix: format!("Edit the migration `{stem}` in your `migrations/` directory (the file ends in `_{stem}.sql`) and correct the failing statement. Migrations are append-only ----- never edit one that already ran on another database; write a new numerically prefixed migration instead."),
         retry: "rustio migrate apply".into(),
         details: Some(body),
     }
@@ -306,7 +306,7 @@ mod tests {
     fn classify_connect_db_missing_wins_over_pool_timeout_phrasing() {
         // If both "does not exist" and "pool timed out" appear in the
         // chained error, the db-missing classification is the more
-        // specific signal and should win — the fix is different.
+        // specific signal and should win ----- the fix is different.
         let raw = "pool timed out … database \"clinic_dev\" does not exist".to_string();
         let e = classify_db_connect_error("postgres://x:***@h/d", &raw);
         assert!(e.problem.contains("\"clinic_dev\""), "got: {}", e.problem);

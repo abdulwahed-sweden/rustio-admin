@@ -10,7 +10,7 @@
 //!
 //! - Stdlib-only. No `dialoguer` / `indicatif` / `console`.
 //! - TTY-gated. Pipes, CI, and `--no-interactive` bypass entirely.
-//! - Project-type is recorded as intent only — PR 1.5 turns it into
+//! - Project-type is recorded as intent only ----- PR 1.5 turns it into
 //!   project-typed starter content (`DESIGN_ONBOARDING.md` §6).
 //! - No emojis, no hype, no banners beyond a single divider.
 
@@ -22,7 +22,7 @@ use std::io::{self, IsTerminal, Write};
 pub(crate) const PROJECT_TYPES: &[&str] = &["custom", "clinic", "school", "inventory", "blog"];
 
 /// Brief Postgres install hint printed before the database-name
-/// prompt. Text-only — `DESIGN_ONBOARDING.md` §4 forbids the CLI
+/// prompt. Text-only ----- `DESIGN_ONBOARDING.md` §4 forbids the CLI
 /// from shelling out to package managers.
 const POSTGRES_GUIDANCE: &str = "\
 RustIO uses PostgreSQL. Recommended version: PostgreSQL 16.
@@ -31,7 +31,7 @@ RustIO uses PostgreSQL. Recommended version: PostgreSQL 16.
   Ubuntu   sudo apt install postgresql-16 && sudo systemctl start postgresql
   Windows  https://www.postgresql.org/download/windows/
 
-The wizard does not install PostgreSQL for you — that is deliberate.";
+The wizard does not install PostgreSQL for you ----- that is deliberate.";
 
 /// The inputs the wizard collects before handing off to the scaffold.
 pub(crate) struct WizardInput {
@@ -118,7 +118,7 @@ fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
 
 fn ask_project_type() -> Result<String, String> {
     println!();
-    println!("Project type (metadata for now — does not change generated files yet):");
+    println!("Project type (metadata for now ----- does not change generated files yet):");
     for (i, t) in PROJECT_TYPES.iter().enumerate() {
         println!("  {}) {t}", i + 1);
     }
@@ -179,7 +179,7 @@ fn prompt_line(prompt: &str) -> Result<String, String> {
     Ok(buf.trim().to_string())
 }
 
-/// Project name validation — mirrors `scaffold::validate_name`
+/// Project name validation ----- mirrors `scaffold::validate_name`
 /// semantics (ASCII letters / digits / `-` / `_`, not starting
 /// with a digit). Duplicated here so the wizard can re-prompt
 /// without round-tripping through the scaffold.
@@ -202,7 +202,7 @@ pub(crate) fn validate_project_name(name: &str) -> Result<(), String> {
 /// PostgreSQL identifier rules without quoting: ASCII letters /
 /// digits / `_`, not starting with a digit, at most 63 bytes
 /// (the standard `NAMEDATALEN - 1`). Rejects `postgres`,
-/// `template0`, and `template1` outright — picking those names
+/// `template0`, and `template1` outright ----- picking those names
 /// breaks `createdb` later, and surfacing it now is kinder than
 /// surfacing it after `rustio migrate apply`.
 pub(crate) fn validate_db_name(name: &str) -> Result<(), String> {
@@ -221,7 +221,7 @@ pub(crate) fn validate_db_name(name: &str) -> Result<(), String> {
     let reserved = ["postgres", "template0", "template1"];
     if reserved.iter().any(|r| r.eq_ignore_ascii_case(name)) {
         return Err(format!(
-            "'{name}' is reserved by PostgreSQL — pick a different name"
+            "'{name}' is reserved by PostgreSQL ----- pick a different name"
         ));
     }
     Ok(())
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn validate_project_name_mirrors_scaffold_semantics() {
         // Sample of the same cases scaffold::tests::valid_names_accepted
-        // / invalid_names_rejected exercise — sanity that the two
+        // / invalid_names_rejected exercise ----- sanity that the two
         // validators stay in lock-step.
         for ok in &["my-app", "my_app", "MyApp", "app1"] {
             assert!(validate_project_name(ok).is_ok(), "should accept {ok}");

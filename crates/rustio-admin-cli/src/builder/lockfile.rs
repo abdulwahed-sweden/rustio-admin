@@ -1,4 +1,4 @@
-//! `.rustio/builder.lock` — Builder version pin (Doctrine B11).
+//! `.rustio/builder.lock` ----- Builder version pin (Doctrine B11).
 //!
 //! `DESIGN_BUILDER.md` §4.3: *"Every Builder command except
 //! `rustio upgrade` reads `builder.lock` first and refuses to
@@ -24,7 +24,7 @@ pub(crate) const EMITTER_VERSION: &str = "rio-canon-1";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct BuilderLock {
     pub schema_version: u32,
-    /// Exact Builder semver — sourced from `CARGO_PKG_VERSION` at
+    /// Exact Builder semver ----- sourced from `CARGO_PKG_VERSION` at
     /// `rustio new` time.
     pub builder: String,
     /// Canonical TOML emitter identifier. Encoded in every

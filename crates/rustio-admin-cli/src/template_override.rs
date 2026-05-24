@@ -1,4 +1,4 @@
-//! `rustio override` — copy an embedded admin template into the
+//! `rustio override` ----- copy an embedded admin template into the
 //! project's `templates/` directory so the project can edit it.
 //!
 //! Pairs with the disk-loader path in
@@ -8,7 +8,7 @@
 //! operators reproduced the same effect by hand-copying the source
 //! file out of the crate's `assets/templates/admin/` tree.
 //!
-//! No network, no DB — pure filesystem. Returns a one-line summary
+//! No network, no DB ----- pure filesystem. Returns a one-line summary
 //! the caller prints on success.
 
 use std::fs;
@@ -33,7 +33,7 @@ fn list_templates() -> Result<(), String> {
         println!("  {n}");
     }
     println!();
-    println!("Copy one with `rustio override <name>` — drops it into");
+    println!("Copy one with `rustio override <name>` ----- drops it into");
     println!("`./templates/<name>` so a `RUSTIO_TEMPLATE_DIR=./templates`");
     println!("run picks it up instead of the embedded default.");
     Ok(())
@@ -46,13 +46,13 @@ fn copy_template(name: &str, force: bool, out_root: &Path) -> Result<(), String>
 
     // Defense in depth: refuse path-traversal attempts even though
     // the source comes from a closed `embedded_template_names()`
-    // list. Future-proofing — the closed set is the security
+    // list. Future-proofing ----- the closed set is the security
     // boundary today, but operator habits (running `override` from
     // a parent directory) make the path-write surface worth
     // double-checking.
     if name.contains("..") || name.starts_with('/') {
         return Err(format!(
-            "refusing to write template `{name}` — path contains parent or absolute segment"
+            "refusing to write template `{name}` ----- path contains parent or absolute segment"
         ));
     }
 
@@ -98,7 +98,7 @@ mod tests {
         let tmp = env::temp_dir().join("rustio-cli-override-tests-traversal");
         let _ = fs::remove_dir_all(&tmp);
         // `../../etc/passwd` doesn't appear in `embedded_template_names()`,
-        // so we never get past the membership check — but if a future
+        // so we never get past the membership check ----- but if a future
         // refactor accidentally widens the input, the explicit
         // path-segment check catches it. Exercise both layers by
         // poking the inner helper with a name that contains `..`.
@@ -117,7 +117,7 @@ mod tests {
     fn copies_known_template_and_writes_correct_bytes() {
         let tmp = env::temp_dir().join("rustio-cli-override-tests-copy");
         let _ = fs::remove_dir_all(&tmp);
-        // Pick the first embedded name — the test stays robust
+        // Pick the first embedded name ----- the test stays robust
         // across reorderings.
         let names = rustio_admin::embedded_template_names();
         let target = names

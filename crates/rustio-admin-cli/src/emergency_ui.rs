@@ -8,12 +8,12 @@
 //!
 //! ## Doctrinal anchors
 //!
-//! - **D10 — confirmation banner is irreducible.** Every emergency
+//! - **D10 ----- confirmation banner is irreducible.** Every emergency
 //!   command renders the banner. `--yes` skips the interactive
-//!   prompt but NEVER the banner — the banner is the visible
+//!   prompt but NEVER the banner ----- the banner is the visible
 //!   artefact for over-the-shoulder review and for CI / scrollback
 //!   forensics.
-//! - **D9 — CLI-actor identity is OS-level.** `os_actor()` reads
+//! - **D9 ----- CLI-actor identity is OS-level.** `os_actor()` reads
 //!   `$USER` (or `$USERNAME` on Windows-style envs) and shells
 //!   `hostname`. No synthetic-user invention; the audit row's
 //!   `metadata.os_actor` is literally what the operator's shell
@@ -128,7 +128,7 @@ pub fn now() -> DateTime<Utc> {
 /// Lock points from `DESIGN_R4_EMERGENCY.md` §4:
 /// - Operation / Target / Reason / Operator / Time labels appear in
 ///   that exact order.
-/// - The header line is `⚠  EMERGENCY OPERATION — RUSTIO ADMIN CLI`.
+/// - The header line is `⚠  EMERGENCY OPERATION ----- RUSTIO ADMIN CLI`.
 /// - The closing line is `This action is audited and irreversible.`
 /// - Box width is 64 chars.
 pub fn format_banner(ctx: &OperationContext, with_ansi: bool) -> String {
@@ -149,7 +149,7 @@ pub fn format_banner(ctx: &OperationContext, with_ansi: bool) -> String {
         "{red_on}┌──────────────────────────────────────────────────────────────┐{red_off}\n"
     ));
     out.push_str(&format!(
-        "{red_on}│  ⚠  EMERGENCY OPERATION — RUSTIO ADMIN CLI                   │{red_off}\n"
+        "{red_on}│  ⚠  EMERGENCY OPERATION ----- RUSTIO ADMIN CLI               │{red_off}\n"
     ));
     out.push_str(&format!(
         "{red_on}├──────────────────────────────────────────────────────────────┤{red_off}\n"
@@ -182,7 +182,7 @@ pub fn print_banner(ctx: &OperationContext) {
 ///
 /// The 64-char box is tight; values longer than ~46 chars wrap by
 /// extending the box on that row (no truncation). The longer
-/// banner is uglier but truthful — truncating a reason field
+/// banner is uglier but truthful ----- truncating a reason field
 /// would defeat the forensic point.
 fn body_row(label: &str, value: &str) -> String {
     let inside = if label.is_empty() {
@@ -221,7 +221,7 @@ pub enum ConfirmOutcome {
 }
 
 /// Demand confirmation. With `yes = true`, skips the interactive
-/// prompt — but the BANNER must already have been rendered by
+/// prompt ----- but the BANNER must already have been rendered by
 /// the caller (D10). With `yes = false`, prints the "Type 'yes' to
 /// confirm" prompt to stdout, reads one line from stdin, and
 /// matches it against the literal `"yes"` (case-sensitive, trimmed).
@@ -245,7 +245,7 @@ pub fn require_confirm(yes: bool) -> ConfirmOutcome {
     classify_response(&buf)
 }
 
-/// Pure-function half of [`require_confirm`] — what to return for
+/// Pure-function half of [`require_confirm`] ----- what to return for
 /// a given user-typed line. Split out so tests can exercise the
 /// classification without touching stdin.
 pub fn classify_response(line: &str) -> ConfirmOutcome {
@@ -355,7 +355,7 @@ mod tests {
         let ctx = fixed_ctx();
         let out = format_banner(&ctx, false);
         // Header marker
-        assert!(out.contains("EMERGENCY OPERATION — RUSTIO ADMIN CLI"));
+        assert!(out.contains("EMERGENCY OPERATION ----- RUSTIO ADMIN CLI"));
         // Every locked label appears
         assert!(out.contains("Operation:"));
         assert!(out.contains("Target:"));

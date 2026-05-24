@@ -1,4 +1,4 @@
-//! `rustio group` — group CRUD on top of the framework's `auth`
+//! `rustio group` ----- group CRUD on top of the framework's `auth`
 //! permission tables.
 
 use clap::Subcommand;
@@ -17,7 +17,7 @@ pub enum Action {
     },
     /// List every group with id / name / member count.
     List,
-    /// Show one group's profile — id / description / member list
+    /// Show one group's profile ----- id / description / member list
     /// and the permissions granted via this group. Operational
     /// symmetry with `rustio user perms`: that command answers
     /// "what can this user do?"; this one answers "who has
@@ -203,8 +203,8 @@ async fn show(db: Db, name: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Render the report as a human-readable block. Pure function —
-/// no IO, no clock, no DB — so unit tests can hand it synthetic
+/// Render the report as a human-readable block. Pure function -----
+/// no IO, no clock, no DB ----- so unit tests can hand it synthetic
 /// reports and assert exact output.
 fn format_group_show(r: &GroupReport) -> String {
     use std::fmt::Write as _;
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn empty_group_uses_none_markers() {
-        // Brand-new group with no members and no permissions —
+        // Brand-new group with no members and no permissions -----
         // every section should read "(none)" rather than a
         // bare blank space.
         let r = base();
@@ -326,7 +326,7 @@ mod tests {
         assert!(out.contains("active"));
         assert!(out.contains("bob@example.test"));
         assert!(out.contains("user"));
-        // Inactive members get the inactive marker — operators
+        // Inactive members get the inactive marker ----- operators
         // need to see "this user is in the group but the
         // active flag denies every check" at a glance.
         assert!(out.contains("inactive"));

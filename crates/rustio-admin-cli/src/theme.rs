@@ -1,7 +1,7 @@
-//! `rustio theme` — print curated `AdminTheme` snippets for
+//! `rustio theme` ----- print curated `AdminTheme` snippets for
 //! copy-paste into a project's `Admin::new()` builder chain.
 //!
-//! No source mutation. The verb is a transparent printer — it lists
+//! No source mutation. The verb is a transparent printer ----- it lists
 //! the available presets, then on demand emits a complete, ready-to-
 //! paste `.theme(...)` clause. Operators do the one-line edit
 //! themselves; the framework never reaches into `main.rs` and risks
@@ -35,11 +35,11 @@ pub(crate) enum Action {
     Generate {
         /// Brand color in `#rrggbb` form. Repeatable; order is the
         /// client's priority order. Engine ranks by fitness rather
-        /// than trusting the order blindly — see DESIGN_THEME §9.
+        /// than trusting the order blindly ----- see DESIGN_THEME §9.
         #[arg(long = "brand")]
         brand: Vec<String>,
         /// Destination path for the emitted CSS. Existing files are
-        /// overwritten without prompting — the engine is deterministic
+        /// overwritten without prompting ----- the engine is deterministic
         /// and regenerable.
         #[arg(long = "out", default_value = "tokens.css")]
         out: PathBuf,
@@ -94,7 +94,7 @@ const PRESETS: &[Preset] = &[
     },
     Preset {
         name: "monochrome",
-        description: "Zero saturation — paper-white, ink-black. Print-shop minimalism.",
+        description: "Zero saturation ----- paper-white, ink-black. Print-shop minimalism.",
         accent: "#1A1A1A",
         bg: "#F5F5F5",
         surface: "#FFFFFF",
@@ -145,7 +145,7 @@ fn print_generate_report(
     println!();
     println!("inputs:");
     if inputs.is_empty() {
-        println!("  (none — Case 7 default brand used)");
+        println!("  (none ----- Case 7 default brand used)");
     } else {
         for (i, c) in inputs.iter().enumerate() {
             println!("  [{}] {}", i + 1, c.to_hex());
@@ -202,7 +202,7 @@ fn print_generate_report(
         && !report.light_still_failing
         && !report.dark_still_failing
     {
-        println!("  (none — inputs needed no repair)");
+        println!("  (none ----- inputs needed no repair)");
     }
 
     println!();
@@ -250,7 +250,7 @@ fn print_show(name: &str) -> Result<(), String> {
 
     let snippet = render_snippet(preset);
     println!(
-        "// rustio theme preset: {} — {}",
+        "// rustio theme preset: {} ----- {}",
         preset.name, preset.description
     );
     println!("//");

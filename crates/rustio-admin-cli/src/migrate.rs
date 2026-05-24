@@ -1,4 +1,4 @@
-//! `rustio migrate` — drive the framework's `migrations::apply` /
+//! `rustio migrate` ----- drive the framework's `migrations::apply` /
 //! `status` against `DATABASE_URL`. The directory defaults to
 //! `migrations/` under the current working directory, mirroring the
 //! convention every example/template uses.
@@ -51,7 +51,7 @@ async fn apply(db: rustio_admin::Db, dir: PathBuf) -> Result<(), String> {
         }
     };
     if applied.is_empty() {
-        println!("Nothing to apply — every migration is up to date.");
+        println!("Nothing to apply ----- every migration is up to date.");
     } else {
         println!("Applied {} migration(s):", applied.len());
         for name in applied {

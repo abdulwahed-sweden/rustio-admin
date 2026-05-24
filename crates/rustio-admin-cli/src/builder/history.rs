@@ -10,7 +10,7 @@
 //! - **Doctrine B2.** The log is append-only. Reversal is always a
 //!   new compensating event; never an in-place edit or truncate.
 //! - **§4.2.1.** Line shape: one JSON object per line, with fields
-//!   in fixed order — `id`, `ts`, `op`, `actor`, `args`, optional
+//!   in fixed order ----- `id`, `ts`, `op`, `actor`, `args`, optional
 //!   `prev_hash`, `schema_v`.
 //! - **§4.2.4.** The closed `op` enum is the source of truth for
 //!   the serialized values. The drift test below asserts the
@@ -18,12 +18,12 @@
 //!
 //! The append boundary lives here. Redaction of secret-bearing
 //! payloads happens in [`crate::builder::redact`] before reaching
-//! this module — `append` itself accepts an already-clean payload.
+//! this module ----- `append` itself accepts an already-clean payload.
 //!
 //! ## Atomicity model
 //!
 //! POSIX guarantees that a write opened with `O_APPEND` and sized
-//! at or below `PIPE_BUF` is atomic — concurrent writers do not
+//! at or below `PIPE_BUF` is atomic ----- concurrent writers do not
 //! interleave bytes within a single write call. `OpenOptions::new()
 //! .append(true)` maps to `O_APPEND` on Unix. `PIPE_BUF` is at
 //! least 512 bytes (POSIX minimum) and is 4096 on every Linux /
@@ -117,7 +117,7 @@ const HISTORY_SCHEMA_V: u32 = 1;
 
 /// Append a single event to `.rustio/history.jsonl`.
 ///
-/// **Doctrine B3 — sole writer.** This is the only function in the
+/// **Doctrine B3 ----- sole writer.** This is the only function in the
 /// CLI crate authorised to open `history.jsonl` for writing. The
 /// grep proof at §10.1 enforces that no other file under
 /// `crates/rustio-admin-cli/src/` calls `OpenOptions::append` /
@@ -164,7 +164,7 @@ pub(crate) fn append(
     const MAX_ATOMIC_LINE_BYTES: usize = 4096;
     if canonical.len() > MAX_ATOMIC_LINE_BYTES {
         return Err(std::io::Error::other(format!(
-            "history.jsonl event line is {} bytes — exceeds the {}-byte atomic-write \
+            "history.jsonl event line is {} bytes ----- exceeds the {}-byte atomic-write \
              bound from `DESIGN_BUILDER.md` §4.2.1. Refusing to write a payload that \
              could interleave under concurrent CLI invocations.",
             canonical.len(),
@@ -188,7 +188,7 @@ mod tests {
 
     /// Drift test (§10.8). The closed enum and its serialized
     /// strings must stay in lockstep. A PR that adds a variant
-    /// without updating the test list — or vice versa — fails here.
+    /// without updating the test list ----- or vice versa ----- fails here.
     #[test]
     fn op_enum_matches_serialized() {
         let pairs = [

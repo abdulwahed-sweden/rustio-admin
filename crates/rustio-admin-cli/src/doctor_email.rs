@@ -1,13 +1,13 @@
-//! `rustio doctor email` — SMTP self-validation.
+//! `rustio doctor email` ----- SMTP self-validation.
 //!
 //! Reads the same `SMTP_*` + `MAIL_FROM` envelope the framework
 //! example reads (so a `.env` that boots the app also passes
 //! the doctor) and runs four checks:
 //!
-//!   1. Env-var presence — every required key is set + non-empty.
-//!   2. TLS handshake — open the socket, complete TLS / STARTTLS.
-//!   3. Authentication — EHLO + AUTH LOGIN (or AUTH PLAIN).
-//!   4. Test send — optional, only when `--to <address>` is
+//!   1. Env-var presence ----- every required key is set + non-empty.
+//!   2. TLS handshake ----- open the socket, complete TLS / STARTTLS.
+//!   3. Authentication ----- EHLO + AUTH LOGIN (or AUTH PLAIN).
+//!   4. Test send ----- optional, only when `--to <address>` is
 //!      passed. Builds a tiny multipart message ("rustio-admin
 //!      doctor smoke test") and ships it through the same
 //!      transport the recovery flow uses.
@@ -23,7 +23,7 @@
 //!   - default (handshake only)
 //!   - `--to <address>` (handshake + real send)
 //!   - `--html-preview` (renders the recovery email body to
-//!     `/tmp/rustio-email-preview.html` and opens it — no SMTP
+//!     `/tmp/rustio-email-preview.html` and opens it ----- no SMTP
 //!     traffic at all; useful for visual iteration without
 //!     burning a real send).
 //!
@@ -68,13 +68,13 @@ fn provider_preset(name: &str) -> Option<(&'static str, u16, bool, Option<&'stat
 ///   `send_to`: when `Some`, dispatches a real test message
 ///   after the handshake. Triggers cooldown enforcement.
 ///   `html_preview`: when `true`, renders the recovery email
-///   body to `/tmp` and opens it — runs no SMTP traffic.
+///   body to `/tmp` and opens it ----- runs no SMTP traffic.
 pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), String> {
     if html_preview {
         return run_html_preview().await;
     }
 
-    println!("rustio doctor email — validating SMTP configuration");
+    println!("rustio doctor email ----- validating SMTP configuration");
     println!();
 
     // ---- 1. Env-var presence + provider preset resolution ----
@@ -85,7 +85,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
             println!("✓ MAIL_PROVIDER = {p} (preset applied)");
         } else {
             println!(
-                "⚠ MAIL_PROVIDER = {p} — unknown preset; falling back to explicit SMTP_* vars"
+                "⚠ MAIL_PROVIDER = {p} ----- unknown preset; falling back to explicit SMTP_* vars"
             );
             println!("  known presets: gmail, resend, postmark, mailgun, sendgrid, ethereal");
         }
@@ -151,7 +151,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
             println!();
             println!("Common causes:");
             println!("  • SMTP_PASSWORD is wrong");
-            println!("    (Gmail: must be a 16-char App Password — no spaces)");
+            println!("    (Gmail: must be a 16-char App Password ----- no spaces)");
             println!("  • 2-Step Verification is not enabled on the Google account");
             println!("    (App Passwords require 2FA; enable it first then regenerate)");
             println!("  • Wrong port + TLS combination");
@@ -167,7 +167,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
         None => {
             println!("· Test send skipped (pass `--to <address>` to dispatch a real message)");
             println!();
-            println!("rustio doctor email — all checks passed.");
+            println!("rustio doctor email ----- all checks passed.");
             Ok(())
         }
         Some(to_raw) => {
@@ -176,7 +176,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
             // command. Stamp lives in /tmp; survives across CLI runs
             // but not across reboots.
             if let Some(remaining) = cooldown_remaining() {
-                println!("✗ Cooldown active — last `--to` send was {remaining}s ago.");
+                println!("✗ Cooldown active ----- last `--to` send was {remaining}s ago.");
                 println!(
                     "  Wait {wait}s before sending another (cooldown is {window}s; \
                      prevents accidental loops).",
@@ -192,7 +192,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
                 "This is a rustio-admin doctor smoke test.\n\n\
                  If you can read this in your inbox, your SMTP \
                  configuration is correct end-to-end.\n\n\
-                 — — —\n\
+                 ----- ----- -----\n\
                  Sent from `rustio doctor email --to {to}`.\n"
             );
             let html = format!(
@@ -225,7 +225,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
             let msg = Message::builder()
                 .from(from)
                 .to(to.clone())
-                .subject("rustio-admin doctor — SMTP smoke test")
+                .subject("rustio-admin doctor ----- SMTP smoke test")
                 .multipart(
                     MultiPart::alternative()
                         .singlepart(
@@ -251,10 +251,10 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
             println!("OK");
             println!("✓ Test message accepted by remote (delivery in transit)");
             println!();
-            println!("rustio doctor email — all checks passed.");
+            println!("rustio doctor email ----- all checks passed.");
             println!();
             println!("Check the inbox of {to}; the message will arrive within seconds.");
-            println!("Gmail may route the first message from a new SMTP sender to Spam — ");
+            println!("Gmail may route the first message from a new SMTP sender to Spam ----- ");
             println!("if you don't see it, look there.");
             Ok(())
         }
@@ -262,7 +262,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
 }
 
 // ============================================================
-// HTML preview mode — no SMTP traffic.
+// HTML preview mode ----- no SMTP traffic.
 //
 // Renders the framework's recovery email template with realistic
 // placeholder data and writes the HTML to /tmp, then opens it in
@@ -272,7 +272,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
 // ============================================================
 
 async fn run_html_preview() -> Result<(), String> {
-    println!("rustio doctor email — rendering HTML preview");
+    println!("rustio doctor email ----- rendering HTML preview");
     println!();
 
     let app_name = env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());
@@ -311,7 +311,7 @@ async fn run_html_preview() -> Result<(), String> {
     println!("✓ Written to {PREVIEW_PATH}");
 
     // Open in the default browser. On macOS use `open`, on Linux
-    // `xdg-open` if available; both are fire-and-forget — the
+    // `xdg-open` if available; both are fire-and-forget ----- the
     // doctor doesn't care if the open succeeded.
     let opener = if cfg!(target_os = "macos") {
         "open"
@@ -345,7 +345,7 @@ async fn run_html_preview() -> Result<(), String> {
 }
 
 // ============================================================
-// Env-var resolvers — preset-aware.
+// Env-var resolvers ----- preset-aware.
 // Explicit SMTP_* env vars always override the preset values.
 // ============================================================
 
@@ -426,7 +426,7 @@ fn require_env(name: &str) -> Result<String, String> {
 }
 
 // ============================================================
-// Cooldown — minimal accidental-spam safety rail on `--to`.
+// Cooldown ----- minimal accidental-spam safety rail on `--to`.
 // Stamp lives in /tmp; the file mtime is the timestamp.
 // ============================================================
 

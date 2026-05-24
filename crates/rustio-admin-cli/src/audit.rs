@@ -1,7 +1,7 @@
-//! `rustio audit` — operator-facing read surface for the
+//! `rustio audit` ----- operator-facing read surface for the
 //! `rustio_admin_actions` table.
 //!
-//! Sibling to the framework's HTML `/admin/history` page — same
+//! Sibling to the framework's HTML `/admin/history` page ----- same
 //! data, different consumer. Useful for shell-driven incident
 //! response ("what did Alice do in the last hour?") and
 //! pipe-into-grep workflows.
@@ -10,7 +10,7 @@
 //! prints the most-recent rows. Filtering by user / model is
 //! handled in-SQL so even very large audit tables stay fast.
 //! Write-side commands (e.g. retention pruning, manual event
-//! injection) are deliberately *not* part of this surface —
+//! injection) are deliberately *not* part of this surface -----
 //! audit data is append-only by doctrine.
 
 use clap::Subcommand;
@@ -35,11 +35,11 @@ pub enum Action {
         #[arg(long)]
         user: Option<String>,
         /// Restrict to rows touching this model (the
-        /// `model_name` column — e.g. `clinics`, `patients`,
+        /// `model_name` column ----- e.g. `clinics`, `patients`,
         /// `rustio_users`).
         #[arg(long)]
         model: Option<String>,
-        /// Only print rows from the last `<duration>` window —
+        /// Only print rows from the last `<duration>` window -----
         /// e.g. `30s`, `15m`, `2h`, `7d`. Useful for incident
         /// response: "what happened in the last hour?" without
         /// having to pick a row count. Composes with `--user`
@@ -185,7 +185,7 @@ async fn tail(
 
 /// Parse a `--since` duration like `30s` / `15m` / `2h` / `7d`
 /// into a concrete UTC cutoff timestamp computed by subtracting
-/// the parsed window from `now`. Pure function — `now` is
+/// the parsed window from `now`. Pure function ----- `now` is
 /// injected so the unit tests pin a fixed clock.
 ///
 /// Accepted format: one or more ASCII digits followed by exactly
@@ -226,7 +226,7 @@ fn parse_since_cutoff(
 }
 
 /// Render the rows as a fixed-width table, newest first.
-/// Pure function — no IO, no clock, no DB — so the unit tests
+/// Pure function ----- no IO, no clock, no DB ----- so the unit tests
 /// can hand it synthetic vectors and assert exact output.
 fn format_audit_tail(rows: &[AuditRow]) -> String {
     use std::fmt::Write as _;
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn empty_input_renders_marker() {
         // Operator runs `rustio audit tail --model wrong` and
-        // gets zero matches — surface the absence rather than
+        // gets zero matches ----- surface the absence rather than
         // print just a header row.
         assert_eq!(format_audit_tail(&[]), "(no audit rows)\n");
     }
@@ -435,7 +435,7 @@ mod tests {
         // Empty / whitespace.
         assert!(parse_since_cutoff("", now).is_err());
         assert!(parse_since_cutoff("   ", now).is_err());
-        // Bad unit. Surfacing the typo is the WHOLE POINT —
+        // Bad unit. Surfacing the typo is the WHOLE POINT -----
         // silently dropping the filter would mask the operator's
         // intent on an incident-response query.
         assert!(parse_since_cutoff("1hr", now).is_err());
@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn parse_since_zero_is_valid_and_equals_now() {
-        // 0s / 0m / 0h / 0d are all valid edge cases — they
+        // 0s / 0m / 0h / 0d are all valid edge cases ----- they
         // mean "no time window applied" (cutoff == now). Useful
         // to keep the cutoff-binding path uniform without a
         // special "0 means skip" rule.
@@ -477,7 +477,7 @@ mod tests {
 
     #[test]
     fn columns_auto_widen_to_batch_max() {
-        // Mix short and long entries — the formatter pads to
+        // Mix short and long entries ----- the formatter pads to
         // the widest seen so columns align across rows.
         let rows = vec![
             mk("create", "a", 1, Some("x@y.z"), 1, "short"),

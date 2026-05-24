@@ -1,4 +1,4 @@
-//! `.rustio/draft.toml` — the declarative intent file.
+//! `.rustio/draft.toml` ----- the declarative intent file.
 //!
 //! `DESIGN_BUILDER.md` §4.1 makes this file the deterministic
 //! generator's sole input (Doctrine B1). This module defines the
@@ -8,7 +8,7 @@
 //!
 //! The struct shape mirrors the on-disk shape. Conversion runs
 //! through the `toml_edit` DOM and routes every emission through
-//! [`crate::builder::toml_canon::emit_canonical`] — the doctrine's
+//! [`crate::builder::toml_canon::emit_canonical`] ----- the doctrine's
 //! sole TOML emitter (§10.4 grep proof). The CLI crate never calls
 //! `toml::to_string` or any other emitter directly.
 //!
@@ -84,7 +84,7 @@ pub(crate) struct Field {
 pub(crate) enum DraftError {
     /// Underlying TOML parse failure.
     Toml(TomlError),
-    /// Schema mismatch — version not understood by this Builder.
+    /// Schema mismatch ----- version not understood by this Builder.
     UnsupportedSchemaVersion(u32),
     /// A required key is missing in the on-disk document.
     Missing(&'static str),
@@ -359,7 +359,7 @@ mod tests {
     #[test]
     fn serialized_output_is_byte_stable() {
         // Calling to_toml() twice from the same draft must produce
-        // identical bytes — the reproducibility invariant at §4.4.
+        // identical bytes ----- the reproducibility invariant at §4.4.
         let draft = sample_draft();
         assert_eq!(draft.to_toml(), draft.to_toml());
     }
@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn duplicate_table_names_refused() {
         let mut draft = sample_draft();
-        // Distinct model name, same table — the silent-collision
+        // Distinct model name, same table ----- the silent-collision
         // footgun from §7.4.
         draft.models.push(Model {
             name: "Resident".into(),
