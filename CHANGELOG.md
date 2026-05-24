@@ -49,7 +49,43 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.19.0]** block below._
+### Added — onboarding PR 1.1 (Beginner Command Surface)
+
+- **`rustio new <name>`** — friendly alias for `rustio startproject
+  <name>`. Identical behaviour, identical generated files, identical
+  exit codes. Restores the universal `<tool> new <name>` expectation
+  for first-time users.
+- **`rustio builder new <name>`** — canonical home for the
+  declarative-Builder bootstrap previously at the top-level `rustio
+  new` slot. Behaviour and generated tree unchanged.
+- **`rustio docs`** — tiny Phase-1 placeholder that prints the online,
+  repository, and in-project documentation locations plus the running
+  admin's `/admin/docs` URL. The browser opener ships with PR 2.4.
+- **Welcome banner on `rustio --help`** — promotes `rustio new
+  <project-name>` and the helpful `rustio doctor` / `rustio docs`
+  verbs above clap's auto-generated command list. The full command
+  list is preserved unchanged below the separator (presentation, not
+  amputation; see `docs/design/DESIGN_ONBOARDING.md` §10).
+
+### Changed
+
+- The doc comment at the top of `crates/rustio-admin-cli/src/main.rs`
+  now mirrors the Phase 1 / full-surface split codified in
+  `DESIGN_ONBOARDING.md`.
+
+### Deprecated
+
+- **`rustio new <name>`** as the Builder bootstrap is reachable for
+  one release as the hidden `rustio new --builder <name>` shim, which
+  prints a calm one-line notice pointing at `rustio builder new`. The
+  shim is hidden from `--help`; existing scripts get a soft landing.
+
+### Doctrine
+
+- `docs/design/DESIGN_ONBOARDING.md` (Stage 0 of the FTUX redesign)
+  governs which verbs the welcome banner promotes and the
+  presentation-not-amputation rule that all PRs in this track must
+  respect.
 
 
 ## [0.19.0] — 2026-05-24

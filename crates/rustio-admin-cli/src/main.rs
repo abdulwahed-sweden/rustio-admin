@@ -1,21 +1,34 @@
 //! `rustio` — command-line companion for `rustio-admin`.
 //!
-//! Subcommands available in this build:
+//! Beginner surface (the verbs the welcome help promotes first;
+//! see `docs/design/DESIGN_ONBOARDING.md` for the doctrine):
 //!
-//! - `rustio migrate apply` / `status` — drive the framework's
-//!   numerically prefixed `migrations/*.sql` runner.
-//! - `rustio user create` / `list` / `role` / `delete` — auth
-//!   table CRUD with Argon2 hashing and a confirm-twice password
-//!   prompt.
-//! - `rustio group create` / `list` / `add-user` — group CRUD and
-//!   membership management.
-//! - `rustio perm grant-user` / `grant-group` / `list` — permission
-//!   grants on top of the framework's `auth::permissions` API.
+//! - `rustio new <name>` — friendly alias for `startproject`.
+//!   Identical behaviour, identical files, identical exit codes.
 //! - `rustio doctor` — health check: reachable DB? auth tables
 //!   present? migrations up to date? at least one administrator?
+//! - `rustio docs` — print where the framework's documentation
+//!   lives (online, repository, in-project once the server runs).
 //!
-//! `startproject` / `startapp` scaffolding lands in a follow-up
-//! phase; the templates need to be designed alongside.
+//! Full surface (still listed in `--help` after the welcome banner):
+//!
+//! - `rustio startproject` / `startapp` — original scaffolding
+//!   verbs. `new` is the friendly alias; `startproject` keeps
+//!   working unchanged for scripts.
+//! - `rustio migrate apply` / `status` — numerically prefixed
+//!   `migrations/*.sql` runner.
+//! - `rustio user create` / `list` / `role` / `delete` — auth
+//!   table CRUD with Argon2 hashing.
+//! - `rustio group create` / `list` / `add-user` — group CRUD
+//!   and membership.
+//! - `rustio perm grant-user` / `grant-group` / `list` — permission
+//!   grants on top of `auth::permissions`.
+//! - `rustio builder new` — declarative-Builder bootstrap. The
+//!   `rustio new` slot was reclaimed for the friendly scaffold
+//!   alias; the legacy entrypoint is reachable as the hidden
+//!   `rustio new --builder` for a one-release deprecation window.
+//! - `rustio add` / `plan` / `commit` — Builder authoring,
+//!   plan, and apply (`docs/design/DESIGN_BUILDER.md`). Unchanged.
 
 use std::process::ExitCode;
 
@@ -36,11 +49,39 @@ mod test_init;
 mod theme;
 mod user;
 
+/// Welcome banner printed before clap's auto-generated `--help`
+/// command list. The Phase 1 surface promoted here is governed by
+/// `docs/design/DESIGN_ONBOARDING.md` §10 (Command-surface doctrine):
+/// promoted, never amputated — the full command list still follows.
+const WELCOME_HELP: &str = "\
+Welcome to RustIO
+
+Start a project:
+
+  rustio new <project-name>
+
+You can build:
+
+  - clinic systems
+  - school systems
+  - inventory systems
+  - blogs
+  - or custom projects
+
+Helpful commands:
+
+  rustio doctor
+  rustio docs
+
+────────────────────────────────────────────────────────────\
+";
+
 #[derive(Parser)]
 #[command(
     name = "rustio",
     version,
-    about = "The rustio-admin command-line tool."
+    about = "The rustio-admin command-line tool.",
+    before_help = WELCOME_HELP,
 )]
 struct Cli {
     #[command(subcommand)]
@@ -49,6 +90,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    // ---------- Beginner surface (promoted by the welcome banner) ----------
+    /// Create a new project (friendly alias for `startproject`).
+    ///
+    /// Identical behaviour, identical generated files, identical
+    /// exit codes. The legacy Builder bootstrap that used to live
+    /// in this slot moved to `rustio builder new`; the hidden
+    /// `--builder` flag below is the one-release deprecation shim
+    /// for scripts still calling the old form.
+    New {
+        /// Project name — also the cargo crate name. Letters,
+        /// digits, '-', and '_' only; must start with a letter.
+        name: String,
+        /// Forwarded to `startproject`: preset choice. Defaults to
+        /// `minimal` (one `Post` model); `blog` adds a `Comment`
+        /// model + FK migration. Ignored when `--builder` is set.
+        #[arg(long, default_value = "minimal")]
+        preset: String,
+        /// Deprecated: run the legacy Builder bootstrap. Use
+        /// `rustio builder new <name>` instead. Hidden from
+        /// `--help`; one-release grace.
+        #[arg(long, hide = true)]
+        builder: bool,
+    },
+
     /// Scaffold a new rustio-admin project at ./<name>.
     #[command(name = "startproject")]
     Startproject {
@@ -101,6 +166,14 @@ enum Command {
         #[command(subcommand)]
         action: Option<DoctorAction>,
     },
+
+    /// Print where the framework's documentation lives.
+    ///
+    /// Phase 1 keeps this verb intentionally tiny — it prints
+    /// online, repository, and in-project doc locations. The
+    /// browser opener and running-server detection ship later
+    /// (PR 2.4 of `docs/design/DESIGN_ONBOARDING.md` §10).
+    Docs,
 
     /// Curated `AdminTheme` palette presets. Subcommands print a
     /// Rust snippet to stdout — the operator pastes it into their
@@ -156,15 +229,19 @@ enum Command {
     },
 
     // ----- Builder verbs (DESIGN_BUILDER.md). All run synchronously
-    // and require no database — Doctrine B9 (network-free).
-    /// Bootstrap a new Builder-managed project at ./<name>.
+    // and require no database — Doctrine B9 (network-free). The
+    // top-level `new` slot was reclaimed for the friendly scaffold
+    // alias; the canonical Builder bootstrap is now `rustio builder
+    // new`. `add`, `plan`, `commit` keep their top-level positions
+    // for script compatibility.
+    /// Builder workflow namespace (`DESIGN_BUILDER.md`).
     ///
-    /// Writes `<name>/{Cargo.toml,src/main.rs,.rustio/{draft.toml,history.jsonl,builder.lock},migrations/}`.
-    /// See `docs/design/DESIGN_BUILDER.md`.
-    New {
-        /// Project name — also the cargo crate name. Letters,
-        /// digits, `-`, and `_` only; must start with a letter.
-        name: String,
+    /// Currently exposes `new` (project bootstrap); `add`, `plan`,
+    /// and `commit` keep their top-level positions for script
+    /// compatibility.
+    Builder {
+        #[command(subcommand)]
+        action: BuilderAction,
     },
 
     /// Builder authoring verbs.
@@ -184,6 +261,19 @@ enum Command {
         /// (DESIGN_BUILDER.md §5.4).
         #[arg(long)]
         force: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum BuilderAction {
+    /// Bootstrap a new Builder-managed project at ./<name>.
+    ///
+    /// Writes `<name>/{Cargo.toml,src/main.rs,.rustio/{draft.toml,history.jsonl,builder.lock},migrations/}`.
+    /// See `docs/design/DESIGN_BUILDER.md`.
+    New {
+        /// Project name — also the cargo crate name. Letters,
+        /// digits, `-`, and `_` only; must start with a letter.
+        name: String,
     },
 }
 
@@ -247,12 +337,29 @@ fn main() -> ExitCode {
         // Pure filesystem; no async / db needed. Builder verbs also
         // sit here — DESIGN_BUILDER.md Doctrine B9 forbids network
         // calls in plan/commit, and `new` / `add` are even simpler.
+        Command::New {
+            name,
+            preset,
+            builder,
+        } => {
+            if builder {
+                eprintln!("note: `rustio new --builder` is the legacy Builder entrypoint.");
+                eprintln!("      Prefer `rustio builder new <name>` going forward.");
+                eprintln!();
+                builder_new(&name)
+            } else {
+                scaffold::project(&name, &preset)
+            }
+        }
         Command::Startproject { name, preset } => scaffold::project(&name, &preset),
         Command::Startapp { name } => scaffold::app(&name),
-        Command::New { name } => builder_new(&name),
+        Command::Builder { action } => match action {
+            BuilderAction::New { name } => builder_new(&name),
+        },
         Command::Add { action } => builder_add(action),
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
+        Command::Docs => run_docs(),
         Command::Override { name, force, out } => template_override::run(name, force, &out),
         Command::Reload => reload::run(),
         Command::TestInit { force, out } => test_init::run(force, &out),
@@ -260,12 +367,14 @@ fn main() -> ExitCode {
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
-                Command::Startproject { .. }
+                Command::New { .. }
+                | Command::Startproject { .. }
                 | Command::Startapp { .. }
-                | Command::New { .. }
+                | Command::Builder { .. }
                 | Command::Add { .. }
                 | Command::Plan
                 | Command::Commit { .. }
+                | Command::Docs
                 | Command::Override { .. }
                 | Command::Reload
                 | Command::TestInit { .. }
@@ -293,10 +402,28 @@ fn main() -> ExitCode {
     }
 }
 
-/// `rustio new <name>` dispatch — pure filesystem, no async.
+/// Builder bootstrap dispatch — pure filesystem, no async.
+/// Reached via `rustio builder new <name>` (canonical) and via
+/// the hidden one-release `rustio new --builder <name>` shim.
 fn builder_new(name: &str) -> Result<(), String> {
     let summary = builder::cmd::run_new(name)?;
     println!("{summary}");
+    Ok(())
+}
+
+/// `rustio docs` — print where the framework's documentation
+/// lives. Phase 1 keeps this tiny on purpose; the running-server
+/// detector and browser opener ship with PR 2.4 of the
+/// onboarding doctrine (`docs/design/DESIGN_ONBOARDING.md` §10).
+fn run_docs() -> Result<(), String> {
+    println!("RustIO documentation");
+    println!();
+    println!("  Online    https://docs.rs/rustio-admin");
+    println!("  Repo      https://github.com/abdulwahed-sweden/rustio-admin");
+    println!("  In-repo   ./docs/  (when running from the source tree)");
+    println!();
+    println!("Once your project's server is running, the built-in admin docs are at:");
+    println!("  http://127.0.0.1:8000/admin/docs");
     Ok(())
 }
 
