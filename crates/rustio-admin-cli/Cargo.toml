@@ -27,6 +27,12 @@ rio-theme = { path = "../rio-theme", version = "0.19.0" }
 # CLI surface
 clap      = { version = "4", features = ["derive"] }
 rpassword = "7"
+# Spinner + status feedback for long-running onboarding operations
+# (PR 1.4 / DESIGN_ONBOARDING.md §9). The library's own TTY / non-TTY
+# / NO_COLOR detection short-circuits to a no-op draw target in
+# pipes / CI; we layer one additional gate on top so the global
+# `--quiet` / `--no-progress` flags work too.
+indicatif = "0.17"
 
 # DB + env (DATABASE_URL is read from .env when present)
 sqlx      = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "chrono"] }

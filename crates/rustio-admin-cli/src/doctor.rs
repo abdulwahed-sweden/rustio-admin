@@ -31,13 +31,16 @@ pub async fn run() -> Result<(), String> {
     };
     println!("✓ DATABASE_URL = {}", crate::redact_password(&url));
 
+    // Spinner during the connect round-trip, replaced by the
+    // ✓/✗ line on completion. PR 1.4 / DESIGN_ONBOARDING.md §9.
+    let step = crate::progress::Step::start("Connecting to PostgreSQL");
     let db = match rustio_admin::Db::connect(&url).await {
         Ok(d) => {
-            println!("✓ Connected to Postgres");
+            step.done_with("Connected to PostgreSQL");
             d
         }
         Err(e) => {
-            println!("✗ Could not connect: {e}");
+            step.failed_with(format!("Could not connect: {e}"));
             return Err("connect failed".into());
         }
     };

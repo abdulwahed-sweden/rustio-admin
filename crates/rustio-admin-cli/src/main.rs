@@ -42,6 +42,7 @@ mod emergency_ui;
 mod group;
 mod migrate;
 mod perm;
+mod progress;
 mod reload;
 mod scaffold;
 mod template_override;
@@ -86,6 +87,14 @@ Helpful commands:
     before_help = WELCOME_HELP,
 )]
 struct Cli {
+    /// Suppress progress spinners and status feedback. Errors still
+    /// print. PR 1.4 of `DESIGN_ONBOARDING.md` §9. Synonym of
+    /// `--no-progress`; either flag is enough on its own.
+    #[arg(long, global = true)]
+    quiet: bool,
+    /// Suppress progress spinners. Equivalent to `--quiet`.
+    #[arg(long, global = true)]
+    no_progress: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -361,6 +370,10 @@ fn main() -> ExitCode {
             e.exit();
         }
     };
+    // Wire the global `--quiet` / `--no-progress` flags into the
+    // progress layer before any Step::start is reachable. PR 1.4 /
+    // DESIGN_ONBOARDING.md §9.
+    progress::configure(cli.quiet, cli.no_progress);
     let result = match cli.command {
         // Pure filesystem; no async / db needed. Builder verbs also
         // sit here — DESIGN_BUILDER.md Doctrine B9 forbids network
@@ -565,9 +578,21 @@ where
 /// is preserved in the `Details:` block for senior engineers.
 pub(crate) async fn db() -> Result<rustio_admin::Db, String> {
     let url = std::env::var("DATABASE_URL").map_err(|_| ui::database_url_missing().format())?;
-    rustio_admin::Db::connect(&url)
-        .await
-        .map_err(|e| ui::classify_db_connect_error(&redact_password(&url), &e.to_string()).format())
+    // Silent-on-success spinner — `rustio user list` and friends
+    // produce their own output and don't need a "✓ Connected" noise
+    // line. The spinner exists only so a slow connect doesn't
+    // freeze the terminal. PR 1.4 / DESIGN_ONBOARDING.md §9.
+    let step = progress::Step::start("Connecting to PostgreSQL");
+    match rustio_admin::Db::connect(&url).await {
+        Ok(db) => {
+            step.clear();
+            Ok(db)
+        }
+        Err(e) => {
+            step.clear();
+            Err(ui::classify_db_connect_error(&redact_password(&url), &e.to_string()).format())
+        }
+    }
 }
 
 /// Strip the password component from a DATABASE_URL for log output.

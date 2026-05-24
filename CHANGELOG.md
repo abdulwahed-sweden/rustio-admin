@@ -49,6 +49,82 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added — onboarding PR 1.4 (Progress & Feedback Layer)
+
+- **`cli::progress` module** — single-spinner-style status feedback
+  for long-running onboarding operations
+  (`DESIGN_ONBOARDING.md` §9). One struct (`Step`) with four
+  methods (`start` / `done_with` / `failed_with` / `clear`); no
+  global TUI state. The spinner ticks on stderr; the `✓ <summary>`
+  result line always goes to stdout; the `✗ <summary>` failure line
+  always goes to stderr — animated or not, so scripts that grep
+  stdout for `✓` see the same bytes in both modes.
+- **`indicatif` (0.17) added** as a direct dependency of
+  `rustio-admin-cli`. Battle-tested, used by `cargo` itself; its
+  own non-TTY draw-target detection is the first gate, with our
+  `--quiet` / `--no-progress` / `CI` / `NO_COLOR` check layered on
+  top. No TUI framework, no `console` re-export beyond what
+  `indicatif` already pulls in transitively.
+- **Global `--quiet` and `--no-progress` flags** on `Cli`, both
+  marked `global = true` so every subcommand accepts them. Either
+  flag forces the progress layer to skip animation; the underlying
+  command behaviour is unchanged. Errors still print.
+- **Spinner placements** (the four call sites authorised by §9):
+    - **`main::db()`** — silent-on-success spinner during
+      `Db::connect`. Other commands (`user list`, `group list`, …)
+      produce their own output, so no extra `✓ Connected` line is
+      printed; the spinner exists only so a slow connect does not
+      freeze the terminal.
+    - **`migrate::apply`** — silent-on-success spinner around
+      `migrations::apply_with`. The existing per-file
+      `✓ <migration>` summary block is unchanged.
+    - **`doctor`** — explicit `✓ Connected to PostgreSQL` /
+      `✗ Could not connect: …` line replaces the previous bare
+      println for the connect step; the spinner ticks during the
+      round-trip. The remaining doctor checks are unchanged
+      (they're fast SQL queries; PR 1.4 deliberately does NOT
+      wrap every check — that would be a doctor redesign).
+- **First-build expectation note** — the wizard's Next Steps block
+  ends with one calm line: *"Note: the first `cargo run` may take
+  several minutes — that is normal for a fresh Rust project."* Only
+  on the wizard path; the non-interactive scaffold path (script
+  users) does not get the note.
+
+### Bypass behaviour (strictly enforced)
+
+The spinner is suppressed entirely under any of:
+
+| Signal | Source |
+|---|---|
+| `--quiet` | top-level Cli flag |
+| `--no-progress` | top-level Cli flag |
+| `CI=1` (or any value) | environment |
+| `NO_COLOR=1` (or any value) | environment |
+| stderr is not a terminal | runtime check via `IsTerminal` |
+
+In all bypass cases the spinner emits zero output; `done_with` /
+`failed_with` fall through to a plain `println!` / `eprintln!`
+so result lines still print. Verified against piped stdout
+(0 ANSI sequences leak), `--quiet`, `--no-progress`, `CI=1`, and
+`NO_COLOR=1`.
+
+### Preserved
+
+- Exit codes unchanged.
+- Existing command output stays on stdout; spinner is stderr-only.
+- Per-file migration `✓` list in `migrate apply` survives untouched
+  in both animated and non-animated modes.
+- Migration engine, doctor architecture, runtime, and database
+  layer are all unmodified — PR 1.4 only adds feedback wrapping
+  at four call sites.
+
+### Doctrine
+
+- PR 1.4 implements `DESIGN_ONBOARDING.md` §9 (Motion and feedback
+  doctrine): one spinner, one ✓ marker, one ✗ marker; respect
+  `NO_COLOR` / non-TTY / `--quiet` / `--no-progress`. Feedback,
+  not theatre.
+
 ### Added — onboarding PR 1.3 (Humanised Error Doctrine)
 
 - **Four-part onboarding error shape** (`DESIGN_ONBOARDING.md` §8) —

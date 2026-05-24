@@ -138,6 +138,11 @@ fn project_with_db_in(
     );
     println!("  rustio user create --email admin@{name}.local --role administrator");
     println!("  cargo run                  # boots http://127.0.0.1:8000/admin");
+    println!();
+    // First-build expectation note. PR 1.4 / DESIGN_ONBOARDING.md §9
+    // — only printed on the wizard path so script users (who know
+    // what to expect from `cargo build`) don't see it.
+    println!("Note: the first `cargo run` may take several minutes — that is normal for a fresh Rust project.");
     Ok(())
 }
 

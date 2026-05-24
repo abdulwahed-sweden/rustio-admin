@@ -33,13 +33,23 @@ pub async fn run(action: Action) -> Result<(), String> {
 
 async fn apply(db: rustio_admin::Db, dir: PathBuf) -> Result<(), String> {
     let opts = migrations::ApplyOptions { verbose: true };
-    let applied = migrations::apply_with(&db, &dir, opts).await.map_err(|e| {
-        // The library wraps failures as `"migration <file> failed:
-        // <sqlx-error>"`; the classifier in `ui` pulls the filename
-        // out and presents the raw SQL error in the Details block.
-        // DESIGN_ONBOARDING.md §8.
-        crate::ui::classify_migration_error(&format!("apply: {e}")).format()
-    })?;
+    // Spinner while the library runs the per-file migration loop.
+    // The library does not surface per-migration progress hooks, so
+    // one outer spinner is the minimum-scope feedback that satisfies
+    // PR 1.4 / DESIGN_ONBOARDING.md §9 without changing the migration
+    // engine. The existing per-file `✓ <name>` summary below the
+    // spinner remains untouched.
+    let step = crate::progress::Step::start("Applying migrations");
+    let applied = match migrations::apply_with(&db, &dir, opts).await {
+        Ok(a) => {
+            step.clear();
+            a
+        }
+        Err(e) => {
+            step.clear();
+            return Err(crate::ui::classify_migration_error(&format!("apply: {e}")).format());
+        }
+    };
     if applied.is_empty() {
         println!("Nothing to apply — every migration is up to date.");
     } else {
