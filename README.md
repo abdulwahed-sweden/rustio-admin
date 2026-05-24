@@ -142,6 +142,18 @@ The surface is grouped into five concerns.
 - Single binary deploy. No build step. One stylesheet.
 - Project templates and CSS embedded at compile time.
 
+### Visual design
+
+- Hand-written CSS driven by `--rio-*` custom-property tokens.
+- `rio-theme` (build-time companion crate) generates a safe
+  `tokens.css` from one or more brand colors — WCAG-checked,
+  vivid colors auto-tamed, brand-vs-semantic-state collisions
+  resolved.
+- v0.19 "Quiet Expert" design language: unified `.rio-section`,
+  `.rio-empty-state`, `.rio-confirm`, kebab row actions,
+  area-chart sparklines. See [`CHANGELOG.md`](./CHANGELOG.md)
+  `[0.19.0]` for the per-page record.
+
 ---
 
 Most projects use a subset. The framework does not require
@@ -154,7 +166,7 @@ The library and the CLI ship as separate crates.
 
 ```toml
 [dependencies]
-rustio-admin = "0.15.1"
+rustio-admin = "0.19.0"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
@@ -196,7 +208,7 @@ Where to start depends on the work.
 **Building on the published crate**
 → Install above
 → [`docs/modeladmin.md`](./docs/modeladmin.md)
-→ [`examples/library-circulation/`](./examples/library-circulation/)
+→ [`examples/clinic/`](./examples/clinic/)
 
 **Understanding scope and design history**
 → [`docs/architecture.md`](./docs/architecture.md)
@@ -239,14 +251,15 @@ Each document is the source of truth for its surface.
 
 ## Workspace layout
 
-Three crates ship together. The split keeps proc-macros and CLI
-compilation off the project's hot path.
+Four crates ship together. The split keeps proc-macros, the
+theme engine, and CLI compilation off the project's hot path.
 
 | Crate | Purpose |
 |---|---|
 | `rustio-admin`        | The library. Re-exports the macros. |
 | `rustio-admin-macros` | Proc-macros (re-exported from `rustio-admin`). |
-| `rustio-admin-cli`    | The `rustio` binary — `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `doctor`. |
+| `rustio-admin-cli`    | The `rustio` binary — `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `theme`, `doctor`. |
+| `rio-theme`           | Build-time theme engine. Turns raw brand colors into a WCAG-safe `tokens.css`. Not depended on by `rustio-admin` at runtime. |
 
 ```sh
 cargo build --workspace
