@@ -47,6 +47,7 @@ mod scaffold;
 mod template_override;
 mod test_init;
 mod theme;
+mod ui;
 mod user;
 mod wizard;
 
@@ -345,7 +346,21 @@ fn main() -> ExitCode {
     let _ = dotenvy::dotenv();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(c) => c,
+        Err(e) => {
+            // Intercept clap's InvalidValue error (e.g. `--role admin`
+            // when valid roles are user/staff/...) and reformat using
+            // the four-part onboarding shape from DESIGN_ONBOARDING.md §8.
+            // Every other clap error (missing arg, --help, --version, …)
+            // falls through to clap's default printing untouched.
+            if let Some(rewritten) = rewrite_clap_invalid_value(&e) {
+                eprintln!("{}", rewritten.format());
+                return ExitCode::from(2);
+            }
+            e.exit();
+        }
+    };
     let result = match cli.command {
         // Pure filesystem; no async / db needed. Builder verbs also
         // sit here — DESIGN_BUILDER.md Doctrine B9 forbids network
@@ -401,10 +416,42 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("error: {e}");
+            // Four-part onboarding errors (DESIGN_ONBOARDING.md §8)
+            // carry their own structural headline; the `error: ` label
+            // would just clutter it. Plain-string errors keep the
+            // label so non-rewritten paths look unchanged.
+            if e.starts_with(ui::ONBOARDING_SENTINEL) {
+                eprintln!("{e}");
+            } else {
+                eprintln!("error: {e}");
+            }
             ExitCode::FAILURE
         }
     }
+}
+
+/// Inspect a clap parse error and, if it's an `InvalidValue` (a
+/// `ValueEnum` mismatch like `--role admin`), build the matching
+/// four-part [`ui::OnboardingError`]. Returns `None` for every
+/// other clap error kind so the default printing still runs.
+fn rewrite_clap_invalid_value(e: &clap::Error) -> Option<ui::OnboardingError> {
+    use clap::error::{ContextKind, ContextValue, ErrorKind};
+    if e.kind() != ErrorKind::InvalidValue {
+        return None;
+    }
+    let arg = match e.get(ContextKind::InvalidArg)? {
+        ContextValue::String(s) => s.clone(),
+        _ => return None,
+    };
+    let bad = match e.get(ContextKind::InvalidValue)? {
+        ContextValue::String(s) => s.clone(),
+        _ => return None,
+    };
+    let valid: Vec<String> = match e.get(ContextKind::ValidValue)? {
+        ContextValue::Strings(v) => v.clone(),
+        _ => return None,
+    };
+    Some(ui::invalid_value(&arg, &bad, &valid))
 }
 
 /// Builder bootstrap dispatch — pure filesystem, no async.
@@ -511,15 +558,16 @@ where
 }
 
 /// Connect to the database read from `DATABASE_URL` (loaded from
-/// `.env` if present). Every subcommand uses this — failing here
-/// produces a single, consistent error message.
+/// `.env` if present). Every subcommand uses this — failures here
+/// flow through the four-part onboarding error shape
+/// (`DESIGN_ONBOARDING.md` §8) so beginners see plain-English
+/// guidance instead of raw driver text. The verbatim backend error
+/// is preserved in the `Details:` block for senior engineers.
 pub(crate) async fn db() -> Result<rustio_admin::Db, String> {
-    let url = std::env::var("DATABASE_URL").map_err(|_| {
-        "DATABASE_URL is not set. Add it to .env or your shell environment.".to_string()
-    })?;
+    let url = std::env::var("DATABASE_URL").map_err(|_| ui::database_url_missing().format())?;
     rustio_admin::Db::connect(&url)
         .await
-        .map_err(|e| format!("could not connect to {}: {e}", redact_password(&url)))
+        .map_err(|e| ui::classify_db_connect_error(&redact_password(&url), &e.to_string()).format())
 }
 
 /// Strip the password component from a DATABASE_URL for log output.

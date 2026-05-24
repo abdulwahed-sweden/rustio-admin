@@ -49,6 +49,79 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added — onboarding PR 1.3 (Humanised Error Doctrine)
+
+- **Four-part onboarding error shape** (`DESIGN_ONBOARDING.md` §8) —
+  every rewritten onboarding-facing error now prints as:
+
+  ```
+  Problem:  <one line, plain English>
+  Why:      <most likely cause>
+  Fix:      <exact command or file edit>
+  Retry:    <exact retry command>
+
+  Details:
+    <verbatim backend error, preserved for senior engineers>
+  ```
+
+  Implemented via a new internal helper `cli::ui::OnboardingError`.
+  The main exit trampoline detects the four-part shape by its
+  `"Problem:"` prefix and skips the redundant `"error: "` label.
+- **First wave of rewrites** — the five onboarding-critical errors
+  from `DESIGN_ONBOARDING.md` §8 now flow through the helper:
+    1. `DATABASE_URL` missing — points the beginner at the wizard
+       (PR 1.2) or shows the exact `.env` line to add.
+    2. PostgreSQL service unreachable — recognises the framework's
+       `Db::connect` wrap chain (`"db connect failed: pool timed out"`)
+       and the raw `"connection refused"` shape; Fix line gives
+       OS-specific start commands for macOS / Ubuntu / Windows.
+    3. Database does not exist — pulls the bare name out of
+       `database "X" does not exist`; Fix shows the exact `createdb`
+       command using that name.
+    4. Migration SQL failure — extracts the migration stem from the
+       library's `"migration <stem> failed: <sqlx-error>"` wrap (even
+       through the framework's `"500 Internal: "` and the CLI's
+       `"apply: "` outer prefixes); Fix points at the matching
+       `_<stem>.sql` file and reminds the user migrations are
+       append-only.
+    5. Invalid `--role` (and any other clap `ValueEnum` mismatch) —
+       `Cli::parse()` switched to `try_parse()` so we can intercept
+       `ErrorKind::InvalidValue`, read the bad value and the valid
+       set from clap's `ContextValue`, and reformat. Role-flag
+       errors get role-specific phrasing; other `ValueEnum` errors
+       get a generic-but-still-four-part shape.
+
+### Changed
+
+- `main::db()` failures flow through `ui::database_url_missing()` and
+  `ui::classify_db_connect_error()` instead of the previous
+  `"DATABASE_URL is not set"` / `"could not connect: …"` one-liners.
+- `migrate::apply` wraps the library error through
+  `ui::classify_migration_error()` instead of the previous
+  `"apply: …"` pass-through.
+- Main switched from `Cli::parse()` to `Cli::try_parse()` to enable
+  intercepting clap's `InvalidValue` errors. All other clap errors
+  (missing required arg, `--help`, `--version`, malformed syntax)
+  still flow through `clap::Error::exit()` unchanged.
+
+### Preserved
+
+- Exit codes are unchanged (0 success, 1 runtime/validation, 2 clap).
+- Plain-`String` errors elsewhere in the CLI are untouched — the
+  helper is opt-in per call site.
+- Verbatim backend errors are never thrown away; they appear in the
+  `Details:` block beneath the four-part guidance. Senior engineers
+  who want the raw sqlx text still get it on the same screen.
+
+### Doctrine
+
+- PR 1.3 implements `DESIGN_ONBOARDING.md` §8 (Error-message
+  doctrine) and §12 rule 10 ("Do not show raw backend errors to
+  beginners without explanation"). The PR explicitly does NOT
+  redesign the migration engine, the database layer, permissions,
+  the runtime, doctor, or startapp — only the CLI messaging that
+  fronts them.
+
 ### Added — onboarding PR 1.2 (Interactive Project Wizard)
 
 - **`rustio new <name>` wizard** — when stdin and stdout are both TTYs

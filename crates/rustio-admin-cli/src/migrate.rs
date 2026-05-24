@@ -33,9 +33,13 @@ pub async fn run(action: Action) -> Result<(), String> {
 
 async fn apply(db: rustio_admin::Db, dir: PathBuf) -> Result<(), String> {
     let opts = migrations::ApplyOptions { verbose: true };
-    let applied = migrations::apply_with(&db, &dir, opts)
-        .await
-        .map_err(|e| format!("apply: {e}"))?;
+    let applied = migrations::apply_with(&db, &dir, opts).await.map_err(|e| {
+        // The library wraps failures as `"migration <file> failed:
+        // <sqlx-error>"`; the classifier in `ui` pulls the filename
+        // out and presents the raw SQL error in the Details block.
+        // DESIGN_ONBOARDING.md §8.
+        crate::ui::classify_migration_error(&format!("apply: {e}")).format()
+    })?;
     if applied.is_empty() {
         println!("Nothing to apply — every migration is up to date.");
     } else {
