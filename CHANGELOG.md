@@ -49,6 +49,51 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added — onboarding PR 1.2 (Interactive Project Wizard)
+
+- **`rustio new <name>` wizard** — when stdin and stdout are both TTYs
+  (and `CI` is unset, and `--no-interactive` is not passed), `rustio
+  new` runs a calm stdlib-only wizard collecting:
+    1. **Project name** — pre-filled with the positional argument when
+       provided; validated against the same rules as `startproject`.
+    2. **Project type** — curated list (`custom` / `clinic` / `school`
+       / `inventory` / `blog`), `custom` is default. Stored as intent
+       only; PR 1.5 will branch starter content on it
+       (DESIGN_ONBOARDING.md §6).
+    3. **Postgres guidance** — text-only install hint for macOS /
+       Ubuntu / Windows (DESIGN_ONBOARDING.md §4 — the CLI never
+       shells out to package managers).
+    4. **Database name** — defaults to `<project>_dev`; validated as a
+       PostgreSQL unquoted identifier (≤63 bytes; reserved
+       `postgres` / `template0` / `template1` rejected).
+  Ends with a one-block summary of the user's choices.
+- **Auto-generated `.env`** — the wizard writes `.env` next to the
+  scaffold's `.env.example`, with `DATABASE_URL` composed from the
+  chosen `DB_NAME` and the standard local defaults. Removes the
+  manual `cp .env.example .env` step from the wizard's Next Steps.
+  The scaffold's `.gitignore` already excludes `.env`; no edit
+  needed.
+- **`--no-interactive` flag** — bypasses the wizard explicitly. With
+  this flag, `rustio new <name>` is byte-identical to `rustio
+  startproject <name>` (verified by tree diff).
+
+### Changed
+
+- `Command::New::name` is now `Option<String>` so the wizard can
+  prompt for it. Non-interactive callers (TTY-less stdin/stdout, CI,
+  or `--no-interactive`) still get a clear "project name is required"
+  error when omitted.
+- `scaffold::project` refactored internally — file writing extracted
+  to `write_project_files` so the wizard can reuse it before layering
+  `.env`. Public `scaffold::project` API and output are unchanged.
+
+### Doctrine
+
+- PR 1.2 implements `DESIGN_ONBOARDING.md` §5 (target flow) and §10
+  (command surface). The wizard explicitly does NOT touch homepage
+  (PR 1.5), project-typed starter content (PR 1.5), starter security
+  defaults (PR 2.2), or error-message humanisation (PR 1.3).
+
 ### Added — onboarding PR 1.1 (Beginner Command Surface)
 
 - **`rustio new <name>`** — friendly alias for `rustio startproject

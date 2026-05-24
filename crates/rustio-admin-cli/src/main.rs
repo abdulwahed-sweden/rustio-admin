@@ -48,6 +48,7 @@ mod template_override;
 mod test_init;
 mod theme;
 mod user;
+mod wizard;
 
 /// Welcome banner printed before clap's auto-generated `--help`
 /// command list. The Phase 1 surface promoted here is governed by
@@ -93,20 +94,32 @@ enum Command {
     // ---------- Beginner surface (promoted by the welcome banner) ----------
     /// Create a new project (friendly alias for `startproject`).
     ///
-    /// Identical behaviour, identical generated files, identical
-    /// exit codes. The legacy Builder bootstrap that used to live
-    /// in this slot moved to `rustio builder new`; the hidden
-    /// `--builder` flag below is the one-release deprecation shim
-    /// for scripts still calling the old form.
+    /// In an interactive terminal, a calm wizard collects the
+    /// project name, project type, and database name, then writes
+    /// a matching `.env` alongside the standard files (PR 1.2 of
+    /// `DESIGN_ONBOARDING.md`). Under `--no-interactive`, when
+    /// stdin/stdout is not a TTY, or under CI, the wizard is
+    /// bypassed and behaviour is byte-identical to `startproject`.
+    /// The legacy Builder bootstrap that used to live in this slot
+    /// moved to `rustio builder new`; the hidden `--builder` flag
+    /// below is the one-release deprecation shim.
     New {
         /// Project name — also the cargo crate name. Letters,
         /// digits, '-', and '_' only; must start with a letter.
-        name: String,
+        /// Optional: the wizard prompts for it when omitted in
+        /// interactive mode. Required in non-interactive mode.
+        name: Option<String>,
         /// Forwarded to `startproject`: preset choice. Defaults to
         /// `minimal` (one `Post` model); `blog` adds a `Comment`
         /// model + FK migration. Ignored when `--builder` is set.
         #[arg(long, default_value = "minimal")]
         preset: String,
+        /// Skip the interactive wizard even when running in a
+        /// terminal. Behaviour matches `rustio startproject` exactly
+        /// — required positional name, scaffold writes `.env.example`
+        /// only (no auto-generated `.env`), same Next Steps block.
+        #[arg(long)]
+        no_interactive: bool,
         /// Deprecated: run the legacy Builder bootstrap. Use
         /// `rustio builder new <name>` instead. Hidden from
         /// `--help`; one-release grace.
@@ -340,17 +353,9 @@ fn main() -> ExitCode {
         Command::New {
             name,
             preset,
+            no_interactive,
             builder,
-        } => {
-            if builder {
-                eprintln!("note: `rustio new --builder` is the legacy Builder entrypoint.");
-                eprintln!("      Prefer `rustio builder new <name>` going forward.");
-                eprintln!();
-                builder_new(&name)
-            } else {
-                scaffold::project(&name, &preset)
-            }
-        }
+        } => dispatch_new(name, preset, no_interactive, builder),
         Command::Startproject { name, preset } => scaffold::project(&name, &preset),
         Command::Startapp { name } => scaffold::app(&name),
         Command::Builder { action } => match action {
@@ -409,6 +414,41 @@ fn builder_new(name: &str) -> Result<(), String> {
     let summary = builder::cmd::run_new(name)?;
     println!("{summary}");
     Ok(())
+}
+
+/// `rustio new` dispatch — wizard or legacy scaffold path.
+///
+/// Decision order: `--builder` → legacy Builder shim (PR 1.1); else
+/// if the wizard is eligible (TTY, not CI, not `--no-interactive`)
+/// → run the wizard and emit a matching `.env`; else → call
+/// `scaffold::project` exactly as PR 1.1 shipped it (byte-identical,
+/// no `.env`, mandatory positional name).
+fn dispatch_new(
+    name: Option<String>,
+    preset: String,
+    no_interactive: bool,
+    builder: bool,
+) -> Result<(), String> {
+    if builder {
+        let name =
+            name.ok_or_else(|| "`rustio new --builder <name>` requires a name".to_string())?;
+        eprintln!("note: `rustio new --builder` is the legacy Builder entrypoint.");
+        eprintln!("      Prefer `rustio builder new <name>` going forward.");
+        eprintln!();
+        return builder_new(&name);
+    }
+    if wizard::should_run(no_interactive) {
+        let input = wizard::run(name.as_deref())?;
+        // PR 1.5 (DESIGN_ONBOARDING.md §6) will branch the scaffold
+        // on `input.project_type`; PR 1.2 records the intent only.
+        let _ = &input.project_type;
+        return scaffold::project_with_db(&input.project_name, &preset, &input.db_name);
+    }
+    // Non-interactive path — name is mandatory (matches `startproject`).
+    let name = name.ok_or_else(|| {
+        "project name is required in non-interactive mode (try `rustio new <name>`)".to_string()
+    })?;
+    scaffold::project(&name, &preset)
 }
 
 /// `rustio docs` — print where the framework's documentation
