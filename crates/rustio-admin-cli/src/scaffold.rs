@@ -1,4 +1,4 @@
-//! `rustio startproject <name>` ----- generate a fresh project skeleton
+//! `rustio startproject <name>` -- generate a fresh project skeleton
 //! at `./<name>/`.
 //!
 //! Templates are baked into the binary via `include_str!` so the CLI
@@ -50,7 +50,7 @@ const PROJECT_TEMPLATES: &[(&str, &str)] = &[
     ),
 ];
 
-/// `blog` preset ----- layered on top of `PROJECT_TEMPLATES`. The
+/// `blog` preset -- layered on top of `PROJECT_TEMPLATES`. The
 /// `src/main.rs` slot is replaced wholesale by writing the preset
 /// version *after* the minimal pass (`fs::write` overwrites
 /// unconditionally), so the ordering
@@ -84,10 +84,29 @@ const BLOG_EXTRAS: &[(&str, &str)] = &[
     ),
 ];
 
+/// Humanise the lower-case cargo crate name into a display title
+/// for `Admin::app_name(...)` — splits on `-` / `_`, capitalises
+/// each word, joins with a single space. `clinic` -> `Clinic`,
+/// `my-clinic` -> `My Clinic`, `school_admin` -> `School Admin`.
+/// Powers `{{name_title}}` substitution (Polish & Trust PR).
+fn humanise_name(name: &str) -> String {
+    name.split(['-', '_'])
+        .filter(|w| !w.is_empty())
+        .map(|w| {
+            let mut cs = w.chars();
+            match cs.next() {
+                Some(c) => c.to_uppercase().collect::<String>() + cs.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Curated project-type identifiers from `DESIGN_ONBOARDING.md` §6
 /// / the PR 1.2 wizard. Drives the `{{type_phrase}}` substitution
 /// in `templates/home.html`. Unknown values (or the non-interactive
-/// default) fall through to the `custom` phrasing — neutral, never
+/// default) fall through to the `custom` phrasing -- neutral, never
 /// blog-flavoured.
 fn type_phrase(project_type: &str) -> &'static str {
     match project_type {
@@ -126,7 +145,7 @@ pub fn project_with_db(
     project_with_db_in(Path::new("."), name, preset, db_name, project_type)
 }
 
-/// Workdir-parameterised variant ----- `project()` calls this with
+/// Workdir-parameterised variant -- `project()` calls this with
 /// `Path::new(".")`. Pulled out so unit tests can scaffold under
 /// a tempdir without changing the process working directory.
 fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Result<(), String> {
@@ -149,7 +168,7 @@ fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Re
     Ok(())
 }
 
-/// Workdir-parameterised wizard variant ----- tests reach this via a
+/// Workdir-parameterised wizard variant -- tests reach this via a
 /// tempdir; `project_with_db` calls it with `Path::new(".")`.
 fn project_with_db_in(
     parent: &Path,
@@ -180,9 +199,9 @@ fn project_with_db_in(
     println!("  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin");
     println!();
     // First-build expectation note. PR 1.4 / DESIGN_ONBOARDING.md §9
-    // ----- only printed on the wizard path so script users (who know
+    // -- only printed on the wizard path so script users (who know
     // what to expect from `cargo build`) don't see it.
-    println!("Note: the first `cargo run` may take several minutes ----- that is normal for a fresh Rust project.");
+    println!("Note: the first `cargo run` may take several minutes -- that is normal for a fresh Rust project.");
     Ok(())
 }
 
@@ -216,6 +235,7 @@ fn write_project_files(
     }
 
     let type_phrase = type_phrase(project_type);
+    let name_title = humanise_name(name);
     let mut written = 0usize;
     for (rel, body) in PROJECT_TEMPLATES {
         let target = dir.join(rel);
@@ -224,6 +244,7 @@ fn write_project_files(
         }
         let body = body
             .replace("{{name}}", name)
+            .replace("{{name_title}}", &name_title)
             .replace("{{type_phrase}}", type_phrase);
         fs::write(&target, body).map_err(|e| format!("write {}: {e}", target.display()))?;
         written += 1;
@@ -241,7 +262,7 @@ fn write_project_files(
                 .replace("{{type_phrase}}", type_phrase);
             fs::write(&target, body).map_err(|e| format!("write {}: {e}", target.display()))?;
             // Overrides reuse a slot the minimal scaffold already
-            // wrote ----- don't double-count those. Extras are net-new
+            // wrote -- don't double-count those. Extras are net-new
             // files; bump the counter for them.
             if BLOG_EXTRAS.iter().any(|(p, _)| *p == *rel) {
                 written += 1;
@@ -301,7 +322,7 @@ fn validate_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-// ---- startapp -----------------------------------------------------------
+// ---- startapp --------------------------
 
 const APP_MODEL_TEMPLATE: &str = include_str!("../templates/app/model.rs.tmpl");
 const APP_MIGRATION_TEMPLATE: &str = include_str!("../templates/app/migration.sql.tmpl");
@@ -388,7 +409,7 @@ fn validate_app_name(name: &str) -> Result<(), String> {
 
 /// Refuse to scaffold an app outside a project. We recognise a
 /// project root by the combo of `Cargo.toml` and `src/main.rs`,
-/// which `rustio startproject` always lays down ----- and which
+/// which `rustio startproject` always lays down -- and which
 /// `cargo new --bin` produces too.
 fn ensure_in_project_root() -> Result<(), String> {
     if !Path::new("Cargo.toml").exists() {
@@ -475,14 +496,14 @@ mod tests {
     }
 
     // `const_is_empty` correctly notes the standalone-const checks
-    // below are compile-time constants ----- but that's the point.
+    // below are compile-time constants -- but that's the point.
     // Catches a regression where a templates file gets emptied or
     // include_str! points at the wrong path.
     #[allow(clippy::const_is_empty)]
     #[test]
     fn every_template_carries_at_least_one_placeholder_or_fixed_content() {
         // Sanity check that the static slice is wired correctly.
-        // Empty templates are also a regression ----- `include_str!` would
+        // Empty templates are also a regression -- `include_str!` would
         // happily load a zero-byte file but the scaffold would write
         // empty files into the new project.
         for (rel, body) in PROJECT_TEMPLATES {
@@ -496,6 +517,17 @@ mod tests {
             !APP_MIGRATION_TEMPLATE.is_empty(),
             "app migration template is empty"
         );
+    }
+
+    #[test]
+    fn humanise_name_capitalises_words_and_splits_on_separators() {
+        assert_eq!(humanise_name("clinic"), "Clinic");
+        assert_eq!(humanise_name("my-clinic"), "My Clinic");
+        assert_eq!(humanise_name("school_admin"), "School Admin");
+        assert_eq!(humanise_name("acme_dental_clinic"), "Acme Dental Clinic");
+        // Leading/trailing/repeated separators stay clean.
+        assert_eq!(humanise_name("_foo__bar_"), "Foo Bar");
+        assert_eq!(humanise_name(""), "");
     }
 
     #[test]
@@ -765,7 +797,7 @@ mod tests {
         out.into_iter()
     }
 
-    /// Stdlib-only tempdir for scaffold tests ----- no `tempfile` dep
+    /// Stdlib-only tempdir for scaffold tests -- no `tempfile` dep
     /// just for the scaffold suite.
     fn unique_tempdir() -> std::path::PathBuf {
         use std::sync::atomic::{AtomicU64, Ordering};

@@ -1,4 +1,4 @@
-//! `rustio perm` ----- direct + group-mediated permission grants.
+//! `rustio perm` -- direct + group-mediated permission grants.
 //!
 //! Permission codenames follow the framework's convention:
 //! `<app>.<action>_<model>`, e.g. `posts.add_post`. The framework's
@@ -58,7 +58,7 @@ async fn list(db: Db) -> Result<(), String> {
         if desc.is_empty() {
             println!("  {name}");
         } else {
-            println!("  {name}  ----- {desc}");
+            println!("  {name}  -- {desc}");
         }
     }
     Ok(())

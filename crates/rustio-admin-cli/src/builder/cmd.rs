@@ -3,7 +3,7 @@
 //! Each function maps one `rustio <verb>` invocation onto the
 //! underlying primitives. Keeping the dispatchers in a single
 //! module makes the grep proofs in DESIGN_BUILDER.md §10 easy to
-//! reason about ----- every Builder-side filesystem write either goes
+//! reason about -- every Builder-side filesystem write either goes
 //! through here or through one of the primitives this module
 //! calls.
 
@@ -27,7 +27,7 @@ use crate::builder::redact::is_secret_field_type;
 /// back to a literal `"unknown"`.
 ///
 /// When no real actor can be resolved, the caller surfaces a
-/// warning on stderr ----- an audit row with `actor = "unknown"` is
+/// warning on stderr -- an audit row with `actor = "unknown"` is
 /// honest (per `DESIGN_AUDIT.md` §2.2 the framework never invents
 /// an id) but degrades the trail. Set either env var or
 /// `git config user.email` to restore attribution.
@@ -64,7 +64,7 @@ pub(crate) enum ActorSource {
 
 /// Print a stderr warning when actor attribution has degraded.
 /// Idempotent within a single CLI invocation by gating on a static
-/// flag ----- multiple events in one command produce one warning.
+/// flag -- multiple events in one command produce one warning.
 fn warn_if_degraded(source: ActorSource) {
     use std::sync::atomic::{AtomicBool, Ordering};
     static WARNED: AtomicBool = AtomicBool::new(false);
@@ -172,7 +172,7 @@ fn validate_field_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `rustio new <name>` ----- bootstrap a fresh project.
+/// `rustio new <name>` -- bootstrap a fresh project.
 ///
 /// Writes:
 /// - `<name>/Cargo.toml` (developer-owned after scaffolding)
@@ -210,7 +210,7 @@ pub(crate) fn run_new(name: &str) -> Result<String, String> {
     };
     std::fs::write(root.join(".rustio/draft.toml"), draft.to_toml()).map_err(|e| e.to_string())?;
 
-    // History ----- single project_init event.
+    // History -- single project_init event.
     let (actor, source) = resolve_actor();
     warn_if_degraded(source);
     let history_path = root.join(".rustio/history.jsonl");
@@ -227,7 +227,7 @@ pub(crate) fn run_new(name: &str) -> Result<String, String> {
     )
     .map_err(|e| e.to_string())?;
 
-    // Cargo.toml ----- developer-owned. Pins rustio-admin and the
+    // Cargo.toml -- developer-owned. Pins rustio-admin and the
     // minimum runtime deps the generated model files reference.
     let cargo_toml = format!(
         r#"[package]
@@ -244,7 +244,7 @@ chrono = {{ version = "0.4", features = ["serde"] }}
     );
     std::fs::write(root.join("Cargo.toml"), cargo_toml).map_err(|e| e.to_string())?;
 
-    // main.rs ----- developer-owned skeleton. Compiles after the
+    // main.rs -- developer-owned skeleton. Compiles after the
     // first `rustio commit` populates src/_generated/.
     let main_rs = "//! Project entry point. Generator scaffolds this once;\n\
                    //! thereafter it is developer-owned.\n\
@@ -266,7 +266,7 @@ chrono = {{ version = "0.4", features = ["serde"] }}
     ))
 }
 
-/// `rustio add model <Name>` ----- append an `add_model` event.
+/// `rustio add model <Name>` -- append an `add_model` event.
 ///
 /// The generator does not run; the developer runs `rustio commit`
 /// to materialize the change. Doctrine separation.
@@ -299,7 +299,7 @@ pub(crate) fn run_add_model(start: &Path, model_name: &str) -> Result<String, St
     ))
 }
 
-/// `rustio add field <Model> <name> <type>` ----- append an `add_field`
+/// `rustio add field <Model> <name> <type>` -- append an `add_field`
 /// event. Refuses unknown field types and reserved field names.
 pub(crate) fn run_add_field(
     start: &Path,
@@ -376,19 +376,19 @@ pub(crate) fn run_add_field(
     ))
 }
 
-/// `rustio plan` ----- print the diff `commit` would apply.
+/// `rustio plan` -- print the diff `commit` would apply.
 pub(crate) fn run_plan(start: &Path) -> Result<String, String> {
     let report = lifecycle_plan(start).map_err(format_lifecycle_err)?;
     Ok(render_plan(&report))
 }
 
-/// `rustio commit` ----- atomic write per §6.2.
+/// `rustio commit` -- atomic write per §6.2.
 pub(crate) fn run_commit(start: &Path, force: bool) -> Result<String, String> {
     let (actor, source) = resolve_actor();
     warn_if_degraded(source);
     let result = lifecycle_commit(start, force, &actor).map_err(format_lifecycle_err)?;
     match result {
-        CommitResult::NoOp => Ok("Nothing to do ----- project is in sync with draft.".to_string()),
+        CommitResult::NoOp => Ok("Nothing to do -- project is in sync with draft.".to_string()),
         CommitResult::Wrote { event_id, files } => {
             let mut out = format!("Committed {} file(s) [event {event_id}]\n", files.len());
             for f in &files {
@@ -564,7 +564,7 @@ mod tests {
         );
     }
 
-    /// Bootstrap a project without going through `run_new` ----- `run_new`
+    /// Bootstrap a project without going through `run_new` -- `run_new`
     /// writes to a CWD-relative path, and `std::env::set_current_dir`
     /// is process-global, so any test using it would race with the
     /// `end_to_end_lifecycle` test under cargo's default parallel

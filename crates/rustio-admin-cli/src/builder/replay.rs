@@ -12,7 +12,7 @@
 //! byte-for-byte. The drift test below exercises that property
 //! against a fixture corpus.
 //!
-//! The replay function never writes ----- it is the inverse of the
+//! The replay function never writes -- it is the inverse of the
 //! single-writer `append` boundary. Doctrine B3 binds `append`;
 //! this module is the read side.
 

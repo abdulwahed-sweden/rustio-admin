@@ -34,7 +34,10 @@ async fn main() -> Result<()> {
 
     // No domain models registered by default — `rustio startapp <name>`
     // adds them, then chain `.model::<YourModel>()` onto this builder.
-    let admin = Admin::new();
+    // `.app_name(...)` flows your project name into the admin tab
+    // title, login header, and dashboard h1 so the framework reads as
+    // "powered by RustIO", not "inside RustIO".
+    let admin = Admin::new().app_name("{{name_title}}");
     admin.seed_permissions(&db).await?;
 
     // Templates::new(None) → embedded defaults only.

@@ -37,7 +37,12 @@ async fn main() -> Result<()> {
     migrations::apply(&db, "migrations").await?;
     background::spawn_housekeeping(db.clone());
 
-    let admin = Admin::new().model::<Post>().model::<Comment>();
+    // `.app_name(...)` flows your project name into the admin tab
+    // title, login header, and dashboard h1.
+    let admin = Admin::new()
+        .app_name("{{name_title}}")
+        .model::<Post>()
+        .model::<Comment>();
     admin.seed_permissions(&db).await?;
 
     // Templates::new(None) → embedded defaults only.

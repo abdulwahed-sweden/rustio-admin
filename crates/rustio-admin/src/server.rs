@@ -37,7 +37,11 @@ impl Server {
     /// period to drain before the runtime drops them.
     pub async fn run(self) -> Result<()> {
         let listener = TcpListener::bind(self.addr).await?;
-        log::info!("rustio listening on http://{}", self.addr);
+        // No "listening on …" log here — scaffolded projects already
+        // log their canonical URL from `main.rs` with their own logger
+        // target ("clinic", "myapp", …). Two log lines with conflicting
+        // URLs (project's `…/admin`, framework's `/`) was an audit
+        // finding (Stage 1 Reality Audit, Polish & Trust PR).
 
         let shutdown = shutdown_signal();
         tokio::pin!(shutdown);

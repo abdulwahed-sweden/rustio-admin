@@ -1,4 +1,4 @@
-//! `rustio test-init` ----- generate a starter integration test at
+//! `rustio test-init` -- generate a starter integration test at
 //! `./tests/smoke.rs`.
 //!
 //! The test spawns the project binary (`cargo run`), waits for the
@@ -6,15 +6,15 @@
 //! response is a 302 / 303 redirect to `/admin/login`. That's
 //! enough signal to catch the "server doesn't start" / "auth
 //! middleware doesn't redirect anonymous traffic" classes of
-//! regression ----- the cheapest possible first CI check for a fresh
+//! regression -- the cheapest possible first CI check for a fresh
 //! Rustio project.
 //!
-//! Stdlib-only ----- the generated test uses `std::process::Command`
+//! Stdlib-only -- the generated test uses `std::process::Command`
 //! and `std::net::TcpStream`. No new project dependencies are
 //! introduced. Operators are free to rewrite the file later (a
 //! richer `reqwest`-based check is a one-line dep away).
 //!
-//! No network, no DB ----- pure filesystem. Mirrors the
+//! No network, no DB -- pure filesystem. Mirrors the
 //! `template_override` verb's shape.
 
 use std::fs;
@@ -22,11 +22,11 @@ use std::path::{Path, PathBuf};
 
 /// Embedded body of the generated `tests/smoke.rs`. Kept inline so
 /// the CLI binary stays single-file deploy. `{{port}}` is the only
-/// substitution ----- defaults to `3000`, the framework's documented
+/// substitution -- defaults to `3000`, the framework's documented
 /// default.
 const SMOKE_TEMPLATE: &str = include_str!("../templates/test_init/smoke.rs.tmpl");
 
-/// Default file the verb writes. Sits under `<out>/smoke.rs` -----
+/// Default file the verb writes. Sits under `<out>/smoke.rs` --
 /// `tests/smoke.rs` with the default `--out=tests`.
 const TARGET_FILE: &str = "smoke.rs";
 
@@ -104,7 +104,7 @@ mod tests {
         assert!(written.contains("#[test]"));
     }
 
-    /// Stdlib-only tempdir ----- no `tempfile` dep just for tests.
+    /// Stdlib-only tempdir -- no `tempfile` dep just for tests.
     /// Returns a unique-per-call path under the OS temp dir; the
     /// directory is created lazily by the caller's first `fs::write`.
     fn tempdir() -> PathBuf {

@@ -36,6 +36,21 @@ impl Db {
             .acquire_timeout(opts.acquire_timeout)
             .idle_timeout(Some(opts.idle_timeout))
             .max_lifetime(Some(opts.max_lifetime))
+            // Suppress benign Postgres NOTICE chatter so harmless
+            // `CREATE … IF NOT EXISTS` and `ADD COLUMN … IF NOT EXISTS`
+            // re-runs don't blast 60+ "relation already exists, skipping"
+            // lines into the operator's log on every boot. WARNING +
+            // ERROR + LOG levels still surface — only the chatty NOTICE
+            // band is silenced. Set per-connection so reconnects in the
+            // pool stay quiet too.
+            .after_connect(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET client_min_messages = warning")
+                        .await
+                        .map(|_| ())
+                })
+            })
             .connect(url)
             .await
             .map_err(|e| Error::Internal(format!("db connect failed: {e}")))?;

@@ -1,4 +1,4 @@
-//! `rustio doctor` ----- read-only health check.
+//! `rustio doctor` -- read-only health check.
 //!
 //! Each check answers with a one-line ✓ / · / ✗:
 //!
@@ -7,11 +7,11 @@
 //!   3. Is there at least one administrator account?
 //!   4. Is `RUSTIO_SECRET_KEY` set and ≥ 32 bytes (only when MFA
 //!      is in use OR a compliance-export surface needs it).
-//!   5. R3 MFA enrolment count ----- informational; helps the operator
+//!   5. R3 MFA enrolment count -- informational; helps the operator
 //!      see at a glance whether MFA is in active use.
-//!   6. R4 emergency-recovery row count ----- informational; surfaces
+//!   6. R4 emergency-recovery row count -- informational; surfaces
 //!      whether any operator has reached for the shell tier.
-//!   7. Audit slug integrity ----- detects pre-0.8.1 rows that still
+//!   7. Audit slug integrity -- detects pre-0.8.1 rows that still
 //!      carry the legacy `"User"` / `"user"` / `"rustio_users"`
 //!      `model_name` conventions. The 0.8.1 backfill (in
 //!      `admin::audit::ensure_table`) rewrites them on next boot;
@@ -58,7 +58,7 @@ pub async fn run() -> Result<(), String> {
         println!("✓ Auth tables present");
     } else {
         println!(
-            "· Auth tables missing ----- boot the app once or run `rustio user create` to seed them."
+            "· Auth tables missing -- boot the app once or run `rustio user create` to seed them."
         );
     }
 
@@ -81,12 +81,12 @@ pub async fn run() -> Result<(), String> {
         );
     }
 
-    // ---- RUSTIO_SECRET_KEY presence + format -------------------------------
+    // ---- RUSTIO_SECRET_KEY presence + format -------------
     //
     // Required by R3 (TOTP-secret AES-256-GCM encryption) and by
     // projects that ship an HMAC-signed compliance export. A
     // deployment with `MfaPolicy::Disabled` and zero enrolled
-    // users keeps working without the key ----- but the moment a
+    // users keeps working without the key -- but the moment a
     // user enrols, the AES-GCM init guard surfaces a runtime 500.
     // Doctor reports presence + length without ever logging the
     // value.
@@ -121,9 +121,9 @@ pub async fn run() -> Result<(), String> {
         }
     }
 
-    // ---- R3 MFA enrolment count --------------------------------------------
+    // ---- R3 MFA enrolment count --------------------
     //
-    // Read directly from `rustio_users.mfa_enabled` ----- does not
+    // Read directly from `rustio_users.mfa_enabled` -- does not
     // require the project's `Admin` runtime. Pre-R3 schemas don't
     // have the column; we degrade silently in that case.
     if exists {
@@ -141,12 +141,12 @@ pub async fn run() -> Result<(), String> {
         }
     }
 
-    // ---- R4 emergency-recovery row count -----------------------------------
+    // ---- R4 emergency-recovery row count --------------
     //
     // `action_type = 'emergency_recovery'` is the audit-row marker
     // for every CLI-driven recovery (reset-password / unlock /
     // disable-mfa / promote / emergency-access). Non-zero is not
-    // a failure ----- it's informational. Operators may want to
+    // a failure -- it's informational. Operators may want to
     // verify the row count matches their internal incident log.
     if exists {
         let emerg_count: Option<i64> = sqlx::query_scalar(
@@ -165,7 +165,7 @@ pub async fn run() -> Result<(), String> {
         }
     }
 
-    // ---- Audit slug-drift check (0.8.1 backfill verifier) ------------------
+    // ---- Audit slug-drift check (0.8.1 backfill verifier) ---------
     //
     // Before 0.8.1, audit-row emissions wrote `model_name` in four
     // inconsistent conventions ("User", "user", "rustio_users",

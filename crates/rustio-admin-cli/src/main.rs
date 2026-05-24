@@ -1,33 +1,33 @@
-//! `rustio` ----- command-line companion for `rustio-admin`.
+//! `rustio` -- command-line companion for `rustio-admin`.
 //!
 //! Beginner surface (the verbs the welcome help promotes first;
 //! see `docs/design/DESIGN_ONBOARDING.md` for the doctrine):
 //!
-//! - `rustio new <name>` ----- friendly alias for `startproject`.
+//! - `rustio new <name>` -- friendly alias for `startproject`.
 //!   Identical behaviour, identical files, identical exit codes.
-//! - `rustio doctor` ----- health check: reachable DB? auth tables
+//! - `rustio doctor` -- health check: reachable DB? auth tables
 //!   present? migrations up to date? at least one administrator?
-//! - `rustio docs` ----- print where the framework's documentation
+//! - `rustio docs` -- print where the framework's documentation
 //!   lives (online, repository, in-project once the server runs).
 //!
 //! Full surface (still listed in `--help` after the welcome banner):
 //!
-//! - `rustio startproject` / `startapp` ----- original scaffolding
+//! - `rustio startproject` / `startapp` -- original scaffolding
 //!   verbs. `new` is the friendly alias; `startproject` keeps
 //!   working unchanged for scripts.
-//! - `rustio migrate apply` / `status` ----- numerically prefixed
+//! - `rustio migrate apply` / `status` -- numerically prefixed
 //!   `migrations/*.sql` runner.
-//! - `rustio user create` / `list` / `role` / `delete` ----- auth
+//! - `rustio user create` / `list` / `role` / `delete` -- auth
 //!   table CRUD with Argon2 hashing.
-//! - `rustio group create` / `list` / `add-user` ----- group CRUD
+//! - `rustio group create` / `list` / `add-user` -- group CRUD
 //!   and membership.
-//! - `rustio perm grant-user` / `grant-group` / `list` ----- permission
+//! - `rustio perm grant-user` / `grant-group` / `list` -- permission
 //!   grants on top of `auth::permissions`.
-//! - `rustio builder new` ----- declarative-Builder bootstrap. The
+//! - `rustio builder new` -- declarative-Builder bootstrap. The
 //!   `rustio new` slot was reclaimed for the friendly scaffold
 //!   alias; the legacy entrypoint is reachable as the hidden
 //!   `rustio new --builder` for a one-release deprecation window.
-//! - `rustio add` / `plan` / `commit` ----- Builder authoring,
+//! - `rustio add` / `plan` / `commit` -- Builder authoring,
 //!   plan, and apply (`docs/design/DESIGN_BUILDER.md`). Unchanged.
 
 use std::process::ExitCode;
@@ -55,7 +55,7 @@ mod wizard;
 /// Welcome banner printed before clap's auto-generated `--help`
 /// command list. The Phase 1 surface promoted here is governed by
 /// `docs/design/DESIGN_ONBOARDING.md` §10 (Command-surface doctrine):
-/// promoted, never amputated ----- the full command list still follows.
+/// promoted, never amputated -- the full command list still follows.
 const WELCOME_HELP: &str = "\
 Welcome to RustIO
 
@@ -101,7 +101,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    // ---------- Beginner surface (promoted by the welcome banner) ----------
+    // ---- Beginner surface (promoted by the welcome banner) ----
     /// Create a new project (friendly alias for `startproject`).
     ///
     /// In an interactive terminal, a calm wizard collects the
@@ -114,7 +114,7 @@ enum Command {
     /// moved to `rustio builder new`; the hidden `--builder` flag
     /// below is the one-release deprecation shim.
     New {
-        /// Project name ----- also the cargo crate name. Letters,
+        /// Project name -- also the cargo crate name. Letters,
         /// digits, '-', and '_' only; must start with a letter.
         /// Optional: the wizard prompts for it when omitted in
         /// interactive mode. Required in non-interactive mode.
@@ -130,7 +130,7 @@ enum Command {
         preset: String,
         /// Skip the interactive wizard even when running in a
         /// terminal. Behaviour matches `rustio startproject` exactly
-        /// ----- required positional name, scaffold writes `.env.example`
+        /// -- required positional name, scaffold writes `.env.example`
         /// only (no auto-generated `.env`), same Next Steps block.
         #[arg(long)]
         no_interactive: bool,
@@ -144,10 +144,10 @@ enum Command {
     /// Scaffold a new rustio-admin project at ./<name>.
     #[command(name = "startproject")]
     Startproject {
-        /// Name of the project ----- also the cargo crate name. Letters,
+        /// Name of the project -- also the cargo crate name. Letters,
         /// digits, '-', and '_' only.
         name: String,
-        /// Project preset: `minimal` (default ----- neutral scaffold,
+        /// Project preset: `minimal` (default -- neutral scaffold,
         /// no domain models) or `blog` (adds `Post` + `Comment`
         /// with their migrations). Unknown presets error out with
         /// the valid list.
@@ -197,14 +197,14 @@ enum Command {
 
     /// Print where the framework's documentation lives.
     ///
-    /// Phase 1 keeps this verb intentionally tiny ----- it prints
+    /// Phase 1 keeps this verb intentionally tiny -- it prints
     /// online, repository, and in-project doc locations. The
     /// browser opener and running-server detection ship later
     /// (PR 2.4 of `docs/design/DESIGN_ONBOARDING.md` §10).
     Docs,
 
     /// Curated `AdminTheme` palette presets. Subcommands print a
-    /// Rust snippet to stdout ----- the operator pastes it into their
+    /// Rust snippet to stdout -- the operator pastes it into their
     /// `Admin::new()` builder chain. The verb never touches
     /// `main.rs` or any other project file.
     Theme {
@@ -223,7 +223,7 @@ enum Command {
         /// to list every available template.
         name: Option<String>,
         /// Overwrite an existing on-disk file with the framework
-        /// default. Off by default ----- the verb refuses to clobber so
+        /// default. Off by default -- the verb refuses to clobber so
         /// in-progress edits stay safe.
         #[arg(long)]
         force: bool,
@@ -242,7 +242,7 @@ enum Command {
 
     /// Generate a starter integration test at `./<out>/smoke.rs`.
     /// The test spawns the project binary, probes the bound port,
-    /// and asserts that `/admin/` redirects to `/admin/login` -----
+    /// and asserts that `/admin/` redirects to `/admin/login` --
     /// useful as a project's first CI check.
     #[command(name = "test-init")]
     TestInit {
@@ -256,8 +256,8 @@ enum Command {
         out: String,
     },
 
-    // ----- Builder verbs (DESIGN_BUILDER.md). All run synchronously
-    // and require no database ----- Doctrine B9 (network-free). The
+    // -- Builder verbs (DESIGN_BUILDER.md). All run synchronously
+    // and require no database -- Doctrine B9 (network-free). The
     // top-level `new` slot was reclaimed for the friendly scaffold
     // alias; the canonical Builder bootstrap is now `rustio builder
     // new`. `add`, `plan`, `commit` keep their top-level positions
@@ -299,7 +299,7 @@ enum BuilderAction {
     /// Writes `<name>/{Cargo.toml,src/main.rs,.rustio/{draft.toml,history.jsonl,builder.lock},migrations/}`.
     /// See `docs/design/DESIGN_BUILDER.md`.
     New {
-        /// Project name ----- also the cargo crate name. Letters,
+        /// Project name -- also the cargo crate name. Letters,
         /// digits, `-`, and `_` only; must start with a letter.
         name: String,
     },
@@ -335,7 +335,7 @@ enum DoctorAction {
     /// environment, opens a TLS + AUTH handshake against the
     /// configured server, and optionally sends a single test
     /// message when `--to <address>` is supplied. No credentials
-    /// are echoed ----- the password is reported as `(set, N chars)`.
+    /// are echoed -- the password is reported as `(set, N chars)`.
     ///
     /// `--html-preview` skips SMTP entirely and renders the
     /// recovery-email template to /tmp + opens it in the
@@ -381,7 +381,7 @@ fn main() -> ExitCode {
     progress::configure(cli.quiet, cli.no_progress);
     let result = match cli.command {
         // Pure filesystem; no async / db needed. Builder verbs also
-        // sit here ----- DESIGN_BUILDER.md Doctrine B9 forbids network
+        // sit here -- DESIGN_BUILDER.md Doctrine B9 forbids network
         // calls in plan/commit, and `new` / `add` are even simpler.
         Command::New {
             name,
@@ -472,7 +472,7 @@ fn rewrite_clap_invalid_value(e: &clap::Error) -> Option<ui::OnboardingError> {
     Some(ui::invalid_value(&arg, &bad, &valid))
 }
 
-/// Builder bootstrap dispatch ----- pure filesystem, no async.
+/// Builder bootstrap dispatch -- pure filesystem, no async.
 /// Reached via `rustio builder new <name>` (canonical) and via
 /// the hidden one-release `rustio new --builder <name>` shim.
 fn builder_new(name: &str) -> Result<(), String> {
@@ -481,7 +481,7 @@ fn builder_new(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `rustio new` dispatch ----- wizard or legacy scaffold path.
+/// `rustio new` dispatch -- wizard or legacy scaffold path.
 ///
 /// Decision order: `--builder` → legacy Builder shim (PR 1.1); else
 /// if the wizard is eligible (TTY, not CI, not `--no-interactive`)
@@ -521,14 +521,14 @@ fn dispatch_new(
             &input.project_type,
         );
     }
-    // Non-interactive path ----- name is mandatory (matches `startproject`).
+    // Non-interactive path -- name is mandatory (matches `startproject`).
     let name = name.ok_or_else(|| {
         "project name is required in non-interactive mode (try `rustio new <name>`)".to_string()
     })?;
     scaffold::project(&name, &preset)
 }
 
-/// `rustio docs` ----- print where the framework's documentation
+/// `rustio docs` -- print where the framework's documentation
 /// lives. Phase 1 keeps this tiny on purpose; the running-server
 /// detector and browser opener ship with PR 2.4 of the
 /// onboarding doctrine (`docs/design/DESIGN_ONBOARDING.md` §10).
@@ -588,14 +588,14 @@ where
 }
 
 /// Connect to the database read from `DATABASE_URL` (loaded from
-/// `.env` if present). Every subcommand uses this ----- failures here
+/// `.env` if present). Every subcommand uses this -- failures here
 /// flow through the four-part onboarding error shape
 /// (`DESIGN_ONBOARDING.md` §8) so beginners see plain-English
 /// guidance instead of raw driver text. The verbatim backend error
 /// is preserved in the `Details:` block for senior engineers.
 pub(crate) async fn db() -> Result<rustio_admin::Db, String> {
     let url = std::env::var("DATABASE_URL").map_err(|_| ui::database_url_missing().format())?;
-    // Silent-on-success spinner ----- `rustio user list` and friends
+    // Silent-on-success spinner -- `rustio user list` and friends
     // produce their own output and don't need a "✓ Connected" noise
     // line. The spinner exists only so a slow connect doesn't
     // freeze the terminal. PR 1.4 / DESIGN_ONBOARDING.md §9.

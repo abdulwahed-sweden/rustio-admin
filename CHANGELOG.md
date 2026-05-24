@@ -49,6 +49,102 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Fixed — Polish & Trust PR (Stage 1 Reality Audit follow-up)
+
+A fresh external-project audit (clinic management, outside the
+monorepo) found the polished CLI surface contrasted unfavourably
+with framework-side noise once `cargo run` succeeded. Eight
+surgical fixes — no redesign, no new systems.
+
+- **sqlx NOTICE chatter silenced.** `Db::connect_with` now runs
+  `SET client_min_messages = warning` on every pooled connection.
+  The framework's `auth::init_tables` and migration runner emit
+  60+ `relation "X" already exists, skipping` lines into the
+  operator's log on every boot after the first. The trust impact
+  was severe — those lines look like errors at first glance and
+  buried the real "listening on" signal. Single-line behaviour:
+  60+ log lines → 0; boot output drops from 65 lines to 2.
+  WARNING + ERROR + LOG bands are unaffected.
+- **Duplicate `listening on` log removed.** The framework's
+  `Server::run` no longer logs its own `rustio listening on …`
+  line. Scaffolded projects already log a canonical URL from
+  their own `main.rs`. The duplicate (with conflicting paths —
+  `/` from the framework vs `/admin` from the project) read as
+  framework self-contradiction.
+- **`-----` reduced to `--` in CLI strings.** The BiDi
+  compatibility fix replaced em-dashes with five hyphens; five
+  reads as ascii-art garbage mid-prose ("metadata for now -----
+  does not change generated files yet"). Two hyphens is the
+  conventional ASCII em-dash. Mechanical sed across CLI src;
+  emergency banner re-aligned by adjusting trailing-space padding
+  to keep the box at column 64.
+- **Project name flows into admin chrome.** Scaffolded `main.rs`
+  now calls `Admin::new().app_name("{{name_title}}")`. The
+  login page tab title, login h1, and dashboard tab title now
+  carry the project name (e.g. `Polishclinic`) instead of the
+  generic `Admin`. New `humanise_name` helper in `scaffold.rs`
+  capitalises and de-snakes / de-kebabs the cargo crate name
+  (`my-clinic` → `My Clinic`, `school_admin` → `School Admin`).
+  `{{name_title}}` template substitution alongside `{{name}}` /
+  `{{type_phrase}}`.
+- **CSS custom properties on the homepage.** `templates/home.html`
+  gains a `:root { --brand: …; --text: …; --muted: …; }` block
+  at the top of its inline CSS, with a one-line comment pointing
+  at it as the customisation seam. The accent checkmark, subtitle,
+  and section eyebrows now reference the tokens. Re-skinning the
+  page is a three-edit affair instead of a 16-hex grep.
+- **"metadata for now" disclaimer dropped from the wizard.** The
+  project-type prompt now reads `"Project type:"` instead of
+  `"Project type (metadata for now -- does not change generated
+  files yet):"`. The original wording explicitly told users
+  their choice was meaningless, which contradicted the
+  homepage's `{{type_phrase}}` substitution that uses it.
+- **README.md.tmpl restructured.** Sections renamed to match the
+  new wizard reality: `1. First run` (drops the `cp .env.example`
+  and `cargo install` steps the wizard already did) → `2. First
+  model` → `3. Admin usage` → `4. Common commands` → `5. Advanced
+  topics` (MFA, R4, custom routes, template overrides folded
+  here). Top-of-file wording acknowledges the wizard wrote `.env`.
+- **CLI/admin handshake on the empty state.** The dashboard's
+  "No models registered yet" copy now leads with the CLI verb
+  (`rustio startapp <name>`) before the Rust line, closing the
+  loop between the friendly CLI that brought the user to the
+  admin and the admin's hint about what to do next.
+
+### Verified end-to-end
+
+Fresh external clinic project at `/tmp/polish-clinic/polishclinic`,
+local-path-patched `rustio-admin` dep so the framework fixes apply:
+
+| Metric | Before | After |
+|---|---|---|
+| Boot log lines | 65 | 2 |
+| `sqlx::postgres::notice` lines | 62 | 0 |
+| `listening on` log lines | 2 (conflicting) | 1 |
+| Admin tab title | `Admin` | `Polishclinic` |
+| Login h1 | `Admin` | `Polishclinic` |
+| `-----` in CLI strings | many | 0 (replaced) |
+| README contradicts the wizard | yes | no |
+| Homepage hex-literal customisation | 16-hex grep | 3 tokens |
+
+### Preserved
+
+- Exit codes, security headers, CSRF flow, audit chain, session
+  lifecycle, MFA paths — all unchanged.
+- Migration engine unchanged.
+- Admin redesign untouched. Dashboard h1 still reads "Site
+  administration" (not in the audit's allowed-changes list).
+- No new dependencies, no new CLI verbs, no new abstractions,
+  no onboarding state systems.
+
+### Notes
+
+- Most framework-side fixes (sqlx silence, duplicate-log removal,
+  empty-state copy) require a new `rustio-admin` release on
+  crates.io to reach users of `cargo install rustio-admin-cli`.
+  The Polish & Trust PR completes the local code; the next
+  release cycle ships it.
+
 ### Added — onboarding PR 1.5 (First-Boot Homepage & Project Identity)
 
 The scaffold finally stops feeling like a renamed blog. A new project

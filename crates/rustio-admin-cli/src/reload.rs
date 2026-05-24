@@ -1,7 +1,7 @@
-//! `rustio reload` ----- dev-mode watcher.
+//! `rustio reload` -- dev-mode watcher.
 //!
 //! Thin wrapper around `cargo watch -x run`. Watches the project's
-//! source tree and re-runs `cargo run` whenever a file changes -----
+//! source tree and re-runs `cargo run` whenever a file changes --
 //! the standard Rust hot-iterate loop for a long-running server.
 //!
 //! Requires the [`cargo-watch`](https://crates.io/crates/cargo-watch)
@@ -9,7 +9,7 @@
 //! installed and prints the one-line install command instead of
 //! exploding with cargo's default error.
 //!
-//! Stdio is forwarded transparently ----- the watcher's compile errors
+//! Stdio is forwarded transparently -- the watcher's compile errors
 //! and the project's stdout / stderr land in the operator's terminal
 //! exactly as `cargo watch -x run` would.
 //!
@@ -36,7 +36,7 @@ pub(crate) fn run() -> Result<(), String> {
         }
     }
 
-    println!("rustio reload ----- running `cargo watch -x run` (Ctrl-C to stop)…");
+    println!("rustio reload -- running `cargo watch -x run` (Ctrl-C to stop)…");
     let status = Command::new("cargo")
         .args(["watch", "-x", "run"])
         .status()

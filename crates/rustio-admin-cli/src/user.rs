@@ -1,4 +1,4 @@
-//! `rustio user` ----- auth-table CRUD without the admin UI.
+//! `rustio user` -- auth-table CRUD without the admin UI.
 //!
 //! ## R4 emergency-recovery surface
 //!
@@ -76,7 +76,7 @@ pub enum Action {
         /// in greetings. Falls back to first_name → email-local-part.
         #[arg(long)]
         display_name: Option<String>,
-        /// Job title ----- second line of the email signature block.
+        /// Job title -- second line of the email signature block.
         #[arg(long)]
         job_title: Option<String>,
     },
@@ -124,13 +124,13 @@ pub enum Action {
         #[arg(long)]
         temp_password: Option<String>,
         /// Skip the interactive `yes` confirm prompt. The banner
-        /// still renders to stdout ----- D10 makes that irreducible.
+        /// still renders to stdout -- D10 makes that irreducible.
         #[arg(long)]
         yes: bool,
     },
     /// EMERGENCY: clear an auto-throttle lock and zero out the
     /// failed-login counter. Renders the locked banner and demands
-    /// `--reason "<text>"` (≥ 8 chars). Does NOT revoke sessions -----
+    /// `--reason "<text>"` (≥ 8 chars). Does NOT revoke sessions --
     /// an unlock is not a session event. See
     /// `DESIGN_R4_EMERGENCY.md` §3.2.
     Unlock {
@@ -142,18 +142,18 @@ pub enum Action {
         #[arg(long)]
         reason: String,
         /// Skip the interactive `yes` confirm prompt. The banner
-        /// still renders to stdout ----- D10 makes that irreducible.
+        /// still renders to stdout -- D10 makes that irreducible.
         #[arg(long)]
         yes: bool,
     },
-    /// EMERGENCY: clear MFA on a user ----- drop the TOTP secret + key
+    /// EMERGENCY: clear MFA on a user -- drop the TOTP secret + key
     /// id + replay-step + every backup code, then revoke every
     /// session for the user. Renders the locked banner and demands
     /// `--reason "<text>"` (≥ 8 chars). See
     /// `DESIGN_R4_EMERGENCY.md` §3.3.
     ///
     /// If the deployment's `MfaPolicy` is `Required`, the target
-    /// user will be redirected to MFA enrolment on next login -----
+    /// user will be redirected to MFA enrolment on next login --
     /// the disable clears the state but does not exempt them from
     /// the policy. The summary line warns the operator.
     DisableMfa {
@@ -165,7 +165,7 @@ pub enum Action {
         #[arg(long)]
         reason: String,
         /// Skip the interactive `yes` confirm prompt. The banner
-        /// still renders to stdout ----- D10 makes that irreducible.
+        /// still renders to stdout -- D10 makes that irreducible.
         #[arg(long)]
         yes: bool,
     },
@@ -188,12 +188,12 @@ pub enum Action {
         #[arg(long)]
         reason: String,
         /// Skip the interactive `yes` confirm prompt. The banner
-        /// still renders to stdout ----- D10 makes that irreducible.
+        /// still renders to stdout -- D10 makes that irreducible.
         #[arg(long)]
         yes: bool,
     },
     /// EMERGENCY: issue a single-use password-reset URL bypassing
-    /// the email mailer. The URL plaintext prints to stdout once -----
+    /// the email mailer. The URL plaintext prints to stdout once --
     /// hand it to the target out-of-band. Renders the locked banner
     /// and demands `--reason "<text>"` (≥ 8 chars). Refuses inactive
     /// targets (issuing a URL to a deactivated account has no
@@ -208,12 +208,12 @@ pub enum Action {
         reason: String,
         /// URL validity in minutes. Default 15; clamped to
         /// `[1, 60]` inside the framework. Beyond 60 use
-        /// `reset-password` instead ----- wider TTLs widen the URL
+        /// `reset-password` instead -- wider TTLs widen the URL
         /// interception window for diminishing operational benefit.
         #[arg(long = "ttl-minutes", default_value_t = 15)]
         ttl_minutes: i64,
         /// Skip the interactive `yes` confirm prompt. The banner
-        /// still renders to stdout ----- D10 makes that irreducible.
+        /// still renders to stdout -- D10 makes that irreducible.
         #[arg(long)]
         yes: bool,
     },
@@ -311,7 +311,7 @@ async fn create(
         .await
         .map_err(|e| format!("create_user: {e}"))?;
 
-    // Profile identity columns ----- populated post-create so the
+    // Profile identity columns -- populated post-create so the
     // existing `create_user` signature doesn't grow. All four are
     // optional; UPDATE sets only the columns the operator supplied.
     if first_name.is_some() || last_name.is_some() || display_name.is_some() || job_title.is_some()
@@ -400,7 +400,7 @@ struct PermsReport {
 }
 
 impl PermsReport {
-    /// Union of direct + group-inherited permissions ----- the set the
+    /// Union of direct + group-inherited permissions -- the set the
     /// runtime's `check_permission` honours for non-bypassing roles.
     fn effective_perms(&self) -> Vec<String> {
         use std::collections::BTreeSet;
@@ -494,8 +494,8 @@ async fn perms(db: Db, email: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Render the report as a human-readable block. Pure function ----- no
-/// IO, no clock, no DB ----- so the unit tests can hand it synthetic
+/// Render the report as a human-readable block. Pure function -- no
+/// IO, no clock, no DB -- so the unit tests can hand it synthetic
 /// reports and assert exact output. The DB layer above builds the
 /// report and prints what this returns.
 fn format_perms_report(r: &PermsReport) -> String {
@@ -515,7 +515,7 @@ fn format_perms_report(r: &PermsReport) -> String {
         if r.is_active {
             "yes"
         } else {
-            "no ----- every check_permission call denies"
+            "no -- every check_permission call denies"
         }
     );
     if r.is_demo {
@@ -561,7 +561,7 @@ fn format_perms_report(r: &PermsReport) -> String {
         "Effective permissions (what check_permission honours):"
     );
     if r.bypasses_group_checks {
-        // The role bypasses the M2M lookup entirely ----- direct and
+        // The role bypasses the M2M lookup entirely -- direct and
         // group grants are still listed above for transparency,
         // but the runtime treats this user as having every
         // permission regardless of the lookup result.
@@ -570,7 +570,7 @@ fn format_perms_report(r: &PermsReport) -> String {
         // Inactive users always deny; surface this prominently
         // since direct + group grants above might otherwise
         // mislead the operator.
-        let _ = writeln!(out, "  (none ----- user is inactive, every check denies)");
+        let _ = writeln!(out, "  (none -- user is inactive, every check denies)");
     } else {
         let eff = r.effective_perms();
         if eff.is_empty() {
@@ -593,14 +593,14 @@ async fn set_role(db: Db, email: String, role: Role) -> Result<(), String> {
 
     // Last-protected-role guard mirrors the framework's user-edit
     // path. `would_orphan_protected` covers every protected role
-    // (Administrator + Developer), not just Developer ----- so a CLI-driven
+    // (Administrator + Developer), not just Developer -- so a CLI-driven
     // role change can't orphan an Administrator either.
     if let Some(orphaned) = auth::would_orphan_protected(&db, user.id, role, true)
         .await
         .map_err(|e| format!("orphan check: {e}"))?
     {
         return Err(format!(
-            "Refusing ----- this change would leave the system with zero active {}s.",
+            "Refusing -- this change would leave the system with zero active {}s.",
             orphaned.label()
         ));
     }
@@ -623,7 +623,7 @@ async fn delete(db: Db, email: String) -> Result<(), String> {
         .map_err(|e| format!("orphan check: {e}"))?
     {
         return Err(format!(
-            "Refusing ----- deleting this user would leave zero active {}s.",
+            "Refusing -- deleting this user would leave zero active {}s.",
             orphaned.label()
         ));
     }
@@ -649,11 +649,11 @@ fn prompt_new_password() -> Result<String, String> {
     Ok(pw1)
 }
 
-// ---- R4: shared preflight + audit-emission helpers -----------------------
+// ---- R4: shared preflight + audit-emission helpers -----------
 
 /// Length of the auto-generated temp password when
 /// `--temp-password` is not supplied. 20 alphanumeric chars from a
-/// 54-character ambiguity-stripped alphabet ≈ 115 bits of entropy -----
+/// 54-character ambiguity-stripped alphabet ≈ 115 bits of entropy --
 /// well above any plausible online attack envelope, and short
 /// enough for the target to type accurately on next login.
 const DEFAULT_TEMP_PASSWORD_LEN: usize = 20;
@@ -676,12 +676,12 @@ async fn preflight(
     reason_arg: &str,
     yes: bool,
 ) -> Result<OperationContext, String> {
-    // Step 1 ----- validate the reason. Surfaces typos / empty /
+    // Step 1 -- validate the reason. Surfaces typos / empty /
     // too-short BEFORE the DB roundtrip so the operator's first
     // error is fast.
     let reason = emergency_ui::validate_reason(reason_arg)?;
 
-    // Step 2 ----- resolve target. Loading the user here lets the
+    // Step 2 -- resolve target. Loading the user here lets the
     // banner echo the persisted email + id + role, so a misspelled
     // --email surfaces before the operator confirms.
     let target = auth::find_user_by_email(db, email)
@@ -689,7 +689,7 @@ async fn preflight(
         .map_err(|e| format!("lookup target: {e}"))?
         .ok_or_else(|| format!("no user with email {email}"))?;
 
-    // Step 3 ----- build the banner context. `os_actor` + `now` are
+    // Step 3 -- build the banner context. `os_actor` + `now` are
     // stamped exactly once, here, and then re-used in both the
     // banner render and the audit metadata so the two surfaces
     // agree.
@@ -703,12 +703,12 @@ async fn preflight(
         when: emergency_ui::now(),
     };
 
-    // Step 4 ----- render the banner (D10 ----- irreducible). ANSI /
+    // Step 4 -- render the banner (D10 -- irreducible). ANSI /
     // colour is auto-detected: enabled only when stdout is a TTY
     // and `NO_COLOR` is unset.
     emergency_ui::print_banner(&ctx);
 
-    // Step 5 ----- confirm (or honour --yes).
+    // Step 5 -- confirm (or honour --yes).
     match emergency_ui::require_confirm(yes) {
         ConfirmOutcome::Confirmed => Ok(ctx),
         ConfirmOutcome::Aborted => {
@@ -727,13 +727,13 @@ async fn preflight(
 /// records.
 ///
 /// `cli_op` is the audit slug (`"reset_password" | "unlock" |
-/// "disable_mfa" | "promote" | "emergency_access"`) ----- distinct
+/// "disable_mfa" | "promote" | "emergency_access"`) -- distinct
 /// from `ctx.operation` which is the kebab-case banner display
 /// slug.
 ///
 /// `per_op_metadata` MUST be a JSON object. Its top-level keys
 /// are merged into the base metadata (cli_operation, reason,
-/// os_actor, cli_invocation). Per-op keys can shadow base keys -----
+/// os_actor, cli_invocation). Per-op keys can shadow base keys --
 /// that's deliberate so a handler can override e.g. cli_invocation
 /// for an unusual call site if ever needed.
 ///
@@ -778,7 +778,7 @@ async fn write_emergency_audit(
     let entry = LogEntry {
         user_id: ctx.target_user_id,
         action_type: ActionType::Update,
-        // The admin slug for the built-in User admin is `"users"` -----
+        // The admin slug for the built-in User admin is `"users"` --
         // matches the dispatcher's `admin.find("users")` lookup so
         // the History page can render a working `/admin/users/:id`
         // link to this row. See `VISIBILITY_AUDIT.md` finding F1.
@@ -798,7 +798,7 @@ async fn write_emergency_audit(
     Ok(correlation_id)
 }
 
-// ---- R4: rustio user reset-password --------------------------------------
+// ---- R4: rustio user reset-password -----------------
 
 async fn reset_password(
     db: Db,
@@ -835,7 +835,7 @@ async fn reset_password(
         } => revoked_session_count,
         ResetOutcome::UnknownTarget => {
             // Race: target existed at preflight, gone now. The
-            // audit row is intentionally NOT written ----- there was
+            // audit row is intentionally NOT written -- there was
             // nothing to record.
             return Err(format!(
                 "User vanished between lookup and reset; no rows changed (email={email})"
@@ -862,7 +862,7 @@ async fn reset_password(
     println!("  Sessions revoked: {revoked}");
     println!("  must_change_password set; user must rotate on next login.");
     println!();
-    println!("  Temporary password (shown once ----- record now):");
+    println!("  Temporary password (shown once -- record now):");
     println!();
     println!("      {temp_password}");
     println!();
@@ -871,7 +871,7 @@ async fn reset_password(
     Ok(())
 }
 
-// ---- R4: rustio user unlock ----------------------------------------------
+// ---- R4: rustio user unlock -------------------
 
 async fn unlock(db: Db, email: String, reason_arg: String, yes: bool) -> Result<(), String> {
     let ctx = preflight(&db, "unlock", &email, &reason_arg, yes).await?;
@@ -907,14 +907,14 @@ async fn unlock(db: Db, email: String, reason_arg: String, yes: bool) -> Result<
         println!("  Account was actively locked; locked_until + failed_login_count cleared.");
     } else {
         println!("  Note: account was not locked at run time; no functional change.");
-        println!("  (The audit row still landed ----- the action remains forensically visible.)");
+        println!("  (The audit row still landed -- the action remains forensically visible.)");
     }
     println!("  Audit correlation: {correlation_id}");
 
     Ok(())
 }
 
-// ---- R4: rustio user disable-mfa -----------------------------------------
+// ---- R4: rustio user disable-mfa -----------------
 
 async fn disable_mfa(db: Db, email: String, reason_arg: String, yes: bool) -> Result<(), String> {
     let ctx = preflight(&db, "disable-mfa", &email, &reason_arg, yes).await?;
@@ -955,7 +955,7 @@ async fn disable_mfa(db: Db, email: String, reason_arg: String, yes: bool) -> Re
         );
     } else {
         println!("  Note: MFA was not enabled at run time; no functional change.");
-        println!("  (The audit row still landed ----- the action remains forensically visible.)");
+        println!("  (The audit row still landed -- the action remains forensically visible.)");
     }
     println!();
     println!("  If the deployment's MfaPolicy is `Required` (or `RequiredForRoles`),");
@@ -965,7 +965,7 @@ async fn disable_mfa(db: Db, email: String, reason_arg: String, yes: bool) -> Re
     Ok(())
 }
 
-// ---- R4: rustio user promote ---------------------------------------------
+// ---- R4: rustio user promote ------------------
 
 async fn promote(
     db: Db,
@@ -986,7 +986,7 @@ async fn promote(
         )),
         PromoteOutcome::SoleAdministratorDemoteRefused => {
             // Refused inside the framework. No audit row is
-            // written ----- refusing isn't a state change.
+            // written -- refusing isn't a state change.
             Err(format!(
                 "Refused: {email} is the sole active administrator; demoting them would leave \
                  the deployment with zero administrators. Promote another user to administrator \
@@ -1015,9 +1015,7 @@ async fn promote(
                 ctx.target_user_id
             );
             println!("  Note: user already carried role={current_role}; no functional change.");
-            println!(
-                "  (The audit row still landed ----- the action remains forensically visible.)"
-            );
+            println!("  (The audit row still landed -- the action remains forensically visible.)");
             println!("  Audit correlation: {correlation_id}");
             Ok(())
         }
@@ -1051,7 +1049,7 @@ async fn promote(
     }
 }
 
-// ---- R4: rustio user emergency-access ------------------------------------
+// ---- R4: rustio user emergency-access ---------------
 
 async fn emergency_access(
     db: Db,
@@ -1089,7 +1087,7 @@ async fn emergency_access(
 
     // The audit row carries `token_id` (linkable to
     // `rustio_password_reset_tokens.id`) and `expires_at`, but
-    // NEVER the URL plaintext ----- the URL embeds the single-use
+    // NEVER the URL plaintext -- the URL embeds the single-use
     // token. Persisting it in audit metadata would defeat the
     // single-use property by giving an audit-log reader a
     // working credential.
@@ -1116,7 +1114,7 @@ async fn emergency_access(
         expires_at.to_rfc3339()
     );
     println!();
-    println!("  URL (shown once ----- hand to target out-of-band):");
+    println!("  URL (shown once -- hand to target out-of-band):");
     println!();
     println!("      <BASE_URL>{url_path}");
     println!();
@@ -1148,7 +1146,7 @@ fn build_summary(op: &str, reason: &str) -> String {
     preview
 }
 
-// ---- Tests ---------------------------------------------------------------
+// ---- Tests ---------------------------
 
 #[cfg(test)]
 mod tests {
@@ -1190,8 +1188,8 @@ mod tests {
             ..base_report()
         };
         let out = format_perms_report(&r);
-        assert!(out.contains("Active:    no ----- every check_permission call denies"));
-        assert!(out.contains("(none ----- user is inactive, every check denies)"));
+        assert!(out.contains("Active:    no -- every check_permission call denies"));
+        assert!(out.contains("(none -- user is inactive, every check denies)"));
         // Direct grants are still printed above the effective
         // section for transparency.
         assert!(out.contains("posts.view_post"));
@@ -1227,7 +1225,7 @@ mod tests {
         assert!(out.contains("  posts.view_post"));
         assert!(out.contains("  via \"Editors\":"));
         assert!(out.contains("    posts.change_post"));
-        // Effective is the deduped union ----- view_post appears in
+        // Effective is the deduped union -- view_post appears in
         // both halves; the effective listing has it ONCE.
         let effective_block = out
             .split_once("Effective permissions")

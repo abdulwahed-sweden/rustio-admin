@@ -46,11 +46,11 @@ use crate::builder::lockfile::{BuilderLock, LockError};
 /// state, per §5.4.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum FileVerdict {
-    /// File absent ----- `commit` writes it.
+    /// File absent -- `commit` writes it.
     Create,
-    /// File present and SchemaHash matches ----- `commit` skips it.
+    /// File present and SchemaHash matches -- `commit` skips it.
     NoOp,
-    /// File present, header parses, hash mismatch ----- `commit`
+    /// File present, header parses, hash mismatch -- `commit`
     /// refuses unless `--force`.
     Mismatch { found_hash: String },
     /// File present but header missing or malformed.
@@ -203,7 +203,7 @@ impl std::fmt::Display for LifecycleError {
                 f,
                 "the on-disk .rustio/draft.toml has been hand-edited. \
                  Reconcile with the event log before running this command \
-                 (rustio status / rustio merge ----- out of MVP scope)."
+                 (rustio status / rustio merge -- out of MVP scope)."
             ),
         }
     }
@@ -232,7 +232,7 @@ impl From<LockError> for LifecycleError {
 /// Walk up from `start` looking for a directory that contains a
 /// `.rustio/` subdirectory. That directory is the project root.
 ///
-/// The walk does **not** call `canonicalize` on `start` ----- symlinks
+/// The walk does **not** call `canonicalize` on `start` -- symlinks
 /// are preserved as the developer experiences them. A `.rustio/`
 /// that is itself a symlink is rejected: doctrine §5.6's "no
 /// access outside project tree" rule would be silently violated
@@ -253,7 +253,7 @@ pub(crate) fn find_project_root(start: &Path) -> Result<PathBuf, LifecycleError>
         let candidate = cur.join(".rustio");
         if candidate.is_dir() {
             // Refuse a symlinked .rustio: doctrine §5.6 reasoning
-            // extended ----- generator-owned paths must stay within
+            // extended -- generator-owned paths must stay within
             // the project tree the developer is in.
             match std::fs::symlink_metadata(&candidate) {
                 Ok(md) if md.file_type().is_symlink() => {
@@ -276,7 +276,7 @@ pub(crate) fn find_project_root(start: &Path) -> Result<PathBuf, LifecycleError>
 /// Read the on-disk draft.toml, verify the builder.lock pin, and
 /// return the parsed [`Draft`]. Shared between `plan` and `commit`.
 fn load_draft_and_verify(project_root: &Path) -> Result<Draft, LifecycleError> {
-    // Doctrine B11 ----- version pin check.
+    // Doctrine B11 -- version pin check.
     let lock_path = project_root.join(".rustio/builder.lock");
     let lock_text = std::fs::read_to_string(&lock_path)
         .map_err(|e| LifecycleError::DraftRead(lock_path.clone(), e))?;
@@ -367,7 +367,7 @@ fn classify(target: &Path, file: &GeneratedFile) -> FileVerdict {
     // is not generator-owned shape.
     if let Some(found) = parse_header_hash(&existing) {
         if found == file.schema_hash {
-            // Hash matches but content differs ----- should not happen
+            // Hash matches but content differs -- should not happen
             // under canonical serialization, but if it does, treat
             // as "owned but stale" → still safe to overwrite, so
             // classify NoOp would lie; emit Create-equivalent by
@@ -387,7 +387,7 @@ fn classify(target: &Path, file: &GeneratedFile) -> FileVerdict {
 /// - Rust files: `// SPDX-SchemaHash: sha256:<64-hex>\n`
 /// - SQL files:  `-- SPDX-SchemaHash: sha256:<64-hex>\n`
 ///
-/// The parser is strict by design ----- accepting nested prefixes
+/// The parser is strict by design -- accepting nested prefixes
 /// (e.g., `// // SPDX-...`) or arbitrary whitespace before the
 /// marker would let a hand-crafted file claim a SchemaHash that
 /// the generator never produced. Only the two canonical prefixes
@@ -408,7 +408,7 @@ fn parse_header_hash(content: &str) -> Option<String> {
         if is_valid_sha256_marker(hash) {
             return Some(hash.to_string());
         }
-        // Marker found but malformed ----- refuse to treat as owned.
+        // Marker found but malformed -- refuse to treat as owned.
         return None;
     }
     None
@@ -445,7 +445,7 @@ fn list_existing_migrations(dir: &Path) -> Result<Vec<PathBuf>, LifecycleError> 
 /// `.rustio/tmp/<txn>/`. Doctrine B8.
 ///
 /// Returns `Ok(None)` for a true no-op (no files changed, no event
-/// emitted) ----- preserving §6.4 idempotence.
+/// emitted) -- preserving §6.4 idempotence.
 /// Returns `Ok(Some(report))` after a successful write with the
 /// commit event ULID populated in `report.committed_event_id`.
 pub(crate) fn commit(
@@ -473,7 +473,7 @@ pub(crate) fn commit(
     let tmp = project_root.join(".rustio/tmp").join(&txn_id);
     std::fs::create_dir_all(&tmp)?;
     // We re-run generate_all so we have the content again (plan
-    // only carries hashes, not content ----- keeping PlanReport small).
+    // only carries hashes, not content -- keeping PlanReport small).
     let draft = load_draft_and_verify(&project_root)?;
     let files = generate_all(&draft);
     let mut staged: Vec<(PathBuf, PathBuf)> = Vec::new(); // (final, tmp)
@@ -509,7 +509,7 @@ pub(crate) fn commit(
     };
 
     // Swap. Best-effort atomic per file: rename if destination
-    // parent exists. Errors here leave partial state in tmp/ -----
+    // parent exists. Errors here leave partial state in tmp/ --
     // recovery is manual but the doctrine acknowledges this risk.
     let mut written: Vec<PathBuf> = Vec::new();
     for (final_path, tmp_path) in &staged {
@@ -533,7 +533,7 @@ pub(crate) fn commit(
 
     // Append the commit event last so it records the actual
     // outcome. If this fails, the files are on disk but the log
-    // does not record them ----- a known weak spot tracked in the
+    // does not record them -- a known weak spot tracked in the
     // doctrine review (REVIEW_BUILDER_DOCTRINE.md §1.16, OPEN).
     let history_path = project_root.join(".rustio/history.jsonl");
     let files_rel: Vec<String> = written
@@ -605,7 +605,7 @@ mod tests {
         )
         .unwrap();
 
-        // History ----- project_init then add_model events for each
+        // History -- project_init then add_model events for each
         // model so replay/draft round-trip is consistent.
         let actor = "test@example.com";
         let history_path = rustio_dir.join("history.jsonl");
@@ -709,7 +709,7 @@ mod tests {
 
     #[test]
     fn commit_is_idempotent() {
-        // §6.4 ----- second commit with no intervening change is a true
+        // §6.4 -- second commit with no intervening change is a true
         // no-op: no files modified, no event appended.
         let root = bootstrap_project(vec![sample_model()]);
         commit(&root, false, "alice@example.com").unwrap();
@@ -813,7 +813,7 @@ mod tests {
     #[test]
     fn incremental_migration_refused() {
         // Bootstrap, commit, then add another model and try to
-        // commit again ----- MVP must refuse the new migration emission.
+        // commit again -- MVP must refuse the new migration emission.
         let root = bootstrap_project(vec![sample_model()]);
         commit(&root, false, "alice@example.com").unwrap();
         let history_path = root.join(".rustio/history.jsonl");
@@ -895,7 +895,7 @@ mod tests {
     #[test]
     fn parse_header_hash_refuses_nested_prefix() {
         // Doc-comment style (`//!`) and tripled (`///`) must not
-        // be parsed as headers ----- only `// ` or `-- ` exactly.
+        // be parsed as headers -- only `// ` or `-- ` exactly.
         let nested = "//! SPDX-SchemaHash: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n";
         assert_eq!(parse_header_hash(nested), None);
         let tripled = "/// SPDX-SchemaHash: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n";

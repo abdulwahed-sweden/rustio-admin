@@ -2,7 +2,7 @@
 //!
 //! Produces the text of every file the Builder writes under
 //! `src/_generated/` and `migrations/`. This module never touches
-//! the filesystem ----- it returns [`GeneratedFile`] values. The
+//! the filesystem -- it returns [`GeneratedFile`] values. The
 //! lifecycle module ([`crate::builder::commit`]) is the only place
 //! that decides whether to write them.
 //!
@@ -141,8 +141,8 @@ fn emit_admin_rs(draft: &Draft) -> GeneratedFile {
 }
 
 fn emit_models_mod_rs(draft: &Draft) -> GeneratedFile {
-    // Reuses the same projection as `mod_hash` ----- every model's
-    // name, nothing more ----- so changes to a model's *internals*
+    // Reuses the same projection as `mod_hash` -- every model's
+    // name, nothing more -- so changes to a model's *internals*
     // do not change this file's hash.
     let hash = mod_hash(draft);
     let mut body = String::new();
@@ -256,7 +256,7 @@ fn emit_initial_migration(draft: &Draft) -> GeneratedFile {
     let mut body = String::new();
     body.push_str(&doctrine_header(HeaderStyle::Sql, &hash));
     body.push('\n');
-    body.push_str("-- Rollback hint (free-form, not parsed ----- DESIGN_BUILDER.md §7.5):\n");
+    body.push_str("-- Rollback hint (free-form, not parsed -- DESIGN_BUILDER.md §7.5):\n");
     body.push_str("--   To roll back, DROP TABLE every table below in reverse order.\n");
     body.push_str("--   Verify FK constraints first if any have been added by hand.\n");
     body.push('\n');
@@ -566,7 +566,7 @@ mod tests {
         // Forbid the regressed concatenation explicitly.
         assert!(
             !mig.content.contains("engine_displacement_ccBIGINT"),
-            "long field name collapsed into its type ----- v0.14.0 codegen bug regressed:\n{}",
+            "long field name collapsed into its type -- v0.14.0 codegen bug regressed:\n{}",
             mig.content
         );
     }

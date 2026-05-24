@@ -6,7 +6,7 @@
 //! IDs."*
 //!
 //! Wraps the `ulid` crate. Lives in its own module so the rest of
-//! the Builder never imports `ulid::*` directly ----- useful for the
+//! the Builder never imports `ulid::*` directly -- useful for the
 //! "no second ULID source" discipline if it ever becomes a doctrine
 //! concern.
 

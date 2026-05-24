@@ -21,7 +21,7 @@
 //!   order. Sorting *within* an array of tables is the caller's
 //!   responsibility (e.g. `[[models]]` sorted by `name`).
 //! - 2-space indent (TOML default).
-//! - LF line endings, no trailing whitespace, single trailing LF -----
+//! - LF line endings, no trailing whitespace, single trailing LF --
 //!   enforced by piping the emitter output through
 //!   [`crate::builder::canonical::canonicalize`].
 //! - No comments emitted. Builder-managed TOML carries no comments
@@ -107,7 +107,7 @@ mod tests {
         project["name"] = value("demo");
         project["created_at"] = value("2026-05-15T10:30:00Z");
         doc["project"] = Item::Table(project);
-        // Array of tables ----- order is semantic, NOT sorted by the
+        // Array of tables -- order is semantic, NOT sorted by the
         // emitter. Caller is responsible for sorting before passing.
         let mut aot = toml_edit::ArrayOfTables::new();
         {
