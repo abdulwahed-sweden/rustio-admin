@@ -120,8 +120,12 @@ enum Command {
         /// interactive mode. Required in non-interactive mode.
         name: Option<String>,
         /// Forwarded to `startproject`: preset choice. Defaults to
-        /// `minimal` (one `Post` model); `blog` adds a `Comment`
-        /// model + FK migration. Ignored when `--builder` is set.
+        /// `minimal` (no domain models — the scaffold is neutral so
+        /// the project does not feel like someone else's demo);
+        /// `blog` adds `Post` + `Comment` with their migrations. In
+        /// wizard mode the user's project-type choice supersedes
+        /// this flag; in non-interactive mode this flag wins.
+        /// Ignored when `--builder` is set.
         #[arg(long, default_value = "minimal")]
         preset: String,
         /// Skip the interactive wizard even when running in a
@@ -143,9 +147,10 @@ enum Command {
         /// Name of the project ----- also the cargo crate name. Letters,
         /// digits, '-', and '_' only.
         name: String,
-        /// Project preset: `minimal` (default ----- one `Post` model) or
-        /// `blog` (adds a `Comment` model with a `post_id` FK + a
-        /// migration). Unknown presets error out with the valid list.
+        /// Project preset: `minimal` (default ----- neutral scaffold,
+        /// no domain models) or `blog` (adds `Post` + `Comment`
+        /// with their migrations). Unknown presets error out with
+        /// the valid list.
         #[arg(long, default_value = "minimal")]
         preset: String,
     },
@@ -499,10 +504,22 @@ fn dispatch_new(
     }
     if wizard::should_run(no_interactive) {
         let input = wizard::run(name.as_deref())?;
-        // PR 1.5 (DESIGN_ONBOARDING.md §6) will branch the scaffold
-        // on `input.project_type`; PR 1.2 records the intent only.
-        let _ = &input.project_type;
-        return scaffold::project_with_db(&input.project_name, &preset, &input.db_name);
+        // PR 1.5: project_type drives preset selection — only the
+        // explicit `blog` choice writes blog-shaped files. Every
+        // other type (custom / clinic / school / inventory) gets
+        // the neutral minimal scaffold and a project-type-aware
+        // homepage. `DESIGN_ONBOARDING.md` §6.
+        let resolved_preset = if input.project_type == "blog" {
+            "blog"
+        } else {
+            "minimal"
+        };
+        return scaffold::project_with_db(
+            &input.project_name,
+            resolved_preset,
+            &input.db_name,
+            &input.project_type,
+        );
     }
     // Non-interactive path ----- name is mandatory (matches `startproject`).
     let name = name.ok_or_else(|| {

@@ -13,6 +13,12 @@ mod post;
 use comment::Comment;
 use post::Post;
 
+// The first-boot homepage at `/`. Baked at compile time so the
+// binary stays single-file. Replace by editing this file and
+// re-running `cargo run`, or remove the `.get("/", …)` route below
+// to free the path for your own handler.
+const HOMEPAGE_HTML: &str = include_str!("../templates/home.html");
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // .env is optional; production deploys typically use real env vars.
@@ -55,11 +61,7 @@ async fn main() -> Result<()> {
         .middleware(middleware::correlation_id)
         .middleware(middleware::security_headers)
         .middleware(middleware::csrf_protect)
-        .get("/", |_req| async {
-            Ok(Response::text(
-                "{{name}} alive — see /admin for the admin panel",
-            ))
-        });
+        .get("/", |_req| async { Ok(Response::html(HOMEPAGE_HTML)) });
 
     let router = register_admin_routes(router, admin, db, Arc::clone(&templates));
 

@@ -12,6 +12,13 @@ use std::path::Path;
 /// `(relative_target_path, template_body)` pairs. `target_path` is
 /// relative to the new project's root and creates parent directories
 /// on demand.
+///
+/// PR 1.5 doctrine (`DESIGN_ONBOARDING.md` §6): the default scaffold
+/// ships NO domain model. `src/post.rs` and `migrations/0001_…`
+/// moved into the `blog` preset so a `clinic` / `school` / `inventory`
+/// / `custom` project stops feeling like a renamed blog. The
+/// `templates/home.html` file (the first-boot homepage) and the
+/// `migrations/.gitkeep` placeholder are now part of every project.
 const PROJECT_TEMPLATES: &[(&str, &str)] = &[
     (
         "Cargo.toml",
@@ -34,23 +41,23 @@ const PROJECT_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../templates/project/src/main.rs.tmpl"),
     ),
     (
-        "src/post.rs",
-        include_str!("../templates/project/src/post.rs.tmpl"),
+        "templates/home.html",
+        include_str!("../templates/project/templates/home.html"),
     ),
     (
-        "migrations/0001_create_posts.sql",
-        include_str!("../templates/project/migrations/0001_create_posts.sql"),
+        "migrations/.gitkeep",
+        include_str!("../templates/project/migrations/.gitkeep"),
     ),
 ];
 
 /// `blog` preset ----- layered on top of `PROJECT_TEMPLATES`. The
-/// `src/main.rs` and (later) any other shared file is replaced
-/// wholesale by writing the preset version *after* the minimal
-/// pass (`fs::write` overwrites unconditionally), so the ordering
+/// `src/main.rs` slot is replaced wholesale by writing the preset
+/// version *after* the minimal pass (`fs::write` overwrites
+/// unconditionally), so the ordering
 /// `PROJECT_TEMPLATES` → `BLOG_OVERRIDES` matters: keep
 /// preset-owned filenames in the overrides slice and any new-only
-/// files separate from them. New-only files (`src/comment.rs`,
-/// `migrations/0002_create_comments.sql`) are listed in
+/// files separate from them. New-only files (`src/post.rs`,
+/// `src/comment.rs`, the two `create_*` migrations) are listed in
 /// `BLOG_EXTRAS` to keep the rebuilt mental model from the
 /// minimal scaffold honest.
 const BLOG_OVERRIDES: &[(&str, &str)] = &[(
@@ -60,8 +67,16 @@ const BLOG_OVERRIDES: &[(&str, &str)] = &[(
 
 const BLOG_EXTRAS: &[(&str, &str)] = &[
     (
+        "src/post.rs",
+        include_str!("../templates/project_blog/src/post.rs.tmpl"),
+    ),
+    (
         "src/comment.rs",
         include_str!("../templates/project_blog/src/comment.rs.tmpl"),
+    ),
+    (
+        "migrations/0001_create_posts.sql",
+        include_str!("../templates/project_blog/migrations/0001_create_posts.sql"),
     ),
     (
         "migrations/0002_create_comments.sql",
@@ -69,44 +84,68 @@ const BLOG_EXTRAS: &[(&str, &str)] = &[
     ),
 ];
 
+/// Curated project-type identifiers from `DESIGN_ONBOARDING.md` §6
+/// / the PR 1.2 wizard. Drives the `{{type_phrase}}` substitution
+/// in `templates/home.html`. Unknown values (or the non-interactive
+/// default) fall through to the `custom` phrasing — neutral, never
+/// blog-flavoured.
+fn type_phrase(project_type: &str) -> &'static str {
+    match project_type {
+        "clinic" => "Clinic project initialized.",
+        "school" => "School management project initialized.",
+        "inventory" => "Inventory project initialized.",
+        "blog" => "Blog project initialized.",
+        _ => "Custom RustIO project initialized.",
+    }
+}
+
 /// Valid preset names, surfaced verbatim in the error path so
 /// `--preset foo` reports the closed list of choices.
 const VALID_PRESETS: &[&str] = &["minimal", "blog"];
 
 pub fn project(name: &str, preset: &str) -> Result<(), String> {
-    project_in(Path::new("."), name, preset)
+    // Non-interactive scaffold paths (`rustio startproject` and
+    // `rustio new --no-interactive`) do not collect project_type;
+    // fall back to "custom" so the generated homepage is neutral.
+    project_in(Path::new("."), name, preset, "custom")
 }
 
 /// Wizard-flavoured scaffold (PR 1.2). Same file set as [`project`],
 /// plus a generated `.env` carrying the wizard's chosen `db_name`,
 /// then a Next Steps block that omits the `cp .env.example .env`
-/// step. Non-interactive callers of `rustio new` keep using
-/// [`project`] verbatim ----- this entry point is reserved for the
-/// wizard path.
-pub fn project_with_db(name: &str, preset: &str, db_name: &str) -> Result<(), String> {
-    project_with_db_in(Path::new("."), name, preset, db_name)
+/// step. The `project_type` is the wizard's collected choice and
+/// drives the `{{type_phrase}}` substitution in `templates/home.html`
+/// (PR 1.5 / `DESIGN_ONBOARDING.md` §6). Non-interactive callers of
+/// `rustio new` keep using [`project`] verbatim.
+pub fn project_with_db(
+    name: &str,
+    preset: &str,
+    db_name: &str,
+    project_type: &str,
+) -> Result<(), String> {
+    project_with_db_in(Path::new("."), name, preset, db_name, project_type)
 }
 
 /// Workdir-parameterised variant ----- `project()` calls this with
 /// `Path::new(".")`. Pulled out so unit tests can scaffold under
 /// a tempdir without changing the process working directory.
-fn project_in(parent: &Path, name: &str, preset: &str) -> Result<(), String> {
-    let written = write_project_files(parent, name, preset)?;
+fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Result<(), String> {
+    let written = write_project_files(parent, name, preset, project_type)?;
     println!("Created `{name}/` ({preset} preset) with {written} files.");
     println!();
     println!("Next steps:");
     println!("  cd {name}");
     println!("  cp .env.example .env       # safe local defaults; edit before production");
     println!(
-        "  rustio migrate apply       # creates the posts table{}",
+        "  rustio migrate apply       # {}",
         if preset == "blog" {
-            " + comments table"
+            "creates the posts + comments tables"
         } else {
-            ""
+            "no project migrations yet (`rustio startapp <name>` adds the first)"
         }
     );
     println!("  rustio user create --email admin@{name}.local --role administrator");
-    println!("  cargo run                  # boots http://127.0.0.1:8000/admin");
+    println!("  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin");
     Ok(())
 }
 
@@ -117,8 +156,9 @@ fn project_with_db_in(
     name: &str,
     preset: &str,
     db_name: &str,
+    project_type: &str,
 ) -> Result<(), String> {
-    let written = write_project_files(parent, name, preset)?;
+    let written = write_project_files(parent, name, preset, project_type)?;
     let project_root = parent.join(name);
     write_env_file(&project_root, db_name)?;
     println!(
@@ -129,15 +169,15 @@ fn project_with_db_in(
     println!("Next steps:");
     println!("  cd {name}");
     println!(
-        "  rustio migrate apply       # creates the posts table{}",
+        "  rustio migrate apply       # {}",
         if preset == "blog" {
-            " + comments table"
+            "creates the posts + comments tables"
         } else {
-            ""
+            "no project migrations yet (`rustio startapp <name>` adds the first)"
         }
     );
     println!("  rustio user create --email admin@{name}.local --role administrator");
-    println!("  cargo run                  # boots http://127.0.0.1:8000/admin");
+    println!("  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin");
     println!();
     // First-build expectation note. PR 1.4 / DESIGN_ONBOARDING.md §9
     // ----- only printed on the wizard path so script users (who know
@@ -149,8 +189,16 @@ fn project_with_db_in(
 /// Pure file-writing core. Extracted so the wizard path can reuse
 /// it before layering its own `.env` on top. Validates name +
 /// preset, refuses an existing target dir, and returns the number
-/// of files written so callers can report it.
-fn write_project_files(parent: &Path, name: &str, preset: &str) -> Result<usize, String> {
+/// of files written so callers can report it. `{{name}}` and
+/// `{{type_phrase}}` are substituted in every template; only
+/// `templates/home.html` actually carries `{{type_phrase}}` today
+/// (everywhere else the replacement is a no-op).
+fn write_project_files(
+    parent: &Path,
+    name: &str,
+    preset: &str,
+    project_type: &str,
+) -> Result<usize, String> {
     validate_name(name)?;
     if !VALID_PRESETS.contains(&preset) {
         return Err(format!(
@@ -167,13 +215,16 @@ fn write_project_files(parent: &Path, name: &str, preset: &str) -> Result<usize,
         ));
     }
 
+    let type_phrase = type_phrase(project_type);
     let mut written = 0usize;
     for (rel, body) in PROJECT_TEMPLATES {
         let target = dir.join(rel);
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
         }
-        let body = body.replace("{{name}}", name);
+        let body = body
+            .replace("{{name}}", name)
+            .replace("{{type_phrase}}", type_phrase);
         fs::write(&target, body).map_err(|e| format!("write {}: {e}", target.display()))?;
         written += 1;
     }
@@ -185,7 +236,9 @@ fn write_project_files(parent: &Path, name: &str, preset: &str) -> Result<usize,
                 fs::create_dir_all(parent)
                     .map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
             }
-            let body = body.replace("{{name}}", name);
+            let body = body
+                .replace("{{name}}", name)
+                .replace("{{type_phrase}}", type_phrase);
             fs::write(&target, body).map_err(|e| format!("write {}: {e}", target.display()))?;
             // Overrides reuse a slot the minimal scaffold already
             // wrote ----- don't double-count those. Extras are net-new
@@ -480,36 +533,110 @@ mod tests {
     #[test]
     fn project_rejects_unknown_preset_with_valid_list_in_message() {
         let dir = unique_tempdir();
-        let err = project_in(&dir, "proj", "definitely-not-a-preset").expect_err("must error");
+        let err =
+            project_in(&dir, "proj", "definitely-not-a-preset", "custom").expect_err("must error");
         assert!(err.contains("unknown preset"), "got: {err}");
         assert!(err.contains("minimal"), "must list minimal: {err}");
         assert!(err.contains("blog"), "must list blog: {err}");
     }
 
+    /// PR 1.5: the minimal scaffold is neutral — no `post.rs`, no
+    /// `0001_create_posts.sql`, no Post registration in main.rs.
+    /// A clinic / school / inventory project must stop feeling
+    /// like a renamed blog demo.
     #[test]
-    fn project_minimal_writes_post_but_not_comment_or_blog_main() {
+    fn project_minimal_is_neutral_with_no_domain_models() {
         let dir = unique_tempdir();
-        project_in(&dir, "proj", "minimal").expect("minimal should scaffold");
+        project_in(&dir, "proj", "minimal", "custom").expect("minimal should scaffold");
         let root = dir.join("proj");
-        assert!(root.join("src/post.rs").exists(), "post.rs missing");
-        assert!(!root.join("src/comment.rs").exists(), "comment.rs leaked");
         assert!(
-            !root.join("migrations/0002_create_comments.sql").exists(),
-            "0002 migration leaked"
+            !root.join("src/post.rs").exists(),
+            "post.rs must NOT exist in minimal scaffold (moved to blog preset)"
         );
-        // main.rs ships the single-model registration.
+        assert!(
+            !root.join("src/comment.rs").exists(),
+            "comment.rs must NOT exist in minimal scaffold"
+        );
+        assert!(
+            !root.join("migrations/0001_create_posts.sql").exists(),
+            "0001_create_posts.sql must NOT exist in minimal scaffold"
+        );
+        // main.rs must not reference Post or Comment anywhere.
         let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
-        assert!(main.contains(".model::<Post>()"), "Post must be registered");
+        assert!(
+            !main.contains("Post"),
+            "minimal main.rs must not mention Post: {main}"
+        );
         assert!(
             !main.contains("Comment"),
             "minimal main.rs must not mention Comment"
         );
     }
 
+    /// PR 1.5: the homepage at `/` is generated alongside the
+    /// scaffold so a fresh `cargo run` shows something more
+    /// inviting than a 404 at the root.
     #[test]
-    fn project_blog_layers_comment_model_and_two_model_main_over_minimal() {
+    fn project_minimal_writes_homepage_and_migrations_placeholder() {
         let dir = unique_tempdir();
-        project_in(&dir, "blog", "blog").expect("blog should scaffold");
+        project_in(&dir, "clinic", "minimal", "clinic").expect("scaffold");
+        let root = dir.join("clinic");
+        assert!(
+            root.join("templates/home.html").exists(),
+            "templates/home.html must exist"
+        );
+        assert!(
+            root.join("migrations/.gitkeep").exists(),
+            "migrations/.gitkeep must exist (keeps empty dir visible to git)"
+        );
+        // main.rs serves the homepage via include_str! and uses Response::html.
+        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+        assert!(
+            main.contains("include_str!(\"../templates/home.html\")"),
+            "main.rs must bake home.html: {main}"
+        );
+        assert!(main.contains("Response::html("), "main.rs must serve HTML");
+    }
+
+    /// PR 1.5: `{{type_phrase}}` substitution turns the user's
+    /// project-type choice into a single calm phrase on the homepage.
+    /// Each curated type has its own wording; anything else falls
+    /// through to the neutral "Custom RustIO project" phrasing.
+    #[test]
+    fn homepage_substitutes_type_phrase_per_project_type() {
+        let cases = [
+            ("custom", "Custom RustIO project initialized."),
+            ("clinic", "Clinic project initialized."),
+            ("school", "School management project initialized."),
+            ("inventory", "Inventory project initialized."),
+            ("blog", "Blog project initialized."),
+            // Unknown type falls back to custom — neutral, never wrong.
+            ("unrecognised", "Custom RustIO project initialized."),
+        ];
+        for (ty, expected) in cases {
+            let dir = unique_tempdir();
+            let preset = if ty == "blog" { "blog" } else { "minimal" };
+            project_in(&dir, "proj", preset, ty).unwrap_or_else(|e| panic!("{ty}: {e}"));
+            let html =
+                fs::read_to_string(dir.join("proj").join("templates").join("home.html")).unwrap();
+            assert!(
+                html.contains(expected),
+                "type {ty} should render '{expected}'; got: {html}"
+            );
+            // The literal placeholder must not leak through.
+            assert!(
+                !html.contains("{{type_phrase}}"),
+                "placeholder leaked for type {ty}: {html}"
+            );
+            // Project name substitution still works.
+            assert!(html.contains("proj"), "project name must substitute");
+        }
+    }
+
+    #[test]
+    fn project_blog_ships_post_comment_and_both_migrations() {
+        let dir = unique_tempdir();
+        project_in(&dir, "blog", "blog", "blog").expect("blog should scaffold");
         let root = dir.join("blog");
         assert!(root.join("src/post.rs").exists(), "post.rs missing");
         assert!(root.join("src/comment.rs").exists(), "comment.rs missing");
@@ -527,14 +654,19 @@ mod tests {
             main.contains(".model::<Comment>()"),
             "Comment must be registered"
         );
+        // Blog still uses the same homepage template.
+        assert!(
+            root.join("templates/home.html").exists(),
+            "templates/home.html must exist on blog scaffold too"
+        );
     }
 
-    // ---- project_with_db (wizard path, PR 1.2) ----
+    // ---- project_with_db (wizard path, PR 1.2 + PR 1.5) ----
 
     #[test]
     fn project_with_db_writes_env_with_chosen_db_name() {
         let dir = unique_tempdir();
-        project_with_db_in(&dir, "clinic", "minimal", "clinic_2026")
+        project_with_db_in(&dir, "clinic", "minimal", "clinic_2026", "clinic")
             .expect("wizard scaffold should succeed");
         let env = fs::read_to_string(dir.join("clinic").join(".env"))
             .expect(".env must exist after wizard scaffold");
@@ -561,7 +693,7 @@ mod tests {
     #[test]
     fn project_with_db_also_writes_env_example_for_team_sharing() {
         let dir = unique_tempdir();
-        project_with_db_in(&dir, "school", "minimal", "school_dev").unwrap();
+        project_with_db_in(&dir, "school", "minimal", "school_dev", "school").unwrap();
         let root = dir.join("school");
         assert!(
             root.join(".env").exists(),
@@ -580,14 +712,20 @@ mod tests {
             gi.lines().any(|l| l.trim() == ".env"),
             ".gitignore must exclude .env: {gi}"
         );
+        // Homepage carries the chosen project type's phrase.
+        let html = fs::read_to_string(root.join("templates/home.html")).unwrap();
+        assert!(
+            html.contains("School management project initialized."),
+            "homepage should reflect school type: {html}"
+        );
     }
 
     #[test]
     fn project_and_project_with_db_share_the_same_file_set() {
         let a = unique_tempdir();
         let b = unique_tempdir();
-        project_in(&a, "proj", "minimal").unwrap();
-        project_with_db_in(&b, "proj", "minimal", "proj_dev").unwrap();
+        project_in(&a, "proj", "minimal", "custom").unwrap();
+        project_with_db_in(&b, "proj", "minimal", "proj_dev", "custom").unwrap();
         let mut a_files: Vec<_> = walk_files(&a.join("proj")).collect();
         let mut b_files: Vec<_> = walk_files(&b.join("proj")).collect();
         a_files.sort();

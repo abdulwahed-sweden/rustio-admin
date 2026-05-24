@@ -8,8 +8,11 @@ use rustio_admin::{
     Server,
 };
 
-mod post;
-use post::Post;
+// The first-boot homepage at `/`. Baked at compile time so the
+// binary stays single-file. Replace by editing this file and
+// re-running `cargo run`, or remove the `.get("/", …)` route below
+// to free the path for your own handler.
+const HOMEPAGE_HTML: &str = include_str!("../templates/home.html");
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -29,7 +32,9 @@ async fn main() -> Result<()> {
     migrations::apply(&db, "migrations").await?;
     background::spawn_housekeeping(db.clone());
 
-    let admin = Admin::new().model::<Post>();
+    // No domain models registered by default — `rustio startapp <name>`
+    // adds them, then chain `.model::<YourModel>()` onto this builder.
+    let admin = Admin::new();
     admin.seed_permissions(&db).await?;
 
     // Templates::new(None) → embedded defaults only.
@@ -53,11 +58,7 @@ async fn main() -> Result<()> {
         .middleware(middleware::correlation_id)
         .middleware(middleware::security_headers)
         .middleware(middleware::csrf_protect)
-        .get("/", |_req| async {
-            Ok(Response::text(
-                "{{name}} alive — see /admin for the admin panel",
-            ))
-        });
+        .get("/", |_req| async { Ok(Response::html(HOMEPAGE_HTML)) });
 
     let router = register_admin_routes(router, admin, db, Arc::clone(&templates));
 

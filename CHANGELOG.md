@@ -49,6 +49,87 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added — onboarding PR 1.5 (First-Boot Homepage & Project Identity)
+
+The scaffold finally stops feeling like a renamed blog. A new project
+now opens with a calm homepage at `/`, a project-type-aware subtitle,
+and a neutral source tree — `Post`, the `posts` migration, and the
+blog wording all moved into the `blog` preset where they belong.
+
+- **Default scaffold is neutral** — `templates/project/src/post.rs.tmpl`
+  and `templates/project/migrations/0001_create_posts.sql` moved to
+  `templates/project_blog/`. The `minimal` preset now ships:
+  `Cargo.toml`, `.env.example`, `.gitignore`, `README.md`, `src/main.rs`,
+  `templates/home.html`, `migrations/.gitkeep`. No domain model, no
+  blog assumptions, no Post reference anywhere in main.rs.
+- **First-boot homepage at `/`** — `templates/project/templates/home.html`
+  is the calm landing page: project name, project-type subtitle,
+  three-item status list, three-line Next Steps code block, three
+  navigation pills (Admin / Docs / Health), credit footer. Inline
+  CSS only; no JS, no framework, no external assets. Baked into the
+  user's binary via `include_str!("../templates/home.html")` so the
+  project stays single-binary.
+- **Project-type-aware wording** — wizard's `project_type` choice
+  now drives a new `{{type_phrase}}` template substitution:
+    - `custom`    → "Custom RustIO project initialized."
+    - `clinic`    → "Clinic project initialized."
+    - `school`    → "School management project initialized."
+    - `inventory` → "Inventory project initialized."
+    - `blog`      → "Blog project initialized."
+  Unknown / non-interactive defaults fall through to the `custom`
+  phrasing — neutral, never wrong. The phrase appears on the
+  homepage subtitle; no domain models are generated.
+- **Wizard maps `project_type == "blog"` to `--preset blog`**
+  automatically — the only project type that produces blog-shaped
+  source. Every other type uses the neutral minimal scaffold.
+- **Blog preset gains `Post` ownership** — `BLOG_EXTRAS` now lists
+  `src/post.rs`, `src/comment.rs`, both `0001_create_posts.sql` and
+  `0002_create_comments.sql`. `BLOG_OVERRIDES` still rewrites
+  `src/main.rs` to register Post + Comment. Blog scaffold behaviour
+  is unchanged from the user's perspective; the file ownership
+  reflects the doctrine.
+- **`README.md.tmpl` debluged** — dropped the Post-specific "what
+  to do with `0001_create_posts.sql`" block, the `src/post.rs`
+  row in the project-layout table, and the `rustio startapp
+  comment` example. Replaced with neutral wording plus a mention
+  of the new homepage and `templates/home.html` override path.
+  Verb references updated `startproject` → `new` (PR 1.1's
+  friendly alias).
+- **Generated `main.rs` serves the homepage** — both minimal and
+  blog `main.rs.tmpl` end with:
+  ```rust
+  .get("/", |_req| async { Ok(Response::html(HOMEPAGE_HTML)) })
+  ```
+  with `HOMEPAGE_HTML` baked from `templates/home.html` via
+  `include_str!`. Replaceable: edit the file and re-run; remove
+  the route to free `/` for a project-defined handler.
+- **`scaffold` API** — `pub fn project_with_db` gains a
+  `project_type: &str` parameter (wizard threads its choice
+  through). `pub fn project` is unchanged externally and defaults
+  internally to `"custom"`.
+
+### Verified end-to-end
+
+- `rustio startproject neutral` → 7 files, no Post, homepage
+  reads "Custom RustIO project initialized."
+- Wizard with school → 8 files, homepage reads "School management
+  project initialized.", main.rs is neutral.
+- Wizard with blog → 12 files (Post + Comment + 2 migrations +
+  .env), homepage reads "Blog project initialized.", main.rs
+  registers Post and Comment.
+- `rustio new wp --no-interactive --preset blog` → script path
+  produces 11 files, blog preset unchanged.
+- Generated minimal project passes `cargo check` cleanly.
+
+### Doctrine
+
+- PR 1.5 implements `DESIGN_ONBOARDING.md` §6 (Default scaffold
+  identity) and §11 (Homepage doctrine). The page intentionally
+  carries no analytics, no fake health checks, no charts, no JS;
+  only project name, type phrase, static status list, Next Steps
+  code block, navigation pills, footer. Easy to replace — the
+  user owns `templates/home.html` from day one.
+
 ### Fixed — terminal compatibility (mixed RTL/LTR rendering)
 
 PR 1.4 introduced terminal rendering problems on systems using
