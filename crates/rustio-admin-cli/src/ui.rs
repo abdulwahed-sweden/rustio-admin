@@ -35,6 +35,7 @@
 /// unchanged. The main exit trampoline detects the four-part shape
 /// by its `"Problem:"` prefix and drops the redundant `"error: "`
 /// label that wraps plain-`String` errors.
+#[derive(Debug)]
 pub(crate) struct OnboardingError {
     pub problem: String,
     pub why: String,

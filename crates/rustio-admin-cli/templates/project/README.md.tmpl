@@ -41,8 +41,24 @@ is ready, the homepage is alive, and you decide what the first
 model represents.
 
 ```sh
-rustio startapp <name>        # e.g. `patient`, `student`, `item`
+# Declare your fields up front (recommended):
+rustio startapp patient \
+    --field name:str \
+    --field date_of_birth:timestamp \
+    --field doctor:fk:Doctor \
+    --field active:bool
+
+# Or run interactively at a TTY (prompts one field per line):
+rustio startapp patient
+
+# Or get the historical one-field placeholder model:
+rustio startapp patient --no-interactive
 ```
+
+Field types (closed vocabulary): `str`, `text`, `int`, `bigint`,
+`bool`, `timestamp`, `json`, `fk:<Model>`. Nullability, indexes,
+unique constraints, and column defaults beyond the table above
+are added by editing the generated migration.
 
 The CLI prints the exact `mod` / `use` / `.model::<>()` lines to
 paste into `src/main.rs`. After that:

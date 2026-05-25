@@ -50,7 +50,80 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.20.0]** block below._
+### Added — onboarding PR 2.1 (`rustio startapp` redesign)
+
+- **`--field <name>:<type>` flag** on `rustio startapp`, repeatable.
+  Closed vocabulary: `str / text / int / bigint / bool / timestamp /
+  json / fk:<Model>` (eight tokens, nothing more — see the §3
+  / §7.1 "no DSL creep" boundary in the PR 2.1 contract). The
+  scaffold renders a full model file with the declared fields,
+  the matching CREATE TABLE migration, and a `ModelAdmin` impl
+  with `list_display` / `search_fields` defaulted from the
+  declaration. The "paste these lines into src/main.rs" handshake
+  from prior releases is preserved unchanged — `startapp` still
+  does not auto-edit the user's `main.rs`.
+- **`--no-interactive`** flag on `rustio startapp`, mirroring the
+  flag on `rustio new`. Bypasses the field-prompt loop when set.
+- **Interactive field prompt** when stdin and stdout are both TTYs,
+  `CI` is unset, and `--no-interactive` was not passed. Prompts
+  one field per line in the `name:type` format; empty line ends
+  the loop; invalid input prints the four-part PR 1.3 error and
+  re-prompts without advancing the slot counter. A `Summary`
+  block previews the collected fields before any file write.
+- **New `app_fields` module** (parser + validator + renderer,
+  stdlib only, 26 unit tests). Owns the closed type vocabulary
+  in one place; the renderer produces the per-placeholder
+  substrings the two new templates consume.
+- **Two new templates** alongside the existing ones:
+  `templates/app/model_with_fields.rs.tmpl` and
+  `templates/app/migration_with_fields.sql.tmpl`. The historical
+  templates remain unchanged and are still used on the no-`--field`
+  path (byte-identical compat with 0.20.0).
+- **`OnboardingError` now derives `Debug`** so `app_fields` tests
+  can use `.unwrap_err()`.
+
+### Field-type / SQL contract
+
+| Token         | Rust type           | SQL column                          |
+|---------------|---------------------|-------------------------------------|
+| `str`         | `String`            | `TEXT NOT NULL`                     |
+| `text`        | `String`            | `TEXT NOT NULL`                     |
+| `int`         | `i32`               | `INTEGER NOT NULL`                  |
+| `bigint`      | `i64`               | `BIGINT NOT NULL`                   |
+| `bool`        | `bool`              | `BOOLEAN NOT NULL DEFAULT FALSE`    |
+| `timestamp`   | `DateTime<Utc>`     | `TIMESTAMPTZ NOT NULL`              |
+| `json`        | `serde_json::Value` | `JSONB NOT NULL`                    |
+| `fk:<Model>`  | `i64`               | `BIGINT NOT NULL REFERENCES <models>(id)` |
+
+Per the PR 2.1 design adjustment, `timestamp` does NOT default to
+`NOW()` and `json` does NOT default to `'{}'::jsonb` — either
+would imply created_at / settings semantics that don't fit every
+use. Users add defaults by editing the generated migration.
+
+### Preserved
+
+- `rustio startapp <name>` with no `--field` flags in non-TTY / CI /
+  `--no-interactive` mode produces the **byte-identical** model
+  file + migration that 0.20.0 ships.
+- Exit codes unchanged.
+- The "paste these lines into src/main.rs" handshake stays.
+- `rustio new`, `rustio doctor`, `rustio migrate`, `rustio user`,
+  `rustio group`, `rustio perm`, `rustio audit`, `rustio theme`,
+  `rustio override`, `rustio reload`, `rustio test-init`, Builder
+  verbs: untouched.
+- No new dependencies; stdlib only.
+- No framework crate changes.
+- The verb stays a scaffold helper — not a schema language, not a
+  second ORM DSL, not a hidden codegen system.
+
+### Doctrine
+
+- PR 2.1 implements the contract in the PR 2.1 spec
+  (`DESIGN_ONBOARDING.md` §6 — Default scaffold identity). The
+  forbidden-scope list (§3) is enforced by code review: no
+  `--update`, no nullability / unique / index flags, no
+  auto-editing of `src/main.rs`, no FK on-delete syntax, no
+  default-value flags.
 
 
 ## [0.20.0] — 2026-05-25

@@ -34,6 +34,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+mod app_fields;
 mod audit;
 mod builder;
 mod doctor;
@@ -163,6 +164,20 @@ enum Command {
         /// form (`Post`, `BookReview`); the table gets the
         /// pluralised form (`posts`, `book_reviews`).
         name: String,
+        /// Field declaration in `<name>:<type>` form, repeatable.
+        /// Closed vocabulary: `str / text / int / bigint / bool /
+        /// timestamp / json / fk:<Model>`. PR 2.1 of
+        /// `DESIGN_ONBOARDING.md`. Omit the flag entirely (or
+        /// run interactively at a TTY) to get the historical
+        /// one-field placeholder model.
+        #[arg(long = "field", value_name = "NAME:TYPE")]
+        fields: Vec<String>,
+        /// Skip the interactive field-prompt loop even when running
+        /// in a terminal. Behaviour matches non-TTY / CI exactly --
+        /// if no `--field` flags are passed, the historical
+        /// placeholder model is generated.
+        #[arg(long)]
+        no_interactive: bool,
     },
     /// Apply / inspect SQL migrations from a directory.
     Migrate {
@@ -390,7 +405,11 @@ fn main() -> ExitCode {
             builder,
         } => dispatch_new(name, preset, no_interactive, builder),
         Command::Startproject { name, preset } => scaffold::project(&name, &preset),
-        Command::Startapp { name } => scaffold::app(&name),
+        Command::Startapp {
+            name,
+            fields,
+            no_interactive,
+        } => scaffold::app(&name, fields, no_interactive),
         Command::Builder { action } => match action {
             BuilderAction::New { name } => builder_new(&name),
         },

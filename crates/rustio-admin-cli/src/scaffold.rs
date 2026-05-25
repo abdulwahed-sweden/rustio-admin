@@ -327,7 +327,26 @@ fn validate_name(name: &str) -> Result<(), String> {
 const APP_MODEL_TEMPLATE: &str = include_str!("../templates/app/model.rs.tmpl");
 const APP_MIGRATION_TEMPLATE: &str = include_str!("../templates/app/migration.sql.tmpl");
 
-pub fn app(name: &str) -> Result<(), String> {
+// PR 2.1: with-fields path. Layered alongside the original templates
+// so the no-fields path stays byte-identical with what 0.20.0 ships.
+const APP_MODEL_WITH_FIELDS_TEMPLATE: &str =
+    include_str!("../templates/app/model_with_fields.rs.tmpl");
+const APP_MIGRATION_WITH_FIELDS_TEMPLATE: &str =
+    include_str!("../templates/app/migration_with_fields.sql.tmpl");
+
+/// `rustio startapp <name>` entry point.
+///
+/// - With no `--field` flags AND non-TTY / `--no-interactive` / CI:
+///   the output is byte-identical to what 0.20.0 shipped (one
+///   placeholder `name` + `created_at` field). Compat-locked by
+///   the `scaffold::tests::startapp_no_fields_writes_byte_identical_to_0_20_0` test.
+/// - With `--field name:type` flags (repeatable): the parsed field
+///   list drives the with-fields templates.
+/// - In TTY mode with no `--field` flags AND `--no-interactive`
+///   unset: an interactive prompt loop collects fields one per
+///   line; an empty line ends the loop. If zero fields are
+///   collected the placeholder path runs.
+pub fn app(name: &str, field_args: Vec<String>, no_interactive: bool) -> Result<(), String> {
     validate_app_name(name)?;
     ensure_in_project_root()?;
 
@@ -347,20 +366,53 @@ pub fn app(name: &str) -> Result<(), String> {
         Path::new("migrations").join(format!("{next_version:04}_create_{table}.sql"));
     fs::create_dir_all("migrations").map_err(|e| format!("mkdir migrations: {e}"))?;
 
-    let model_body = APP_MODEL_TEMPLATE
-        .replace("{{Singular}}", &singular)
-        .replace("{{name}}", name)
-        .replace("{{table}}", &table);
-    let migration_body = APP_MIGRATION_TEMPLATE
-        .replace("{{name}}", name)
-        .replace("{{table}}", &table);
+    // Resolve the field list. CLI flags take precedence; interactive
+    // prompt fills it in when allowed.
+    let fields = collect_fields(field_args, no_interactive)?;
 
-    fs::write(&model_path, model_body)
-        .map_err(|e| format!("write {}: {e}", model_path.display()))?;
-    fs::write(&migration_path, migration_body)
-        .map_err(|e| format!("write {}: {e}", migration_path.display()))?;
-
-    println!("Created {}", model_path.display());
+    if fields.is_empty() {
+        // Compat path -- byte-identical to 0.20.0.
+        let model_body = APP_MODEL_TEMPLATE
+            .replace("{{Singular}}", &singular)
+            .replace("{{name}}", name)
+            .replace("{{table}}", &table);
+        let migration_body = APP_MIGRATION_TEMPLATE
+            .replace("{{name}}", name)
+            .replace("{{table}}", &table);
+        fs::write(&model_path, model_body)
+            .map_err(|e| format!("write {}: {e}", model_path.display()))?;
+        fs::write(&migration_path, migration_body)
+            .map_err(|e| format!("write {}: {e}", migration_path.display()))?;
+        println!("Created {}", model_path.display());
+    } else {
+        let r = crate::app_fields::render(&fields);
+        let model_body = APP_MODEL_WITH_FIELDS_TEMPLATE
+            .replace("{{Singular}}", &singular)
+            .replace("{{name}}", name)
+            .replace("{{table}}", &table)
+            .replace("{{imports}}", &r.imports)
+            .replace("{{struct_fields}}", &r.struct_fields)
+            .replace("{{columns_literal}}", &r.columns_literal)
+            .replace("{{insert_columns_literal}}", &r.insert_columns_literal)
+            .replace("{{from_row_assignments}}", &r.from_row_assignments)
+            .replace("{{insert_values_expr}}", &r.insert_values_expr)
+            .replace("{{list_display_literal}}", &r.list_display_literal)
+            .replace("{{search_fields_literal}}", &r.search_fields_literal);
+        let migration_body = APP_MIGRATION_WITH_FIELDS_TEMPLATE
+            .replace("{{name}}", name)
+            .replace("{{table}}", &table)
+            .replace("{{column_decls}}", &r.column_decls_sql);
+        fs::write(&model_path, model_body)
+            .map_err(|e| format!("write {}: {e}", model_path.display()))?;
+        fs::write(&migration_path, migration_body)
+            .map_err(|e| format!("write {}: {e}", migration_path.display()))?;
+        println!(
+            "Created {} ({} field{})",
+            model_path.display(),
+            fields.len(),
+            if fields.len() == 1 { "" } else { "s" }
+        );
+    }
     println!("Created {}", migration_path.display());
     println!();
     println!("Next steps:");
@@ -372,7 +424,7 @@ pub fn app(name: &str) -> Result<(), String> {
     println!("     Then chain it onto the Admin builder:");
     println!();
     println!("       Admin::new()");
-    println!("           // … other models …");
+    println!("           // ... other models ...");
     println!("           .model::<{singular}>()");
     println!();
     println!("  2. Apply the migration:");
@@ -381,6 +433,98 @@ pub fn app(name: &str) -> Result<(), String> {
     println!();
     println!("  3. Reboot the server. The `{singular}` admin pages land at /admin/{table}.");
     Ok(())
+}
+
+/// Parse the `--field` CLI args, then -- if zero fields landed AND
+/// the wizard is eligible -- run the interactive prompt loop.
+/// Returns the validated field list (may be empty, which routes the
+/// caller to the compat / placeholder template path).
+fn collect_fields(
+    field_args: Vec<String>,
+    no_interactive: bool,
+) -> Result<Vec<crate::app_fields::Field>, String> {
+    let mut fields: Vec<crate::app_fields::Field> = Vec::with_capacity(field_args.len());
+    for raw in field_args {
+        let field = crate::app_fields::parse_field(&raw).map_err(|e| e.format())?;
+        fields.push(field);
+    }
+    crate::app_fields::validate_unique_names(&fields).map_err(|e| e.format())?;
+
+    // Interactive prompt -- only when no CLI fields were passed AND
+    // the wizard is eligible. Eligibility matches `rustio new` (PR 1.2):
+    // both stdin and stdout must be terminals; CI / NO_COLOR / explicit
+    // `--no-interactive` bypass entirely.
+    if fields.is_empty() && wizard_eligible(no_interactive) {
+        fields = prompt_fields_interactively()?;
+        crate::app_fields::validate_unique_names(&fields).map_err(|e| e.format())?;
+    }
+
+    Ok(fields)
+}
+
+fn wizard_eligible(no_interactive: bool) -> bool {
+    use std::io::IsTerminal;
+    if no_interactive {
+        return false;
+    }
+    if std::env::var_os("CI").is_some() {
+        return false;
+    }
+    std::io::stdin().is_terminal() && std::io::stdout().is_terminal()
+}
+
+/// Prompt the operator for fields one line at a time. Empty line
+/// ends the loop. Invalid input re-prompts without consuming the
+/// slot number. EOF (Ctrl-D) is treated as "done".
+fn prompt_fields_interactively() -> Result<Vec<crate::app_fields::Field>, String> {
+    use std::io::{self, Write};
+
+    println!("--------------------------------------------------");
+    println!("rustio startapp -- field declarations");
+    println!("--------------------------------------------------");
+    println!();
+    println!("Add fields one at a time. Format: <name>:<type>");
+    println!("Press ENTER on an empty line to finish.");
+    println!();
+    println!("Types: str, text, int, bigint, bool, timestamp, json, fk:<Model>");
+    println!();
+
+    let mut out = Vec::<crate::app_fields::Field>::new();
+    loop {
+        print!("  field {}> ", out.len() + 1);
+        io::stdout().flush().map_err(|e| format!("flush: {e}"))?;
+        let mut buf = String::new();
+        let n = io::stdin()
+            .read_line(&mut buf)
+            .map_err(|e| format!("read stdin: {e}"))?;
+        if n == 0 {
+            // EOF -- treat as "done".
+            break;
+        }
+        let input = buf.trim();
+        if input.is_empty() {
+            break;
+        }
+        match crate::app_fields::parse_field(input) {
+            Ok(f) => out.push(f),
+            Err(e) => {
+                // Show the four-part error inline and re-prompt
+                // without advancing the slot counter.
+                println!();
+                println!("{}", e.format());
+                println!();
+            }
+        }
+    }
+    if !out.is_empty() {
+        println!();
+        println!("Summary");
+        for f in &out {
+            println!("  {}: {:?}", f.name, f.kind);
+        }
+        println!();
+    }
+    Ok(out)
 }
 
 /// App names follow Rust module rules: ASCII lowercase letters /
