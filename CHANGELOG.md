@@ -50,6 +50,96 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Fixed — `rustio startapp` pluralization + spatial orientation
+
+Two related fixes to the `rustio startapp` developer experience.
+Strict constraints upheld: no AST rewriting, no auto-editing of
+`src/main.rs`, no auto-registration, no hidden framework state.
+The developer still makes the edits by hand -- the CLI only makes
+*where* unambiguous.
+
+- **Pluralization bug fix.** Replaced the naive `format!("{name}s")`
+  with `app_fields::pluralise_snake()` (extracted as a top-level
+  helper from the existing `pluralise_camel_to_snake`):
+    - ends in `s` / `x` / `z` / `ch` / `sh` -> add `es`
+    - ends in consonant + `y` -> drop `y`, add `ies`
+    - ends in vowel + `y` -> keep `y`, add `s`
+    - otherwise -> add `s`
+  Drives both the generated `migrations/NNNN_create_<plural>.sql`
+  filename AND the printed admin URL (`/admin/<plural>`).
+  Audit-broken cases (`class -> classs`, `bus -> buss`, `category
+  -> categorys`) now produce `classes`, `buses`, `categories`. No
+  irregular-noun dictionary (`person` still pluralises to `persons`,
+  not `people` -- predictable beats correct here; users rename if
+  needed). 6 new unit tests cover every rule branch.
+- **Insertion markers in the scaffolded `src/main.rs`.** The
+  `templates/project/src/main.rs.tmpl` and
+  `templates/project_blog/src/main.rs.tmpl` now contain three
+  permanent marker comments at the correct locations:
+    - `// rustio: modules` -- `mod <name>;` declarations go directly
+      under this marker.
+    - `// rustio: imports` -- `use <name>::<Name>;` lines go
+      directly under this marker.
+    - `// rustio: models` -- `.model::<YourModel>()` calls chain on
+      the `Admin::new()` builder between this marker and the closing
+      `;`.
+  These markers are part of the scaffold contract and stay put as
+  the project grows.
+- **Spatial-orientation output from `rustio startapp`.** The
+  previous prose-y "Edit src/main.rs and add these lines somewhere"
+  was replaced with a structured layout that orients the developer
+  against the markers. Output shape (NO_COLOR / non-TTY example):
+
+  ```
+  MODEL CREATED  Task  (2 fields)
+    ✓ src/task.rs
+    ✓ migrations/0001_create_tasks.sql
+
+  3 edits in src/main.rs
+    under  // rustio: modules  add  mod task;
+    under  // rustio: imports   add  use task::Task;
+    under  // rustio: models    add  .model::<Task>()
+
+    $ rustio migrate apply
+    $ cargo run
+    admin  http://127.0.0.1:8000/admin/tasks
+  ```
+
+  Operational values (paths, shell commands, admin URL) visually
+  stand out via `console::style()` -- paths cyan, commands green,
+  URL cyan-underlined, markers dim, paste-this code bold. The
+  `console` crate (already transitively present via `indicatif`)
+  is now declared as a direct dep so the call site is reviewable.
+  NO_COLOR / non-TTY environments strip ANSI sequences cleanly.
+- **Missing-marker warning.** If any of the three markers is
+  missing from `src/main.rs` when `startapp` runs (older project
+  pre-this-fix, or a project that deleted them), the output
+  prepends a `WARNING` block telling the developer to add the
+  marker(s) manually before applying the edits. The edit
+  instructions still print below. The CLI deliberately does NOT
+  edit the file -- the developer stays the author.
+
+### Compat note (intentional)
+
+PR 2.1's "byte-identical to 0.20.0 on the no-`--field` path"
+guarantee holds for words where naive `+s` happened to be correct
+(`patient`, `student`, `task`, `book_review`, etc.). It is
+intentionally broken for words where naive `+s` produced invalid
+output (`class`, `bus`, `category`, etc.) -- those were generating
+unusable table names + admin routes in 0.20.0; this fix corrects
+them.
+
+### Preserved
+
+- No AST rewriting, no auto-editing of `src/main.rs`, no
+  auto-registration, no hidden framework state.
+- Exit codes unchanged.
+- Existing 0.20.0 projects' generated models continue to compile.
+- Field-type vocabulary, `--field` parser, `--no-interactive`
+  flag, interactive prompt loop -- all unchanged from PR 2.1.
+- `rustio startproject` / `rustio new` / `rustio doctor` / every
+  other verb -- untouched.
+
 ### Added — onboarding PR 2.2 (Structural permission defaults)
 
 Most security-critical PR in Stage 2 per the original execution

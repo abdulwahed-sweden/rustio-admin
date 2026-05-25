@@ -351,7 +351,11 @@ pub fn app(name: &str, field_args: Vec<String>, no_interactive: bool) -> Result<
     ensure_in_project_root()?;
 
     let singular = camel_case(name);
-    let table = format!("{name}s");
+    // Pluralise via `app_fields::pluralise_snake` so `class` -> `classes`
+    // (not the audit-broken `classs`), `bus` -> `buses`, `category` ->
+    // `categories`, etc. Same helper drives FK target tables in
+    // `app_fields::render`.
+    let table = crate::app_fields::pluralise_snake(name);
 
     let model_path = Path::new("src").join(format!("{name}.rs"));
     if model_path.exists() {
@@ -370,7 +374,7 @@ pub fn app(name: &str, field_args: Vec<String>, no_interactive: bool) -> Result<
     // prompt fills it in when allowed.
     let fields = collect_fields(field_args, no_interactive)?;
 
-    if fields.is_empty() {
+    let field_count = if fields.is_empty() {
         // Compat path -- byte-identical to 0.20.0.
         let model_body = APP_MODEL_TEMPLATE
             .replace("{{Singular}}", &singular)
@@ -383,7 +387,7 @@ pub fn app(name: &str, field_args: Vec<String>, no_interactive: bool) -> Result<
             .map_err(|e| format!("write {}: {e}", model_path.display()))?;
         fs::write(&migration_path, migration_body)
             .map_err(|e| format!("write {}: {e}", migration_path.display()))?;
-        println!("Created {}", model_path.display());
+        None
     } else {
         let r = crate::app_fields::render(&fields);
         let model_body = APP_MODEL_WITH_FIELDS_TEMPLATE
@@ -406,33 +410,132 @@ pub fn app(name: &str, field_args: Vec<String>, no_interactive: bool) -> Result<
             .map_err(|e| format!("write {}: {e}", model_path.display()))?;
         fs::write(&migration_path, migration_body)
             .map_err(|e| format!("write {}: {e}", migration_path.display()))?;
-        println!(
-            "Created {} ({} field{})",
-            model_path.display(),
-            fields.len(),
-            if fields.len() == 1 { "" } else { "s" }
-        );
-    }
-    println!("Created {}", migration_path.display());
-    println!();
-    println!("Next steps:");
-    println!("  1. Edit `src/main.rs` and add the lines:");
-    println!();
-    println!("       mod {name};");
-    println!("       use {name}::{singular};");
-    println!();
-    println!("     Then chain it onto the Admin builder:");
-    println!();
-    println!("       Admin::new()");
-    println!("           // ... other models ...");
-    println!("           .model::<{singular}>()");
-    println!();
-    println!("  2. Apply the migration:");
-    println!();
-    println!("       rustio migrate apply");
-    println!();
-    println!("  3. Reboot the server. The `{singular}` admin pages land at /admin/{table}.");
+        Some(fields.len())
+    };
+
+    // Spatial-orientation output: name files once, then refer to
+    // them by their marker location in `src/main.rs`. Operational
+    // values (paths, commands, URLs) get color via `console`; the
+    // crate auto-degrades under NO_COLOR / non-TTY.
+    print_startapp_summary(
+        &singular,
+        &model_path,
+        &migration_path,
+        &table,
+        field_count,
+        name,
+    );
     Ok(())
+}
+
+/// One-shot console output for `rustio startapp`. Spatial layout +
+/// `console::style` for colour. NO_COLOR / non-TTY degrade
+/// automatically (the `console` crate strips ANSI in that case).
+fn print_startapp_summary(
+    singular: &str,
+    model_path: &Path,
+    migration_path: &Path,
+    table: &str,
+    field_count: Option<usize>,
+    name: &str,
+) {
+    use console::style;
+
+    let path_style = |p: &str| style(p.to_string()).cyan();
+    let cmd_style = |c: &str| style(c.to_string()).green();
+    let url_style = |u: &str| style(u.to_string()).cyan().underlined();
+    let mark_style = |m: &str| style(m.to_string()).dim();
+    let check = style("✓".to_string()).green();
+
+    println!();
+    let header = match field_count {
+        Some(n) => format!(
+            "MODEL CREATED  {}  ({} field{})",
+            style(singular).bold(),
+            n,
+            if n == 1 { "" } else { "s" }
+        ),
+        None => format!("MODEL CREATED  {}", style(singular).bold()),
+    };
+    println!("{header}");
+    println!(
+        "  {} {}",
+        check,
+        path_style(&model_path.display().to_string())
+    );
+    println!(
+        "  {} {}",
+        check,
+        path_style(&migration_path.display().to_string())
+    );
+    println!();
+
+    // Inspect main.rs for the three markers. Each missing marker
+    // surfaces a single line of warning ABOVE the edit block so the
+    // developer adds the marker first, then the edit it gates.
+    let main_rs = Path::new("src").join("main.rs");
+    let main_src = fs::read_to_string(&main_rs).unwrap_or_default();
+    let mods_ok = main_src.contains("// rustio: modules");
+    let imports_ok = main_src.contains("// rustio: imports");
+    let models_ok = main_src.contains("// rustio: models");
+
+    if !(mods_ok && imports_ok && models_ok) {
+        let warn = style("WARNING").yellow().bold();
+        println!("{warn}  `src/main.rs` is missing one or more rustio insertion markers.");
+        println!("         Add the marker(s) below to your file manually before applying");
+        println!("         the edits. `rustio startapp` deliberately does NOT edit your");
+        println!("         `src/main.rs` -- you stay the author.");
+        println!();
+        if !mods_ok {
+            println!(
+                "  add   {}  (suggested location: after the `use` block at the top)",
+                mark_style("// rustio: modules")
+            );
+        }
+        if !imports_ok {
+            println!(
+                "  add   {}  (suggested location: after the `// rustio: modules` line)",
+                mark_style("// rustio: imports")
+            );
+        }
+        if !models_ok {
+            println!(
+                "  add   {}  (suggested location: inside the `Admin::new()...` builder chain, before `;`)",
+                mark_style("// rustio: models")
+            );
+        }
+        println!();
+    }
+
+    println!(
+        "{} edits in {}",
+        style("3").bold(),
+        path_style("src/main.rs")
+    );
+    println!(
+        "  under  {}  add  {}",
+        mark_style("// rustio: modules"),
+        style(format!("mod {name};")).bold()
+    );
+    println!(
+        "  under  {}  add  {}",
+        mark_style("// rustio: imports "),
+        style(format!("use {name}::{singular};")).bold()
+    );
+    println!(
+        "  under  {}  add  {}",
+        mark_style("// rustio: models  "),
+        style(format!(".model::<{singular}>()")).bold()
+    );
+    println!();
+
+    println!("  {}", cmd_style("$ rustio migrate apply"));
+    println!("  {}", cmd_style("$ cargo run"));
+    println!(
+        "  {}  {}",
+        style("admin").dim(),
+        url_style(&format!("http://127.0.0.1:8000/admin/{table}"))
+    );
 }
 
 /// Parse the `--field` CLI args, then -- if zero fields landed AND

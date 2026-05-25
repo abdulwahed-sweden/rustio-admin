@@ -8,6 +8,10 @@ use rustio_admin::{
     Server,
 };
 
+// rustio: modules — `mod <name>;` declarations from `rustio startapp` go directly under this marker.
+
+// rustio: imports — `use <name>::<Name>;` lines from `rustio startapp` go directly under this marker.
+
 // The first-boot homepage at `/`. Baked at compile time so the
 // binary stays single-file. Replace by editing this file and
 // re-running `cargo run`, or remove the `.get("/", …)` route below
@@ -32,12 +36,16 @@ async fn main() -> Result<()> {
     migrations::apply(&db, "migrations").await?;
     background::spawn_housekeeping(db.clone());
 
-    // No domain models registered by default — `rustio startapp <name>`
-    // adds them, then chain `.model::<YourModel>()` onto this builder.
     // `.app_name(...)` flows your project name into the admin tab
     // title, login header, and dashboard h1 so the framework reads as
-    // "powered by RustIO", not "inside RustIO".
-    let admin = Admin::new().app_name("{{name_title}}");
+    // "powered by RustIO", not "inside RustIO". The `// rustio: models`
+    // marker below is the insertion point for `.model::<YourModel>()`
+    // calls printed by `rustio startapp` — chain them between the
+    // marker and the closing `;`.
+    let admin = Admin::new()
+        .app_name("{{name_title}}")
+        // rustio: models
+        ;
     admin.seed_permissions(&db).await?;
 
     // Templates::new(None) → embedded defaults only.

@@ -467,10 +467,43 @@ fn insert_value_expr(name: &str, kind: &FieldKind) -> String {
     }
 }
 
-/// CamelCase singular -> snake_case plural (matches the existing
-/// `scaffold.rs` convention for the table name). Tiny re-impl
-/// instead of pulling in the macros crate's plural_snake to keep
-/// this module dep-free.
+/// Pluralise a snake_case singular noun. Three rules, evaluated
+/// in order:
+///
+/// 1. Ends in `s` / `x` / `z` / `ch` / `sh` → add `es`
+///    (`class -> classes`, `bus -> buses`, `box -> boxes`).
+/// 2. Ends in consonant + `y` → drop `y`, add `ies`
+///    (`category -> categories`).
+/// 3. Otherwise → add `s` (`task -> tasks`).
+///
+/// Vowel + `y` keeps the `y` (`monkey -> monkeys`). Deliberately
+/// no irregular-noun dictionary (`person -> persons`, not
+/// `people` — predictable beats correct here; users rename if
+/// needed). Empty input returns empty.
+pub(crate) fn pluralise_snake(s: &str) -> String {
+    if s.is_empty() {
+        return String::new();
+    }
+    if let Some(stem) = s.strip_suffix('y') {
+        let prev = stem.chars().last();
+        return if matches!(prev, Some(c) if "aeiou".contains(c)) {
+            format!("{s}s")
+        } else {
+            format!("{stem}ies")
+        };
+    }
+    if s.ends_with("ch") || s.ends_with("sh") {
+        return format!("{s}es");
+    }
+    let last = s.chars().last().unwrap();
+    if matches!(last, 's' | 'x' | 'z') {
+        return format!("{s}es");
+    }
+    format!("{s}s")
+}
+
+/// CamelCase singular -> snake_case plural. Composes
+/// [`pluralise_snake`] after a camel→snake walk.
 fn pluralise_camel_to_snake(name: &str) -> String {
     let mut snake = String::with_capacity(name.len() + 2);
     for (i, c) in name.chars().enumerate() {
@@ -483,30 +516,7 @@ fn pluralise_camel_to_snake(name: &str) -> String {
             snake.push(c);
         }
     }
-    // Pluralise: handles the common cases the scaffold's own
-    // pluraliser handles (matches the existing `app` flow's
-    // expectations). Same `-s` / `-ies` / `-es` rules.
-    if snake.ends_with('y') {
-        // Consonant + y -> -ies (`category` -> `categories`).
-        // Vowel + y -> keep + -s (`monkey` -> `monkeys`).
-        let prev = snake.chars().rev().nth(1);
-        if matches!(prev, Some(c) if "aeiou".contains(c)) {
-            format!("{snake}s")
-        } else {
-            let mut s = snake[..snake.len() - 1].to_string();
-            s.push_str("ies");
-            s
-        }
-    } else if snake.ends_with('s')
-        || snake.ends_with('x')
-        || snake.ends_with('z')
-        || snake.ends_with("ch")
-        || snake.ends_with("sh")
-    {
-        format!("{snake}es")
-    } else {
-        format!("{snake}s")
-    }
+    pluralise_snake(&snake)
 }
 
 #[cfg(test)]
@@ -772,5 +782,49 @@ mod tests {
         assert_eq!(pluralise_camel_to_snake("Branch"), "branches");
         assert_eq!(pluralise_camel_to_snake("Dish"), "dishes");
         assert_eq!(pluralise_camel_to_snake("BookReview"), "book_reviews");
+    }
+
+    // ---- pluralise_snake (the bug-fix surface) ----
+
+    #[test]
+    fn pluralise_snake_default_adds_s() {
+        assert_eq!(pluralise_snake("task"), "tasks");
+        assert_eq!(pluralise_snake("patient"), "patients");
+        assert_eq!(pluralise_snake("book_review"), "book_reviews");
+    }
+
+    #[test]
+    fn pluralise_snake_sxz_take_es() {
+        // The bug from the audit: naive +s on "class" yielded "classs".
+        assert_eq!(pluralise_snake("class"), "classes");
+        assert_eq!(pluralise_snake("bus"), "buses");
+        assert_eq!(pluralise_snake("status"), "statuses");
+        assert_eq!(pluralise_snake("box"), "boxes");
+        assert_eq!(pluralise_snake("quiz"), "quizes");
+    }
+
+    #[test]
+    fn pluralise_snake_ch_sh_take_es() {
+        assert_eq!(pluralise_snake("branch"), "branches");
+        assert_eq!(pluralise_snake("dish"), "dishes");
+    }
+
+    #[test]
+    fn pluralise_snake_consonant_y_becomes_ies() {
+        assert_eq!(pluralise_snake("category"), "categories");
+        assert_eq!(pluralise_snake("city"), "cities");
+        assert_eq!(pluralise_snake("party"), "parties");
+    }
+
+    #[test]
+    fn pluralise_snake_vowel_y_keeps_y() {
+        assert_eq!(pluralise_snake("monkey"), "monkeys");
+        assert_eq!(pluralise_snake("survey"), "surveys");
+        assert_eq!(pluralise_snake("day"), "days");
+    }
+
+    #[test]
+    fn pluralise_snake_empty_returns_empty() {
+        assert_eq!(pluralise_snake(""), "");
     }
 }

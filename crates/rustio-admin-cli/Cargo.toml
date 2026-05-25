@@ -33,6 +33,12 @@ rpassword = "7"
 # pipes / CI; we layer one additional gate on top so the global
 # `--quiet` / `--no-progress` flags work too.
 indicatif = "0.17"
+# Terminal styling for `rustio startapp` spatial-orientation output
+# (paths, commands, URLs visually distinct). `console` is already in
+# the transitive tree via `indicatif`; declaring it directly keeps
+# the call site reviewable and locks the version. NO_COLOR / TTY
+# detection lives inside the crate.
+console = "0.15"
 
 # DB + env (DATABASE_URL is read from .env when present)
 sqlx      = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "chrono"] }
