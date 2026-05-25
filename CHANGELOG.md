@@ -50,6 +50,96 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added — onboarding PR 2.2 (Structural permission defaults)
+
+Most security-critical PR in Stage 2 per the original execution
+plan. A fresh database now ships with three named permission
+groups every project will end up needing — `administrator`,
+`editor`, `viewer` — sized conservatively, lockstepped to the
+CLI's `--role` values, and **never silently re-shaping** projects
+that have built their own group structure.
+
+- **`auth::seed_default_groups(db)`** — new function called at the
+  end of `auth::init_tables` on every boot. Creates the three
+  groups idempotently (`create_group` uses `ON CONFLICT (name)`).
+  Guarded: skipped entirely when `rustio_groups` contains any
+  name NOT in the default set, so existing 0.20.x projects with
+  custom groups pick up zero changes on upgrade.
+- **`auth::grant_model_to_default_groups(db, app, singular)`** —
+  new function called by `Admin::seed_permissions` after each
+  model registers its four CRUD permissions. Applies the grant
+  matrix (administrator gets all four; editor gets add/change/view;
+  viewer gets view only). Missing groups (because the seed was
+  skipped) are silent no-ops.
+- **`auth::DEFAULT_GROUP_NAMES: [&str; 3]`** — exported constant,
+  the single source of truth for the three names.
+- **`CliRole::Editor` and `CliRole::Viewer`** — two new
+  `--role` values on `rustio user create`. Both map internally to
+  `Role::User` (the lowest tier — their authority comes entirely
+  from group membership, not from a tier-level bypass). The
+  `Administrator` / `Developer` permission-check bypass is
+  unchanged.
+- **`CliRole::default_group_name()`** — returns `Some("administrator")`
+  / `Some("editor")` / `Some("viewer")` for the three new-style
+  roles and `None` for the legacy five.
+- **Group assignment on user-create** — `rustio user create --role
+  <r>` now adds the new user to the matching seeded group when
+  `<r>` is `administrator` / `editor` / `viewer`. Output gains an
+  `Added to group: <name>` line. Legacy roles (`user`, `staff`,
+  `supervisor`, `developer`) keep their existing behaviour (no
+  group assignment).
+- **`lockstep_default_groups_match_cli_role_names` test** — CI
+  guard that asserts `DEFAULT_GROUP_NAMES` and the set of
+  `CliRole` variants returning `Some` from `default_group_name()`
+  are byte-equal. Renaming either side without the other fails CI.
+- **`docs/design/DESIGN_PERMISSIONS.md`** — new doctrine doc
+  (eight sections, mirrors the shape of `DESIGN_AUDIT.md` /
+  `DESIGN_SESSIONS.md`). Defines the three groups, the grant
+  matrix, the seeding conditions, the lockstep contract, the
+  `Role` enum vs. seeded-groups distinction, and the seven
+  non-negotiable rules.
+- **Scaffold's `README.md.tmpl` §3** updated to mention the three
+  default groups and link to the doctrine doc.
+
+### Grant matrix (the contract — see DESIGN_PERMISSIONS.md §3)
+
+|              | `add` | `change` | `delete` | `view` |
+|--------------|-------|----------|----------|--------|
+| `administrator` | ✓     | ✓        | ✓        | ✓      |
+| `editor`        | ✓     | ✓        |          | ✓      |
+| `viewer`        |       |          |          | ✓      |
+
+`editor` deliberately lacks `delete` — destructive operations
+belong to administrators by default. Projects that want
+editor-level delete grant `<app>.delete_<model>` to the `editor`
+group explicitly via the admin permission-matrix page.
+
+### Preserved
+
+- The framework's `Role` enum (`User / Staff / Supervisor /
+  Administrator / Developer`) is unchanged. No variants added,
+  none removed. Library API surface unchanged.
+- `Role::Administrator` and `Role::Developer` keep their
+  permission-check bypass behaviour.
+- `rustio user create --role <r>` for the legacy five values
+  (`user / staff / supervisor / administrator / developer`) works
+  exactly as before. `--role administrator` now additionally adds
+  the user to the `administrator` group; the framework bypass
+  means functional access is unchanged.
+- Schema unchanged. The seed is INSERTs only — no DDL.
+- Existing 0.20.x projects with user-defined groups pick up zero
+  changes on upgrade.
+- Migration engine semantics unchanged.
+- Exit codes unchanged.
+- No new dependencies.
+
+### Doctrine
+
+- PR 2.2 implements `DESIGN_PERMISSIONS.md` and
+  `DESIGN_ONBOARDING.md` §7 (Demo data vs structural defaults).
+  Conservative defaults, never broad. Lockstep enforced by CI.
+  No silent re-shaping of existing projects.
+
 ### Added — onboarding PR 2.1 (`rustio startapp` redesign)
 
 - **`--field <name>:<type>` flag** on `rustio startapp`, repeatable.

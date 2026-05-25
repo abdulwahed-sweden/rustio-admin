@@ -29,6 +29,18 @@ use crate::emergency_ui::{self, ConfirmOutcome, OperationContext};
 
 /// CLI surface for `Role`. clap's derive needs `ValueEnum` and we
 /// deliberately keep the labels lowercase to match the SQL column.
+///
+/// PR 2.2 (0.21.0) added `Editor` and `Viewer`. They are NOT new
+/// framework `Role` variants — both map to `Role::User`. Their
+/// actual permissions come from the matching seeded group
+/// (`auth::DEFAULT_GROUP_NAMES`). The CLI's `Create` action assigns
+/// group membership on user-create so the role choice and the
+/// group the user lands in are the same string.
+///
+/// The three values `administrator` / `editor` / `viewer` MUST stay
+/// in exact lockstep with `auth::DEFAULT_GROUP_NAMES` — the
+/// `lockstep_default_groups_match_cli_role_names` test below fails
+/// CI if either side drifts.
 #[derive(Copy, Clone, Debug, ValueEnum)]
 pub enum CliRole {
     User,
@@ -36,6 +48,10 @@ pub enum CliRole {
     Supervisor,
     Administrator,
     Developer,
+    /// PR 2.2. Maps to `Role::User`; assigned to the `editor` group.
+    Editor,
+    /// PR 2.2. Maps to `Role::User`; assigned to the `viewer` group.
+    Viewer,
 }
 
 impl From<CliRole> for Role {
@@ -46,6 +62,26 @@ impl From<CliRole> for Role {
             CliRole::Supervisor => Role::Supervisor,
             CliRole::Administrator => Role::Administrator,
             CliRole::Developer => Role::Developer,
+            // PR 2.2 — Editor / Viewer ride at the base User tier;
+            // their real authority comes from group membership.
+            CliRole::Editor | CliRole::Viewer => Role::User,
+        }
+    }
+}
+
+impl CliRole {
+    /// Name of the seeded default group this role assigns to on
+    /// `rustio user create`, if any. Returns `None` for the legacy
+    /// 5-tier roles which don't have an associated default group
+    /// (their authority comes from the tier-level `check_permission`
+    /// path: `Administrator` / `Developer` bypass; `Staff` /
+    /// `Supervisor` / `User` rely on direct grants).
+    pub fn default_group_name(&self) -> Option<&'static str> {
+        match self {
+            CliRole::Administrator => Some("administrator"),
+            CliRole::Editor => Some("editor"),
+            CliRole::Viewer => Some("viewer"),
+            CliRole::User | CliRole::Staff | CliRole::Supervisor | CliRole::Developer => None,
         }
     }
 }
@@ -234,7 +270,7 @@ pub async fn run(action: Action) -> Result<(), String> {
             create(
                 db,
                 email,
-                role.into(),
+                role,
                 password,
                 first_name,
                 last_name,
@@ -274,7 +310,7 @@ pub async fn run(action: Action) -> Result<(), String> {
 async fn create(
     db: Db,
     email: String,
-    role: Role,
+    cli_role: CliRole,
     password: Option<String>,
     first_name: Option<String>,
     last_name: Option<String>,
@@ -307,6 +343,7 @@ async fn create(
     let policy = DefaultPasswordPolicy::new();
     policy.validate(&pw).map_err(|e| e.to_string())?;
 
+    let role: Role = cli_role.into();
     let id = auth::create_user(&db, &email, &pw, role)
         .await
         .map_err(|e| format!("create_user: {e}"))?;
@@ -335,6 +372,30 @@ async fn create(
     }
 
     println!("Created user id={id} email={email} role={role}");
+
+    // PR 2.2 -- structural permission defaults. If the chosen role
+    // maps to a seeded default group (`administrator` / `editor` /
+    // `viewer`), add the new user to it so their authority comes
+    // from the group's permission grants (and shows up in the
+    // group's member list for UI / audit clarity). Looks up the
+    // group by name; a missing group means `seed_default_groups`
+    // was skipped on this project (user-defined-groups guard), in
+    // which case we don't try to invent membership -- the operator
+    // can wire it via the admin permission-matrix page.
+    if let Some(group_name) = cli_role.default_group_name() {
+        let group_id: Option<i64> =
+            sqlx::query_scalar("SELECT id FROM rustio_groups WHERE name = $1")
+                .bind(group_name)
+                .fetch_optional(db.pool())
+                .await
+                .map_err(|e| format!("lookup group `{group_name}`: {e}"))?;
+        if let Some(gid) = group_id {
+            auth::add_user_to_group(&db, id, gid)
+                .await
+                .map_err(|e| format!("add to group `{group_name}`: {e}"))?;
+            println!("Added to group: {group_name}");
+        }
+    }
     Ok(())
 }
 
@@ -1150,7 +1211,58 @@ fn build_summary(op: &str, reason: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_summary, format_perms_report, PermsReport};
+    use super::{build_summary, format_perms_report, CliRole, PermsReport};
+
+    /// PR 2.2 lockstep guard. The three names in
+    /// `auth::DEFAULT_GROUP_NAMES` MUST exactly match the set of
+    /// `CliRole` variants that return `Some(name)` from
+    /// `default_group_name()`. Renaming either side without the
+    /// other -- or adding a new default role/group on only one
+    /// side -- fails this test and blocks CI.
+    ///
+    /// Required behaviour, not a coincidence. Reviewers who hit
+    /// this failure should NOT relax the assertion; they should
+    /// either revert the asymmetric change or extend both sides.
+    #[test]
+    fn lockstep_default_groups_match_cli_role_names() {
+        use rustio_admin::auth::DEFAULT_GROUP_NAMES;
+        use std::collections::BTreeSet;
+
+        let groups: BTreeSet<&'static str> = DEFAULT_GROUP_NAMES.iter().copied().collect();
+
+        // Every CliRole variant that claims a default group.
+        let cli_roles: BTreeSet<&'static str> = [
+            CliRole::User,
+            CliRole::Staff,
+            CliRole::Supervisor,
+            CliRole::Administrator,
+            CliRole::Developer,
+            CliRole::Editor,
+            CliRole::Viewer,
+        ]
+        .iter()
+        .filter_map(|r| r.default_group_name())
+        .collect();
+
+        assert_eq!(
+            groups, cli_roles,
+            "lockstep drift: rustio_admin::auth::DEFAULT_GROUP_NAMES ({groups:?}) \
+             must equal the set of CliRole values that return Some from \
+             default_group_name() ({cli_roles:?})"
+        );
+
+        // Sanity: the lockstep set is non-empty and equals exactly
+        // the three doctrine names. If a future PR legitimately
+        // adds a fourth default role, update both lists AND the
+        // expected set below.
+        let expected: BTreeSet<&'static str> =
+            ["administrator", "editor", "viewer"].into_iter().collect();
+        assert_eq!(
+            groups, expected,
+            "doctrine guard: the seeded default groups should be exactly \
+             {{administrator, editor, viewer}} per DESIGN_PERMISSIONS.md"
+        );
+    }
 
     fn base_report() -> PermsReport {
         PermsReport {

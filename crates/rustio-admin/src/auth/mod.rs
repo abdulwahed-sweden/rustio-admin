@@ -34,9 +34,10 @@ pub use mfa::MfaPolicy;
 pub(crate) use permissions::invalidate_user_cache;
 // public:
 pub use permissions::{
-    add_user_to_group, check_permission, create_group, grant_to_group, grant_to_user,
-    init_permission_tables, permissions_for_user, register_model_permissions,
-    remove_user_from_group, Permission, PermissionError, Superuser,
+    add_user_to_group, check_permission, create_group, grant_model_to_default_groups,
+    grant_to_group, grant_to_user, init_permission_tables, permissions_for_user,
+    register_model_permissions, remove_user_from_group, seed_default_groups, Permission,
+    PermissionError, Superuser, DEFAULT_GROUP_NAMES,
 };
 // public:
 pub use recovery::{
@@ -82,6 +83,12 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     sessions::migrate_session_schema(db).await?;
     sessions::migrate_session_lifecycle(db).await?;
     init_permission_tables(db).await?;
+    // PR 2.2 (0.21.0) — structural permission defaults. Seeds the
+    // three groups (`administrator`, `editor`, `viewer`) on fresh
+    // databases. Guarded: skipped when the project has built its
+    // own group structure. Idempotent on the happy path.
+    // See `docs/design/DESIGN_PERMISSIONS.md`.
+    seed_default_groups(db).await?;
     // R1 (0.5.0) — self password recovery schema. See
     // DESIGN_RECOVERY.md §9 for the contract.
     recovery::migrate_user_recovery_schema(db).await?;

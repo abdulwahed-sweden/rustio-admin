@@ -327,6 +327,122 @@ pub async fn register_model_permissions(db: &Db, app: &str, singular: &str) -> R
     Ok(())
 }
 
+// public:
+/// The three structural permission groups every fresh database is
+/// seeded with (PR 2.2 / `DESIGN_PERMISSIONS.md`).
+///
+/// - `administrator` — full system access.
+/// - `editor` — create / read / update on content models only.
+/// - `viewer` — read-only on content models.
+///
+/// **These are structural defaults, not demo data.** Group names
+/// MUST exactly match the `--role` values accepted by `rustio user
+/// create` so a developer's role choice and the group their account
+/// gets dropped into are the same string. The CLI's lockstep test
+/// (`crates/rustio-admin-cli/src/user.rs`) fails CI if either side
+/// drifts.
+pub const DEFAULT_GROUP_NAMES: [&str; 3] = ["administrator", "editor", "viewer"];
+
+// public:
+/// Seed the three structural permission groups on a fresh database.
+///
+/// Idempotent: calls `create_group` (ON CONFLICT (name) DO UPDATE
+/// description) for each name. Safe to invoke on every boot.
+///
+/// **Guard (PR 2.2 doctrine):** the seed is SKIPPED when the
+/// `rustio_groups` table already contains any group name NOT in
+/// [`DEFAULT_GROUP_NAMES`]. An existing project that has built its
+/// own group structure on 0.20.x is never silently re-shaped by
+/// upgrading to 0.21.0; only databases that are either fresh or
+/// already match the default set get the seed applied.
+pub async fn seed_default_groups(db: &Db) -> Result<()> {
+    let foreign_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM rustio_groups
+         WHERE name NOT IN ('administrator', 'editor', 'viewer')",
+    )
+    .fetch_one(db.pool())
+    .await
+    .map_err(|e| Error::Internal(format!("seed_default_groups guard: {e}")))?;
+    if foreign_count > 0 {
+        // Project has user-defined groups; respect that and skip.
+        return Ok(());
+    }
+    create_group(db, "administrator", "Full system access.").await?;
+    create_group(
+        db,
+        "editor",
+        "Create / read / update on content models only. No user, group, settings, or framework-admin actions.",
+    )
+    .await?;
+    create_group(db, "viewer", "Read-only access to content models.").await?;
+    Ok(())
+}
+
+// public:
+/// Per-model permission grants for the seeded default groups
+/// (PR 2.2 / `DESIGN_PERMISSIONS.md`). Called by
+/// [`crate::admin::Admin::seed_permissions`] after the four CRUD
+/// permissions are registered for `<app>.<singular>`. Each grant
+/// is idempotent (`grant_to_group` uses ON CONFLICT DO NOTHING);
+/// missing groups (because [`seed_default_groups`] was skipped by
+/// the user-defined-groups guard) cause silent no-ops, not errors.
+///
+/// Grant matrix:
+///
+/// |              | `add` | `change` | `delete` | `view` |
+/// |--------------|-------|----------|----------|--------|
+/// | administrator | ✓     | ✓        | ✓        | ✓      |
+/// | editor        | ✓     | ✓        |          | ✓      |
+/// | viewer        |       |          |          | ✓      |
+///
+/// `editor` deliberately lacks `delete` — destructive operations
+/// belong to administrators by default. Projects that want
+/// editor-level delete access either grant `<app>.delete_<model>`
+/// to the `editor` group explicitly via the admin permission-matrix
+/// UI, or move those users to `administrator`.
+pub async fn grant_model_to_default_groups(db: &Db, app: &str, singular: &str) -> Result<()> {
+    // Look up the three group IDs. Missing => skip (user-defined
+    // groups guard fired; the default set isn't installed on this
+    // database, so per-model grants would have nowhere to land).
+    let admin_id = group_id_by_name(db, "administrator").await?;
+    let editor_id = group_id_by_name(db, "editor").await?;
+    let viewer_id = group_id_by_name(db, "viewer").await?;
+
+    let add = format!("{app}.add_{singular}");
+    let change = format!("{app}.change_{singular}");
+    let delete = format!("{app}.delete_{singular}");
+    let view = format!("{app}.view_{singular}");
+
+    if let Some(id) = admin_id {
+        grant_to_group(db, id, &add).await?;
+        grant_to_group(db, id, &change).await?;
+        grant_to_group(db, id, &delete).await?;
+        grant_to_group(db, id, &view).await?;
+    }
+    if let Some(id) = editor_id {
+        grant_to_group(db, id, &add).await?;
+        grant_to_group(db, id, &change).await?;
+        grant_to_group(db, id, &view).await?;
+        // No delete — see grant matrix above.
+    }
+    if let Some(id) = viewer_id {
+        grant_to_group(db, id, &view).await?;
+    }
+    Ok(())
+}
+
+/// Look up a group ID by name. Returns Ok(None) when the group
+/// doesn't exist (intentional: callers want graceful no-op on
+/// missing-default-groups, not error propagation).
+async fn group_id_by_name(db: &Db, name: &str) -> Result<Option<i64>> {
+    let id: Option<i64> = sqlx::query_scalar("SELECT id FROM rustio_groups WHERE name = $1")
+        .bind(name)
+        .fetch_optional(db.pool())
+        .await
+        .map_err(|e| Error::Internal(format!("group_id_by_name({name}): {e}")))?;
+    Ok(id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

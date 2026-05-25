@@ -1078,6 +1078,12 @@ impl Admin {
         for entry in &self.entries {
             let singular = entry.singular_name.to_ascii_lowercase();
             crate::auth::register_model_permissions(db, entry.admin_name, &singular).await?;
+            // PR 2.2 — grant the four model-CRUD permissions to the
+            // three default groups per the grant matrix in
+            // `auth::permissions::grant_model_to_default_groups`. No-op
+            // when the seeded groups are absent (user-defined-groups
+            // guard fired in `seed_default_groups`).
+            crate::auth::grant_model_to_default_groups(db, entry.admin_name, &singular).await?;
         }
         Ok(())
     }

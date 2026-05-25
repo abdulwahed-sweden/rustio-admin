@@ -91,6 +91,15 @@ carry random tokens and the database stores SHA-256 hashes only.
 Per-model permissions sit on a five-tier role ladder
 (User · Staff · Supervisor · Administrator · Developer).
 
+Every fresh database is seeded with three structural permission
+groups (`administrator`, `editor`, `viewer`) -- they are
+foundational defaults the project builds on, not throwaway
+example data. `rustio user create --role <name>` accepts those
+three values (alongside the legacy five) and drops the new user
+into the matching group on create. See
+[`docs/design/DESIGN_PERMISSIONS.md`](https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/design/DESIGN_PERMISSIONS.md)
+for the grant matrix and the doctrine.
+
 ## 4. Common commands
 
 ```sh
