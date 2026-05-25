@@ -164,7 +164,9 @@ fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Re
         }
     );
     println!("  rustio user create --email admin@{name}.local --role administrator");
-    println!("  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin");
+    println!(
+        "  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin + /admin/docs"
+    );
     Ok(())
 }
 
@@ -196,7 +198,9 @@ fn project_with_db_in(
         }
     );
     println!("  rustio user create --email admin@{name}.local --role administrator");
-    println!("  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin");
+    println!(
+        "  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin + /admin/docs"
+    );
     println!();
     // First-build expectation note. PR 1.4 / DESIGN_ONBOARDING.md §9
     // -- only printed on the wizard path so script users (who know

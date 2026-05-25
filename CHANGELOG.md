@@ -50,6 +50,77 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added — onboarding PR 2.4 (docs discoverability)
+
+Smallest of the originally-planned Stage 2 PRs. Three small
+affordances on top of the existing `rustio docs` placeholder
+from PR 1.1; no new architecture, no new ongoing surfaces.
+
+- **`rustio docs` becomes a useful command** — probes the local
+  `/admin/health` endpoint with a 500ms timeout and reflects the
+  result in the printed output. Server reachable → "RustIO docs
+  are running on this project" with the local URL prominent;
+  server unreachable → "RustIO documentation" with a `(start
+  the server with cargo run to enable)` hint and the online +
+  repo URLs.
+- **`rustio docs --open`** — new flag that launches the local
+  `/admin/docs` in the default browser (`open` on macOS,
+  `xdg-open` on Linux/BSD, `cmd /c start` on Windows). Exits 1
+  if the server is unreachable or the browser opener fails so
+  scripts piping `--open` can detect the failure. Default off
+  — auto-opening a browser is the kind of magic
+  `DESIGN_ONBOARDING.md` §4 forbids.
+- **Health probe specificity** — the probe requires both a
+  2xx/3xx status AND an `x-correlation-id` response header
+  (set by the framework's `middleware::correlation_id` on
+  every response, BEFORE any auth gate). This is the
+  rustio-specific tell that distinguishes a real rustio server
+  from a foreign HTTP service bound to port 8000. An audit-
+  driven regression test (`health_probe_rejects_foreign_server_
+  without_correlation_id`) locks the behaviour.
+- **Raw `std::net::TcpStream` for the probe** — no HTTP client
+  dep. ~50 lines vs. pulling in `ureq` / `hyper` for one
+  endpoint. Failure-closed: any error / refused / hung
+  connection returns "not running".
+- **New module `crates/rustio-admin-cli/src/docs.rs`** — owns
+  the probe + browser-opener + the `console::style` output.
+  Six unit tests (probe behaviour with stub servers: 200 with
+  correlation_id; 303 with correlation_id; 303 WITHOUT
+  correlation_id; 500 with correlation_id; non-HTTP garbage;
+  nothing listening).
+- **Homepage gains a "sign in required" hint** — one line of
+  muted text under the three nav pills (`Admin`, `Docs`,
+  `Health`) in `templates/project/templates/home.html` to
+  explain why clicking any of them redirects to the login
+  page when not signed in. Static label (no login-state
+  inference); uses the existing `--muted` CSS custom property.
+- **Wizard Next Steps mentions `/admin/docs`** — the
+  scaffolded `cargo run` comment now reads
+  `# http://127.0.0.1:8000 (homepage) + /admin + /admin/docs`
+  in both the wizard path and the non-interactive
+  `startproject` path.
+- **Generated README §4 (Common commands)** gets two new
+  lines: `rustio docs` and `rustio docs --open`.
+
+### Dependencies
+
+- `console = "0.15"` (declared as a direct dep in PR 2.1 for
+  startapp styling) is reused. No new dependency in this PR.
+
+### Preserved
+
+- Exit codes: 0 on success, 1 only on `--open` failure or
+  browser-launcher failure.
+- The existing `rustio docs` no-flags output structure (URLs
+  with the same three labels) is preserved; the bytes change
+  but scripts that grep for "RustIO" / "docs.rs/rustio-admin"
+  still match.
+- Non-TTY / CI / NO_COLOR cleanly strip ANSI via the
+  `console::style` auto-detection.
+- No framework crate changes.
+- No new wizard prompt, no new state file, no new CLI verb.
+- The framework's `/admin/docs` page itself is unchanged.
+
 ### Fixed — `rustio startapp` pluralization + spatial orientation
 
 Two related fixes to the `rustio startapp` developer experience.

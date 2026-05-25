@@ -7,8 +7,10 @@
 //!   Identical behaviour, identical files, identical exit codes.
 //! - `rustio doctor` -- health check: reachable DB? auth tables
 //!   present? migrations up to date? at least one administrator?
-//! - `rustio docs` -- print where the framework's documentation
-//!   lives (online, repository, in-project once the server runs).
+//! - `rustio docs [--open]` -- print where the framework's docs
+//!   live; probes the local server and reflects reachability
+//!   in the output; `--open` launches the local docs in your
+//!   default browser (PR 2.4).
 //!
 //! Full surface (still listed in `--help` after the welcome banner):
 //!
@@ -37,6 +39,7 @@ use clap::{Parser, Subcommand};
 mod app_fields;
 mod audit;
 mod builder;
+mod docs;
 mod doctor;
 mod doctor_email;
 mod emergency_ui;
@@ -212,11 +215,21 @@ enum Command {
 
     /// Print where the framework's documentation lives.
     ///
-    /// Phase 1 keeps this verb intentionally tiny -- it prints
-    /// online, repository, and in-project doc locations. The
-    /// browser opener and running-server detection ship later
-    /// (PR 2.4 of `docs/design/DESIGN_ONBOARDING.md` §10).
-    Docs,
+    /// Probes `http://127.0.0.1:8000/admin/health` with a short
+    /// timeout to detect a running local server; the printed URL
+    /// block reflects whether the local `/admin/docs` is reachable.
+    /// Pass `--open` to launch the local docs in your default
+    /// browser (no-op without a running server; exits 1).
+    Docs {
+        /// Open the local `/admin/docs` page in your default
+        /// browser. Requires the project's server to be running
+        /// (`cargo run`). Exits 1 if the server is unreachable
+        /// or the browser opener fails. Default off — auto-
+        /// opening a browser is the kind of magic
+        /// `DESIGN_ONBOARDING.md` §4 forbids.
+        #[arg(long)]
+        open: bool,
+    },
 
     /// Curated `AdminTheme` palette presets. Subcommands print a
     /// Rust snippet to stdout -- the operator pastes it into their
@@ -416,7 +429,7 @@ fn main() -> ExitCode {
         Command::Add { action } => builder_add(action),
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
-        Command::Docs => run_docs(),
+        Command::Docs { open } => docs::print_docs(open),
         Command::Override { name, force, out } => template_override::run(name, force, &out),
         Command::Reload => reload::run(),
         Command::TestInit { force, out } => test_init::run(force, &out),
@@ -431,7 +444,7 @@ fn main() -> ExitCode {
                 | Command::Add { .. }
                 | Command::Plan
                 | Command::Commit { .. }
-                | Command::Docs
+                | Command::Docs { .. }
                 | Command::Override { .. }
                 | Command::Reload
                 | Command::TestInit { .. }
@@ -545,22 +558,6 @@ fn dispatch_new(
         "project name is required in non-interactive mode (try `rustio new <name>`)".to_string()
     })?;
     scaffold::project(&name, &preset)
-}
-
-/// `rustio docs` -- print where the framework's documentation
-/// lives. Phase 1 keeps this tiny on purpose; the running-server
-/// detector and browser opener ship with PR 2.4 of the
-/// onboarding doctrine (`docs/design/DESIGN_ONBOARDING.md` §10).
-fn run_docs() -> Result<(), String> {
-    println!("RustIO documentation");
-    println!();
-    println!("  Online    https://docs.rs/rustio-admin");
-    println!("  Repo      https://github.com/abdulwahed-sweden/rustio-admin");
-    println!("  In-repo   ./docs/  (when running from the source tree)");
-    println!();
-    println!("Once your project's server is running, the built-in admin docs are at:");
-    println!("  http://127.0.0.1:8000/admin/docs");
-    Ok(())
 }
 
 /// `rustio add ...` dispatch.
