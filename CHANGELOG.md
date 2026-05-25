@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.21.0** | 2026-05-25 | **Stage 2 — first-model + structural permission defaults.** Four PRs: `rustio startapp --field <name>:<type>` accepts a closed 8-token vocabulary (`str / text / int / bigint / bool / timestamp / json / fk:<Model>`) and produces a real model file + matching migration in one CLI breath; structural permission defaults (`administrator`, `editor`, `viewer` — three groups seeded on fresh databases, lockstepped to `rustio user create --role` values, guarded against re-shaping existing projects); `startapp` pluralization fix (audit-broken `class → classs` now `class → classes`; `bus → buses`; `category → categories`); spatial-orientation `startapp` output with three `// rustio: modules / imports / models` insertion markers in the scaffolded `main.rs` + structured edit instructions referencing them; `rustio docs` becomes useful (probes local server via `x-correlation-id` specificity check, `--open` launches default browser); homepage gains a `sign in required` hint under the nav pills. New doctrine doc `docs/design/DESIGN_PERMISSIONS.md`. **No API breaks** — `Role` enum unchanged; existing 0.20.x projects update by bumping the pin. New deps: `console = "0.15"` (already transitively in tree via indicatif). |
 | **0.20.0** | 2026-05-25 | **First-time developer experience overhaul.** The headline release of Stage 1: friendly `rustio new <name>` alias; calm interactive TTY wizard (project name → project type → DB name → auto-`.env`); first-boot homepage at `/` with project-type-aware subtitle and three CSS custom-property tokens for re-skinning; four-part humanised onboarding errors (DATABASE_URL missing, PG unreachable, DB missing, migration SQL failure, invalid `--role`) with verbatim sqlx text preserved in a `Details:` block; calm ASCII spinner during long ops; first-build expectation note. Default scaffold is neutral — no `post.rs`, no posts migration, no blog assumptions; those moved into the `blog` preset where they belong. Stage 0 doctrine doc (`docs/design/DESIGN_ONBOARDING.md`) governs the whole FTUX surface. **Polish & Trust runtime fixes (Stage 1 Reality Audit follow-up):** Postgres NOTICE chatter silenced at the connection layer (boot log: 65 lines → 2); duplicate framework `listening on` log removed; project name flows into admin tab title and login chrome via `Admin::new().app_name(...)`; admin empty-state CTA leads with `rustio startapp <name>` instead of bare Rust; scaffold README restructured into five layered sections matching the wizard reality; `-----` ASCII em-dash replacement reduced to `--` for cleaner mixed RTL/LTR rendering. **No API breaks** — `app_name()` was already in 0.19.0; existing 0.19.0 projects update by bumping the pin. Migration engine semantics unchanged. |
 | **0.19.0** | 2026-05-24 | **Visual overhaul — "Quiet Expert" design language.** Six-turn pass over every admin template: foundational primitives (`.rio-section`, `.rio-empty-state`, `.rio-confirm` block w/ `--danger`/`--neutral`, `.rio-env-chip`, `.rio-page-actions__group`), unified stat tile (single white surface + 3-px accent rail instead of cycling pastel fills), unified page-header pattern across every list / detail / form / confirm / settings / admin-tool page, area-chart sparkline replacing bars (gradient fill + baseline rule + per-day dots), shared `_row_actions.html` kebab partial powered by `<details>` + JS upgrade that escapes `.rio-list { overflow: hidden }` via `position: fixed` anchored to the toggle, `--rio-z-*` z-index ladder (sidebar/topbar/dropdown/modal) fixing the "sidebar overlaps topbar on scroll" bug, demo-row seed in the scaffold so freshly-bootstrapped projects aren't a blank slate, dashboard greeting trimmed (no emoji, no filler), MFA settings pages migrated from auth-style `.rio-login` shell to the in-chrome settings pattern. **No backend change** — every Rust handler, route, model, SQLx query, and migration is identical to 0.18.x. Diff is CSS / templates / JS / one new icon (`more-horizontal`). |
 | **0.18.6** | 2026-05-23 | **Professional polish pass on top of 0.18.5.** Six refinements after side-by-side screenshot review: (1) topbar search trigger goes wide — `flex:1` so search visually dominates the chrome instead of sitting as a small pill (Linear / Stripe / Vercel pattern). (2) List toolbar reflows to a 2-row pattern — Row 1 = full-width search; Row 2 = secondary controls (Filters / Saved / View) — addresses the "search bar is crowded" feedback at a deeper structural level than 0.18.5. (3) Per-row table actions collapse into a kebab `⋯` dropdown — Linear / Notion / Stripe / GitHub pattern; new `more-horizontal` icon plus `--rio-row-actions` toggle CSS, plus a `.rio-dropdown-item--danger` variant for the Delete row. (4) Dashboard greeting tightens from a 3-line Slack-style hello (emoji + filler "Manage X from one console") to a single page title + app name. (5) Recent-activity sparkline replaced — bars give way to a smooth area chart with gradient fill, polyline data line, baseline rule, and a circle dot at each measurement (Vercel / Grafana / Stripe analytics pattern). (6) DEVELOPMENT badge color confirmed amber (was already correct in the CSS — false-alarm). All features preserved; no library API change. |
@@ -49,6 +50,44 @@ leaves the alpha track.
 
 
 ## [Unreleased]
+
+_No unreleased changes yet — see the **[0.21.0]** block below._
+
+
+## [0.21.0] — 2026-05-25
+
+Stage 2 of the FTUX redesign. Four PRs:
+
+- **PR 2.1** — `rustio startapp <name> --field <name>:<type>` (closed
+  8-token vocabulary; field-declared model + migration generated in
+  one CLI breath; print-and-paste handshake preserved).
+- **PR 2.2** — structural permission defaults (three groups
+  seeded on fresh databases, lockstepped to `--role` values, never
+  silently re-shaping existing projects).
+- **Startapp pluralization + spatial-orientation fix** — naive `+s`
+  replaced with the proper English rules; new `// rustio: modules
+  / imports / models` markers in the scaffolded `main.rs`; structured
+  `startapp` output orients the developer against the markers.
+- **PR 2.4** — `rustio docs` evolves from static text to a useful
+  command (probes the local server with an `x-correlation-id`
+  specificity check; `--open` launches the default browser).
+
+PR 2.3 (doctor onboarding mode + `.rustio/onboarding.json` state
+machine) was deliberately cut per the Stage 1 Reality Audit — the
+audit found doctor already reads clean and the state file would
+introduce hidden framework state that solves a problem nobody has.
+
+**No API breaks.** Existing 0.20.x projects update by bumping
+`rustio-admin = "0.20.0"` to `"0.21.0"` in their `Cargo.toml` and
+running `cargo update -p rustio-admin`. Schema unchanged (the
+permission seed is INSERTs only). The framework's `Role` enum
+unchanged. `Admin::app_name(...)` chain unchanged.
+
+New doctrine doc: `docs/design/DESIGN_PERMISSIONS.md`.
+New direct dep: `console = "0.15"` (already transitively in the
+tree via `indicatif`).
+
+See the sections below for per-PR detail.
 
 ### Added — onboarding PR 2.4 (docs discoverability)
 
