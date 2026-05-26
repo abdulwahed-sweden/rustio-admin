@@ -10,6 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.21.1** | 2026-05-26 | **Admin list-page redesign — Find/Arrange toolbar, framed surfaces, dark thead.** The pre-0.21 "View ▾" mega-dropdown split into two zones with distinct intent: Row 1 Find (search + ≤2 promoted filter chips + More filters overflow + Reset) and Row 2 Arrange (Sort + direction toggle + Rows + Saved view + Export + Import). Find sits inside a soft `--rio-accent-soft` panel; Arrange stays transparent. Table header re-skins to `--rio-surface-chrome` (sidebar slate-900) via a thead-scoped chrome cascade — same trick `layout/shell.css` uses on the sidebar — with active-sort accent lifted to teal-400 for 9.6:1 contrast on the dark bar. New `SortFieldCtx` collapses the Sort menu from field×direction (17 rows on an 8-column model) to one-row-per-field plus a direction toggle that reads field-aware copy ("newest first" / "highest first" / "Z → A" / etc.). Numeric columns gain "highest first" / "lowest first" instead of generic ascending/descending. New CSS file `pages/list.css` scoped under `.rio-list-page`; new icons `inbox` / `rotate-ccw` / `arrow-up-down`; stronger empty state (icon + h2 + sentence + CTA); bottom bar ("Showing N of M"). **Pure CSS / template / render-context change** — no schema, no auth, no permission, no migration, no public-API impact. Forms, sidebar, topbar, auth, docs, dashboard untouched. Existing 0.21.0 projects update by bumping `rustio-admin = "0.21.0"` to `"0.21.1"` in their `Cargo.toml`. |
 | **0.21.0** | 2026-05-25 | **Stage 2 — first-model + structural permission defaults.** Four PRs: `rustio startapp --field <name>:<type>` accepts a closed 8-token vocabulary (`str / text / int / bigint / bool / timestamp / json / fk:<Model>`) and produces a real model file + matching migration in one CLI breath; structural permission defaults (`administrator`, `editor`, `viewer` — three groups seeded on fresh databases, lockstepped to `rustio user create --role` values, guarded against re-shaping existing projects); `startapp` pluralization fix (audit-broken `class → classs` now `class → classes`; `bus → buses`; `category → categories`); spatial-orientation `startapp` output with three `// rustio: modules / imports / models` insertion markers in the scaffolded `main.rs` + structured edit instructions referencing them; `rustio docs` becomes useful (probes local server via `x-correlation-id` specificity check, `--open` launches default browser); homepage gains a `sign in required` hint under the nav pills. New doctrine doc `docs/design/DESIGN_PERMISSIONS.md`. **No API breaks** — `Role` enum unchanged; existing 0.20.x projects update by bumping the pin. New deps: `console = "0.15"` (already transitively in tree via indicatif). |
 | **0.20.0** | 2026-05-25 | **First-time developer experience overhaul.** The headline release of Stage 1: friendly `rustio new <name>` alias; calm interactive TTY wizard (project name → project type → DB name → auto-`.env`); first-boot homepage at `/` with project-type-aware subtitle and three CSS custom-property tokens for re-skinning; four-part humanised onboarding errors (DATABASE_URL missing, PG unreachable, DB missing, migration SQL failure, invalid `--role`) with verbatim sqlx text preserved in a `Details:` block; calm ASCII spinner during long ops; first-build expectation note. Default scaffold is neutral — no `post.rs`, no posts migration, no blog assumptions; those moved into the `blog` preset where they belong. Stage 0 doctrine doc (`docs/design/DESIGN_ONBOARDING.md`) governs the whole FTUX surface. **Polish & Trust runtime fixes (Stage 1 Reality Audit follow-up):** Postgres NOTICE chatter silenced at the connection layer (boot log: 65 lines → 2); duplicate framework `listening on` log removed; project name flows into admin tab title and login chrome via `Admin::new().app_name(...)`; admin empty-state CTA leads with `rustio startapp <name>` instead of bare Rust; scaffold README restructured into five layered sections matching the wizard reality; `-----` ASCII em-dash replacement reduced to `--` for cleaner mixed RTL/LTR rendering. **No API breaks** — `app_name()` was already in 0.19.0; existing 0.19.0 projects update by bumping the pin. Migration engine semantics unchanged. |
 | **0.19.0** | 2026-05-24 | **Visual overhaul — "Quiet Expert" design language.** Six-turn pass over every admin template: foundational primitives (`.rio-section`, `.rio-empty-state`, `.rio-confirm` block w/ `--danger`/`--neutral`, `.rio-env-chip`, `.rio-page-actions__group`), unified stat tile (single white surface + 3-px accent rail instead of cycling pastel fills), unified page-header pattern across every list / detail / form / confirm / settings / admin-tool page, area-chart sparkline replacing bars (gradient fill + baseline rule + per-day dots), shared `_row_actions.html` kebab partial powered by `<details>` + JS upgrade that escapes `.rio-list { overflow: hidden }` via `position: fixed` anchored to the toggle, `--rio-z-*` z-index ladder (sidebar/topbar/dropdown/modal) fixing the "sidebar overlaps topbar on scroll" bug, demo-row seed in the scaffold so freshly-bootstrapped projects aren't a blank slate, dashboard greeting trimmed (no emoji, no filler), MFA settings pages migrated from auth-style `.rio-login` shell to the in-chrome settings pattern. **No backend change** — every Rust handler, route, model, SQLx query, and migration is identical to 0.18.x. Diff is CSS / templates / JS / one new icon (`more-horizontal`). |
@@ -51,7 +52,141 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.21.0]** block below._
+_No unreleased changes yet — see the **[0.21.1]** block below._
+
+
+## [0.21.1] — 2026-05-26
+
+Admin list-page redesign. Pure CSS + template + render-context
+change; no Rust public-API impact, no schema, no auth or permission
+behaviour shift.
+
+### Toolbar split
+
+The pre-0.21 "View ▾" overflow dropdown collapsed Sort, Per-page,
+CSV export, and CSV import into one mega-menu — operators had to
+scan a 17-row list (8 fields × 2 directions + Default + 4 per-page
++ Export + Import) to find any single operation. 0.21.1 splits the
+toolbar into two zones with distinct intent:
+
+- **Row 1 "Find"** — search input (flex:1, ≥360px), up to two
+  promoted filter chips, a "More filters" overflow for the rest, a
+  Reset link that surfaces only when there's state to reset
+  (search OR ≥1 active filter).
+- **Row 2 "Arrange"** — Sort field menu, direction toggle, Rows
+  per page, Saved view, then a flex spacer, then Export / Import
+  pinned to the trailing edge. Every control carries icon + label.
+
+### Find panel surface
+
+`.rlp-find` sits inside an accent-tinted card (`--rio-accent-soft`
+fill, `--rio-accent-border`, framework radius). No heading or icon
+above the panel — the surface itself is the cue. Arrange stays
+transparent so the visual weight stays on Find.
+
+### Dark table header
+
+`.rio-list-page .rio-table th` re-skins to `--rio-surface-chrome`
+(the same slate-900 the sidebar uses). The `thead` scope locally
+redefines `--rio-text-strong` / `--rio-text` / `--rio-text-muted`
+/ `--rio-text-subtle` to slate-50…500 and lifts `--rio-accent` to
+teal-400 — same chrome-cascade trick `layout/shell.css` already
+uses on the sidebar, so hover and active-sort copy stay legible
+without per-selector overrides. The header bar reads as one
+continuous frame with the sidebar; data rows now contrast hard
+against the chrome instead of fading into a neutral.
+
+### Sort menu — field-once + direction toggle
+
+`SortFieldCtx` (one entry per sortable field) replaces the
+field×direction menu pattern. Clicking a field row activates
+ascending sort; a sibling direction toggle flips to descending and
+reads field-type-aware copy:
+
+| Field type           | Asc label       | Desc label      |
+|----------------------|-----------------|-----------------|
+| `DateTime`           | oldest first    | newest first    |
+| `String` / `FilePath`| A → Z           | Z → A           |
+| `I32` / `I64`        | lowest first    | highest first   |
+| `Bool`               | off → on        | on → off        |
+
+Numeric copy (`lowest first` / `highest first`) is new in 0.21.1;
+0.21.0 fell back to the generic `ascending` / `descending` strip.
+The unit test was updated to match the new copy.
+
+### Empty state
+
+The pre-0.21 `<p class="rio-empty">No <model> yet</p>` floated as a
+single sentence inside a large blank card. 0.21.1 ships a centered
+empty-state block: a tinted-disc `inbox` icon, an `h2` title
+("No appointments yet"), a 16px body sentence ("Add the first
+appointment to get started."), and the primary `Add` CTA. Copy
+substitutes the model's plural / singular display name so the
+same block reads correctly for every model with no project-side
+override.
+
+### Bottom bar
+
+Row count + pagination move out of the toolbar into a footer-style
+bar below the table card. `Showing N of M <model-plural>` plus
+pagination nav; hidden in the empty state because zero-of-zero is
+noise.
+
+### Responsive
+
+`.rio-list-page` page padding cascades: 32px desktop ≥1280px →
+24px tablet 768–1279px → 16px mobile <768px, driven by a
+`.rio-main:has(> .rio-list-page)` selector so non-list pages keep
+their existing padding. The toolbar's `flex-wrap` lets Row 1 and
+Row 2 reflow vertically below 768px without code; the table card
+remains the only horizontal-scroll surface.
+
+### Render-context additions
+
+`ListCtx` gains:
+
+- `sort_fields: Vec<SortFieldCtx>` — one entry per sortable field.
+- `current_sort_field_label: String` — Sort chip caption.
+- `current_sort_dir_label: &'static str` — direction toggle text.
+- `sort_dir_toggle_link: String` — flips the active sort's direction.
+- `default_sort_link: String` — Sort menu's reset row URL.
+
+The legacy `sort_options` / `current_sort_label` fields are kept
+for back-compat with project templates that haven't migrated to
+the new layout.
+
+### Assets
+
+- New stylesheet `assets/static/admin/pages/list.css`, scoped
+  under `.rio-list-page`. Wired into both the `admin.css` `@import`
+  manifest and the `ADMIN_CSS` concat block in `routes.rs`;
+  `tests/cascade_lockstep.rs` verifies the two lists stay aligned.
+- New icons: `inbox` (empty-state disc), `rotate-ccw` (Reset chip),
+  `arrow-up-down` (direction toggle decoration). All inline lucide
+  stroke paths, no external library.
+
+### Known issue (carried forward, not introduced by 0.21.1)
+
+A foreign-key filter declared in `ModelAdmin::list_filter()` is
+silently dropped when the `RelationRegistry` doesn't carry the
+relation — `infer_filters_with_registry` falls through to
+`FilterKind::NumericExact`, then the list handler hits a `_ => {}`
+catch-all with no rendered widget. Pre-existing in 0.21.0; the
+new toolbar makes the gap more visible (the "More filters"
+dropdown is the natural place to surface secondary filters and
+will obviously be empty when only the FK was configured). Fix
+requires real widget design for `NumericExact` / `RelationSelect`
+and belongs in a later phase, not a UI patch release.
+
+### Migration
+
+Existing 0.21.0 projects update by bumping
+`rustio-admin = "0.21.0"` to `"0.21.1"` in their `Cargo.toml` and
+running `cargo update -p rustio-admin`. No schema migration. No
+template override required — the new layout ships as the embedded
+default. Projects that override `templates/admin/list.html`
+locally will continue to use their override; remove it to pick up
+the new layout.
 
 
 ## [0.21.0] — 2026-05-25
