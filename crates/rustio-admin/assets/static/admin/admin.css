@@ -90,6 +90,7 @@
 @import url("pages/permissions.css");
 @import url("pages/sessions.css");
 @import url("pages/errors.css");
+@import url("pages/list.css");
 
 /* ---- Responsive — mobile-first overrides; MUST come after layout
  *      and components so its rules win the cascade on small screens. */

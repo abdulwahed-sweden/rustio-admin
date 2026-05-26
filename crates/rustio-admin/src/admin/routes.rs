@@ -117,6 +117,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/pages/errors.css"),
     "\n",
+    include_str!("../../assets/static/admin/pages/list.css"),
+    "\n",
     // ---- responsive — mobile-first overrides, last so they win.
     include_str!("../../assets/static/admin/layout/responsive.css"),
     "\n",

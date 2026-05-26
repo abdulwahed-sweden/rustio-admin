@@ -844,13 +844,38 @@ pub(crate) struct ListCtx {
     /// `per_page` (CSV is paginate-free). Routes to the bulk export
     /// endpoint registered at `/admin/<name>/export.csv`.
     pub csv_export_url: String,
-    /// Sort dropdown options — every visible field × {asc, desc} plus
-    /// a "Default order" reset link. Pre-baked into ready-to-render
-    /// `(label, href, is_active)` triplets.
+    /// Legacy sort-dropdown options — every visible field × {asc, desc}
+    /// plus a leading "Default order" reset link. Kept on `ListCtx`
+    /// for back-compat with project templates that still consume the
+    /// pre-0.21.1 mega-dropdown; the framework's own `list.html` now
+    /// uses [`Self::sort_fields`] + the direction toggle below.
     pub sort_options: Vec<SortOptionCtx>,
-    /// Toolbar label for the Sort toggle: "Default order" when no
-    /// override is in effect, otherwise the active option's label.
+    /// Toolbar label for the legacy Sort toggle: "Default order" when
+    /// no override is in effect, otherwise the active option's label.
     pub current_sort_label: String,
+    /// Per-field rows for the redesigned Sort menu — one entry per
+    /// sortable column. See [`SortFieldCtx`] for the field shape and
+    /// the rationale behind the field-once layout.
+    pub sort_fields: Vec<SortFieldCtx>,
+    /// Toolbar label for the redesigned Sort toggle: the active
+    /// field's `label` (e.g. "Scheduled At"), or "Default order"
+    /// when no override is in effect.
+    pub current_sort_field_label: String,
+    /// Direction-aware copy for the toolbar's direction toggle:
+    /// "newest first" / "oldest first" for datetime, "A → Z" /
+    /// "Z → A" for text, etc. Empty when no sort override is in
+    /// effect (the toggle is hidden in that state).
+    pub current_sort_dir_label: &'static str,
+    /// URL the direction toggle navigates to — flips the active
+    /// field's direction while preserving search / filters /
+    /// per-page. Empty when no sort is active.
+    pub sort_dir_toggle_link: String,
+    /// URL the Sort menu's "Default order" reset row navigates to —
+    /// clears the sort while preserving search / filters / per-page.
+    /// Same URL as `sort_options[0].link`; surfaced separately so the
+    /// new template can render it without indexing into the legacy
+    /// vec.
+    pub default_sort_link: String,
     /// Active sort field + direction surfaced as plain strings so the
     /// search form can carry them as hidden inputs. `None` when no
     /// sort override is in effect.
@@ -1035,6 +1060,48 @@ pub(crate) struct SortOptionCtx {
     pub is_active: bool,
 }
 
+/// One row in the redesigned Sort menu — *one entry per sortable
+/// field*. The toolbar's previous "View" mega-dropdown emitted two
+/// rows per field (asc + desc), so a model with eight columns
+/// produced a 17-row menu (8 × 2 + Default) that operators had to
+/// scan twice for the same label. `SortFieldCtx` collapses that to
+/// one row per field; direction is selected by a sibling toggle
+/// control whose URL is pre-baked into `sort_dir_toggle_link` on
+/// the parent `ListCtx`.
+///
+/// Each entry carries explicit `asc_link` / `desc_link` URLs (both
+/// passed through `build_list_url`) so the field row can render
+/// either as a single "sort by X" click that defaults to ascending,
+/// or — for power use — as a two-button group exposing both
+/// directions inline. Direction-aware *labels*
+/// ("newest first" / "A → Z") stay alongside the URLs so the
+/// template can surface them without re-running `sort_direction_label`.
+#[derive(Serialize)]
+pub(crate) struct SortFieldCtx {
+    /// Field name as it appears on the URL (`?sort=<field>`). Used
+    /// only when the template needs the raw key; rendering reads
+    /// `label` instead.
+    pub field: String,
+    /// Human-readable column label, identical to the table header
+    /// label so the menu reads as "Sort by <column name>".
+    pub label: String,
+    /// URL that activates ascending sort for this field while
+    /// preserving search / filters / per-page. Always populated.
+    pub asc_link: String,
+    /// URL that activates descending sort for this field.
+    pub desc_link: String,
+    /// Field-type-aware ascending label — "A → Z" for text,
+    /// "oldest first" for datetime, "off → on" for bool, etc.
+    pub asc_label: &'static str,
+    /// Counterpart descending label — "Z → A", "newest first",
+    /// "on → off".
+    pub desc_label: &'static str,
+    /// `true` when this field is the currently sorted column.
+    /// Drives the menu's "selected" affordance and tells the
+    /// direction toggle which field's URL to anchor against.
+    pub is_active: bool,
+}
+
 /// One option in the toolbar's per-page dropdown. The link goes
 /// through `build_list_url` so search / filter / sort survive a
 /// row-density change. Page resets to 1 — staying on page N at a
@@ -1131,11 +1198,17 @@ fn sort_direction_label(
         (DateTime | OptionalDateTime, SortDir::Asc) => "oldest first",
         (String | OptionalString | FilePath | OptionalFilePath, SortDir::Asc) => "A → Z",
         (String | OptionalString | FilePath | OptionalFilePath, SortDir::Desc) => "Z → A",
+        (I32 | I64 | OptionalI64, SortDir::Desc) => "highest first",
+        (I32 | I64 | OptionalI64, SortDir::Asc) => "lowest first",
         (Bool, SortDir::Asc) => "off → on",
         (Bool, SortDir::Desc) => "on → off",
-        (_, SortDir::Asc) => "ascending",
-        (_, SortDir::Desc) => "descending",
     }
+    // FieldType is #[non_exhaustive] for downstream callers, but
+    // within this crate the match must stay exhaustive — adding a
+    // catch-all here would mask the missing arm a future variant
+    // (e.g. `Numeric`, `Json`, `Uuid`) introduces. Forcing the next
+    // contributor to pick deliberate direction copy for the new
+    // type is the whole point of this function.
 }
 
 /// Compose a list-view URL with full query-state preservation.
@@ -1662,6 +1735,86 @@ pub(crate) fn list_ctx(
         .map(|o| o.label.clone())
         .unwrap_or_else(|| "Default order".to_string());
 
+    // Redesigned Sort menu — one entry per sortable field. The legacy
+    // `sort_options` vec stays populated above for project templates
+    // that haven't migrated; the framework's own list template now
+    // renders the field menu plus a direction toggle, which the
+    // template builds against `sort_fields` + `sort_dir_toggle_link`.
+    let sort_fields: Vec<SortFieldCtx> = visible_fields
+        .iter()
+        .map(|f| {
+            let asc_link = build_list_url(
+                entry.admin_name,
+                &search_query,
+                &active_filter_pairs,
+                Some((f.name, SortDir::Asc)),
+                1,
+                per_page_override,
+            );
+            let desc_link = build_list_url(
+                entry.admin_name,
+                &search_query,
+                &active_filter_pairs,
+                Some((f.name, SortDir::Desc)),
+                1,
+                per_page_override,
+            );
+            let is_active = matches!(
+                &active_sort,
+                Some((col, _)) if col == f.name
+            );
+            SortFieldCtx {
+                field: f.name.to_string(),
+                label: f.label.to_string(),
+                asc_link,
+                desc_link,
+                asc_label: sort_direction_label(f.field_type, SortDir::Asc),
+                desc_label: sort_direction_label(f.field_type, SortDir::Desc),
+                is_active,
+            }
+        })
+        .collect();
+
+    // `default_sort_link` mirrors `sort_options[0].link` (the
+    // "Default order" reset). Surfacing it as a standalone field
+    // lets the new template emit the link without indexing into
+    // the legacy vec, which keeps the two layouts independently
+    // editable.
+    let default_sort_link = build_list_url(
+        entry.admin_name,
+        &search_query,
+        &active_filter_pairs,
+        None,
+        1,
+        per_page_override,
+    );
+
+    // Direction-toggle pair: the active field's label drives the
+    // toolbar Sort chip's caption; the active field's *opposite*
+    // direction URL drives the toggle button. When no sort is
+    // active, both stay empty and the template hides the toggle.
+    let (current_sort_field_label, current_sort_dir_label, sort_dir_toggle_link) =
+        match &active_sort {
+            Some((col, dir)) => {
+                let field = sort_fields.iter().find(|sf| sf.field == *col);
+                let label = field
+                    .map(|f| f.label.clone())
+                    .unwrap_or_else(|| col.clone());
+                let (dir_label, toggle_link) = match (field, dir) {
+                    (Some(f), SortDir::Asc) => (f.desc_label, f.desc_link.clone()),
+                    (Some(f), SortDir::Desc) => (f.asc_label, f.asc_link.clone()),
+                    // `active_sort` references a column not in
+                    // `visible_fields` (rare: column dropped from
+                    // `list_display` between requests). Fall back
+                    // to generic labels + an empty toggle URL so
+                    // the template renders without crashing.
+                    (None, _) => ("", String::new()),
+                };
+                (label, dir_label, toggle_link)
+            }
+            None => ("Default order".to_string(), "", String::new()),
+        };
+
     let prev_page_link = (page > 1).then(|| {
         build_list_url(
             entry.admin_name,
@@ -1821,6 +1974,11 @@ pub(crate) fn list_ctx(
         filters,
         sort_options,
         current_sort_label,
+        sort_fields,
+        current_sort_field_label,
+        current_sort_dir_label,
+        sort_dir_toggle_link,
+        default_sort_link,
         active_sort_field,
         active_sort_dir,
         per_page_options,
@@ -3968,18 +4126,19 @@ mod tests {
     }
 
     #[test]
-    fn sort_direction_label_numerics_fall_back_to_generic() {
-        // Numeric columns intentionally keep the generic
-        // "ascending" / "descending" copy: a column named `count`
-        // or `score` reads better than "smallest first" /
-        // "largest first" would. The fallback branch covers them.
+    fn sort_direction_label_numerics_read_highest_lowest() {
+        // Numeric columns get the same direction-aware treatment
+        // as datetime / string / bool: "lowest first" /
+        // "highest first" beats generic "ascending" / "descending"
+        // for a column named `count`, `score`, `priority`, or any
+        // other quantity an operator scans by magnitude.
         use super::super::modeladmin::SortDir;
         use super::super::types::FieldType::*;
-        assert_eq!(sort_direction_label(I32, SortDir::Asc), "ascending");
-        assert_eq!(sort_direction_label(I64, SortDir::Asc), "ascending");
+        assert_eq!(sort_direction_label(I32, SortDir::Asc), "lowest first");
+        assert_eq!(sort_direction_label(I64, SortDir::Asc), "lowest first");
         assert_eq!(
             sort_direction_label(OptionalI64, SortDir::Desc),
-            "descending"
+            "highest first"
         );
     }
 

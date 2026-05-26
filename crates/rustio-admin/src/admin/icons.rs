@@ -109,6 +109,34 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
         r#"<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>"#,
     );
 
+    // Inbox — list-page empty-state default glyph. A model-agnostic
+    // "no rows here yet" visual that reads the same for appointments,
+    // patients, invoices, audit entries, and so on. Projects can pick
+    // a more specific glyph later through `ModelAdmin::empty_state_icon`
+    // once that hook lands.
+    m.insert(
+        "inbox",
+        r#"<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>"#,
+    );
+
+    // Rotate-ccw — list-page toolbar "Reset" affordance: clears the
+    // current search + filters back to the model's default view.
+    // Counter-clockwise to read as "undo / revert" rather than the
+    // clockwise "refresh / reload" semantics.
+    m.insert(
+        "rotate-ccw",
+        r#"<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>"#,
+    );
+
+    // Arrow-up-down — sort direction toggle. Two vertical arrows
+    // pointing at each other; the active direction is conveyed by
+    // a sibling text label ("newest first" / "A → Z"), not by the
+    // glyph itself, so the same icon serves both states.
+    m.insert(
+        "arrow-up-down",
+        r#"<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>"#,
+    );
+
     m
 });
 
