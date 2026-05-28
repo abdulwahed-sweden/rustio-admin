@@ -1,4 +1,4 @@
-//! `rustio user` -- auth-table CRUD without the admin UI.
+//! `rustio-admin user` -- auth-table CRUD without the admin UI.
 //!
 //! ## R4 emergency-recovery surface
 //!
@@ -71,7 +71,7 @@ impl From<CliRole> for Role {
 
 impl CliRole {
     /// Name of the seeded default group this role assigns to on
-    /// `rustio user create`, if any. Returns `None` for the legacy
+    /// `rustio-admin user create`, if any. Returns `None` for the legacy
     /// 5-tier roles which don't have an associated default group
     /// (their authority comes from the tier-level `check_permission`
     /// path: `Administrator` / `Developer` bypass; `Staff` /
@@ -859,7 +859,7 @@ async fn write_emergency_audit(
     Ok(correlation_id)
 }
 
-// ---- R4: rustio user reset-password -----------------
+// ---- R4: rustio-admin user reset-password -----------------
 
 async fn reset_password(
     db: Db,
@@ -932,7 +932,7 @@ async fn reset_password(
     Ok(())
 }
 
-// ---- R4: rustio user unlock -------------------
+// ---- R4: rustio-admin user unlock -------------------
 
 async fn unlock(db: Db, email: String, reason_arg: String, yes: bool) -> Result<(), String> {
     let ctx = preflight(&db, "unlock", &email, &reason_arg, yes).await?;
@@ -975,7 +975,7 @@ async fn unlock(db: Db, email: String, reason_arg: String, yes: bool) -> Result<
     Ok(())
 }
 
-// ---- R4: rustio user disable-mfa -----------------
+// ---- R4: rustio-admin user disable-mfa -----------------
 
 async fn disable_mfa(db: Db, email: String, reason_arg: String, yes: bool) -> Result<(), String> {
     let ctx = preflight(&db, "disable-mfa", &email, &reason_arg, yes).await?;
@@ -1026,7 +1026,7 @@ async fn disable_mfa(db: Db, email: String, reason_arg: String, yes: bool) -> Re
     Ok(())
 }
 
-// ---- R4: rustio user promote ------------------
+// ---- R4: rustio-admin user promote ------------------
 
 async fn promote(
     db: Db,
@@ -1110,7 +1110,7 @@ async fn promote(
     }
 }
 
-// ---- R4: rustio user emergency-access ---------------
+// ---- R4: rustio-admin user emergency-access ---------------
 
 async fn emergency_access(
     db: Db,
@@ -1140,7 +1140,7 @@ async fn emergency_access(
             return Err(format!(
                 "Refused: {email} is deactivated. Emergency-access only issues URLs to active \
                  accounts (a URL into a deactivated account has no recovery semantic). \
-                 Reactivate the user first via `rustio user role` or update `is_active` \
+                 Reactivate the user first via `rustio-admin user role` or update `is_active` \
                  directly, then re-run."
             ));
         }

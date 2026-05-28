@@ -1,5 +1,5 @@
 //! Emergency-recovery primitives — the framework-side surface called
-//! by the `rustio user <op>` CLI commands.
+//! by the `rustio-admin user <op>` CLI commands.
 //!
 //! Each function performs the atomic DB-mutation chain for one
 //! emergency operation and returns a typed outcome the CLI uses to
@@ -483,7 +483,7 @@ use InvalidationOutcome as _;
 /// alphabet excludes visually ambiguous glyphs (`0`/`O`, `1`/`l`/`I`)
 /// so an operator reading the password aloud or writing it down by
 /// hand has fewer transcription errors. Used by
-/// `rustio user reset-password` when `--temp-password` is not
+/// `rustio-admin user reset-password` when `--temp-password` is not
 /// supplied.
 ///
 /// The generated value is NOT stored anywhere by this function —

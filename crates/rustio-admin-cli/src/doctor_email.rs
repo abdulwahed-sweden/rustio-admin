@@ -1,4 +1,4 @@
-//! `rustio doctor email` -- SMTP self-validation.
+//! `rustio-admin doctor email` -- SMTP self-validation.
 //!
 //! Reads the same `SMTP_*` + `MAIL_FROM` envelope the framework
 //! example reads (so a `.env` that boots the app also passes
@@ -13,7 +13,7 @@
 //!      transport the recovery flow uses.
 //!
 //! Each check answers with a ✓ / ⚠ / ✗ line. The output matches
-//! `rustio doctor`'s aesthetic so an operator's eye can scan
+//! `rustio-admin doctor`'s aesthetic so an operator's eye can scan
 //! both surfaces the same way.
 //!
 //! No credentials are echoed; SMTP_PASSWORD is reported as
@@ -74,7 +74,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
         return run_html_preview().await;
     }
 
-    println!("rustio doctor email -- validating SMTP configuration");
+    println!("rustio-admin doctor email -- validating SMTP configuration");
     println!();
 
     // ---- 1. Env-var presence + provider preset resolution ----
@@ -167,7 +167,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
         None => {
             println!("· Test send skipped (pass `--to <address>` to dispatch a real message)");
             println!();
-            println!("rustio doctor email -- all checks passed.");
+            println!("rustio-admin doctor email -- all checks passed.");
             Ok(())
         }
         Some(to_raw) => {
@@ -193,7 +193,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
                  If you can read this in your inbox, your SMTP \
                  configuration is correct end-to-end.\n\n\
                  -- -- --\n\
-                 Sent from `rustio doctor email --to {to}`.\n"
+                 Sent from `rustio-admin doctor email --to {to}`.\n"
             );
             let html = format!(
                 "<!DOCTYPE html><html><body style=\"margin:0;padding:48px 24px;\
@@ -217,8 +217,8 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
                  ✓ TLS handshake ✓ Authentication ✓ Delivery</div>\
                  <p style=\"margin:24px 0 0 0;color:#9CA3AF;font-size:12px;\
                  line-height:1.5;\">Sent from <code style=\"font-family:\
-                 SFMono-Regular,Menlo,monospace;font-size:11px;\">rustio doctor \
-                 email --to {to}</code>.</p>\
+                 SFMono-Regular,Menlo,monospace;font-size:11px;\">rustio-admin \
+                 doctor email --to {to}</code>.</p>\
                  </td></tr></table></body></html>"
             );
 
@@ -251,7 +251,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
             println!("OK");
             println!("✓ Test message accepted by remote (delivery in transit)");
             println!();
-            println!("rustio doctor email -- all checks passed.");
+            println!("rustio-admin doctor email -- all checks passed.");
             println!();
             println!("Check the inbox of {to}; the message will arrive within seconds.");
             println!("Gmail may route the first message from a new SMTP sender to Spam -- ");
@@ -272,7 +272,7 @@ pub async fn run(send_to: Option<String>, html_preview: bool) -> Result<(), Stri
 // ============================================================
 
 async fn run_html_preview() -> Result<(), String> {
-    println!("rustio doctor email -- rendering HTML preview");
+    println!("rustio-admin doctor email -- rendering HTML preview");
     println!();
 
     let app_name = env::var("APP_NAME").unwrap_or_else(|_| "Library Circulation".into());

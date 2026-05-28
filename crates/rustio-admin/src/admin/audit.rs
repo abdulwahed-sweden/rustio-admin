@@ -524,8 +524,8 @@ pub enum AuditEvent {
     /// out of scope for this iteration.
     LoginFailed,
     // ---- Layer-3 CLI (R4+) ----
-    /// Emergency-recovery operation initiated from the `rustio`
-    /// CLI binary. Subsumes every `rustio user <op>` emergency
+    /// Emergency-recovery operation initiated from the `rustio-admin`
+    /// CLI binary. Subsumes every `rustio-admin user <op>` emergency
     /// subcommand — the specific operation lives in
     /// `metadata.cli_operation` (`"reset_password" | "unlock" |
     /// "disable_mfa" | "promote" | "emergency_access"`). The

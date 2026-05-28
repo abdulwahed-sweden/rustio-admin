@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-`rustio-admin` is a Postgres-first administrative framework for Rust ("Django Admin, but for Rust"). It is a Cargo workspace shipping three crates: the library, a proc-macro crate, and a `rustio` CLI binary. Authentication, sessions, recovery, and audit are designed as one system — not assembled from separate parts.
+`rustio-admin` is a Postgres-first administrative framework for Rust ("Django Admin, but for Rust"). It is a Cargo workspace shipping three crates: the library, a proc-macro crate, and a `rustio-admin` CLI binary. Authentication, sessions, recovery, and audit are designed as one system — not assembled from separate parts.
 
 Project README: `README.md`. Architecture map: `docs/architecture.md`. Design contracts (the source of truth for security-sensitive subsystems): `docs/design/DESIGN_*.md`.
 
@@ -37,7 +37,7 @@ git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_vali
 
 Any match is a CI failure. These symbols belong to a future `rustio-pro` layer and must never appear in this repo.
 
-The `rustio` CLI (built from `crates/rustio-admin-cli`) reads `DATABASE_URL` from `.env`:
+The `rustio-admin` CLI (built from `crates/rustio-admin-cli`) reads `DATABASE_URL` from `.env`:
 
 ```sh
 cargo run -p rustio-admin-cli -- migrate apply

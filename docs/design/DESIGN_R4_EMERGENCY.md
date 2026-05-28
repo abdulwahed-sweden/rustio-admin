@@ -90,15 +90,15 @@ who already controls the host.
 
 ## 3. Subcommand catalogue
 
-All R4 commands live under `rustio user` to mirror the existing
+All R4 commands live under `rustio-admin user` to mirror the existing
 CLI shape (`user create`, `user list`, `user role`, `user
 delete`). Every emergency operation has the same envelope:
 `--email <e> --reason "<text>"` plus operation-specific flags.
 
-### 3.1 `rustio user reset-password`
+### 3.1 `rustio-admin user reset-password`
 
 ```
-rustio user reset-password --email <e> --reason "<text>" [--temp-password <p>] [--yes]
+rustio-admin user reset-password --email <e> --reason "<text>" [--temp-password <p>] [--yes]
 ```
 
 Sets a new password (random if `--temp-password` not given),
@@ -110,10 +110,10 @@ EVERY session for the user, writes one
 Prints the generated temp password ONCE to stdout. Plaintext
 never lands in a log, an audit row, or any other DB column.
 
-### 3.2 `rustio user unlock`
+### 3.2 `rustio-admin user unlock`
 
 ```
-rustio user unlock --email <e> --reason "<text>" [--yes]
+rustio-admin user unlock --email <e> --reason "<text>" [--yes]
 ```
 
 Clears `locked_until` and resets `failed_login_count = 0` on
@@ -121,10 +121,10 @@ the target. Does NOT touch sessions; an unlock is not a session
 event. Writes `EmergencyRecovery` with `metadata.cli_operation
 = "unlock"`.
 
-### 3.3 `rustio user disable-mfa`
+### 3.3 `rustio-admin user disable-mfa`
 
 ```
-rustio user disable-mfa --email <e> --reason "<text>" [--yes]
+rustio-admin user disable-mfa --email <e> --reason "<text>" [--yes]
 ```
 
 Clears `mfa_enabled`, `mfa_secret_ciphertext`,
@@ -144,10 +144,10 @@ enrolment on next login. (Acceptance via a second confirmation
 prompt: "Policy requires MFA; user will be re-enrolled on next
 login. Proceed?")
 
-### 3.4 `rustio user promote`
+### 3.4 `rustio-admin user promote`
 
 ```
-rustio user promote --email <e> --to-role <role> --reason "<text>" [--yes]
+rustio-admin user promote --email <e> --to-role <role> --reason "<text>" [--yes]
 ```
 
 Sets `rustio_users.role` to `<role>`. Revokes the target's
@@ -162,10 +162,10 @@ Refuses to demote the sole Administrator. The check is
 is_active = TRUE AND id <> $target` — must be ≥ 1 for a
 demote-from-administrator operation.
 
-### 3.5 `rustio user emergency-access`
+### 3.5 `rustio-admin user emergency-access`
 
 ```
-rustio user emergency-access --email <e> --reason "<text>" [--ttl-minutes <n>] [--yes]
+rustio-admin user emergency-access --email <e> --reason "<text>" [--ttl-minutes <n>] [--yes]
 ```
 
 Issues a single-use password-reset URL bypassing the mailer.
@@ -407,10 +407,10 @@ R4 ships as 9 small commits on `feat/r4-cli-emergency-recovery`:
 2. `feat(r4): AuditEvent + SessionInvalidationReason scaffolding` — add `RoleChangedByOther`, doc-comment `EmergencyRecovery` as CLI-only, plus the §9.3 cross-crate test.
 3. `feat(r4): auth::emergency module skeleton` — framework-side thin wrappers, one function per CLI command, no banner / no confirm logic (those live in CLI).
 4. `feat(r4): CLI banner + reason validation` — std-only, no DB. Unit tests for §9.1 banner/reason cases.
-5. `feat(r4): rustio user reset-password` — first end-to-end command. Audit row written, sessions revoked, temp password printed.
-6. `feat(r4): rustio user unlock` — simplest mutation. Used to validate the banner+confirm chain on a no-side-effects command first.
-7. `feat(r4): rustio user disable-mfa + promote` — bundled, both lean on §6's primitives.
-8. `feat(r4): rustio user emergency-access` — the token-issuance path. Refactor `issue_reset_token` to expose the no-mail variant cleanly.
+5. `feat(r4): rustio-admin user reset-password` — first end-to-end command. Audit row written, sessions revoked, temp password printed.
+6. `feat(r4): rustio-admin user unlock` — simplest mutation. Used to validate the banner+confirm chain on a no-side-effects command first.
+7. `feat(r4): rustio-admin user disable-mfa + promote` — bundled, both lean on §6's primitives.
+8. `feat(r4): rustio-admin user emergency-access` — the token-issuance path. Refactor `issue_reset_token` to expose the no-mail variant cleanly.
 9. `test(r4): testcontainers integration suite` — §9.2 scenarios.
 10. `docs(changelog): R4 entry under [Unreleased] targeting 0.8.0`.
 11. `chore: bump workspace to 0.8.0 + CHANGELOG release flip` (gated on explicit publish approval).
@@ -434,7 +434,7 @@ R4 is done when:
   --workspace` is green.
 - lursystem can run a downstream-validation scenario:
   simulate "Administrator lost MFA, no other admins", recover
-  via `rustio user disable-mfa`, confirm the recovered admin
+  via `rustio-admin user disable-mfa`, confirm the recovered admin
   can re-enrol MFA cleanly on next login.
 - `[0.8.0]` CHANGELOG entry references this doc.
 

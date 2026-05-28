@@ -1,7 +1,7 @@
-//! `rustio docs` — running-server detection + browser opener.
+//! `rustio-admin docs` — running-server detection + browser opener.
 //!
 //! PR 2.4 of the Stage 2 onboarding work. Three small affordances
-//! on top of the existing `rustio docs` placeholder (PR 1.1):
+//! on top of the existing `rustio-admin docs` placeholder (PR 1.1):
 //!
 //! 1. Probe `http://127.0.0.1:8000/admin/health` with a short
 //!    timeout so the printed output reflects whether the local
@@ -72,7 +72,7 @@ pub(crate) fn print_docs(open: bool) -> Result<(), String> {
         eprintln!(
             "Start the server with {}, then re-run {}.",
             style("`cargo run`").green(),
-            style("`rustio docs --open`").green(),
+            style("`rustio-admin docs --open`").green(),
         );
         eprintln!();
         eprintln!(
@@ -136,7 +136,7 @@ pub(crate) fn print_docs(open: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Probe the local rustio admin server on `127.0.0.1:8000` by
+/// Probe the local rustio-admin server on `127.0.0.1:8000` by
 /// issuing a short-timeout HTTP GET on `/admin/health`. Returns
 /// `true` only when the response is a 2xx / 3xx **AND** carries
 /// the `x-correlation-id` response header that the framework's
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn health_probe_returns_false_when_nothing_listening() {
         // We can't guarantee port 8000 is free on every test host,
-        // so this test is best-effort -- if a real rustio server
+        // so this test is best-effort -- if a real rustio-admin server
         // happens to be running on 8000, the assertion below is
         // skipped. CI runs on a clean box where 8000 is free.
         if TcpStream::connect_timeout(
@@ -305,7 +305,7 @@ mod tests {
     }
 
     /// The typical unauthenticated `/admin/health` shape on a real
-    /// rustio server: 303 redirect to `/admin/login`. Must be
+    /// rustio-admin server: 303 redirect to `/admin/login`. Must be
     /// classified as "running" because the framework's
     /// correlation_id middleware fires before any auth gate.
     #[test]

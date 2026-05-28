@@ -1,4 +1,4 @@
-//! `rustio audit` -- operator-facing read surface for the
+//! `rustio-admin audit` -- operator-facing read surface for the
 //! `rustio_admin_actions` table.
 //!
 //! Sibling to the framework's HTML `/admin/history` page -- same
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn empty_input_renders_marker() {
-        // Operator runs `rustio audit tail --model wrong` and
+        // Operator runs `rustio-admin audit tail --model wrong` and
         // gets zero matches -- surface the absence rather than
         // print just a header row.
         assert_eq!(format_audit_tail(&[]), "(no audit rows)\n");

@@ -1,4 +1,4 @@
-//! `rustio migrate` -- drive the framework's `migrations::apply` /
+//! `rustio-admin migrate` -- drive the framework's `migrations::apply` /
 //! `status` against `DATABASE_URL`. The directory defaults to
 //! `migrations/` under the current working directory, mirroring the
 //! convention every example/template uses.

@@ -1,4 +1,4 @@
-//! `rustio doctor` -- read-only health check.
+//! `rustio-admin doctor` -- read-only health check.
 //!
 //! Each check answers with a one-line ✓ / · / ✗:
 //!
@@ -58,7 +58,7 @@ pub async fn run() -> Result<(), String> {
         println!("✓ Auth tables present");
     } else {
         println!(
-            "· Auth tables missing -- boot the app once or run `rustio user create` to seed them."
+            "· Auth tables missing -- boot the app once or run `rustio-admin user create` to seed them."
         );
     }
 
@@ -77,7 +77,7 @@ pub async fn run() -> Result<(), String> {
         println!("✓ {admin_count} active administrator(s)");
     } else {
         println!(
-            "· No active administrator. Run `rustio user create --email …  --role administrator`."
+            "· No active administrator. Run `rustio-admin user create --email …  --role administrator`."
         );
     }
 

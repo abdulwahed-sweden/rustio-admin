@@ -61,13 +61,13 @@ use crate::builder::ulid_gen::new_ulid;
 /// is the source of truth for the serialized values."*
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum HistoryOp {
-    /// Emitted once by `rustio new` to mark project birth.
+    /// Emitted once by `rustio-admin new` to mark project birth.
     ProjectInit,
-    /// `rustio add model <Name>`.
+    /// `rustio-admin add model <Name>`.
     AddModel,
-    /// `rustio add field <Model> <name> <type>`.
+    /// `rustio-admin add field <Model> <name> <type>`.
     AddField,
-    /// Emitted by every successful `rustio commit` invocation.
+    /// Emitted by every successful `rustio-admin commit` invocation.
     Commit,
     /// Emitted as a child of a `Commit` event for each generated
     /// file written.

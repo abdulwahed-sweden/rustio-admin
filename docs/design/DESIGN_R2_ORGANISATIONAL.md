@@ -1283,7 +1283,7 @@ resolved before commit #1 landed:
 Items shaped by the R2 substrate; not yet implemented.
 
 - **TOTP MFA + backup codes** → R3.
-- **CLI emergency recovery** (`rustio user reset-password / unlock /
+- **CLI emergency recovery** (`rustio-admin user reset-password / unlock /
   …`) → R4. R2's web-side admin recovery covers the operator's
   steady state; R4 covers the "framework is down or the only
   Administrator's password is lost" emergency path.

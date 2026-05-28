@@ -1,4 +1,4 @@
-//! `rustio perm` -- direct + group-mediated permission grants.
+//! `rustio-admin perm` -- direct + group-mediated permission grants.
 //!
 //! Permission codenames follow the framework's convention:
 //! `<app>.<action>_<model>`, e.g. `posts.add_post`. The framework's

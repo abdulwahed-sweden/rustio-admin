@@ -1,4 +1,4 @@
-//! Web counterpart to the `rustio doctor` CLI verb.
+//! Web counterpart to the `rustio-admin doctor` CLI verb.
 //!
 //! Exposed at `GET /admin/health` (mounted in `routes.rs`,
 //! Administrator-gated). The CLI's `doctor.rs` writes ✓ / · / ✗
@@ -109,7 +109,7 @@ pub(crate) async fn gather_checks(db: &Db) -> Vec<HealthCheck> {
         message: if auth_exists {
             "rustio_users + rustio_sessions are in place.".to_string()
         } else {
-            "Boot the app once or run `rustio user create` to seed them.".to_string()
+            "Boot the app once or run `rustio-admin user create` to seed them.".to_string()
         },
     });
 
@@ -135,7 +135,7 @@ pub(crate) async fn gather_checks(db: &Db) -> Vec<HealthCheck> {
         message: if admin_count > 0 {
             format!("{admin_count} active administrator(s) on file.")
         } else {
-            "No active administrator. Run `rustio user create --email … --role administrator`."
+            "No active administrator. Run `rustio-admin user create --email … --role administrator`."
                 .to_string()
         },
     });

@@ -172,7 +172,7 @@ fn validate_field_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `rustio new <name>` -- bootstrap a fresh project.
+/// `rustio-admin new <name>` -- bootstrap a fresh project.
 ///
 /// Writes:
 /// - `<name>/Cargo.toml` (developer-owned after scaffolding)
@@ -245,11 +245,11 @@ chrono = {{ version = "0.4", features = ["serde"] }}
     std::fs::write(root.join("Cargo.toml"), cargo_toml).map_err(|e| e.to_string())?;
 
     // main.rs -- developer-owned skeleton. Compiles after the
-    // first `rustio commit` populates src/_generated/.
+    // first `rustio-admin commit` populates src/_generated/.
     let main_rs = "//! Project entry point. Generator scaffolds this once;\n\
                    //! thereafter it is developer-owned.\n\
                    //!\n\
-                   //! Run `rustio add model <Name>` and `rustio commit` to\n\
+                   //! Run `rustio-admin add model <Name>` and `rustio-admin commit` to\n\
                    //! populate `src/_generated/`. Then wire your server here.\n\
                    \n\
                    mod _generated;\n\
@@ -257,18 +257,18 @@ chrono = {{ version = "0.4", features = ["serde"] }}
                    #[tokio::main]\n\
                    async fn main() {\n\
                    \x20   let _admin = _generated::admin::build_admin();\n\
-                   \x20   println!(\"rustio: scaffold ready. Edit src/main.rs to wire your server.\");\n\
+                   \x20   println!(\"rustio-admin: scaffold ready. Edit src/main.rs to wire your server.\");\n\
                    }\n";
     std::fs::write(root.join("src/main.rs"), main_rs).map_err(|e| e.to_string())?;
 
     Ok(format!(
-        "Created project '{name}'.\nNext: cd {name} && rustio add model <Name> && rustio commit"
+        "Created project '{name}'.\nNext: cd {name} && rustio-admin add model <Name> && rustio-admin commit"
     ))
 }
 
-/// `rustio add model <Name>` -- append an `add_model` event.
+/// `rustio-admin add model <Name>` -- append an `add_model` event.
 ///
-/// The generator does not run; the developer runs `rustio commit`
+/// The generator does not run; the developer runs `rustio-admin commit`
 /// to materialize the change. Doctrine separation.
 pub(crate) fn run_add_model(start: &Path, model_name: &str) -> Result<String, String> {
     validate_model_name(model_name)?;
@@ -295,11 +295,11 @@ pub(crate) fn run_add_model(start: &Path, model_name: &str) -> Result<String, St
 
     Ok(format!(
         "Recorded add_model {model_name} (table = {table}) [event {id}]\n\
-         Run `rustio commit` to generate code."
+         Run `rustio-admin commit` to generate code."
     ))
 }
 
-/// `rustio add field <Model> <name> <type>` -- append an `add_field`
+/// `rustio-admin add field <Model> <name> <type>` -- append an `add_field`
 /// event. Refuses unknown field types and reserved field names.
 pub(crate) fn run_add_field(
     start: &Path,
@@ -338,7 +338,7 @@ pub(crate) fn run_add_field(
         crate::builder::replay::replay_from_file(&history_path).map_err(|e| e.to_string())?;
     if !draft.models.iter().any(|m| m.name == model_name) {
         return Err(format!(
-            "model '{model_name}' is not registered; run `rustio add model {model_name}` first"
+            "model '{model_name}' is not registered; run `rustio-admin add model {model_name}` first"
         ));
     }
     if draft
@@ -372,17 +372,17 @@ pub(crate) fn run_add_field(
 
     Ok(format!(
         "Recorded add_field {model_name}.{field_name}: {type_name} [event {id}]\n\
-         Run `rustio commit` to regenerate code."
+         Run `rustio-admin commit` to regenerate code."
     ))
 }
 
-/// `rustio plan` -- print the diff `commit` would apply.
+/// `rustio-admin plan` -- print the diff `commit` would apply.
 pub(crate) fn run_plan(start: &Path) -> Result<String, String> {
     let report = lifecycle_plan(start).map_err(format_lifecycle_err)?;
     Ok(render_plan(&report))
 }
 
-/// `rustio commit` -- atomic write per §6.2.
+/// `rustio-admin commit` -- atomic write per §6.2.
 pub(crate) fn run_commit(start: &Path, force: bool) -> Result<String, String> {
     let (actor, source) = resolve_actor();
     warn_if_degraded(source);
@@ -504,7 +504,7 @@ mod tests {
     /// commit-again-is-no-op.
     #[test]
     fn end_to_end_lifecycle() {
-        // Work in an isolated CWD so `rustio new` writes into the
+        // Work in an isolated CWD so `rustio-admin new` writes into the
         // tempdir, not the repo. Hold the global guard for the
         // duration of the CWD mutation.
         let work = tempdir();
@@ -531,7 +531,7 @@ mod tests {
         ] {
             assert!(
                 project_root.join(rel).exists(),
-                "{rel} must exist after rustio new"
+                "{rel} must exist after rustio-admin new"
             );
         }
 
@@ -569,7 +569,7 @@ mod tests {
     /// is process-global, so any test using it would race with the
     /// `end_to_end_lifecycle` test under cargo's default parallel
     /// runner. Tests that only need a project on disk (not the
-    /// `rustio new` verb itself) bootstrap here.
+    /// `rustio-admin new` verb itself) bootstrap here.
     fn bootstrap_project_at(root: &Path) {
         std::fs::create_dir_all(root.join(".rustio")).unwrap();
         std::fs::create_dir_all(root.join("src")).unwrap();

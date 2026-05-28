@@ -63,9 +63,9 @@ not just the diff.
   the framework dispatches on a project's behalf (recovery today,
   MFA enrolment and security alerts tomorrow).
 - [`design/DESIGN_BUILDER.md`](design/DESIGN_BUILDER.md) — the
-  deterministic project compiler (`rustio builder new`, `rustio add`,
-  `rustio commit`), its thirteen numbered invariants, and the five
-  CI-enforced grep proofs. (`rustio new` is now the friendly scaffold
+  deterministic project compiler (`rustio-admin builder new`, `rustio-admin add`,
+  `rustio-admin commit`), its thirteen numbered invariants, and the five
+  CI-enforced grep proofs. (`rustio-admin new` is now the friendly scaffold
   alias; see `design/DESIGN_ONBOARDING.md` §10.)
 
 ## Archive

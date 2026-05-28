@@ -1,11 +1,11 @@
-//! `rustio theme` -- print curated `AdminTheme` snippets for
+//! `rustio-admin theme` -- print curated `AdminTheme` snippets for
 //! copy-paste into a project's `Admin::new()` builder chain.
 //!
 //! No source mutation. The verb is a transparent printer -- it lists
 //! the available presets, then on demand emits a complete, ready-to-
 //! paste `.theme(...)` clause. Operators do the one-line edit
 //! themselves; the framework never reaches into `main.rs` and risks
-//! corrupting in-progress work. Same posture as `rustio override`,
+//! corrupting in-progress work. Same posture as `rustio-admin override`,
 //! which copies a template to disk but never edits the project's
 //! existing files.
 //!
@@ -237,7 +237,7 @@ fn print_list() {
         println!("  {:<width$}  {}", p.name, p.description, width = max_name);
     }
     println!();
-    println!("Show a preset's full code with `rustio theme show <name>`.");
+    println!("Show a preset's full code with `rustio-admin theme show <name>`.");
     println!("Paste the printed `.theme(...)` clause into your `Admin::new()` chain.");
 }
 
@@ -250,7 +250,7 @@ fn print_show(name: &str) -> Result<(), String> {
 
     let snippet = render_snippet(preset);
     println!(
-        "// rustio theme preset: {} -- {}",
+        "// rustio-admin theme preset: {} -- {}",
         preset.name, preset.description
     );
     println!("//");

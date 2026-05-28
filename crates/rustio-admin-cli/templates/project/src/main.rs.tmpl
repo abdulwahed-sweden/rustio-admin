@@ -8,9 +8,9 @@ use rustio_admin::{
     Server,
 };
 
-// rustio: modules — `mod <name>;` declarations from `rustio startapp` go directly under this marker.
+// rustio: modules — `mod <name>;` declarations from `rustio-admin startapp` go directly under this marker.
 
-// rustio: imports — `use <name>::<Name>;` lines from `rustio startapp` go directly under this marker.
+// rustio: imports — `use <name>::<Name>;` lines from `rustio-admin startapp` go directly under this marker.
 
 // The first-boot homepage at `/`. Baked at compile time so the
 // binary stays single-file. Replace by editing this file and
@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
     // title, login header, and dashboard h1 so the framework reads as
     // "powered by RustIO", not "inside RustIO". The `// rustio: models`
     // marker below is the insertion point for `.model::<YourModel>()`
-    // calls printed by `rustio startapp` — chain them between the
+    // calls printed by `rustio-admin startapp` — chain them between the
     // marker and the closing `;`.
     let admin = Admin::new()
         .app_name("{{name_title}}")

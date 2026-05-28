@@ -1,4 +1,4 @@
-//! Banner + confirmation surface shared by every `rustio user <op>`
+//! Banner + confirmation surface shared by every `rustio-admin user <op>`
 //! emergency command.
 //!
 //! This module owns the CLI's UX concerns for emergency operations:
@@ -43,7 +43,7 @@ pub const REASON_MIN_LEN: usize = 8;
 #[derive(Debug, Clone)]
 pub struct OperationContext {
     /// User-facing operation slug, e.g. `"reset-password"`.
-    /// Matches the `rustio user <op>` subcommand name verbatim.
+    /// Matches the `rustio-admin user <op>` subcommand name verbatim.
     pub operation: &'static str,
     /// The target's email, loaded fresh from
     /// `find_user_by_email` immediately before the banner renders.
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn redact_space_form() {
         let argv: Vec<String> = [
-            "rustio",
+            "rustio-admin",
             "user",
             "reset-password",
             "--email",
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn redact_equals_form() {
         let argv: Vec<String> = [
-            "rustio",
+            "rustio-admin",
             "user",
             "reset-password",
             "--reason=lost MFA device",
@@ -498,12 +498,12 @@ mod tests {
 
     #[test]
     fn redact_no_reason_passes_through() {
-        let argv: Vec<String> = ["rustio", "user", "list"]
+        let argv: Vec<String> = ["rustio-admin", "user", "list"]
             .iter()
             .map(|s| s.to_string())
             .collect();
         let out = redact_reason_in_argv(&argv);
-        assert_eq!(out, "rustio user list");
+        assert_eq!(out, "rustio-admin user list");
     }
 
     #[test]
@@ -511,11 +511,11 @@ mod tests {
         // Pathological: --reason at end of argv with no value.
         // Clap would have rejected this; the redactor must not panic
         // or eat a value that doesn't exist.
-        let argv: Vec<String> = ["rustio", "--reason"]
+        let argv: Vec<String> = ["rustio-admin", "--reason"]
             .iter()
             .map(|s| s.to_string())
             .collect();
         let out = redact_reason_in_argv(&argv);
-        assert_eq!(out, "rustio --reason");
+        assert_eq!(out, "rustio-admin --reason");
     }
 }

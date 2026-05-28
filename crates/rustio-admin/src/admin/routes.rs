@@ -956,7 +956,7 @@ pub fn register_admin_routes(
     });
 
     // Health dashboard — Administrator-only web counterpart to
-    // `rustio doctor`. Runs the same DB probes the CLI does
+    // `rustio-admin doctor`. Runs the same DB probes the CLI does
     // (Postgres reachable, auth tables present, ≥1 active admin,
     // RUSTIO_SECRET_KEY shape). Distinct from `/admin/healthz`
     // which is the public liveness probe.
