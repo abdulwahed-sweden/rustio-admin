@@ -1,4 +1,4 @@
-//! `rustio test-init` -- generate a starter integration test at
+//! `rustio-admin test-init` -- generate a starter integration test at
 //! `./tests/smoke.rs`.
 //!
 //! The test spawns the project binary (`cargo run`), waits for the
@@ -30,7 +30,7 @@ const SMOKE_TEMPLATE: &str = include_str!("../templates/test_init/smoke.rs.tmpl"
 /// `tests/smoke.rs` with the default `--out=tests`.
 const TARGET_FILE: &str = "smoke.rs";
 
-/// Dispatch for `rustio test-init`.
+/// Dispatch for `rustio-admin test-init`.
 pub(crate) fn run(force: bool, out: &str) -> Result<(), String> {
     let out_root = Path::new(out);
     let dest: PathBuf = out_root.join(TARGET_FILE);

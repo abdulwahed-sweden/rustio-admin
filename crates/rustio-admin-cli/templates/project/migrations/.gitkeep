@@ -1,2 +1,2 @@
-# Migration files live here. `rustio startapp <name>` adds the first one.
-# Apply pending files with `rustio migrate apply`.
+# Migration files live here. `rustio-admin startapp <name>` adds the first one.
+# Apply pending files with `rustio-admin migrate apply`.

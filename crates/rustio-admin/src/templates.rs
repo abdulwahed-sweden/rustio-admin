@@ -294,7 +294,7 @@ fn load_template(
 /// Every template baked into the framework binary, by canonical name
 /// (e.g. `"admin/list.html"`). Order is stable across builds so a
 /// CLI verb that lists them produces deterministic output. Used by
-/// `rustio override` to enumerate copy candidates; project code can
+/// `rustio-admin override` to enumerate copy candidates; project code can
 /// also iterate this to build documentation pages.
 pub fn embedded_template_names() -> Vec<&'static str> {
     EMBEDDED_TEMPLATES.iter().map(|(n, _)| *n).collect()
@@ -302,7 +302,7 @@ pub fn embedded_template_names() -> Vec<&'static str> {
 
 // public:
 /// Return the byte-for-byte source of an embedded template by name,
-/// or `None` when no such template exists. Used by `rustio override`
+/// or `None` when no such template exists. Used by `rustio-admin override`
 /// to materialise a copy at `<RUSTIO_TEMPLATE_DIR>/<name>` so the
 /// operator can start editing without first having to find the
 /// framework source.

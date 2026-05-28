@@ -1,4 +1,4 @@
-//! `rustio group` -- group CRUD on top of the framework's `auth`
+//! `rustio-admin group` -- group CRUD on top of the framework's `auth`
 //! permission tables.
 
 use clap::Subcommand;
@@ -19,7 +19,7 @@ pub enum Action {
     List,
     /// Show one group's profile -- id / description / member list
     /// and the permissions granted via this group. Operational
-    /// symmetry with `rustio user perms`: that command answers
+    /// symmetry with `rustio-admin user perms`: that command answers
     /// "what can this user do?"; this one answers "who has
     /// access via this group, and what does membership grant?".
     Show {

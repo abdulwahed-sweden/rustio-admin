@@ -1,4 +1,4 @@
-//! `rustio reload` -- dev-mode watcher.
+//! `rustio-admin reload` -- dev-mode watcher.
 //!
 //! Thin wrapper around `cargo watch -x run`. Watches the project's
 //! source tree and re-runs `cargo run` whenever a file changes --
@@ -17,7 +17,7 @@
 
 use std::process::Command;
 
-/// Dispatch for `rustio reload`. Returns the cargo-watch exit code
+/// Dispatch for `rustio-admin reload`. Returns the cargo-watch exit code
 /// (zero on a clean shutdown of the watcher, non-zero on error
 /// install or watcher failure).
 pub(crate) fn run() -> Result<(), String> {
@@ -31,12 +31,12 @@ pub(crate) fn run() -> Result<(), String> {
         _ => {
             return Err("`cargo-watch` isn't installed. Install once with:\n  \
                  cargo install cargo-watch\n\
-                 Then re-run `rustio reload`."
+                 Then re-run `rustio-admin reload`."
                 .into());
         }
     }
 
-    println!("rustio reload -- running `cargo watch -x run` (Ctrl-C to stop)…");
+    println!("rustio-admin reload -- running `cargo watch -x run` (Ctrl-C to stop)…");
     let status = Command::new("cargo")
         .args(["watch", "-x", "run"])
         .status()

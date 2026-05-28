@@ -65,7 +65,7 @@ pub(crate) struct PlanEntry {
     pub schema_hash: String,
 }
 
-/// Result of `rustio plan`.
+/// Result of `rustio-admin plan`.
 #[derive(Debug, Clone)]
 pub(crate) struct PlanReport {
     pub project_root: PathBuf,
@@ -165,7 +165,7 @@ impl std::fmt::Display for LifecycleError {
             LifecycleError::Lock(e) => write!(f, "{e}"),
             LifecycleError::NotInProject { cwd } => write!(
                 f,
-                "no .rustio/ directory found at {} or any parent. Run `rustio new <name>` first.",
+                "no .rustio/ directory found at {} or any parent. Run `rustio-admin new <name>` first.",
                 cwd.display()
             ),
             LifecycleError::SymlinkedRustioDir { path } => write!(
@@ -197,13 +197,13 @@ impl std::fmt::Display for LifecycleError {
             }
             LifecycleError::DraftRead(p, e) => write!(f, "could not read {}: {e}", p.display()),
             LifecycleError::DraftMissing(p) => {
-                write!(f, "{} not found. Is this a rustio project?", p.display())
+                write!(f, "{} not found. Is this a rustio-admin project?", p.display())
             }
             LifecycleError::DraftDrift => write!(
                 f,
                 "the on-disk .rustio/draft.toml has been hand-edited. \
                  Reconcile with the event log before running this command \
-                 (rustio status / rustio merge -- out of MVP scope)."
+                 (rustio-admin status / rustio-admin merge -- out of MVP scope)."
             ),
         }
     }

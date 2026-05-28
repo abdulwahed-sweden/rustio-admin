@@ -42,7 +42,7 @@ Pull request review runs against this document, not only the diff.
 - The `.rustio/builder.lock` version-pin file.
 - The `src/_generated/` directory and the SchemaHash / overwrite /
   deletion contract that protects it.
-- The `rustio plan` / `rustio commit` lifecycle and atomicity
+- The `rustio-admin plan` / `rustio-admin commit` lifecycle and atomicity
   guarantees.
 - Migration append-only guarantees and the closed enumeration of
   destructive operations.
@@ -93,9 +93,9 @@ implementation. CI enforcement is named under §10.
 | **B4**  | The Builder's `cli::redact` produces fingerprints, not values, for every secret-category field before emission to `history.jsonl` or `.rustio/proposals/` (Builder analog of Doctrine 11) |
 | **B5**  | Every file under `src/_generated/` carries a header and a SchemaHash; overwrite without a matching hash requires explicit `--force` and emits an event |
 | **B6**  | Migrations are append-only — no command, with or without `--force`, edits an existing migration file |
-| **B7**  | Doctrine-bound features (§8.2) cannot be disabled via `draft.toml`; `rustio commit` refuses such a configuration |
-| **B8**  | `rustio plan` has zero filesystem side effects; `rustio commit` is atomic |
-| **B9**  | `rustio plan` and `rustio commit` open no network sockets |
+| **B7**  | Doctrine-bound features (§8.2) cannot be disabled via `draft.toml`; `rustio-admin commit` refuses such a configuration |
+| **B8**  | `rustio-admin plan` has zero filesystem side effects; `rustio-admin commit` is atomic |
+| **B9**  | `rustio-admin plan` and `rustio-admin commit` open no network sockets |
 | **B10** | The Framework crate never reads Builder-emitted metadata at runtime |
 | **B11** | The Builder version is pinned in `.rustio/builder.lock`; mismatch refuses to run without explicit upgrade |
 | **B12** | A model or field rename is performed only when the corresponding `rename_*` event exists in `history.jsonl`; otherwise the operation is classified destructive |
@@ -219,7 +219,7 @@ schema version refuse to run.
 
 **Mutability.** Mutated only by Builder commands. Hand-editing is
 permitted but treated as an unverified mutation: the next
-`rustio status` invocation detects drift between `draft.toml` and
+`rustio-admin status` invocation detects drift between `draft.toml` and
 the replay of `history.jsonl`, prints the divergence, and refuses
 subsequent mutating commands until the developer either accepts the
 hand edit (which emits a `hand_edit` event recording the drift) or
@@ -273,7 +273,7 @@ this order, with no embedded newlines:
 
 > **The replay-rebuild property.** Replaying every event in `history.jsonl` in line order against an empty `draft.toml`, using `cli::toml::emit_canonical`, produces the current `draft.toml` byte-for-byte under the environment fixings of §4.4.
 
-The property is verified by `rustio doctor builder` (§10) and by a
+The property is verified by `rustio-admin doctor builder` (§10) and by a
 unit-level drift test in CI.
 
 #### 4.2.3 Redaction (Doctrine B4)
@@ -320,7 +320,7 @@ log values stay in lockstep, symmetric to `DESIGN_AUDIT.md` §5.2.
 Projects may opt into a SHA-256 chain — each line carries
 `prev_hash = sha256(prior line bytes including its prev_hash)`.
 When chain mode is enabled in `builder.lock`, every appender must
-populate the field; verification is part of `rustio doctor builder`.
+populate the field; verification is part of `rustio-admin doctor builder`.
 Chain mode is off by default; off projects omit the field entirely.
 
 ### 4.3 `builder.lock` — version pin
@@ -334,12 +334,12 @@ toml_emitter   = "rio-canon-1"   # canonical emitter version
 chain_mode     = false
 ```
 
-**Ownership.** Written on first `rustio commit` of a project.
-Updated only via `rustio upgrade` (or whichever name the eventual
+**Ownership.** Written on first `rustio-admin commit` of a project.
+Updated only via `rustio-admin upgrade` (or whichever name the eventual
 CLI uses for the same responsibility).
 
 **Enforcement (Doctrine B11).** Every Builder command except
-`rustio upgrade` reads `builder.lock` first and refuses to proceed
+`rustio-admin upgrade` reads `builder.lock` first and refuses to proceed
 if the executing Builder's semver does not match. The error message
 prints the exact upgrade command. There is no implicit upgrade.
 
@@ -352,7 +352,7 @@ runtime crate from reading it; the grep proof in §10 enforces this.
 Reproducibility is the load-bearing property of the Builder. It is
 asserted, not assumed, under a closed set of environment fixings.
 
-> **Canonical reproducibility property.** Given an unchanged `draft.toml`, an unchanged `history.jsonl`, an unchanged `builder.lock`, and an execution environment matching the fixings below, two `rustio commit --dry-run` runs produce byte-identical outputs.
+> **Canonical reproducibility property.** Given an unchanged `draft.toml`, an unchanged `history.jsonl`, an unchanged `builder.lock`, and an execution environment matching the fixings below, two `rustio-admin commit --dry-run` runs produce byte-identical outputs.
 
 **Required fixings:**
 
@@ -393,7 +393,7 @@ merge cannot survive an enterprise environment.
 
 > **Mergeability of `history.jsonl`.** Two `history.jsonl` streams from divergent branches are mergeable iff the textual three-way merge produces a line sequence that replays to a well-formed `draft.toml` under §4.2.2.
 
-`rustio merge` (CLI verb naming non-normative) performs the
+`rustio-admin merge` (CLI verb naming non-normative) performs the
 verification. The operation:
 
 1. Reads the working-tree `history.jsonl` (assumed to be the
@@ -417,7 +417,7 @@ versions must migrate forward.
 
 > **Forward-only.** Schema downgrades are not supported by the Builder.
 
-A `rustio upgrade --schema` command (verb naming non-normative):
+A `rustio-admin upgrade --schema` command (verb naming non-normative):
 
 1. Reads the existing `draft.toml`.
 2. Writes a snapshot to `.rustio/draft.toml.v<old>.bak`.
@@ -471,7 +471,7 @@ Every file in `_generated/` carries a fixed header:
 // @generated by rustio <semver> from .rustio/draft.toml
 // SPDX-SchemaHash: sha256:<64-hex-chars>
 // SPDX-EmitterVersion: rio-canon-1
-// To change, edit draft.toml and run `rustio commit`. Manual edits
+// To change, edit draft.toml and run `rustio-admin commit`. Manual edits
 // will be overwritten.
 ```
 
@@ -506,7 +506,7 @@ design.
 
 ### 5.4 Overwrite contract
 
-`rustio commit` operates on each file in `_generated/` under these
+`rustio-admin commit` operates on each file in `_generated/` under these
 rules:
 
 1. **File absent on disk.** Write the new file. Emit a
@@ -537,7 +537,7 @@ When a model removal (or any other `draft.toml` change) leaves a
 1. The Builder verifies the file's SchemaHash matches expectation.
    On mismatch, refuses (same as overwrite case 3) unless
    `--force` is supplied.
-2. The deletion is part of the atomic `rustio commit`. Either every
+2. The deletion is part of the atomic `rustio-admin commit`. Either every
    intended deletion happens or none do.
 3. A `file_deleted` event is emitted carrying the prior path and
    the prior file's SHA-256.
@@ -561,11 +561,11 @@ path from constructing a path under `src/app/`.
 The Builder's mutating verbs follow a Terraform-style two-phase
 contract.
 
-### 6.1 `rustio plan`
+### 6.1 `rustio-admin plan`
 
 Read-only. Has zero filesystem side effects (no writes, no creates,
 no deletes, no permission changes — Doctrine B8). Output is a
-structured diff that describes what `rustio commit` would do:
+structured diff that describes what `rustio-admin commit` would do:
 
 - Files that would be created.
 - Files that would be overwritten (SchemaHash before/after).
@@ -576,11 +576,11 @@ structured diff that describes what `rustio commit` would do:
 - Redaction summaries for any `args` payload that would be written
   to `history.jsonl`.
 
-`rustio plan` is the contract surface for review tools and CI. A
+`rustio-admin plan` is the contract surface for review tools and CI. A
 pull request that touches `draft.toml` must include the `plan`
 output, the same way a Terraform PR includes a plan diff.
 
-### 6.2 `rustio commit`
+### 6.2 `rustio-admin commit`
 
 Atomic. Either every file in the plan is written, or none are.
 Implementation uses a staged-write strategy: produce all outputs
@@ -603,7 +603,7 @@ After a successful `commit`:
 ### 6.3 No network in `plan` or `commit`
 
 Doctrine B9. Neither verb opens a socket. The deterministic core is
-network-free. The Advisory layer's `rustio suggest` and any future
+network-free. The Advisory layer's `rustio-admin suggest` and any future
 import command have their own contracts and never reach `plan` or
 `commit` directly.
 
@@ -614,7 +614,7 @@ Framework's own contract surface (`DESIGN_RECOVERY.md`,
 
 ### 6.4 Idempotence under canonical conditions
 
-Running `rustio commit` twice in succession with no intervening
+Running `rustio-admin commit` twice in succession with no intervening
 changes to `draft.toml`, `history.jsonl`, or `builder.lock`, and
 under the environment fixings of §4.4, produces no on-disk
 modification on the second run beyond timestamp updates the OS may
@@ -654,7 +654,7 @@ question.
 ### 7.3 Destructive-operation enumeration (closed list)
 
 A migration emitting any of the following is **destructive** and
-requires `--accept-destructive` on `rustio commit`. The flag is
+requires `--accept-destructive` on `rustio-admin commit`. The flag is
 independent of `--yes` and `--force`; none implies the others.
 
 | Class | SQL pattern | Notes |
@@ -681,10 +681,10 @@ judgement.
 
 The discrimination rule:
 
-1. Developer runs `rustio rename model Patient Resident`.
+1. Developer runs `rustio-admin rename model Patient Resident`.
 2. Builder emits a `rename_model` event:
    `{"op": "rename_model", "args": {"from": "Patient", "to": "Resident"}}`.
-3. On the next `rustio commit`, the generator detects that
+3. On the next `rustio-admin commit`, the generator detects that
    `Patient` is absent from `draft.toml` but `Resident` is present
    with a matching field set, and the `rename_model` event is the
    most recent operation affecting either name.
@@ -802,7 +802,7 @@ declared dependencies.
 
 The Builder never injects runtime behaviour. It does not register
 hooks, ship a privileged daemon, or open a control socket. After
-`rustio commit` exits, no Builder code is running anywhere.
+`rustio-admin commit` exits, no Builder code is running anywhere.
 
 ### 9.3 Builder ↔ Advisory AI (boundary only)
 
@@ -820,7 +820,7 @@ The Advisory AI layer's internal contract lives in a future
 
 > **Doctrine B13. Advisory output is never source of truth.**
 
-A future `rustio review <id> --accept` command takes Advisor-authored
+A future `rustio-admin review <id> --accept` command takes Advisor-authored
 content and writes it through Builder commands to `draft.toml`. The
 operation is human-initiated; it carries a verdict event in
 `history.jsonl` that records the proposal ID, reviewer identifier,
@@ -982,7 +982,7 @@ before any code. Updates to this document carry a CHANGELOG entry the
 same way framework runtime changes do.
 
 The doctrine is not closed. Significant gaps still exist —
-`main.rs` splice details, `rustio doctor builder` obligations, and
+`main.rs` splice details, `rustio-admin doctor builder` obligations, and
 the Advisory verdict-event field schema all remain undocumented. The
 companion review document [`REVIEW_BUILDER_DOCTRINE.md`](../archive/REVIEW_BUILDER_DOCTRINE.md)
 tracks resolved and outstanding findings. Future doctrine revisions

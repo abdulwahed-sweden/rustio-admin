@@ -336,7 +336,7 @@ pub async fn register_model_permissions(db: &Db, app: &str, singular: &str) -> R
 /// - `viewer` — read-only on content models.
 ///
 /// **These are structural defaults, not demo data.** Group names
-/// MUST exactly match the `--role` values accepted by `rustio user
+/// MUST exactly match the `--role` values accepted by `rustio-admin user
 /// create` so a developer's role choice and the group their account
 /// gets dropped into are the same string. The CLI's lockstep test
 /// (`crates/rustio-admin-cli/src/user.rs`) fails CI if either side

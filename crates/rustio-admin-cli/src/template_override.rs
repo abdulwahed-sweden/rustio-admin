@@ -1,4 +1,4 @@
-//! `rustio override` -- copy an embedded admin template into the
+//! `rustio-admin override` -- copy an embedded admin template into the
 //! project's `templates/` directory so the project can edit it.
 //!
 //! Pairs with the disk-loader path in
@@ -14,7 +14,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Dispatch for `rustio override`.
+/// Dispatch for `rustio-admin override`.
 ///
 /// - `name = None` → list every available template name.
 /// - `name = Some(n)` → materialise `<out>/<n>` from the embedded
@@ -33,7 +33,7 @@ fn list_templates() -> Result<(), String> {
         println!("  {n}");
     }
     println!();
-    println!("Copy one with `rustio override <name>` -- drops it into");
+    println!("Copy one with `rustio-admin override <name>` -- drops it into");
     println!("`./templates/<name>` so a `RUSTIO_TEMPLATE_DIR=./templates`");
     println!("run picks it up instead of the embedded default.");
     Ok(())
@@ -41,7 +41,9 @@ fn list_templates() -> Result<(), String> {
 
 fn copy_template(name: &str, force: bool, out_root: &Path) -> Result<(), String> {
     let body = rustio_admin::embedded_template_source(name).ok_or_else(|| {
-        format!("unknown template `{name}`. Run `rustio override` (no args) for the full list.")
+        format!(
+            "unknown template `{name}`. Run `rustio-admin override` (no args) for the full list."
+        )
     })?;
 
     // Defense in depth: refuse path-traversal attempts even though

@@ -34,7 +34,7 @@ against this document, not only the diff.
 - The identity of the default scaffold and the line between
   *demo data* and *structural defaults*.
 - The default permission groups and their exact-name contract
-  with `rustio user create --role`.
+  with `rustio-admin user create --role`.
 - The error-message shape every onboarding-facing failure must
   take.
 - Progress, motion, and terminal-feedback rules.
@@ -172,17 +172,17 @@ useful, a short next-step hint.
 cargo install rustio-admin-cli
 rustio --version
 rustio --help
-rustio new project school
+rustio-admin new project school
 cd school
 # automatic .env generation
 # automatic .gitignore generation
 # platform-specific PostgreSQL guidance
 # database name chosen once
-rustio migrate apply
-rustio user create --email admin@school.local --role administrator
-rustio startapp student
+rustio-admin migrate apply
+rustio-admin user create --email admin@school.local --role administrator
+rustio-admin startapp student
 # model registration guidance
-rustio migrate apply
+rustio-admin migrate apply
 cargo run
 ```
 
@@ -264,7 +264,7 @@ The framework seeds exactly three groups on a fresh database:
 ### 7.4 The exact-name contract
 
 The three group names MUST exactly match the `--role` values
-accepted by `rustio user create`. If either side renames, the
+accepted by `rustio-admin user create`. If either side renames, the
 other renames in the same commit. CI enforces the match.
 
 This means `administrator` is `administrator` — not `admin`,
@@ -311,7 +311,7 @@ output, not internal error types.
 Problem:  DATABASE_URL is not set.
 Why:      The CLI looks for a .env file in the current directory.
 Fix:      Create .env with: DATABASE_URL=postgres://localhost/<your-db>
-Retry:    rustio migrate apply
+Retry:    rustio-admin migrate apply
 ```
 
 **PostgreSQL service is not running**
@@ -320,7 +320,7 @@ Retry:    rustio migrate apply
 Problem:  Cannot connect to PostgreSQL at <host>:<port>.
 Why:      The PostgreSQL server is not running, or it is listening on a different address.
 Fix:      Start PostgreSQL — on macOS: `brew services start postgresql`.
-Retry:    rustio migrate apply
+Retry:    rustio-admin migrate apply
 ```
 
 **Database does not exist**
@@ -329,7 +329,7 @@ Retry:    rustio migrate apply
 Problem:  Database "<name>" does not exist on <host>.
 Why:      PostgreSQL is running, but the database has not been created yet.
 Fix:      createdb <name>
-Retry:    rustio migrate apply
+Retry:    rustio-admin migrate apply
 ```
 
 **Migration SQL failed**
@@ -338,7 +338,7 @@ Retry:    rustio migrate apply
 Problem:  Migration <file> failed at line <n>.
 Why:      <captured SQL error, prefixed verbatim>
 Fix:      Edit <file> and re-run, or write a new migration that corrects the schema.
-Retry:    rustio migrate apply
+Retry:    rustio-admin migrate apply
 ```
 
 **Role / group name mismatch**
@@ -347,7 +347,7 @@ Retry:    rustio migrate apply
 Problem:  Role "<role>" is not one of the framework's known roles.
 Why:      Known roles are: administrator, editor, viewer.
 Fix:      Re-run with --role administrator (or editor / viewer).
-Retry:    rustio user create --email <email> --role administrator
+Retry:    rustio-admin user create --email <email> --role administrator
 ```
 
 The pattern is consistent: name the failure, name the cause,
@@ -384,8 +384,8 @@ whether the CLI is working or hung will assume hung.
 
 ### 10.1 Beginner-facing first
 
-- `rustio new project <name>` is the beginner-facing command.
-- `rustio startproject <name>` remains for compatibility and
+- `rustio-admin new project <name>` is the beginner-facing command.
+- `rustio-admin startproject <name>` remains for compatibility and
   scripts; it is not removed.
 - The Builder's `new` verb lives under a Builder-namespaced path
   so the universal `new` is free for the beginner.

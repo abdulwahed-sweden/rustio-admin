@@ -1,6 +1,6 @@
-//! `rustio startapp --field` parser, validator, and renderer.
+//! `rustio-admin startapp --field` parser, validator, and renderer.
 //!
-//! PR 2.1 of the FTUX redesign. `rustio startapp` accepts a closed
+//! PR 2.1 of the FTUX redesign. `rustio-admin startapp` accepts a closed
 //! vocabulary of field declarations via repeatable `--field
 //! <name>:<type>` flags so the scaffold can produce a real model
 //! file + matching migration in one CLI breath -- without growing a
@@ -79,7 +79,7 @@ pub(crate) fn parse_field(input: &str) -> Result<Field, OnboardingError> {
                 problem: format!("`{input}` is not a valid `--field` value."),
                 why: "Expected format: `<name>:<type>`. Example: `email:str`.".into(),
                 fix: "Re-run with the colon-separated form.".into(),
-                retry: format!("rustio startapp <name> --field {input}:str"),
+                retry: format!("rustio-admin startapp <name> --field {input}:str"),
                 details: None,
             });
         }

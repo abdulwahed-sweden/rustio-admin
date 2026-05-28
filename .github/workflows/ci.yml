@@ -150,7 +150,7 @@ jobs:
       - name: scaffold template pin tracks workspace minor
         run: |
           set -eu
-          # The bundled `rustio startproject` template
+          # The bundled `rustio-admin startproject` template
           # (crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl)
           # must pin the same `rustio-admin` version the workspace
           # ships. Three releases (0.17.0, 0.17.1, 0.18.0) drifted

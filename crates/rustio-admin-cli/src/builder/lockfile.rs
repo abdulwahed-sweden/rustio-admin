@@ -1,7 +1,7 @@
 //! `.rustio/builder.lock` -- Builder version pin (Doctrine B11).
 //!
 //! `DESIGN_BUILDER.md` §4.3: *"Every Builder command except
-//! `rustio upgrade` reads `builder.lock` first and refuses to
+//! `rustio-admin upgrade` reads `builder.lock` first and refuses to
 //! proceed if the executing Builder's semver does not match."*
 //!
 //! Reproducibility invariant §4.4 #7 binds on this file: the
@@ -25,7 +25,7 @@ pub(crate) const EMITTER_VERSION: &str = "rio-canon-1";
 pub(crate) struct BuilderLock {
     pub schema_version: u32,
     /// Exact Builder semver -- sourced from `CARGO_PKG_VERSION` at
-    /// `rustio new` time.
+    /// `rustio-admin new` time.
     pub builder: String,
     /// Canonical TOML emitter identifier. Encoded in every
     /// generated file's header so a future emitter bump is
@@ -62,7 +62,7 @@ impl std::fmt::Display for LockError {
                 f,
                 "builder.lock pins Builder {pinned} but this is Builder {running}. \
                  Doctrine B11 forbids running mismatched versions. \
-                 Run `rustio upgrade` to migrate the project."
+                 Run `rustio-admin upgrade` to migrate the project."
             ),
         }
     }
@@ -174,7 +174,7 @@ mod tests {
         // upgrade command.
         let msg = format!("{err}");
         assert!(msg.contains("99.99.99"));
-        assert!(msg.contains("rustio upgrade"));
+        assert!(msg.contains("rustio-admin upgrade"));
     }
 
     #[test]

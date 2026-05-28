@@ -144,7 +144,7 @@ The list view, form view, dashboard, and audit pages are the framework's largest
 - ✅ Security-headers middleware
 - ✅ **Email-based password reset flow** — admin-driven + self-service variants, single-use signed token, real SMTP transport, project-branded HTML email
 - ✅ **Two-factor authentication** — TOTP + single-use backup codes
-- ✅ **Emergency-access CLI** — `rustio user reset-password / unlock / disable-mfa / promote / emergency-access`
+- ✅ **Emergency-access CLI** — `rustio-admin user reset-password / unlock / disable-mfa / promote / emergency-access`
 - ✅ **Session management UI** — `user_view.html` sessions tab lists active sessions with a per-row Revoke button (hidden on the actor's own session). `POST /admin/users/:id/sessions/:session_id/revoke` enforces cross-rank, runs through `auth::invalidate_sessions` (Doctrine 22 single writer), emits `SessionsRevokedByOther`. Self-service variants at `/admin/account/sessions/:id/revoke`, `…/revoke-others`, `…/revoke-all`
 - ✅ **Audit on auth events** — `LoginSucceeded`, `LoginFailed` (with `reason = wrong_password | inactive | locked` in metadata), `PasswordChangedSelf`, `PasswordResetByOther`, `SessionsRevokedSelf` / `…ByOther`, `SessionLogout`, `MfaEnabled` / `MfaDisabled` / `MfaCodeConsumed`, `BackupCodesRegenerated`, `AccountLocked` / `…Unlocked`, `ForcedPasswordChangeCompleted`, `EmergencyRecovery` (CLI-only) — 58 emission sites across the framework. SIEM-friendly stable strings locked by `audit_event_existing_variants_have_stable_strings`.
 - 🔬 **WebAuthn / passkeys.** Strictly research at this point; the trade-off between framework surface area and operator value is unclear.
@@ -174,8 +174,8 @@ JSON content negotiation ships today on list + detail endpoints; CSV export ship
 - ✅ Single-source-of-truth theme architecture (`AdminTheme` is an override patch, not a snapshot — light-only)
 - ✅ Self-hosted fonts (Geist, Tajawal, Noto Naskh Arabic, Inter, Thai, Devanagari) with `unicode-range` filtering
 - ✅ **Per-model template override** — `templates/admin/<model>/list.html` wins over the framework default for that model only; covered by `Templates::render_for_model` tests
-- ✅ **`rustio override <template>`** — CLI verb that copies a named embedded template into the project's `templates/` dir (refuses to clobber without `--force`); pair with `RUSTIO_TEMPLATE_DIR=./templates` at runtime
-- ✅ **`rustio theme` presets** — curated `AdminTheme` palettes; subcommand prints a Rust snippet for the operator to paste into their `Admin::new()` chain
+- ✅ **`rustio-admin override <template>`** — CLI verb that copies a named embedded template into the project's `templates/` dir (refuses to clobber without `--force`); pair with `RUSTIO_TEMPLATE_DIR=./templates` at runtime
+- ✅ **`rustio-admin theme` presets** — curated `AdminTheme` palettes; subcommand prints a Rust snippet for the operator to paste into their `Admin::new()` chain
 
 ---
 
@@ -194,24 +194,24 @@ JSON content negotiation ships today on list + detail endpoints; CSV export ship
 
 ## CLI & Project Bootstrap
 
-The `rustio` binary handles the operationally critical surface for new and existing projects.
+The `rustio-admin` binary handles the operationally critical surface for new and existing projects.
 
-- ✅ `rustio startproject <name>` — scaffold a fresh project
-- ✅ `rustio startapp <name>` — add a model + migration to an existing project
-- ✅ `rustio migrate apply` / `status`
-- ✅ `rustio user create` / `list` / `role` / `delete` (honours the developer-orphan guard)
-- ✅ `rustio group create` / `list` / `add-user` / `remove-user`
-- ✅ `rustio perm grant-user` / `grant-group` / `list`
-- ✅ `rustio doctor` — read-only health check (DB reachable, auth tables present, ≥1 administrator); `doctor email` for SMTP self-validation (incl. `--html-preview`)
-- ✅ `rustio audit tail [--since <duration>]` — read-only audit-trail viewer
-- ✅ `rustio override <template>` — copy an embedded template into the project's `templates/` dir
-- ✅ `rustio theme` — curated `AdminTheme` preset snippets
-- ✅ Builder verbs (`rustio new / add model / add field / plan / commit`) — pre-MVP build-time scaffolder; see `docs/design/DESIGN_BUILDER.md`
-- 🟡 **Zero-config bootstrap.** `rustio startproject` requires a project name argument and assumes a Postgres at `localhost:5432`. A truly zero-config path (auto-detect a Postgres, prompt only for a project name) is not built. *Note: SQLite as a fallback collides with the "Postgres only" non-goal — the more likely path is to ship a `docker compose up` snippet rather than abstract over backends.*
-- 🟡 **Project presets / starters.** `rustio startproject <name> --preset blog` ships a richer two-model skeleton (Post + Comment with a `post_id` FK, two migrations, both models registered in `main.rs`). The `--preset minimal` default reproduces today's single-model scaffold byte-for-byte. Additional presets (`e-commerce`, `crm`, …) and tuned `AdminTheme` snippets per preset are still planned.
-- ⚪ **`rustio sdk-gen <lang>`.** Pairs with the OpenAPI spec.
-- ✅ **Initial test generation** — `rustio test-init` writes a stdlib-only `tests/smoke.rs` integration test that spawns `cargo run`, probes the bound HTTP port, sends a raw GET to `/admin/`, and asserts a 302/303 redirect to `/admin/login` (`Location` header inspection). `--force` to clobber; `--out <dir>` to override the destination root.
-- ✅ **`rustio reload`** — thin wrapper around `cargo watch -x run`. Probes for `cargo-watch` first and surfaces a one-line install instruction when it isn't present, so operators get a clean message instead of cargo's default "no such subcommand" error. Stdio is forwarded transparently so the watcher's compile output and the project's stdout / stderr both land in the terminal as the bare command would.
+- ✅ `rustio-admin startproject <name>` — scaffold a fresh project
+- ✅ `rustio-admin startapp <name>` — add a model + migration to an existing project
+- ✅ `rustio-admin migrate apply` / `status`
+- ✅ `rustio-admin user create` / `list` / `role` / `delete` (honours the developer-orphan guard)
+- ✅ `rustio-admin group create` / `list` / `add-user` / `remove-user`
+- ✅ `rustio-admin perm grant-user` / `grant-group` / `list`
+- ✅ `rustio-admin doctor` — read-only health check (DB reachable, auth tables present, ≥1 administrator); `doctor email` for SMTP self-validation (incl. `--html-preview`)
+- ✅ `rustio-admin audit tail [--since <duration>]` — read-only audit-trail viewer
+- ✅ `rustio-admin override <template>` — copy an embedded template into the project's `templates/` dir
+- ✅ `rustio-admin theme` — curated `AdminTheme` preset snippets
+- ✅ Builder verbs (`rustio-admin new / add model / add field / plan / commit`) — pre-MVP build-time scaffolder; see `docs/design/DESIGN_BUILDER.md`
+- 🟡 **Zero-config bootstrap.** `rustio-admin startproject` requires a project name argument and assumes a Postgres at `localhost:5432`. A truly zero-config path (auto-detect a Postgres, prompt only for a project name) is not built. *Note: SQLite as a fallback collides with the "Postgres only" non-goal — the more likely path is to ship a `docker compose up` snippet rather than abstract over backends.*
+- 🟡 **Project presets / starters.** `rustio-admin startproject <name> --preset blog` ships a richer two-model skeleton (Post + Comment with a `post_id` FK, two migrations, both models registered in `main.rs`). The `--preset minimal` default reproduces today's single-model scaffold byte-for-byte. Additional presets (`e-commerce`, `crm`, …) and tuned `AdminTheme` snippets per preset are still planned.
+- ⚪ **`rustio-admin sdk-gen <lang>`.** Pairs with the OpenAPI spec.
+- ✅ **Initial test generation** — `rustio-admin test-init` writes a stdlib-only `tests/smoke.rs` integration test that spawns `cargo run`, probes the bound HTTP port, sends a raw GET to `/admin/`, and asserts a 302/303 redirect to `/admin/login` (`Location` header inspection). `--force` to clobber; `--out <dir>` to override the destination root.
+- ✅ **`rustio-admin reload`** — thin wrapper around `cargo watch -x run`. Probes for `cargo-watch` first and surfaces a one-line install instruction when it isn't present, so operators get a clean message instead of cargo's default "no such subcommand" error. Stdio is forwarded transparently so the watcher's compile output and the project's stdout / stderr both land in the terminal as the bare command would.
 
 ---
 
@@ -220,7 +220,7 @@ The `rustio` binary handles the operationally critical surface for new and exist
 Each item below is real and on the planning surface, but not yet scheduled for an implementation slot. They may grow, shrink, or merge as the framework matures.
 
 - ⚪ **Upload / media system.** A `MediaModel` trait, an admin page at `/admin/media`, and per-field upload widgets. Storage backends start with local-filesystem; S3-compatible support is a separate add-on. Disk paths are validated against a project-configured root so a bad upload can't escape the sandbox.
-- ⚪ **Email subsystem.** SMTP transport, message templates baked into the binary, `rustio email send-test` CLI verb. Used by the password-reset flow and by future "notify on event" features.
+- ⚪ **Email subsystem.** SMTP transport, message templates baked into the binary, `rustio-admin email send-test` CLI verb. Used by the password-reset flow and by future "notify on event" features.
 - ⚪ **Email template management.** Override-friendly text + HTML templates per email type (welcome, password-reset, invitation). Same disk-override pattern as admin templates.
 - ✅ **Notifications** — `rustio_notifications` table + public `rustio_admin::send_notification(db, user_id, message, url)` helper. Topbar bell carries a red-dot badge with the unread count (capped at `99+`) on dashboard / list pages / history / API surface / health / feature flags / notifications / playground. `/admin/notifications` lists the operator's last 200 entries with "Mark all read". Badge wires through a chained `BaseContext::with_unread_count` setter so non-page-handler code paths stay untouched.
 - ⚪ **Background jobs / queue.** General-purpose async job runner — today's `background.rs` carries only the session sweeper. Goal is a `Job` trait, a `rustio_jobs` table, and one runner per admin process. Multi-worker scaling is out of scope until single-process limits show up.
@@ -238,7 +238,7 @@ These are open questions. Each may become a roadmap item, may live in a separate
 
 - 🔬 **Plugin / extension architecture.** A way for project code to add admin pages, sidebar entries, and dashboard widgets without forking. Today the closest equivalent is `Admin::user_profile_extension(closure)`. A general extension surface is desirable but the API design is unsettled — too narrow and it doesn't help; too wide and it leaks framework internals. May be the right time to revisit once two or three concrete extension shapes are in flight.
 - 🔬 **Multi-tenancy.** Per-row tenant scoping enforced at the framework level (every query gets `WHERE tenant_id = current_tenant`). Real demand exists, but the trade-offs (schema requirements, permission interactions, audit-log changes) are wide enough that this likely lives in a dedicated `rustio-pro-multitenancy` crate rather than the core.
-- 🔬 **Live reload (dev-only).** Watch the project's source tree, rebuild on change, hot-swap templates without dropping sessions. Could be a thin dev-only middleware that injects a WebSocket pinger; could be a separate `rustio dev` CLI subcommand. Open question whether it belongs in `rustio-admin` proper.
+- 🔬 **Live reload (dev-only).** Watch the project's source tree, rebuild on change, hot-swap templates without dropping sessions. Could be a thin dev-only middleware that injects a WebSocket pinger; could be a separate `rustio-admin dev` CLI subcommand. Open question whether it belongs in `rustio-admin` proper.
 - 🔬 **WebAuthn / passkeys.** See *Authentication & Security*.
 - 🔬 **GraphQL surface.** See *APIs & Documentation*.
 - 🔬 **Bidirectional embedded text policy.** See *Internationalization & RTL*.
@@ -259,7 +259,7 @@ A few principles that should outlast any specific roadmap item.
 6. **`#[derive(RustioAdmin)]` emits obvious code.** `cargo expand` should always show the full picture. Any macro that requires runtime inspection to understand is a design failure.
 7. **Audit and security defaults are loud.** CSRF on every mutating route, audit entry on every CRUD operation, last-developer guard, permission cache with a short TTL. Adding a new mutating route without these is an oversight, not a feature.
 8. **The framework is allowed to be small.** "We didn't ship X" is a valid answer. Saying no preserves the parts that already work.
-9. **Releases are verified, not asserted.** Every release runs through the install smoke test (`cargo install` to a sandboxed `--root`, run `rustio startproject`, assert generated `Cargo.toml` pins the current version). The 0.2.1 patch came directly from this check; future patches should too.
+9. **Releases are verified, not asserted.** Every release runs through the install smoke test (`cargo install` to a sandboxed `--root`, run `rustio-admin startproject`, assert generated `Cargo.toml` pins the current version). The 0.2.1 patch came directly from this check; future patches should too.
 10. **The roadmap is a living document.** Reorganise it. Promote items between sections. Remove things that no longer make sense. The shape of this file at any moment reflects the project's honest current direction, not a marketing snapshot.
 
 ---

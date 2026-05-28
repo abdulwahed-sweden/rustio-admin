@@ -13,12 +13,12 @@ description = "Command-line tools for rustio-admin: project scaffolding, migrati
 readme = "../../README.md"
 
 [[bin]]
-name = "rustio"
+name = "rustio-admin"
 path = "src/main.rs"
 
 [dependencies]
 rustio-admin = { workspace = true }
-# Theme engine (DESIGN_THEME). Build-time only — the `rustio theme
+# Theme engine (DESIGN_THEME). Build-time only — the `rustio-admin theme
 # generate` subcommand turns raw brand colors into a static tokens.css.
 # Runtime CSS is the generated file; the library does not depend on
 # this crate.
@@ -33,7 +33,7 @@ rpassword = "7"
 # pipes / CI; we layer one additional gate on top so the global
 # `--quiet` / `--no-progress` flags work too.
 indicatif = "0.17"
-# Terminal styling for `rustio startapp` spatial-orientation output
+# Terminal styling for `rustio-admin startapp` spatial-orientation output
 # (paths, commands, URLs visually distinct). `console` is already in
 # the transitive tree via `indicatif`; declaring it directly keeps
 # the call site reviewable and locks the version. NO_COLOR / TTY
@@ -54,7 +54,7 @@ log       = "0.4"
 # transitive tree via rustio-admin; declaring it as a direct dep
 # keeps the call site reviewable.
 serde_json = "1"
-# `rustio doctor email` opens a SMTP handshake against the
+# `rustio-admin doctor email` opens a SMTP handshake against the
 # configured server (and optionally sends a single test
 # message). Matches the `lettre` feature set the
 # clinic-appointments example ships with.

@@ -6,14 +6,14 @@ on, not throwaway demo data.
 
 This document is the contract for what is seeded, when it is
 seeded, the conditions under which seeding is skipped, and how the
-seeded groups' names lock to the values of `rustio user create
+seeded groups' names lock to the values of `rustio-admin user create
 --role`.
 
 Pull request review for any permissions-touching change runs against
 this document, not only the diff.
 
 > **Governing sentence**
-> A fresh `rustio migrate apply` leaves the project with three named
+> A fresh `rustio-admin migrate apply` leaves the project with three named
 > groups whose intent is obvious and whose permission scope is
 > conservative enough that no operator can shoot themselves in the
 > foot by inheriting them.
@@ -28,7 +28,7 @@ this document, not only the diff.
 - Their per-model permission grants (the "grant matrix").
 - The conditions under which seeding runs vs. skips.
 - The exact-name lockstep between the seeded groups and the
-  `--role` values accepted by `rustio user create`.
+  `--role` values accepted by `rustio-admin user create`.
 - The CI guard that enforces the lockstep.
 
 ### 1.2 What this does not cover
@@ -64,7 +64,7 @@ Those are application-specific and belong to the project owner.
 
 ## 3. The grant matrix
 
-After every `rustio startapp <model>` and the project's startup
+After every `rustio-admin startapp <model>` and the project's startup
 `Admin::seed_permissions(...)` call, the four CRUD permissions for
 each registered model are registered AND granted to the seeded
 groups per this matrix:
@@ -153,7 +153,7 @@ The strings on both sides MUST match byte-for-byte.
 
 ### 5.2 Why
 
-`rustio user create --email alice@x --role editor` creates a user
+`rustio-admin user create --email alice@x --role editor` creates a user
 and immediately adds them to the `editor` group. The role the
 operator typed and the group the user landed in are the same
 string. If the strings drift, the create succeeds but the new user
@@ -236,7 +236,7 @@ the case where a future PR removes the tier-level bypass.
 5. **Idempotency everywhere.** Every seed operation tolerates
    re-running.
 6. **No demo users.** The seed creates groups, not accounts. The
-   project's first admin user comes from `rustio user create`.
+   project's first admin user comes from `rustio-admin user create`.
 7. **The grant matrix is the contract.** Reviewers who want to
    add or remove a permission grant must update this document.
 

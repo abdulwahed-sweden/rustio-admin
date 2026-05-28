@@ -89,8 +89,8 @@ pub(crate) fn database_url_missing() -> OnboardingError {
     OnboardingError {
         problem: "DATABASE_URL is not set.".into(),
         why: "The CLI reads DATABASE_URL from your environment (and from `.env` in the current directory if present); neither contained it.".into(),
-        fix: "Run `rustio new <name>` in an interactive terminal to have the wizard generate `.env` for you, or add a line like `DATABASE_URL=postgres://postgres:postgres@localhost:5432/<db>_dev` to `.env`.".into(),
-        retry: "rustio migrate apply".into(),
+        fix: "Run `rustio-admin new <name>` in an interactive terminal to have the wizard generate `.env` for you, or add a line like `DATABASE_URL=postgres://postgres:postgres@localhost:5432/<db>_dev` to `.env`.".into(),
+        retry: "rustio-admin migrate apply".into(),
         details: None,
     }
 }
@@ -116,7 +116,7 @@ pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> Onboar
             problem: format!("Cannot connect to PostgreSQL ({url_redacted})."),
             why: "The PostgreSQL server is not running, or it is not listening on the host/port your DATABASE_URL points at.".into(),
             fix: "Start PostgreSQL. macOS:  `brew services start postgresql@16`  ·  Ubuntu:  `sudo systemctl start postgresql`  ·  Windows:  start the PostgreSQL service from the Services panel.".into(),
-            retry: "rustio migrate apply".into(),
+            retry: "rustio-admin migrate apply".into(),
             details: Some(raw.to_string()),
         };
     }
@@ -125,7 +125,7 @@ pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> Onboar
             problem: format!("Database \"{db_name}\" does not exist on the PostgreSQL server."),
             why: "PostgreSQL is running, but no database with that name has been created. Either the wizard's chosen DB_NAME has not been created yet, or `.env` and the actual database disagree.".into(),
             fix: format!("Create the database (`createdb {db_name}`) or edit `.env` so DB_NAME / DATABASE_URL match an existing database."),
-            retry: "rustio migrate apply".into(),
+            retry: "rustio-admin migrate apply".into(),
             details: Some(raw.to_string()),
         };
     }
@@ -134,7 +134,7 @@ pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> Onboar
             problem: format!("PostgreSQL refused the credentials in DATABASE_URL ({url_redacted})."),
             why: "The user / password pair in DATABASE_URL does not match what the server expects.".into(),
             fix: "Check the DB_USER and DB_PASSWORD lines in `.env`, or update DATABASE_URL directly.".into(),
-            retry: "rustio migrate apply".into(),
+            retry: "rustio-admin migrate apply".into(),
             details: Some(raw.to_string()),
         };
     }
@@ -142,7 +142,7 @@ pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> Onboar
         problem: format!("Could not connect to PostgreSQL ({url_redacted})."),
         why: "The driver returned an error that does not match the common cases (service down, missing database, bad credentials).".into(),
         fix: "Inspect the Details block below and adjust `.env` / the server accordingly.".into(),
-        retry: "rustio migrate apply".into(),
+        retry: "rustio-admin migrate apply".into(),
         details: Some(raw.to_string()),
     }
 }
@@ -160,7 +160,7 @@ pub(crate) fn classify_migration_error(raw: &str) -> OnboardingError {
         problem: format!("Migration `{stem}` failed."),
         why: "PostgreSQL rejected a statement in the migration file. The raw SQL error is preserved in the Details block below; line numbers, if present, refer to the file as PostgreSQL parsed it.".into(),
         fix: format!("Edit the migration `{stem}` in your `migrations/` directory (the file ends in `_{stem}.sql`) and correct the failing statement. Migrations are append-only -- never edit one that already ran on another database; write a new numerically prefixed migration instead."),
-        retry: "rustio migrate apply".into(),
+        retry: "rustio-admin migrate apply".into(),
         details: Some(body),
     }
 }
@@ -178,7 +178,7 @@ pub(crate) fn invalid_value(arg: &str, bad: &str, valid: &[String]) -> Onboardin
             problem: format!("`{bad}` is not a valid role."),
             why: format!("Known roles are: {valid_list}."),
             fix: format!("Re-run with one of those values, e.g. `--role {example}`."),
-            retry: format!("rustio user create --email <email> --role {example}"),
+            retry: format!("rustio-admin user create --email <email> --role {example}"),
             details: None,
         }
     } else {

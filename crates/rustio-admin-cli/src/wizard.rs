@@ -1,4 +1,4 @@
-//! `rustio new <name>` interactive wizard.
+//! `rustio-admin new <name>` interactive wizard.
 //!
 //! Stage 1 / PR 1.2 of the FTUX redesign. Calm guided creation:
 //! confirm the project name, pick a project type (metadata only),
@@ -61,7 +61,7 @@ pub(crate) fn should_run(no_interactive: bool) -> bool {
 /// Run the wizard to collect a [`WizardInput`].
 ///
 /// `suggested_name` carries the positional argument from the
-/// command line (when the user typed `rustio new clinic`) so the
+/// command line (when the user typed `rustio-admin new clinic`) so the
 /// first prompt can offer it as a default the user just hits
 /// Enter to accept.
 pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
@@ -204,7 +204,7 @@ pub(crate) fn validate_project_name(name: &str) -> Result<(), String> {
 /// (the standard `NAMEDATALEN - 1`). Rejects `postgres`,
 /// `template0`, and `template1` outright -- picking those names
 /// breaks `createdb` later, and surfacing it now is kinder than
-/// surfacing it after `rustio migrate apply`.
+/// surfacing it after `rustio-admin migrate apply`.
 pub(crate) fn validate_db_name(name: &str) -> Result<(), String> {
     if name.is_empty() {
         return Err("database name is required".into());

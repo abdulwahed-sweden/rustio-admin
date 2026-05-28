@@ -22,7 +22,7 @@ permission manager all in one.
 ## 2. Scaffold
 
 ```sh
-rustio startproject my-app
+rustio-admin startproject my-app
 cd my-app
 ```
 
@@ -55,8 +55,8 @@ The default `DATABASE_URL` in `.env.example` is
 ## 4. Apply migrations + seed the first admin
 
 ```sh
-rustio migrate apply
-rustio user create --email admin@my-app.local --role administrator
+rustio-admin migrate apply
+rustio-admin user create --email admin@my-app.local --role administrator
 ```
 
 The CLI prompts twice for the password (echo-suppressed). The
@@ -68,7 +68,7 @@ flows where the secret is already managed.
 Sanity-check the setup at any time:
 
 ```sh
-rustio doctor
+rustio-admin doctor
 # ✓ DATABASE_URL = postgres://postgres:***@localhost/my_app_dev
 # ✓ Connected to Postgres
 # ✓ Auth tables present
@@ -156,7 +156,7 @@ The framework's design choices, in one place:
 
 ## 6. Add a model
 
-`rustio startproject` already creates `migrations/` containing
+`rustio-admin startproject` already creates `migrations/` containing
 `0001_create_posts.sql` and the matching `src/post.rs`. **Don't run
 `mkdir -p migrations`** — the directory exists. From here you have
 two clean paths:
@@ -165,17 +165,17 @@ two clean paths:
 
 Useful while you learn the framework. Leave `0001_create_posts.sql`
 applied; add new tables as `0002_*.sql`, `0003_*.sql`, etc. via
-`rustio startapp`:
+`rustio-admin startapp`:
 
 ```sh
-rustio startapp patient        # writes src/patient.rs + migrations/0002_create_patients.sql
-rustio startapp appointment    # 0003_*
-rustio startapp treatment      # 0004_*
-rustio startapp invoice        # 0005_*
+rustio-admin startapp patient        # writes src/patient.rs + migrations/0002_create_patients.sql
+rustio-admin startapp appointment    # 0003_*
+rustio-admin startapp treatment      # 0004_*
+rustio-admin startapp invoice        # 0005_*
 ```
 
 Each `startapp` prints the `mod` / `use` / `.model::<>()` lines to
-paste into `src/main.rs`. Run `rustio migrate apply` and re-boot;
+paste into `src/main.rs`. Run `rustio-admin migrate apply` and re-boot;
 the new pages light up alongside `/admin/posts`.
 
 ### Option B — replace `Post` with the real domain
@@ -193,7 +193,7 @@ $EDITOR migrations/0001_create_patients.sql       # write your real first table
 $EDITOR src/patient.rs                            # write the matching Rust model
 # Add `mod patient; use patient::Patient;` to src/main.rs and chain
 # `.model::<Patient>()` onto Admin::new().
-rustio migrate apply
+rustio-admin migrate apply
 ```
 
 If the demo migration has already touched a real database, do **not**
@@ -237,7 +237,7 @@ CREATE TABLE courses (
 ```
 
 ```sh
-rustio migrate apply
+rustio-admin migrate apply
 ```
 
 The new model is automatically permission-seeded (`courses.add_course`,
@@ -253,10 +253,10 @@ call at app boot.
 - Reach for a separate ORM, search engine, or templating crate —
   sqlx + minijinja are wrapped behind the `Model` and `Templates`
   types.
-- Write a migration runner — `rustio migrate apply` walks the
+- Write a migration runner — `rustio-admin migrate apply` walks the
   numerically prefixed `*.sql` files in `migrations/` transactionally
   with a tracking table.
-- Hand-craft your first admin user — `rustio user create` does the
+- Hand-craft your first admin user — `rustio-admin user create` does the
   Argon2 hashing and seeds the auth tables on a fresh DB.
 
 ## Next
