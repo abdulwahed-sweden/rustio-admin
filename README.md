@@ -279,6 +279,15 @@ RustIO is intentionally narrow in scope.
 - Not schema-contract-driven.
 
 
+## Naming — what about `rustio`?
+
+There's a separate project at **[`rustio`](https://github.com/abdulwahed-sweden/rustio)** — a strict-by-construction system builder with SQLite, a typed AI planner, and an admin UI. Through `rustio-admin`'s v0.21.x line, this project also shipped a CLI binary called `rustio`, which meant `cargo install rustio-admin-cli` and `cargo install rustio-cli` silently overwrote each other in `~/.cargo/bin`.
+
+As of v0.22.0 the binary published by this project is named **`rustio-admin`**, so the two no longer collide. You can install both on the same machine; `rustio-admin` always means this project, `rustio` always means the other.
+
+The two are different in scope — this project (`rustio-admin`) targets Postgres-only admin panels with a narrow, doctrine-governed surface; the sibling project layers an admin UI, ORM, and AI-augmented schema pipeline over a strict typed core with SQLite. Same name prefix, different goals.
+
+
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).

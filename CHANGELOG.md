@@ -53,7 +53,15 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_No unreleased changes yet — see the **[0.22.0]** block below._
+### Docs
+
+- **README naming-disambiguation subsection** added near the bottom
+  pointing at the sibling [`rustio`](https://github.com/abdulwahed-sweden/rustio)
+  project — different scope (SQLite + AI-augmented schema pipeline
+  + admin), same name prefix. The note records that v0.22.0's
+  binary rename means `cargo install rustio-cli` and `cargo install
+  rustio-admin-cli` no longer collide in `~/.cargo/bin`, so both
+  binaries can coexist on the same machine.
 
 
 ## [0.22.0] — 2026-05-29
