@@ -33,10 +33,11 @@ pub(crate) async fn ensure_table(db: &Db) -> Result<()> {
 
 /// Read a metadata value, or `None` when the key is absent.
 pub(crate) async fn get(db: &Db, key: &str) -> Result<Option<String>> {
-    let value = sqlx::query_scalar::<_, String>("SELECT value FROM rustio_admin_meta WHERE key = $1")
-        .bind(key)
-        .fetch_optional(db.pool())
-        .await?;
+    let value =
+        sqlx::query_scalar::<_, String>("SELECT value FROM rustio_admin_meta WHERE key = $1")
+            .bind(key)
+            .fetch_optional(db.pool())
+            .await?;
     Ok(value)
 }
 

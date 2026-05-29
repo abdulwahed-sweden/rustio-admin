@@ -21,8 +21,8 @@ pub mod http;
 // public:
 pub mod middleware;
 // public:
-pub mod migrations;
 pub(crate) mod meta;
+pub mod migrations;
 pub(crate) mod multipart;
 // public:
 pub mod orm;
