@@ -279,6 +279,11 @@ RustIO is intentionally narrow in scope.
 - Not schema-contract-driven.
 
 
+## CLI
+
+See [`docs/cli.md`](docs/cli.md) for the full command reference.
+
+
 ## Naming — what about `rustio`?
 
 There's a separate project at **[`rustio`](https://github.com/abdulwahed-sweden/rustio)** — a strict-by-construction system builder with SQLite, a typed AI planner, and an admin UI. Through `rustio-admin`'s v0.21.x line, this project also shipped a CLI binary called `rustio`, which meant `cargo install rustio-admin-cli` and `cargo install rustio-cli` silently overwrote each other in `~/.cargo/bin`.
