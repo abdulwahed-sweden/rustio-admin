@@ -76,7 +76,23 @@ use crate::orm::Db;
 
 // public:
 /// Initialise every auth-related table. Safe to call on every boot.
+///
+/// Fast-path: the full sequence below is idempotent but costs ~13 DDL
+/// round-trips. We stamp the crate version into `rustio_admin_meta` once
+/// it has run, and skip the sequence when the stored stamp already
+/// matches the running version. A fresh database (no stamp) or a
+/// framework upgrade (version changed) runs the full sequence and
+/// re-stamps, so any schema change shipped in a new release self-heals on
+/// the first boot of that release. To force a re-run on the same version,
+/// `TRUNCATE rustio_admin_meta`.
 pub async fn init_tables(db: &Db) -> Result<()> {
+    const STAMP_KEY: &str = "auth_schema_version";
+    let current = env!("CARGO_PKG_VERSION");
+    crate::meta::ensure_table(db).await?;
+    if crate::meta::get(db, STAMP_KEY).await?.as_deref() == Some(current) {
+        return Ok(());
+    }
+
     init_user_tables(db).await?;
     migrate_user_schema(db).await?;
     init_session_tables(db).await?;
@@ -118,5 +134,9 @@ pub async fn init_tables(db: &Db) -> Result<()> {
     // this is safe to call alongside the lazy path that still
     // exists in the dashboard handler.
     crate::admin::audit::ensure_table(db).await?;
+
+    // Stamp the version that just initialised the schema so subsequent
+    // boots on this version take the fast-path above.
+    crate::meta::set(db, STAMP_KEY, current).await?;
     Ok(())
 }

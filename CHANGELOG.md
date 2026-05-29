@@ -53,6 +53,21 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+
+- **Startup is no longer dominated by idempotent re-work.** `auth::init_tables`
+  and `Admin::seed_permissions` previously re-issued their full DDL /
+  permission `INSERT`s on every boot (~46 ms + ~67 ms of Postgres
+  round-trips in a typical project). Both now fast-path through a new
+  `rustio_admin_meta` key/value table: `init_tables` stamps the crate
+  version and skips when it matches; `seed_permissions` stamps a
+  fingerprint of `(crate version + sorted model set)` and skips when it
+  matches. A fresh database, a framework upgrade, or a changed model set
+  all force a full re-run, so the self-healing-on-boot guarantee is
+  preserved — only the redundant work is removed. Warm startup for a
+  6-model project drops from ~138 ms to ~25–30 ms. `TRUNCATE
+  rustio_admin_meta` forces a full re-run.
+
 ### Docs
 
 - **README naming-disambiguation subsection** added near the bottom

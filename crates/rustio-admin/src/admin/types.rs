@@ -1074,7 +1074,23 @@ impl Admin {
     // public:
     /// Register the canonical (add/change/delete/view) permissions for
     /// every model. Call during startup after `init_tables`.
+    ///
+    /// Fast-path: the per-model `INSERT`s below are idempotent but cost a
+    /// burst of round-trips on every boot. We stamp a fingerprint of
+    /// `(crate version + sorted model set)` into `rustio_admin_meta`; when
+    /// it already matches we skip the loop. Adding/removing a model
+    /// changes the fingerprint and re-seeds; a framework upgrade does too.
+    /// To force a re-seed, `TRUNCATE rustio_admin_meta`.
     pub async fn seed_permissions(&self, db: &crate::orm::Db) -> crate::error::Result<()> {
+        const STAMP_KEY: &str = "permissions_fingerprint";
+        let mut names: Vec<&str> = self.entries.iter().map(|e| e.admin_name).collect();
+        names.sort_unstable();
+        let fingerprint = format!("{}|{}", env!("CARGO_PKG_VERSION"), names.join(","));
+        crate::meta::ensure_table(db).await?;
+        if crate::meta::get(db, STAMP_KEY).await?.as_deref() == Some(fingerprint.as_str()) {
+            return Ok(());
+        }
+
         for entry in &self.entries {
             let singular = entry.singular_name.to_ascii_lowercase();
             crate::auth::register_model_permissions(db, entry.admin_name, &singular).await?;
@@ -1085,6 +1101,7 @@ impl Admin {
             // guard fired in `seed_default_groups`).
             crate::auth::grant_model_to_default_groups(db, entry.admin_name, &singular).await?;
         }
+        crate::meta::set(db, STAMP_KEY, &fingerprint).await?;
         Ok(())
     }
 }
