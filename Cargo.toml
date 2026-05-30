@@ -7,6 +7,10 @@ members = [
     "crates/rio-theme",
     "examples/clinic",
 ]
+# `examples/clinic-admin` is the canonical multi-crate reference project.
+# It is its OWN standalone workspace (depends on the published
+# rustio-admin), so it is excluded from this framework workspace.
+exclude = ["examples/clinic-admin"]
 
 [workspace.package]
 version = "0.23.0"

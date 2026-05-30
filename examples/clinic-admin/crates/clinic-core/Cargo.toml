@@ -1,0 +1,10 @@
+[package]
+name = "clinic-core"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+rustio-admin = { workspace = true }
+chrono       = { workspace = true }
+dotenvy      = { workspace = true }

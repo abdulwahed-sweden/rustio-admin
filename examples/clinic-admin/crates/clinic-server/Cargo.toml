@@ -1,0 +1,23 @@
+[package]
+name = "clinic-server"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[[bin]]
+name = "clinic-server"
+path = "src/main.rs"
+
+[dependencies]
+rustio-admin = { workspace = true }
+tokio        = { workspace = true }
+dotenvy      = { workspace = true }
+env_logger   = { workspace = true }
+log          = { workspace = true }
+
+# The capabilities this server runs. Adding a capability = add one
+# dependency here and one `register()` call in main.rs. Nothing else.
+clinic-core = { workspace = true }
+patients    = { workspace = true }
+scheduling  = { workspace = true }
+billing     = { workspace = true }

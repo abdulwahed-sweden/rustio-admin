@@ -1,0 +1,25 @@
+/* ──────────────────────────────────────────────
+   Clinic palette — OPTIONAL runtime theme override.
+
+   Edit the VALUES, never the names. These are the framework's `--rio-*`
+   design tokens; every admin style derives from them.
+
+   To apply this file, run the server with:
+       RUSTIO_TOKENS_CSS=static/tokens.css
+   It is appended AFTER the admin's baked CSS, so these values win the
+   cascade without `!important`.
+
+   A real palette is normally GENERATED (contrast-checked, vivid colours
+   tamed) rather than hand-edited:
+       rustio-admin theme generate --brand '#059669' --out static/tokens.css
+   See docs/design/DESIGN_THEME.md in the framework repo.
+   ────────────────────────────────────────────── */
+:root {
+  --rio-accent:      #059669;  /* emerald-600 — clinic brand */
+  --rio-accent-hover:#047857;  /* emerald-700 */
+  --rio-bg:          #f8fafc;  /* page canvas */
+  --rio-surface:     #ffffff;  /* cards, topbar, table body */
+  --rio-text:        #0f172a;  /* slate-900 */
+  --rio-text-muted:  #475569;  /* slate-600 */
+  --rio-border:      #e2e8f0;  /* slate-200 */
+}

@@ -1,0 +1,10 @@
+[package]
+name = "billing"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+rustio-admin = { workspace = true }
+chrono       = { workspace = true }
+clinic-core  = { workspace = true }
