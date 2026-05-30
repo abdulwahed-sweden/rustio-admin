@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-`rustio-admin` is a Postgres-first administrative framework for Rust ("Django Admin, but for Rust"). It is a Cargo workspace shipping three crates: the library, a proc-macro crate, and a `rustio-admin` CLI binary. Authentication, sessions, recovery, and audit are designed as one system — not assembled from separate parts.
+`rustio-admin` is a Postgres-first administrative framework for Rust ("Django Admin, but for Rust"). It is a Cargo workspace shipping four crates: the library (`rustio-admin`), a proc-macro crate (`rustio-admin-macros`), the `rustio-admin` CLI binary (`rustio-admin-cli`), and a build-time theme engine (`rio-theme`). Authentication, sessions, recovery, and audit are designed as one system — not assembled from separate parts.
 
 Project README: `README.md`. Architecture map: `docs/architecture.md`. Design contracts (the source of truth for security-sensitive subsystems): `docs/design/DESIGN_*.md`.
 
@@ -32,10 +32,11 @@ Integration suites under `crates/rustio-admin/tests/integration_*.rs` are gated 
 CI's Tier-2-symbol guard (`.github/workflows/ci.yml`) — also run this locally before pushing if you've touched core or examples:
 
 ```sh
-git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel' -- crates/ examples/ Cargo.toml
+git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel' \
+    -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'
 ```
 
-Any match is a CI failure. These symbols belong to a future `rustio-pro` layer and must never appear in this repo.
+The `crates/*/assets/**` exclusion matches CI: bundled docs under those dirs legitimately *mention* these symbols when explaining the guard itself, so the guard scans source/TOML/templates only. Any match is a CI failure. These symbols belong to a future `rustio-pro` layer and must never appear in this repo.
 
 The `rustio-admin` CLI (built from `crates/rustio-admin-cli`) reads `DATABASE_URL` from `.env`:
 
@@ -43,11 +44,17 @@ The `rustio-admin` CLI (built from `crates/rustio-admin-cli`) reads `DATABASE_UR
 cargo run -p rustio-admin-cli -- migrate apply
 cargo run -p rustio-admin-cli -- user create --email admin@local --role administrator
 cargo run -p rustio-admin-cli -- doctor                # or `doctor email --to ...` for SMTP
+cargo run -p rustio-admin-cli -- theme list            # curated AdminTheme snippets
+cargo run -p rustio-admin-cli -- theme generate --brand '#2563eb'  # rio-theme → tokens.css
 ```
+
+The `theme` verbs are pure printers/generators — they never edit your `main.rs` or in-progress files. `theme generate` drives the `rio-theme` crate (see below).
 
 ## Architecture — the big picture
 
 **One library crate, one runtime, no second runtime.** `crates/rustio-admin/src/` is the entire framework surface. The split into `rustio-admin-macros` and `rustio-admin-cli` exists only to keep proc-macro and CLI compile time off the hot path.
+
+**`rio-theme` is build-time only.** `crates/rio-theme/` takes a client's raw brand color(s) and emits a safe, computed `tokens.css` (measure contrast → repair → derive shades → adapt). It runs inside the CLI when a developer calls `rustio theme generate`; the generated CSS is the artifact, and the **runtime library never depends on `rio-theme`**. OKLab/WCAG math is hand-rolled — `log` is its only dependency on purpose. Read order inside the crate: `color` → `contrast` → the six decision cases (`guard`, `derive`, `vivid`, `semantic`, `adaptive`, `hierarchy`) → `engine` → `emit`. This does not violate "no build step" — there is no bundler/transpiler in the runtime path; theme generation is an opt-in developer command.
 
 The library layers cleanly — read in this order:
 
@@ -95,7 +102,7 @@ The narrow surface is the point. If a feature feels like it wants schema-driven 
 - Touching CSS, tokens, or templates → `docs/design/DESIGN_DOCTRINE.md` § 1 (tokens), § 7 (source layout), § 9 (adding a fragment). The PR template requires a token disclosure and a visual regression checklist (`.github/pull_request_template.md`).
 - Changing what's public → `docs/public-api.md` is generated/descriptive; the canonical `pub use` surface lives in `crates/rustio-admin/src/lib.rs`. Anything not re-exported there is `pub(crate)` or `pub` inside `admin::*` for testing only.
 - Understanding scope and history → `ROADMAP.md`, `CHANGELOG.md`, and `docs/archive/STRATEGIC_RESET_PLAN.md` § 8 (strict architectural rules).
-- The canonical end-to-end consumer of the library lives at `examples/clinic-appointments/`.
+- The canonical end-to-end consumer of the library lives at `examples/clinic/`.
 
 ## Workflow conventions
 
