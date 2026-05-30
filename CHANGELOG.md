@@ -53,6 +53,27 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added
+
+- **`RUSTIO_TOKENS_CSS` — apply a generated palette to a running admin
+  without recompiling.** `rio-theme` could already generate a complete,
+  contrast-safe `tokens.css` (`rustio-admin theme generate --brand
+  '#<hex>'`), but a *consumer* had no way to use it: `/static/admin.css`
+  served a fully-baked `concat!` bundle, so the file was inert unless you
+  forked the framework. Set `RUSTIO_TOKENS_CSS=<path>` and the runtime now
+  appends that file's bytes *after* the baked bundle, so its `:root` block
+  wins the cascade (later `:root` wins, no `!important`) — exactly like the
+  `AdminTheme` inline patch. Read once at router-build time (the route is
+  `no-cache`, so a restart rolls out an edit); a set-but-unreadable path
+  logs a warning and degrades to the baked bundle rather than failing boot.
+  The runtime serves bytes only and **does not** link `rio-theme`, so the
+  "runtime never depends on the theme engine" invariant holds. The
+  `theme generate` report now prints the exact `RUSTIO_TOKENS_CSS=… cargo
+  run` next step. New doctrine doc `docs/design/DESIGN_THEME.md` (the
+  engine's §1–§12 contract — purpose, color model, contrast thresholds,
+  the seven Cases, pipeline order, token vocabulary, consumer integration),
+  finally resolving the in-code `DESIGN_THEME §N` citations.
+
 ### Changed
 
 - **Startup is no longer dominated by idempotent re-work.** `auth::init_tables`

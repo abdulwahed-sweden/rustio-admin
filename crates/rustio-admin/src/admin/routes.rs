@@ -44,9 +44,13 @@ use crate::templates::Templates;
 /// source of cascade order, and they must stay in lock-step or the
 /// served bundle will silently drift from what contributors author.
 ///
-/// Project overrides happen via `Admin::theme(...)` (CSS custom
-/// properties) rather than an asset override, so we don't expose a
-/// disk path here.
+/// Project overrides happen two ways, both layered *after* this bundle
+/// so they win the cascade without `!important`: `Admin::theme(...)`
+/// emits a small inline `<style>` patch (a handful of `--rio-*` tokens),
+/// and `RUSTIO_TOKENS_CSS=<path>` appends a whole generated `tokens.css`
+/// (see [`admin_css_payload`] / [`load_token_override`]). The latter is
+/// how a `rustio-admin theme generate` palette reaches a running admin
+/// without recompiling the framework.
 const ADMIN_CSS: &str = concat!(
     // ---- tokens -----------------------------------------------
     include_str!("../../assets/static/admin/tokens/colors.css"),
@@ -125,6 +129,45 @@ const ADMIN_CSS: &str = concat!(
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
 );
+
+/// The CSS served at `/static/admin.css`: the baked [`ADMIN_CSS`] bundle,
+/// with an optional project token override appended.
+///
+/// The override (a generated `tokens.css`) is concatenated *after* the
+/// bundle, so its `:root` block wins the cascade — later `:root` wins,
+/// no `!important` needed. This mirrors how `Admin::theme(...)`'s inline
+/// patch already overrides the baked tokens. The runtime only ever
+/// handles the file's *bytes*: it never links `rio-theme`, so the
+/// "runtime never depends on the theme engine" invariant holds.
+///
+/// Pure on its input so it can be unit-tested without touching the
+/// process-global environment; [`load_token_override`] is the impure
+/// wrapper that reads `RUSTIO_TOKENS_CSS`.
+fn admin_css_payload(override_css: Option<&str>) -> bytes::Bytes {
+    match override_css {
+        Some(extra) => bytes::Bytes::from(format!(
+            "{ADMIN_CSS}\n/* ---- RUSTIO_TOKENS_CSS override ---- */\n{extra}"
+        )),
+        None => bytes::Bytes::from_static(ADMIN_CSS.as_bytes()),
+    }
+}
+
+/// Read the `RUSTIO_TOKENS_CSS` override file, if the env var is set.
+///
+/// A set-but-unreadable path logs a warning and degrades to the baked
+/// bundle rather than failing boot — a theming typo must never take the
+/// admin offline. Returns `None` when the var is unset or the file can't
+/// be read.
+fn load_token_override() -> Option<String> {
+    let path = std::env::var("RUSTIO_TOKENS_CSS").ok()?;
+    match std::fs::read_to_string(&path) {
+        Ok(css) => Some(css),
+        Err(e) => {
+            log::warn!("RUSTIO_TOKENS_CSS={path:?} unreadable: {e}; serving baked CSS");
+            None
+        }
+    }
+}
 
 /// Embedded admin JS (sidebar drawer + dropdowns + bulk select +
 /// FK autocomplete). ≤200 LOC, no build step.
@@ -697,13 +740,20 @@ pub fn register_admin_routes(
     // (revalidate every request) so theme + design tweaks roll out the
     // moment the binary restarts; fonts (next block) keep their long
     // immutable cache because their bytes never change per release.
-    let router = router.get("/static/admin.css", |_req| async move {
-        Ok(Response::new(
-            hyper::StatusCode::OK,
-            bytes::Bytes::from_static(ADMIN_CSS.as_bytes()),
-        )
-        .with_header("content-type", "text/css; charset=utf-8")
-        .with_header("cache-control", "no-cache, must-revalidate"))
+    // Compute the CSS payload once at router-build time (baked bundle +
+    // optional RUSTIO_TOKENS_CSS override). The `no-cache` header means a
+    // restart is what rolls a theme change out, so reading the override
+    // file here — not per request — matches the existing semantics and
+    // keeps the hot path free of disk IO. `Bytes` is Arc-backed, so the
+    // per-request clone is cheap.
+    let admin_css = admin_css_payload(load_token_override().as_deref());
+    let router = router.get("/static/admin.css", move |_req| {
+        let body = admin_css.clone();
+        async move {
+            Ok(Response::new(hyper::StatusCode::OK, body)
+                .with_header("content-type", "text/css; charset=utf-8")
+                .with_header("cache-control", "no-cache, must-revalidate"))
+        }
     });
     let router = router.get("/static/admin.js", |_req| async move {
         Ok(Response::new(
@@ -2108,6 +2158,35 @@ mod tests {
             mfa_enabled: false,
             trust_level: crate::auth::SessionTrust::Authenticated,
         }
+    }
+
+    // `admin_css_payload` is pure on its input, so these exercise the
+    // RUSTIO_TOKENS_CSS layering without touching process-global env
+    // (env mutation races other parallel tests).
+
+    #[test]
+    fn admin_css_payload_none_is_the_baked_bundle_verbatim() {
+        let css = admin_css_payload(None);
+        assert_eq!(css.as_ref(), ADMIN_CSS.as_bytes());
+        // Sanity: the baked bundle still carries a known token.
+        assert!(ADMIN_CSS.contains("--rio-accent"));
+    }
+
+    #[test]
+    fn admin_css_payload_appends_override_after_baked_bundle() {
+        let override_css = ":root{--rio-accent:#abcdef}";
+        let css = admin_css_payload(Some(override_css));
+        let text = std::str::from_utf8(css.as_ref()).expect("utf-8");
+        // Override is present...
+        assert!(text.ends_with(override_css));
+        // ...and lands *after* the baked colours layer, so its `:root`
+        // wins the cascade. The baked bundle's first token is the
+        // generated `--rio-brand-light`; the override must come later.
+        let baked = text.find("--rio-brand-light").expect("baked token present");
+        let overridden = text
+            .rfind("--rio-accent:#abcdef")
+            .expect("override present");
+        assert!(overridden > baked, "override must follow the baked bundle");
     }
 
     // role_guard's decision is `Role::includes(min)`. The 25-case

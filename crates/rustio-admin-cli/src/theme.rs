@@ -226,6 +226,11 @@ fn print_generate_report(
         report.warning_contrast
     );
     println!("  danger        vs #ffffff : {:.2}", report.danger_contrast);
+
+    println!();
+    println!("next step -- serve this palette without recompiling:");
+    println!("  RUSTIO_TOKENS_CSS={} cargo run", out.display());
+    println!("  (the running admin appends it after the baked CSS; a restart picks up edits)");
 }
 
 fn print_list() {
