@@ -36,6 +36,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+mod ai;
 mod app_fields;
 mod audit;
 mod builder;
@@ -240,6 +241,16 @@ enum Command {
         action: theme::Action,
     },
 
+    /// AI assistant permissions. `status` shows what an AI coding
+    /// assistant may do here (Allowed / Needs approval / Blocked) by
+    /// reading `.rustio/ai.toml`; `init` writes a default policy. Offline
+    /// and read-only -- no AI is contacted, no database is opened. See
+    /// `docs/design/DESIGN_AI_ASSISTANT.md`.
+    Ai {
+        #[command(subcommand)]
+        action: ai::Action,
+    },
+
     /// Copy an embedded admin template into the project's
     /// `templates/` directory so it can be edited. Pair with
     /// `RUSTIO_TEMPLATE_DIR=./templates` at runtime to make the
@@ -434,6 +445,7 @@ fn main() -> ExitCode {
         Command::Reload => reload::run(),
         Command::TestInit { force, out } => test_init::run(force, &out),
         Command::Theme { action } => theme::run(action),
+        Command::Ai { action } => ai::run(action),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
@@ -448,7 +460,8 @@ fn main() -> ExitCode {
                 | Command::Override { .. }
                 | Command::Reload
                 | Command::TestInit { .. }
-                | Command::Theme { .. } => unreachable!("handled above"),
+                | Command::Theme { .. }
+                | Command::Ai { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,

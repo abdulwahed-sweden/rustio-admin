@@ -55,6 +55,20 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio ai status` / `rustio ai init` — AI assistant permissions
+  (first slice).** The read-only, offline start of
+  `docs/design/DESIGN_AI_ASSISTANT.md`: a `.rustio/ai.toml` policy file
+  that sorts every known capability into **Allowed**, **Needs approval**,
+  or **Blocked**, and a `status` verb that prints it (`✓ / ⚠ / ✗`, with a
+  "2 approvers" note where the policy requires dual sign-off). The
+  capability set is a fixed catalogue; the file only moves capabilities
+  between buckets, so `status` always shows the full surface even with a
+  partial or absent file — an unknown key is warned and ignored, a
+  malformed file is a hard error. `status` reads the policy only (no AI
+  call, no database); `init` writes a default policy and refuses to
+  clobber an existing one without `--force`. The approval lifecycle,
+  proposal record, and the remaining `ai` verbs are later slices.
+
 - **`RUSTIO_TOKENS_CSS` — apply a generated palette to a running admin
   without recompiling.** `rio-theme` could already generate a complete,
   contrast-safe `tokens.css` (`rustio-admin theme generate --brand
