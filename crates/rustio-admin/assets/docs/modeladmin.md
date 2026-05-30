@@ -16,16 +16,19 @@ An earlier prototype shipped `impl<T: AdminModel> ModelAdmin for T {}` so every 
 
 | Method | Default | Used by |
 |---|---|---|
-| `list_display`     | `&[]` (every column on `M::FIELDS`) | List page columns |
-| `list_filter`      | `&[]` (none) | Filters dropdown chips |
-| `search_fields`    | `&[]` (search box decorative) | `?q=term` ILIKE search |
-| `ordering`         | `&["-id"]` (newest first) | List page `ORDER BY`; default for the Sort dropdown |
-| `list_per_page`    | `50` | Default page size; user override via `?per_page=` |
-| `readonly_fields`  | `&[]` | Form field disabling (UI hint) |
-| `fieldsets`        | `&[]` (heuristic grouping) | Form section ordering |
-| `bulk_actions`     | `&[]` (Delete only) | Extra buttons in the list-view bulk bar |
+| `list_display`        | `&[]` (every column on `M::FIELDS`) | List page columns |
+| `list_filter`         | `&[]` (none) | Filters dropdown chips |
+| `search_fields`       | `&[]` (search box decorative) | `?q=term` ILIKE search |
+| `search_index_column` | `None` (ILIKE path) | Opt the search box into Postgres full-text search |
+| `ordering`            | `&["-id"]` (newest first) | List page `ORDER BY`; default for the Sort dropdown |
+| `list_per_page`       | `50` | Default page size; user override via `?per_page=` |
+| `readonly_fields`     | `&[]` | Disabled form inputs (value reloaded from DB on save) |
+| `inlines`             | `&[]` (none) | Child rows rendered on the parent edit page |
+| `fieldsets`           | `&[]` (heuristic grouping) | Explicit form section ordering |
+| `validate`            | `Ok(())` | Project validation before a row is written |
+| `bulk_actions`        | `&[]` (Delete only) | Extra buttons in the list-view bulk bar |
 
-Every method returns `&'static [&'static str]` (or `&'static [Fieldset]`) so the values are captured into `AdminEntry` once at registration time and read straight from the entry on every request. No per-request virtual dispatch beyond the existing `dyn AdminOps`.
+Most methods return `&'static` data, so the values are captured into `AdminEntry` once at registration and read straight from the entry on every request — no per-request virtual dispatch beyond the existing `dyn AdminOps`. The exceptions are `validate(&Self)`, which runs per submission against the candidate model, and `execute_bulk_action`, which dispatches a selected action.
 
 ---
 
@@ -83,6 +86,25 @@ fn search_fields() -> &'static [&'static str] {
 }
 ```
 
+### `search_index_column`
+
+```rust
+fn search_index_column() -> Option<&'static str> { None }
+```
+
+Opt the list-page search box (and the global ⌘K palette and CSV-export filter) into Postgres full-text search instead of the default ILIKE OR-chain. Return the name of a `tsvector` column the project maintains; the framework switches to `<col> @@ websearch_to_tsquery('english', $N)`. Default `None` keeps the ILIKE path, so existing models are unchanged.
+
+```rust
+// 1. Add a generated tsvector column in a migration:
+//    ALTER TABLE posts ADD COLUMN search_vector tsvector
+//      GENERATED ALWAYS AS (to_tsvector('english',
+//        coalesce(title,'') || ' ' || coalesce(body,''))) STORED;
+//    CREATE INDEX posts_search_idx ON posts USING gin(search_vector);
+
+// 2. Opt in:
+fn search_index_column() -> Option<&'static str> { Some("search_vector") }
+```
+
 ### `ordering`
 
 ```rust
@@ -107,21 +129,47 @@ fn list_per_page() -> usize { 50 }
 
 Default rows-per-page on the list view. The user can override at runtime via `?per_page=N` (or via the per-page picker dropdown in the toolbar), but the param is allow-listed to `{25, 50, 100, 200}` so a malicious query can't OOM the worker. Override values outside the allow-list are silently ignored — the framework falls back to the model's default.
 
-### `readonly_fields` (planned)
+### `readonly_fields`
 
 ```rust
 fn readonly_fields() -> &'static [&'static str] { &[] }
 ```
 
-Columns the change form should render as disabled. **Currently captured but not yet honoured by `form_ctx`** — wires up before v0.1.0. The macro's `editable: false` flag still owns the strict per-field gate (e.g. `id` and `created_at` stay non-editable regardless).
+Columns the change form renders as **disabled**. Honoured on every form: on update the framework reloads the persisted value from the database rather than trusting the submitted body, so a read-only field can't be smuggled past via a hand-crafted POST. The macro's `editable: false` flag still owns the strict per-field gate (e.g. `id` and `created_at` stay non-editable regardless).
 
-### `fieldsets` (planned)
+```rust
+fn readonly_fields() -> &'static [&'static str] { &["created_at", "external_ref"] }
+```
+
+### `inlines`
+
+```rust
+fn inlines() -> &'static [Inline] { &[] }
+```
+
+Child rows shown on the parent's edit page (the "parent-with-children" pattern). Each `Inline` names a target model and the FK column linking back to this parent. Today the rows render with click-through navigation to the child; in-page row editing is on the roadmap.
+
+```rust
+use rustio_admin::admin::Inline;
+
+fn inlines() -> &'static [Inline] {
+    &[Inline {
+        target_model:  "appointments",
+        fk_field:      "patient_id",
+        label:         Some("Appointments"),
+        max_rows:      20,                 // then a "…and N more" link
+        display_field: Some("status"),     // else name → title → … → #id
+    }]
+}
+```
+
+### `fieldsets`
 
 ```rust
 fn fieldsets() -> &'static [Fieldset] { &[] }
 ```
 
-Override the framework's name-heuristic grouping on the change form (Default / System / Advanced) with explicit sections. The struct:
+Override the framework's name-heuristic grouping on the change form with explicit sections. Honoured by `render.rs` (`group_fields_by_fieldsets`); the heuristic only runs when a model declares no fieldsets. The struct:
 
 ```rust
 pub struct Fieldset {
@@ -130,7 +178,25 @@ pub struct Fieldset {
 }
 ```
 
-**Currently captured but not yet honoured by `form_ctx`** — wires up before v0.1.0.
+### `validate`
+
+```rust
+fn validate(model: &Self) -> Result<(), Vec<FieldValidationError>> { Ok(()) }
+```
+
+Project-level validation run **before** the row hits the database, on both create and update. Return `FieldValidationError::field("col", "message")` to attach an error to a specific input, or `FieldValidationError::global("message")` for a form-wide error; both surface in the same UI as the framework's constraint-violation flash.
+
+```rust
+use rustio_admin::FieldValidationError;
+
+fn validate(model: &Self) -> std::result::Result<(), Vec<FieldValidationError>> {
+    let mut errs = Vec::new();
+    if model.credit_hours == 0 {
+        errs.push(FieldValidationError::field("credit_hours", "must be at least 1"));
+    }
+    if errs.is_empty() { Ok(()) } else { Err(errs) }
+}
+```
 
 ### `bulk_actions`
 
@@ -138,10 +204,10 @@ pub struct Fieldset {
 fn bulk_actions() -> &'static [BulkAction] { &[] }
 ```
 
-Project-defined bulk actions surfaced as extra buttons in the list-view bulk bar (next to the framework's built-in Delete). Each button POSTs to `/admin/:model/bulk/:name`; the runtime dispatcher is `AdminOps::execute_bulk_action`.
+Project-defined bulk actions surfaced as extra buttons in the list-view bulk bar (next to the framework's built-in Delete). Each button POSTs to `/admin/:model/bulk/:name`; the runtime dispatcher is `ModelAdmin::execute_bulk_action`.
 
 ```rust
-use rustio_admin::admin::BulkAction;
+use rustio_admin::BulkAction;
 
 impl ModelAdmin for Post {
     fn bulk_actions() -> &'static [BulkAction] {
@@ -151,63 +217,67 @@ impl ModelAdmin for Post {
                 label:       "Publish selected",
                 destructive: false,
                 confirm:     false,
+                permission:  None,                 // inherits the `change` gate
             },
             BulkAction {
                 name:        "archive",
                 label:       "Archive selected",
                 destructive: true,
                 confirm:     true,
+                permission:  Some("archive"),      // also requires posts.archive_post
             },
         ]
     }
 }
 ```
 
-`BulkAction` is metadata only. To actually apply the work you override `AdminOps::execute_bulk_action` on the model:
+`BulkAction` is metadata only. To apply the work you override `execute_bulk_action` — a `ModelAdmin` method that returns a `BulkActionResult`:
 
 ```rust
-impl AdminOps for ConcreteOps<Post> {
-    // ... existing methods ...
+use std::future::Future;
+use std::pin::Pin;
+use rustio_admin::{BulkAction, BulkActionContext, BulkActionResult, Db, ModelAdmin, Result};
+
+impl ModelAdmin for Post {
+    // ... bulk_actions() as above ...
 
     fn execute_bulk_action<'a>(
-        &'a self,
-        db: &'a Db,
-        name: &'a str,
+        action: &'a str,
         ids: &'a [i64],
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        db: &'a Db,
+        _ctx: &'a BulkActionContext<'a>,
+    ) -> Pin<Box<dyn Future<Output = Result<BulkActionResult>> + Send + 'a>> {
         Box::pin(async move {
-            match name {
+            match action {
                 "publish" => {
                     sqlx::query("UPDATE posts SET published = TRUE WHERE id = ANY($1)")
-                        .bind(ids)
-                        .execute(db.pool())
-                        .await?;
-                    Ok(())
+                        .bind(ids).execute(db.pool()).await?;
+                    Ok(BulkActionResult::ok(ids.len()))
                 }
                 "archive" => {
                     sqlx::query("UPDATE posts SET archived_at = NOW() WHERE id = ANY($1)")
-                        .bind(ids)
-                        .execute(db.pool())
-                        .await?;
-                    Ok(())
+                        .bind(ids).execute(db.pool()).await?;
+                    Ok(BulkActionResult::ok(ids.len()))
                 }
-                other => Err(Error::BadRequest(format!("unknown bulk action: {other}"))),
+                other => Err(rustio_admin::Error::BadRequest(
+                    format!("unknown bulk action: {other}"))),
             }
         })
     }
 }
 ```
 
-The default trait impl returns a `BadRequest` with the action name embedded, so an action you registered but didn't dispatch surfaces as a clear 400 page rather than a silent no-op.
+The framework wraps each dispatch with **one audit row** (using the `BulkActionContext` actor + correlation id and the `BulkActionResult` outcome) — you don't audit the envelope yourself. Two failure channels: return `Err(...)` if the whole action failed (4xx/5xx page, attempt still audited), or `Ok(BulkActionResult::partial(ok, failed))` to report per-row failures (a partial-success audit row + per-id summary on the next request). The default impl returns a `BadRequest` naming the action, so a declared-but-undispatched action surfaces clearly rather than silently no-op'ing.
 
-**Field semantics:**
+**Field semantics (`BulkAction`):**
 
-- `name` — URL slug. Use snake_case identifiers. The framework reserves `delete` for its built-in cascade-aware delete (handled separately at `/bulk_delete`). Registering an action named `delete` is a runtime error.
+- `name` — URL slug. Use snake_case identifiers. The framework reserves `delete` for its built-in cascade-aware delete (handled separately at `/bulk_delete`).
 - `label` — Button text. Rendered as-is in the bulk bar and on the confirmation page header.
-- `destructive` — `true` styles the button with the framework's danger-red variant; otherwise it uses the default surface button.
+- `destructive` — `true` styles the button with the framework's danger-red variant; otherwise the default surface button.
 - `confirm` — `true` renders a confirmation page listing every selected row before commit; `false` executes on the first POST. Use `confirm: true` for any action a user might regret.
+- `permission` — `Some("foo")` additionally requires `<admin_name>.foo_<singular>` (or a role that bypasses group checks) on top of the route's `change` gate; `None` inherits — `change` is the only check. Use it to scope destructive actions to a narrower set of operators.
 
-**Permission gate:** the bulk-action route is gated on the model's `change` permission (not `delete` — delete has its own `/bulk_delete` route). Override `execute_bulk_action` to apply finer-grained checks (e.g. block destructive actions for non-admins).
+**Permission gate:** the bulk-action route is gated on the model's `change` permission (not `delete` — delete has its own `/bulk_delete` route); a `BulkAction.permission` adds a second, scoped check on top.
 
 ---
 
@@ -253,6 +323,8 @@ Fields you don't set inherit from `admin.css`.
 The injected `<style>` block in `_theme.html` uses a single `html { ... }` selector so it wins cascade ties on source order without `!important`.
 
 `Admin::accent()` returns `Option<&str>` — `None` means *"no override — admin.css owns it"*.
+
+For a fuller re-skin than these six tokens, generate a complete, contrast-checked palette from a brand color with `rustio-admin theme generate --brand '#…'` and serve it at runtime with `RUSTIO_TOKENS_CSS=./tokens.css` — the file is appended after the baked CSS bundle. See [`design/DESIGN_THEME.md`](./design/DESIGN_THEME.md).
 
 ---
 

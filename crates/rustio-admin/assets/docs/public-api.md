@@ -2,9 +2,9 @@
 
 _This document is descriptive, not normative. Annotation does not itself guarantee SemVer stability before 1.0._
 
-Generated from `// public:` annotations across the workspace.
+Derived from `// public:` annotations across the workspace; hand-synced for 0.23.0. The canonical surface is the `pub use` block in `crates/rustio-admin/src/lib.rs` and the `pub use` lines in each module's `mod.rs`.
 
-**Total items: 355**
+**Total items: ~372** (approximate; descriptive)
 
 ---
 
@@ -37,14 +37,18 @@ Generated from `// public:` annotations across the workspace.
 
 - `pub mod audit;`
 - `pub mod bulk;`
+- `pub mod feature_flags;`
 - `pub mod filters;`
 - `pub mod modeladmin;`
+- `pub mod notifications;`
 - `pub mod redact;`
 - `pub mod relations;`
 - `pub use audit::`
 - `pub use bulk::{BulkActionContext, BulkActionFailure, BulkActionResult};`
+- `pub use feature_flags::{feature_enabled, FeatureFlag};`
 - `pub use filters::`
 - `pub use modeladmin::`
+- `pub use notifications::{send as send_notification, Notification};`
 - `pub use redact::`
 - `pub use relations::`
 - `pub use routes::register_admin_routes;`
@@ -61,6 +65,19 @@ Generated from `// public:` annotations across the workspace.
 - `pub fn with_message(mut self, message: impl Into<String>) -> Self`
 - `pub struct BulkActionFailure` — `#[non_exhaustive]`; fields `id: i64`, `reason: String`.
 - `pub fn new(id: i64, reason: impl Into<String>) -> Self`
+
+### `rustio_admin::admin::feature_flags`
+
+- `pub async fn ensure_table(db: &Db) -> Result<()>`
+- `pub struct FeatureFlag`
+- `pub async fn feature_enabled(db: &Db, key: &str) -> bool` — 60-s per-key in-process cache.
+- `pub fn invalidate_cache()`
+
+### `rustio_admin::admin::notifications`
+
+- `pub async fn ensure_table(db: &Db) -> Result<()>`
+- `pub struct Notification`
+- `pub async fn send(db: &Db, user_id: i64, message: &str, url: &str) -> Result<i64>` — re-exported as `send_notification`.
 
 ### `rustio_admin::admin::audit`
 
@@ -99,9 +116,13 @@ Generated from `// public:` annotations across the workspace.
 ### `rustio_admin::admin::modeladmin`
 
 - `pub struct Fieldset`
-- `pub trait ModelAdmin: AdminModel`
+- `pub struct Inline` — fields `target_model`, `fk_field`, `label`, `max_rows`, `display_field`.
+- `pub struct FieldValidationError`
+- `pub fn field(field: &'static str, message: impl Into<String>) -> Self`
+- `pub fn global(message: impl Into<String>) -> Self`
+- `pub trait ModelAdmin: AdminModel` — hooks (all defaulted): `list_display`, `list_filter`, `search_fields`, `search_index_column`, `ordering`, `list_per_page`, `readonly_fields`, `inlines`, `fieldsets`, `validate`, `bulk_actions`, `execute_bulk_action`.
 - `fn execute_bulk_action<'a>(action: &'a str, ids: &'a [i64], db: &'a Db, ctx: &'a BulkActionContext<'a>) -> Pin<Box<dyn Future<Output = Result<BulkActionResult>> + Send + 'a>>` — default returns `BadRequest` with the action name; projects override to dispatch declared `bulk_actions()`.
-- `pub struct BulkAction`
+- `pub struct BulkAction` — fields `name`, `label`, `destructive`, `confirm`, `permission`.
 - `pub enum SortDir`
 - `pub fn sql(self) -> &'static str`
 - `pub fn parse_order_spec(spec: &str) -> (String, SortDir)`
@@ -374,6 +395,7 @@ Generated from `// public:` annotations across the workspace.
 - `pub use compression::gzip;`
 - `pub use correlation_id::`
 - `pub use csrf::`
+- `pub use locale::{locale, parse_accept_language, Locale, DEFAULT_LOCALE};`
 - `pub use logger::logger;`
 - `pub use rate_limit::`
 - `pub use security_headers::security_headers;`
@@ -396,6 +418,14 @@ Generated from `// public:` annotations across the workspace.
 - `pub const CSRF_FIELD: &str = "_csrf";`
 - `pub struct CsrfGuard`
 - `pub async fn csrf_protect(mut req: Request, next: Next) -> Result<Response>`
+
+### `rustio_admin::middleware::locale`
+
+- `pub const DEFAULT_LOCALE: &str = "en";`
+- `pub struct Locale(pub String);`
+- `pub fn as_str(&self) -> &str`
+- `pub fn parse_accept_language(header: Option<&str>) -> Option<String>`
+- `pub async fn locale(req: Request, next: Next) -> Result<Response>`
 
 ### `rustio_admin::middleware::logger`
 
