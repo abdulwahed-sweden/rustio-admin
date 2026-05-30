@@ -175,6 +175,34 @@ jobs:
           fi
           echo "OK: workspace and scaffold template both pin $workspace"
 
+      - name: reference example pin tracks workspace version
+        run: |
+          set -eu
+          # The canonical reference project (examples/clinic-admin) pins
+          # the published rustio-admin. On a version bump it MUST be
+          # re-pinned in lock-step — re-pinning the reference is part of
+          # the release, enforced here (same convention as the scaffold
+          # template pin above). The `reference-example` job then builds
+          # it against the framework at HEAD via a path patch, so a
+          # matching pin keeps that job green.
+          workspace=$(awk '
+            /^\[workspace\.package\]/ { in_section = 1; next }
+            /^\[/                     { in_section = 0 }
+            in_section && $1 == "version" { gsub(/"/, "", $3); print $3; exit }
+          ' Cargo.toml)
+          example=$(grep -E '^rustio-admin\s*=\s*"' \
+            examples/clinic-admin/Cargo.toml \
+            | head -1 | cut -d'"' -f2)
+          if [ -z "$workspace" ] || [ -z "$example" ]; then
+            echo "::error::reference-example-pin guard could not extract both values (workspace='$workspace', example='$example'). Fix the regex or the file format."
+            exit 1
+          fi
+          if [ "$workspace" != "$example" ]; then
+            echo "::error::Workspace version ($workspace) and examples/clinic-admin pin ($example) have drifted. Re-pin examples/clinic-admin/Cargo.toml [workspace.dependencies] to 'rustio-admin = \"$workspace\"' as part of the release."
+            exit 1
+          fi
+          echo "OK: workspace and reference example both pin $workspace"
+
   reference-example:
     name: reference example (clinic-admin)
     runs-on: ubuntu-latest
