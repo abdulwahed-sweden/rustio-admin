@@ -55,6 +55,23 @@ leaves the alpha track.
 
 ### Added
 
+- **AI assistant proposal model + approval lifecycle (`rustio ai
+  propose` / `list` / `review` / `approve` / `reject` / `apply`).** Builds
+  on the policy from the previous slice (DESIGN_AI_ASSISTANT.md §4–§5). A
+  proposal is a change the AI wants to make; it moves `Suggested →
+  Approved → Applied` (or `→ Rejected`). The bucket and the number of
+  required approvals (0 for Allowed, 1 for Needs-approval, 2 when the
+  policy lists the capability under `second_approver_for`) are
+  snapshotted at creation, so a later policy edit can't retroactively
+  change a pending proposal's rules. `propose` refuses a Blocked
+  capability (and logs the attempt); `approve` enforces *distinct*
+  approvers; `apply` writes the proposal's staged files only once the
+  approval gate is satisfied (staged destinations are validated against
+  path traversal). Proposals are JSON under `.rustio/ai/proposals/`; every
+  state change appends to `.rustio/ai/log.jsonl`. `status` now shows
+  pending proposals and recent actions. Still offline — no AI call, no
+  database; the approver is a `--by <name>` string and mirroring into
+  `rustio_admin_actions` is a later slice.
 - **`rustio ai status` / `rustio ai init` — AI assistant permissions
   (first slice).** The read-only, offline start of
   `docs/design/DESIGN_AI_ASSISTANT.md`: a `.rustio/ai.toml` policy file

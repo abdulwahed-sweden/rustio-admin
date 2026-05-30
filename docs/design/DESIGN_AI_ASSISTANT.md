@@ -204,21 +204,35 @@ threads through every action):
 "Who changed the schema, and who approved it?" always has an answer. A
 Blocked attempt is recorded too — the record shows the AI was told no.
 
+> **Implementation status.** The current slice keeps this record in a
+> local append-only `.rustio/ai/log.jsonl` (one JSON object per line),
+> and proposals as JSON under `.rustio/ai/proposals/`. The approver is
+> captured as a `--by <name>` string. Mirroring the record into
+> `rustio_admin_actions` and authenticating the approver against a live
+> admin both need a database; they are a later slice, so this surface
+> stays offline like `rustio ai status`.
+
 ---
 
 ## 6. Command surface
 
 The command set stays small and obvious.
 
-| Command | Does |
-|---|---|
-| `rustio ai status` | Show the policy: Allowed / Needs approval / Blocked, plus pending reviews and recent actions. Reads the policy + log; no AI call. |
-| `rustio ai review <id>` | Show a proposal's exact files / SQL and its approval requirement. |
-| `rustio ai approve <id>` | Sign off as the current authenticated user. |
-| `rustio ai reject <id> --reason "…"` | Decline, keeping the record. |
-| `rustio ai apply <id>` | Run an approved (or Allowed) change. |
-| `rustio ai log` | The full record of suggestions, approvals, and applied changes. |
-| `rustio ai allow` / `deny` | Edit the policy buckets — prints the `.rustio/ai.toml` diff it is about to make. |
+| Command | Does | Status |
+|---|---|---|
+| `rustio ai status` | Show the policy (Allowed / Needs approval / Blocked), pending proposals, and recent actions. Reads the policy + log; no AI call. | shipped |
+| `rustio ai init [--force]` | Write a default `.rustio/ai.toml`. | shipped |
+| `rustio ai propose --capability <k> --title <t> [--stage DEST=SRC]…` | Register a change. Refused when the capability is Blocked. | shipped |
+| `rustio ai list [--all]` | List proposals (pending by default). | shipped |
+| `rustio ai review <id>` | Show a proposal's details and staged changes. | shipped |
+| `rustio ai approve <id> --by <name>` | Record one approval (distinct approvers enforced). | shipped |
+| `rustio ai reject <id> --reason "…"` | Decline, keeping the record. | shipped |
+| `rustio ai apply <id>` | Write the staged files of an approved (or Allowed) proposal. | shipped |
+| `rustio ai log` | The full record of suggestions, approvals, and applied changes. | planned |
+| `rustio ai allow` / `deny` | Edit the policy buckets — prints the `.rustio/ai.toml` diff it is about to make. | planned |
+
+`<id>` accepts the full ULID or the short suffix handle `status` / `list`
+print. The default `--by` is the OS user.
 
 ### 6.1 `rustio ai status` — reference output
 
