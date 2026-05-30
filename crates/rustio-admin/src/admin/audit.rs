@@ -547,6 +547,26 @@ pub enum AuditEvent {
     /// See `DESIGN_R4_EMERGENCY.md` §5 for the full metadata
     /// schema and §10 doctrine D12.
     EmergencyRecovery,
+    // ---- AI assistant proposals (CLI) ----
+    /// A developer approved an AI assistant proposal via
+    /// `rustio-admin ai approve --as <email>`. The approver is a real,
+    /// active `rustio_users` row whose role meets the policy's
+    /// `approver_role`; `user_id` / `object_id` is that approver and
+    /// `model_name` is `"users"`. Emitted only from the CLI `ai` verbs
+    /// (`crates/rustio-admin-cli/`). `metadata` carries `proposal_id`,
+    /// `capability`, `title`, and `ai_action = "approved"`. See
+    /// `DESIGN_AI_ASSISTANT.md` §5.
+    AiProposalApproved,
+    /// A developer rejected an AI assistant proposal via
+    /// `rustio-admin ai reject --as <email>`. Same shape as
+    /// [`Self::AiProposalApproved`]; `metadata.reason` carries the
+    /// decline reason.
+    AiProposalRejected,
+    /// A developer applied an approved (or Allowed) AI assistant proposal
+    /// via `rustio-admin ai apply --as <email>`, writing its staged
+    /// files. Same shape as [`Self::AiProposalApproved`];
+    /// `metadata.files` lists the paths written.
+    AiProposalApplied,
 }
 
 impl AuditEvent {
@@ -588,6 +608,9 @@ impl AuditEvent {
             Self::LoginSucceeded => "login_succeeded",
             Self::LoginFailed => "login_failed",
             Self::EmergencyRecovery => "emergency_recovery",
+            Self::AiProposalApproved => "ai_proposal_approved",
+            Self::AiProposalRejected => "ai_proposal_rejected",
+            Self::AiProposalApplied => "ai_proposal_applied",
         }
     }
 }
@@ -721,6 +744,9 @@ mod tests {
         AuditEvent::LoginSucceeded,
         AuditEvent::LoginFailed,
         AuditEvent::EmergencyRecovery,
+        AuditEvent::AiProposalApproved,
+        AuditEvent::AiProposalRejected,
+        AuditEvent::AiProposalApplied,
     ];
 
     /// Drift test (doctrine 18): every variant's `as_str()` is
@@ -819,6 +845,18 @@ mod tests {
         assert_eq!(AuditEvent::LoginSucceeded.as_str(), "login_succeeded");
         assert_eq!(AuditEvent::LoginFailed.as_str(), "login_failed");
         assert_eq!(AuditEvent::EmergencyRecovery.as_str(), "emergency_recovery");
+        assert_eq!(
+            AuditEvent::AiProposalApproved.as_str(),
+            "ai_proposal_approved"
+        );
+        assert_eq!(
+            AuditEvent::AiProposalRejected.as_str(),
+            "ai_proposal_rejected"
+        );
+        assert_eq!(
+            AuditEvent::AiProposalApplied.as_str(),
+            "ai_proposal_applied"
+        );
     }
 
     /// `ActionType` and `AuditEvent` are intentionally separate

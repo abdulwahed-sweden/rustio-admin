@@ -55,6 +55,18 @@ leaves the alpha track.
 
 ### Added
 
+- **AI assistant: DB-backed approver identity + audit mirroring (opt-in
+  `--as <email>`).** `rustio ai approve` / `reject` / `apply` accept
+  `--as <email>` (mutually exclusive with `--by`): the CLI reads
+  `DATABASE_URL`, resolves the email to an **active** `rustio_users` row
+  whose role meets the policy's `approver_role`, records that real user,
+  and mirrors the decision into `rustio_admin_actions`. The local
+  `.rustio/ai/log.jsonl` stays the working record; the audit row is a
+  mirror, joinable by `metadata.proposal_id`. The offline `--by <name>`
+  path is unchanged and needs no database. CLI trust model: `--as`
+  asserts identity (trust boundary = shell + `DATABASE_URL`, as with the
+  emergency-access CLI) and authorises it against the users table — no
+  password challenge.
 - **`rustio ai allow` / `deny` — edit the policy buckets.** `allow <cap>`
   moves a capability into `allowed` (`--needs-approval` into
   `needs_approval`); `deny <cap>` moves it into `blocked`. The edit is
@@ -120,6 +132,17 @@ leaves the alpha track.
   engine's §1–§12 contract — purpose, color model, contrast thresholds,
   the seven Cases, pipeline order, token vocabulary, consumer integration),
   finally resolving the in-code `DESIGN_THEME §N` citations.
+
+### Audit
+
+- **Three new `AuditEvent` variants** — `ai_proposal_approved`,
+  `ai_proposal_rejected`, `ai_proposal_applied` — for AI-assistant
+  decisions mirrored from the CLI's `rustio ai` verbs (see Added). Minor
+  addition per `DESIGN_AUDIT.md` Appendix A; strings locked by
+  `audit_event_existing_variants_have_stable_strings`. Rows are written
+  via the public `audit::record` with `model_name = "users"`,
+  `object_id` = the acting user, and a UUID-v7 `correlation_id`. No schema
+  change.
 
 ### Changed
 

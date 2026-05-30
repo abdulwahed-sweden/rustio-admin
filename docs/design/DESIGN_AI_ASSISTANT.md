@@ -204,13 +204,30 @@ threads through every action):
 "Who changed the schema, and who approved it?" always has an answer. A
 Blocked attempt is recorded too — the record shows the AI was told no.
 
-> **Implementation status.** The current slice keeps this record in a
-> local append-only `.rustio/ai/log.jsonl` (one JSON object per line),
-> and proposals as JSON under `.rustio/ai/proposals/`. The approver is
-> captured as a `--by <name>` string. Mirroring the record into
-> `rustio_admin_actions` and authenticating the approver against a live
-> admin both need a database; they are a later slice, so this surface
-> stays offline like `rustio ai status`.
+> **Implementation status.** Proposals live as JSON under
+> `.rustio/ai/proposals/` and the local record is an append-only
+> `.rustio/ai/log.jsonl` (one JSON object per line) — the offline default,
+> with the approver captured as a `--by <name>` string.
+>
+> **DB-backed identity + audit mirroring is opt-in via `--as <email>`**
+> on `approve` / `reject` / `apply`. It reads `DATABASE_URL`, resolves the
+> email to an **active** `rustio_users` row whose role meets the policy's
+> `approver_role` (`Role::includes`), records that real user, and mirrors
+> the decision into `rustio_admin_actions` via the framework's public
+> `audit::record` — `model_name = "users"`, `object_id` = the actor's id,
+> a fresh UUID-v7 `correlation_id`, and `metadata` carrying
+> `proposal_id` / `capability` / `title` / `ai_action`. Three typed
+> `AuditEvent` variants back the rows: `ai_proposal_approved`,
+> `ai_proposal_rejected`, `ai_proposal_applied`. The local
+> `.rustio/ai/log.jsonl` stays the working record; the audit row is a
+> mirror, joinable by `metadata.proposal_id`.
+>
+> **CLI trust model.** `--as` *asserts* identity (the trust boundary is
+> shell + `DATABASE_URL` access, exactly as for the emergency-access CLI)
+> and *authorises* it against the users table — there is no password
+> challenge in a CLI context. `suggested` / `blocked` events stay
+> local-only: they have no authenticated user, and `rustio_admin_actions.user_id`
+> is `NOT NULL`.
 
 ---
 
@@ -225,14 +242,16 @@ The command set stays small and obvious.
 | `rustio ai propose --capability <k> --title <t> [--stage DEST=SRC]…` | Register a change. Refused when the capability is Blocked. | shipped |
 | `rustio ai list [--all]` | List proposals (pending by default). | shipped |
 | `rustio ai review <id>` | Show a proposal's details and staged changes. | shipped |
-| `rustio ai approve <id> --by <name>` | Record one approval (distinct approvers enforced). | shipped |
-| `rustio ai reject <id> --reason "…"` | Decline, keeping the record. | shipped |
-| `rustio ai apply <id>` | Write the staged files of an approved (or Allowed) proposal. | shipped |
+| `rustio ai approve <id> --by <name> \| --as <email>` | Record one approval (distinct approvers enforced). `--as` authenticates against the DB and mirrors to `rustio_admin_actions`. | shipped |
+| `rustio ai reject <id> --reason "…" [--as <email>]` | Decline, keeping the record. | shipped |
+| `rustio ai apply <id> [--as <email>]` | Write the staged files of an approved (or Allowed) proposal. | shipped |
 | `rustio ai log [--limit N] [--proposal <id>] [--all]` | The record of suggestions, approvals, rejections, applies, and blocked attempts, newest first. | shipped |
 | `rustio ai allow <cap> [--needs-approval]` / `deny <cap>` | Move a capability between buckets (`allow` → allowed, `--needs-approval` → needs_approval, `deny` → blocked). Edits `.rustio/ai.toml` in place, preserving comments, and prints the diff. | shipped |
 
 `<id>` accepts the full ULID or the short suffix handle `status` / `list`
-print. The default `--by` is the OS user.
+print. The default `--by` is the OS user. `--as <email>` (mutually
+exclusive with `--by`) switches on DB-backed identity + audit mirroring
+(§5) and requires `DATABASE_URL`.
 
 ### 6.1 `rustio ai status` — reference output
 

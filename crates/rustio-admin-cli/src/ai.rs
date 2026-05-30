@@ -34,6 +34,11 @@ use clap::Subcommand;
 use console::style;
 use serde::{Deserialize, Serialize};
 
+use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry as AuditLogEntry};
+use rustio_admin::auth::emergency::fresh_correlation_id;
+use rustio_admin::auth::{self, StoredUser};
+use rustio_admin::{Db, Role};
+
 use crate::builder::ulid_gen::new_ulid;
 
 /// `.rustio/ai.toml`, relative to the current working directory — the
@@ -132,25 +137,39 @@ pub(crate) enum Action {
     /// Show one proposal's details and staged changes. Accepts a full id
     /// or any unique prefix.
     Review { id: String },
-    /// Approve a proposal as `--by <name>` (defaults to the OS user).
+    /// Approve a proposal. `--by <name>` records an offline approver;
+    /// `--as <email>` authenticates against the database (active user,
+    /// role ≥ the policy's approver_role) and mirrors the decision into
+    /// `rustio_admin_actions`.
     Approve {
         id: String,
         #[arg(long)]
         by: Option<String>,
+        /// Authenticated approver email (requires DATABASE_URL).
+        #[arg(long = "as", value_name = "EMAIL", conflicts_with = "by")]
+        as_user: Option<String>,
     },
-    /// Reject a proposal with a reason.
+    /// Reject a proposal with a reason. `--as <email>` authenticates and
+    /// mirrors to the audit trail (see `approve`).
     Reject {
         id: String,
         #[arg(long)]
         reason: String,
         #[arg(long)]
         by: Option<String>,
+        /// Authenticated decider email (requires DATABASE_URL).
+        #[arg(long = "as", value_name = "EMAIL", conflicts_with = "by")]
+        as_user: Option<String>,
     },
     /// Apply an approved (or Allowed) proposal — writes its staged files.
+    /// `--as <email>` authenticates and mirrors to the audit trail.
     Apply {
         id: String,
         #[arg(long)]
         by: Option<String>,
+        /// Authenticated applier email (requires DATABASE_URL).
+        #[arg(long = "as", value_name = "EMAIL", conflicts_with = "by")]
+        as_user: Option<String>,
     },
     /// Show the action record: suggestions, approvals, rejections,
     /// applies, and blocked attempts, newest first.
@@ -206,9 +225,14 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
         ),
         Action::List { all } => list(&store, all),
         Action::Review { id } => review(&store, &id),
-        Action::Approve { id, by } => approve(&store, &id, by),
-        Action::Reject { id, reason, by } => reject(&store, &id, &reason, by),
-        Action::Apply { id, by } => apply(&store, &id, by),
+        Action::Approve { id, by, as_user } => approve(&store, &id, by, as_user),
+        Action::Reject {
+            id,
+            reason,
+            by,
+            as_user,
+        } => reject(&store, &id, &reason, by, as_user),
+        Action::Apply { id, by, as_user } => apply(&store, &id, by, as_user),
         Action::Log {
             limit,
             proposal,
@@ -1038,10 +1062,61 @@ fn propose(
     Ok(())
 }
 
-fn approve(store: &Store, id: &str, by: Option<String>) -> Result<(), String> {
-    let actor = whoami(by);
-    let p = do_approve(store, id, actor.clone())?;
-    println!("rustio ai: {} approved proposal {}", actor, p.short());
+fn approve(
+    store: &Store,
+    id: &str,
+    by: Option<String>,
+    as_user: Option<String>,
+) -> Result<(), String> {
+    match as_user {
+        Some(email) => approve_db(store, id, &email),
+        None => {
+            let actor = whoami(by);
+            let p = do_approve(store, id, actor.clone())?;
+            print_approved(&actor, &p, None);
+            Ok(())
+        }
+    }
+}
+
+fn reject(
+    store: &Store,
+    id: &str,
+    reason: &str,
+    by: Option<String>,
+    as_user: Option<String>,
+) -> Result<(), String> {
+    match as_user {
+        Some(email) => reject_db(store, id, reason, &email),
+        None => {
+            let actor = whoami(by);
+            let p = do_reject(store, id, reason, actor)?;
+            println!("rustio ai: proposal {} rejected", p.short());
+            Ok(())
+        }
+    }
+}
+
+fn apply(
+    store: &Store,
+    id: &str,
+    by: Option<String>,
+    as_user: Option<String>,
+) -> Result<(), String> {
+    match as_user {
+        Some(email) => apply_db(store, id, &email),
+        None => {
+            let actor = whoami(by);
+            let (p, written) = do_apply(store, id, actor)?;
+            print_applied(&p, &written, None);
+            Ok(())
+        }
+    }
+}
+
+/// Shared printer for an approval (offline or DB-backed).
+fn print_approved(actor: &str, p: &Proposal, correlation: Option<&str>) {
+    println!("rustio ai: {actor} approved proposal {}", p.short());
     if p.state == State::Approved {
         println!("  fully approved — apply it:");
         println!("    rustio ai apply {}", p.short());
@@ -1053,27 +1128,211 @@ fn approve(store: &Store, id: &str, by: Option<String>) -> Result<(), String> {
             need.saturating_sub(have)
         );
     }
-    Ok(())
+    if let Some(c) = correlation {
+        println!("  audit: rustio_admin_actions row written (correlation {c})");
+    }
 }
 
-fn reject(store: &Store, id: &str, reason: &str, by: Option<String>) -> Result<(), String> {
-    let actor = whoami(by);
-    let p = do_reject(store, id, reason, actor)?;
-    println!("rustio ai: proposal {} rejected", p.short());
-    Ok(())
-}
-
-fn apply(store: &Store, id: &str, by: Option<String>) -> Result<(), String> {
-    let actor = whoami(by);
-    let (p, written) = do_apply(store, id, actor)?;
+/// Shared printer for an apply (offline or DB-backed).
+fn print_applied(p: &Proposal, written: &[String], correlation: Option<&str>) {
     println!("rustio ai: proposal {} applied", p.short());
     if written.is_empty() {
         println!("  (no files staged)");
     } else {
-        for path in &written {
+        for path in written {
             println!("  wrote {path}");
         }
     }
+    if let Some(c) = correlation {
+        println!("  audit: rustio_admin_actions row written (correlation {c})");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DB-backed identity + rustio_admin_actions mirroring (DESIGN §5)
+//
+// `--as <email>` authenticates the actor against the database and mirrors
+// the decision into the framework's audit trail. The local lifecycle runs
+// exactly as the offline path does; the DB work wraps around it. The local
+// `.rustio/ai/` store remains the working record — the audit row is a
+// mirror, linked by `metadata.proposal_id`.
+// ---------------------------------------------------------------------------
+
+/// Resolve `email` to an active user whose role meets the policy's
+/// `approver_role`. This is the CLI trust model: identity is *asserted*
+/// via `--as` (the trust boundary is shell + DATABASE_URL access, as with
+/// the emergency-access CLI) and *authorised* against the users table —
+/// there is no password challenge in a CLI context.
+async fn resolve_approver(db: &Db, email: &str, policy: &Policy) -> Result<StoredUser, String> {
+    let user = auth::find_user_by_email(db, email)
+        .await
+        .map_err(|e| format!("user lookup failed: {e}"))?
+        .ok_or_else(|| format!("no user with email {email}"))?;
+    if !user.is_active {
+        return Err(format!("{email} is not active — cannot act as this user"));
+    }
+    let required = Role::parse(&policy.approver_role).map_err(|_| {
+        format!(
+            "policy approver_role {:?} is not a valid role",
+            policy.approver_role
+        )
+    })?;
+    if !user.role.includes(required) {
+        return Err(format!(
+            "{email} has role `{}`, which does not meet the required approver role `{}`",
+            user.role.as_str(),
+            required.as_str()
+        ));
+    }
+    Ok(user)
+}
+
+/// Write one mirrored row into `rustio_admin_actions` and return its
+/// correlation id. The row is attributed to the acting user
+/// (`model_name = "users"`, `object_id = user.id`); the AI proposal lives
+/// in `metadata`.
+async fn mirror(
+    db: &Db,
+    user: &StoredUser,
+    p: &Proposal,
+    event: AuditEvent,
+    action: &str,
+    extra: serde_json::Value,
+) -> Result<String, String> {
+    let correlation_id = fresh_correlation_id();
+    let mut md = serde_json::Map::new();
+    md.insert("proposal_id".into(), p.id.clone().into());
+    md.insert("capability".into(), p.capability.clone().into());
+    md.insert("title".into(), p.title.clone().into());
+    md.insert("ai_action".into(), action.to_string().into());
+    md.insert("bucket".into(), bucket_field(p.bucket).to_string().into());
+    if let serde_json::Value::Object(extra) = extra {
+        for (k, v) in extra {
+            md.insert(k, v);
+        }
+    }
+    let summary = format!("AI proposal {} {}: {}", p.short(), action, p.title);
+    let entry = AuditLogEntry {
+        user_id: user.id,
+        action_type: ActionType::Update,
+        model_name: "users",
+        object_id: user.id,
+        ip_address: None,
+        summary,
+        correlation_id: Some(&correlation_id),
+        session_id: None,
+        metadata: Some(serde_json::Value::Object(md)),
+        actor_user_id: None,
+        event: Some(event),
+    };
+    record(db, entry)
+        .await
+        .map_err(|e| format!("audit record failed: {e}"))?;
+    Ok(correlation_id)
+}
+
+fn approve_db(store: &Store, id: &str, email: &str) -> Result<(), String> {
+    let policy = load_policy(Path::new(POLICY_PATH))?;
+    let mut captured: Option<(Proposal, String)> = None;
+    crate::tokio_run(async {
+        let db = crate::db().await?;
+        let user = resolve_approver(&db, email, &policy).await?;
+        let p = do_approve(store, id, user.email.clone())?;
+        let extra = serde_json::json!({
+            "approvals": p.distinct_approvals(),
+            "required_approvals": p.required_approvals,
+            "state": state_label(p.state),
+        });
+        match mirror(
+            &db,
+            &user,
+            &p,
+            AuditEvent::AiProposalApproved,
+            "approved",
+            extra,
+        )
+        .await
+        {
+            Ok(corr) => {
+                captured = Some((p, corr));
+                Ok(())
+            }
+            Err(e) => Err(format!(
+                "proposal {} is now {} locally, but the audit mirror failed: {e}",
+                p.short(),
+                state_label(p.state)
+            )),
+        }
+    })?;
+    let (p, corr) = captured.expect("set on success");
+    print_approved(email, &p, Some(&corr));
+    Ok(())
+}
+
+fn reject_db(store: &Store, id: &str, reason: &str, email: &str) -> Result<(), String> {
+    let policy = load_policy(Path::new(POLICY_PATH))?;
+    let mut captured: Option<(Proposal, String)> = None;
+    crate::tokio_run(async {
+        let db = crate::db().await?;
+        let user = resolve_approver(&db, email, &policy).await?;
+        let p = do_reject(store, id, reason, user.email.clone())?;
+        let extra = serde_json::json!({ "reason": reason });
+        match mirror(
+            &db,
+            &user,
+            &p,
+            AuditEvent::AiProposalRejected,
+            "rejected",
+            extra,
+        )
+        .await
+        {
+            Ok(corr) => {
+                captured = Some((p, corr));
+                Ok(())
+            }
+            Err(e) => Err(format!(
+                "proposal {} is now rejected locally, but the audit mirror failed: {e}",
+                p.short()
+            )),
+        }
+    })?;
+    let (p, corr) = captured.expect("set on success");
+    println!("rustio ai: proposal {} rejected", p.short());
+    println!("  audit: rustio_admin_actions row written (correlation {corr})");
+    Ok(())
+}
+
+fn apply_db(store: &Store, id: &str, email: &str) -> Result<(), String> {
+    let policy = load_policy(Path::new(POLICY_PATH))?;
+    let mut captured: Option<(Proposal, Vec<String>, String)> = None;
+    crate::tokio_run(async {
+        let db = crate::db().await?;
+        let user = resolve_approver(&db, email, &policy).await?;
+        let (p, written) = do_apply(store, id, user.email.clone())?;
+        let extra = serde_json::json!({ "files": written, "file_count": written.len() });
+        match mirror(
+            &db,
+            &user,
+            &p,
+            AuditEvent::AiProposalApplied,
+            "applied",
+            extra,
+        )
+        .await
+        {
+            Ok(corr) => {
+                captured = Some((p, written, corr));
+                Ok(())
+            }
+            Err(e) => Err(format!(
+                "proposal {} is now applied locally, but the audit mirror failed: {e}",
+                p.short()
+            )),
+        }
+    })?;
+    let (p, written, corr) = captured.expect("set on success");
+    print_applied(&p, &written, Some(&corr));
     Ok(())
 }
 
