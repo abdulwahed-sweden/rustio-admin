@@ -53,6 +53,23 @@ fn flatten_validation_errors<M: AdminModel>(errs: Vec<FieldValidationError>) -> 
         .collect()
 }
 
+/// The column list to `SELECT` for a list page: every model column except
+/// the full-text-search column, when one is configured.
+///
+/// The FTS column (`ModelAdmin::search_index_column`) must be in
+/// `Model::COLUMNS` for the WHERE clause to use it, but it is typically a
+/// `tsvector` that is wasteful to fetch and is never displayed — `from_row`
+/// reads by name and skips it — so we drop it from the projection. When no
+/// FTS column is set (or it isn't a real column), the full list is returned.
+fn select_projection(columns: &[&str], fts_column: Option<&str>) -> String {
+    columns
+        .iter()
+        .copied()
+        .filter(|c| Some(*c) != fts_column)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 impl<M> AdminOps for ConcreteOps<M>
 where
     M: AdminModel + ModelAdmin + crate::orm::Model,
@@ -193,9 +210,12 @@ where
             let total: i64 = count_q.fetch_one(db.pool()).await?;
 
             // ---- SELECT page ----
+            // Project every column except the FTS column: it is only used
+            // in the WHERE clause and is typically a `tsvector` that is
+            // wasteful to fetch and never displayed (`from_row` skips it).
             let mut sql = format!(
                 "SELECT {} FROM {}{} ORDER BY {}",
-                M::COLUMNS.join(", "),
+                select_projection(M::COLUMNS, opts.search_index_column),
                 M::TABLE,
                 where_sql,
                 order_clause,
@@ -364,6 +384,34 @@ where
         // structured BadRequest when the action name has no project
         // handler.
         M::execute_bulk_action(name, ids, db, ctx)
+    }
+}
+
+#[cfg(test)]
+mod select_projection_tests {
+    use super::select_projection;
+
+    const COLS: &[&str] = &["id", "full_name", "email", "created_at", "search_vector"];
+
+    #[test]
+    fn drops_the_fts_column_from_the_projection() {
+        let sql = select_projection(COLS, Some("search_vector"));
+        assert_eq!(sql, "id, full_name, email, created_at");
+        assert!(!sql.contains("search_vector"));
+    }
+
+    #[test]
+    fn keeps_all_columns_when_no_fts_column() {
+        assert_eq!(
+            select_projection(COLS, None),
+            "id, full_name, email, created_at, search_vector"
+        );
+    }
+
+    #[test]
+    fn no_op_when_fts_column_is_not_a_real_column() {
+        // A typo'd / non-COLUMNS fts name removes nothing.
+        assert_eq!(select_projection(&["id", "name"], Some("nope")), "id, name");
     }
 }
 

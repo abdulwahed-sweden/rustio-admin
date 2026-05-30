@@ -64,6 +64,11 @@ leaves the alpha track.
   `ILIKE` scan. The framework now logs a `warn!` at model registration
   naming the model and column, instead of leaving the misconfig silent.
   `docs/modeladmin.md` documents the COLUMNS requirement.
+- **List pages no longer fetch the full-text-search column.** The FTS
+  column must be in `Model::COLUMNS` to be usable in the `WHERE` clause,
+  but it's a `tsvector` that's never displayed — the list `SELECT` now
+  excludes it from the projection (instead of `SELECT …, search_vector`),
+  so the wasteful blob isn't fetched per row.
 
 
 ## [0.24.0] — 2026-05-31
