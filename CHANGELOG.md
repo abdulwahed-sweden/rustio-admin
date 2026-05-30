@@ -54,7 +54,17 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+
+- **`/admin/docs` no longer renders dead cross-document links.** The
+  in-app docs viewer serves only the three embedded files
+  (`architecture` / `modeladmin` / `public-api`) by slug, so relative
+  cross-doc links in those pages (`design/…`, `archive/…`, sibling
+  `*.md`) could never resolve and rendered as 404-on-click anchors.
+  `admin::docs::render_markdown` now strips any non-navigable link to
+  plain text (keeping its label); external URLs (`http`/`https`/
+  `mailto`) and in-page `#anchor` links are untouched. The canonical
+  `docs/` copies keep their links for GitHub browsing.
 
 
 ## [0.23.0] — 2026-05-30
