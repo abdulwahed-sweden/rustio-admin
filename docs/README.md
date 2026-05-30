@@ -40,6 +40,9 @@ not just the diff.
   ownership, accent palette, authority vocabulary.
 - [`design/DESIGN_CHROME.md`](design/DESIGN_CHROME.md) — operational
   chrome conventions (topbar, sidebar, footer, environment badge).
+- [`design/DESIGN_THEME.md`](design/DESIGN_THEME.md) — the build-time
+  `rio-theme` engine: brand colors → a WCAG-safe `tokens.css`, and the
+  `RUSTIO_TOKENS_CSS` runtime override.
 
 ### Authority and security
 
@@ -56,6 +59,10 @@ not just the diff.
   multi-factor authentication with single-use backup codes (R3).
 - [`design/DESIGN_R4_EMERGENCY.md`](design/DESIGN_R4_EMERGENCY.md)
   — CLI emergency-recovery primitives (R4).
+- [`design/DESIGN_AI_ASSISTANT.md`](design/DESIGN_AI_ASSISTANT.md) —
+  permissions / approval / audit layer over external AI coding
+  assistants: the `.rustio/ai.toml` policy, the `rustio ai` proposal
+  lifecycle, and opt-in `rustio_admin_actions` mirroring (0.23.0).
 
 ### Framework conventions
 

@@ -9,10 +9,14 @@ rustio-admin/
 ├── crates/
 │   ├── rustio-admin/          ← the library (everything project code consumes)
 │   ├── rustio-admin-macros/   ← #[derive(RustioAdmin)] proc-macro
-│   └── rustio-admin-cli/      ← `rustio` CLI binary (work in progress)
+│   ├── rustio-admin-cli/      ← `rustio-admin` CLI binary (scaffolding, migrations,
+│   │                            users, `theme`, `ai` assistant permissions, builder)
+│   └── rio-theme/             ← build-time theme engine (brand colors → tokens.css)
 └── examples/
-    └── minimal/               ← canonical project skeleton
+    └── clinic/                ← canonical project skeleton
 ```
+
+The `ai` surface (`crates/rustio-admin-cli/src/ai.rs`) is a permissions / approval / audit layer over external AI coding assistants — see [`design/DESIGN_AI_ASSISTANT.md`](./design/DESIGN_AI_ASSISTANT.md). It is offline by default; its `--as <email>` path authenticates an approver and mirrors decisions into `rustio_admin_actions` via three typed `AuditEvent` variants (`ai_proposal_approved` / `_rejected` / `_applied`).
 
 Workspace deps (`tokio`, `hyper`, `sqlx`, `minijinja`, `chrono`, `argon2`, …) are pinned at the workspace level for one-place version control. Project-side code never reaches for them transitively — the framework re-exports the surface it cares about (`Db`, `Router`, `Server`, `Templates`, etc.).
 

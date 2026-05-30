@@ -24,6 +24,13 @@ cargo install rustio-admin-cli
 | `doctor`                               | Diagnose the local environment (DB, auth, MFA, secret key)  |
 | `docs`                                 | Print where the framework's documentation lives             |
 | `theme list`                           | List built-in `AdminTheme` palette presets                  |
+| `ai status`                            | Show what an AI assistant may do (Allowed / Needs approval / Blocked) |
+| `ai init`                              | Write a default `.rustio/ai.toml` policy                    |
+| `ai propose`                           | Register a change the AI wants to make                      |
+| `ai review <id>` / `ai list`           | Inspect proposals and their staged changes                  |
+| `ai approve <id>` / `reject` / `apply` | Decide on / apply a proposal (`--as <email>` mirrors to the audit trail) |
+| `ai log`                               | Show the AI action record                                   |
+| `ai allow <cap>` / `deny <cap>`        | Move a capability between policy buckets (prints the diff)  |
 | `override <template>`                  | Copy an embedded admin template to `./templates/`           |
 | `reload`                               | Watch the source tree and re-run `cargo run` on change      |
 | `test-init`                            | Generate a starter integration test at `tests/smoke.rs`     |
@@ -51,6 +58,17 @@ cargo run
 # Add a model to the project, then re-apply migrations
 rustio-admin startapp patient --field name:str --field date_of_birth:timestamp
 rustio-admin migrate apply
+```
+
+```bash
+# AI assistant permissions: see the policy, then run a change through review.
+rustio-admin ai init                     # write .rustio/ai.toml
+rustio-admin ai status                   # what the AI may do (offline, no DB)
+rustio-admin ai propose --capability modify_table \
+    --title "Add phone column" --stage migrations/0008.sql=phone.sql
+rustio-admin ai review <id>
+rustio-admin ai approve <id> --as amir@team   # authenticates + mirrors to rustio_admin_actions
+rustio-admin ai apply <id> --as amir@team
 ```
 
 ## Flags

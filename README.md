@@ -107,7 +107,7 @@ The invariants the framework refuses to break.
 
 ## What's in the box
 
-The surface is grouped into five concerns.
+The surface is grouped into these concerns.
 
 ### Admin surface
 
@@ -135,6 +135,19 @@ The surface is grouped into five concerns.
 - Typed `AuditEvent` with stable string identifiers.
 - Per-request correlation IDs.
 - Redaction helpers for tokens and passwords.
+
+### AI assistant permissions
+
+- `rustio ai` governs what an external AI coding assistant (Claude
+  Code, Copilot, Cursor, …) may do in the project — a permissions /
+  approval / audit layer, **not** an embedded model.
+- A version-controlled `.rustio/ai.toml` policy sorts every capability
+  into Allowed / Needs approval / Blocked. Changes are proposed,
+  reviewed, approved (distinct approvers enforced), and applied as an
+  explicit step; Blocked is refused outright.
+- Offline by default. `--as <email>` authenticates the approver against
+  the users table and mirrors the decision into `rustio_admin_actions`.
+- Contract: [`DESIGN_AI_ASSISTANT.md`](./docs/design/DESIGN_AI_ASSISTANT.md).
 
 ### Operational
 
@@ -244,6 +257,12 @@ Self-service password recovery (R1, ships in 0.5.0).
 Admin-driven recovery, auto-throttle, re-auth wall (R2,
 ships in 0.6.0).
 
+### [`DESIGN_AI_ASSISTANT.md`](./docs/design/DESIGN_AI_ASSISTANT.md)
+
+Permissions, approval, and audit layer over external AI coding
+assistants — the `rustio ai` policy, proposal lifecycle, and opt-in
+audit mirroring (ships in 0.23.0).
+
 ---
 
 Each document is the source of truth for its surface.
@@ -258,7 +277,7 @@ theme engine, and CLI compilation off the project's hot path.
 |---|---|
 | `rustio-admin`        | The library. Re-exports the macros. |
 | `rustio-admin-macros` | Proc-macros (re-exported from `rustio-admin`). |
-| `rustio-admin-cli`    | The `rustio-admin` binary — `new` (friendly alias for `startproject`), `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `theme`, `doctor`, `docs`, `builder new`. |
+| `rustio-admin-cli`    | The `rustio-admin` binary — `new` (friendly alias for `startproject`), `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `theme`, `ai` (AI assistant permissions), `doctor`, `docs`, `builder new`. |
 | `rio-theme`           | Build-time theme engine. Turns raw brand colors into a WCAG-safe `tokens.css`. Not depended on by `rustio-admin` at runtime. |
 
 ```sh
@@ -274,7 +293,9 @@ RustIO is intentionally narrow in scope.
 - Not a general-purpose web framework.
 - Not an ORM. The `Model` trait is a thin sqlx shim.
 - Not a content management system.
-- Not AI-augmented.
+- Not AI-augmented — the framework embeds no model or planner. (`rustio ai`
+  *governs* an external AI assistant via a permissions / approval / audit
+  layer; it does not call out to one.)
 - Not multi-database. Postgres only, by design.
 - Not schema-contract-driven.
 

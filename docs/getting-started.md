@@ -261,6 +261,11 @@ call at app boot.
 
 ## Next
 
+- If you work with an AI coding assistant (Claude Code, Copilot,
+  Cursor, …), run `rustio-admin ai init` then `rustio-admin ai status`
+  to set the policy for what it may do in this project — Allowed /
+  Needs approval / Blocked, with proposals reviewed and approved before
+  they apply. See [`docs/design/DESIGN_AI_ASSISTANT.md`](./design/DESIGN_AI_ASSISTANT.md).
 - Customise the chrome with `Admin::theme(...)` and
   `Admin::site_branding(...)`.
 - Override `templates/admin/_base.html` etc. to ship your own layout
