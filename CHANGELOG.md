@@ -55,6 +55,11 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio ai log` — the action record.** Renders
+  `.rustio/ai/log.jsonl` newest-first (suggestions, approvals,
+  rejections, applies, and blocked attempts), with `--proposal <id>` to
+  scope to one proposal, `--limit N` (default 20), and `--all`. Reads the
+  local log only — offline, no database.
 - **AI assistant proposal model + approval lifecycle (`rustio ai
   propose` / `list` / `review` / `approve` / `reject` / `apply`).** Builds
   on the policy from the previous slice (DESIGN_AI_ASSISTANT.md §4–§5). A

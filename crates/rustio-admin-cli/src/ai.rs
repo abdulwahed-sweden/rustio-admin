@@ -152,6 +152,19 @@ pub(crate) enum Action {
         #[arg(long)]
         by: Option<String>,
     },
+    /// Show the action record: suggestions, approvals, rejections,
+    /// applies, and blocked attempts, newest first.
+    Log {
+        /// Show at most N entries (default 20). Ignored with `--all`.
+        #[arg(long)]
+        limit: Option<usize>,
+        /// Only entries for one proposal (full id or short handle).
+        #[arg(long)]
+        proposal: Option<String>,
+        /// Show every entry, no limit.
+        #[arg(long)]
+        all: bool,
+    },
 }
 
 /// Dispatch. Offline and synchronous — no Postgres connection.
@@ -181,8 +194,16 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
         Action::Approve { id, by } => approve(&store, &id, by),
         Action::Reject { id, reason, by } => reject(&store, &id, &reason, by),
         Action::Apply { id, by } => apply(&store, &id, by),
+        Action::Log {
+            limit,
+            proposal,
+            all,
+        } => log_cmd(&store, limit, proposal, all),
     }
 }
+
+/// Default number of log entries shown by `rustio ai log`.
+const DEFAULT_LOG_LIMIT: usize = 20;
 
 // ---------------------------------------------------------------------------
 // Policy (DESIGN §2–§3)
@@ -674,17 +695,23 @@ impl Store {
             .map_err(|e| format!("could not write {}: {e}", path.display()))
     }
 
-    /// The most recent `n` log entries, oldest-first.
-    fn recent_log(&self, n: usize) -> Vec<LogEntry> {
+    /// Every log entry, oldest-first. A line that fails to parse is
+    /// skipped rather than aborting the read — the record is best-effort
+    /// readable even if a future field is added.
+    fn read_log(&self) -> Vec<LogEntry> {
         let raw = match fs::read_to_string(self.log_path()) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };
-        let mut entries: Vec<LogEntry> = raw
-            .lines()
+        raw.lines()
             .filter(|l| !l.trim().is_empty())
             .filter_map(|l| serde_json::from_str(l).ok())
-            .collect();
+            .collect()
+    }
+
+    /// The most recent `n` log entries, oldest-first.
+    fn recent_log(&self, n: usize) -> Vec<LogEntry> {
+        let mut entries = self.read_log();
         let start = entries.len().saturating_sub(n);
         entries.split_off(start)
     }
@@ -1121,6 +1148,66 @@ fn list(store: &Store, all: bool) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+/// `rustio ai log` — render the action record, newest first.
+fn log_cmd(
+    store: &Store,
+    limit: Option<usize>,
+    proposal: Option<String>,
+    all: bool,
+) -> Result<(), String> {
+    let mut entries = store.read_log();
+    if let Some(q) = &proposal {
+        // Match the same way `Store::load` resolves a handle.
+        entries
+            .retain(|e| e.proposal == *q || e.proposal.ends_with(q) || e.proposal.starts_with(q));
+    }
+    if entries.is_empty() {
+        println!("No actions recorded yet.");
+        return Ok(());
+    }
+    entries.reverse(); // newest first
+
+    let total = entries.len();
+    let cap = if all {
+        total
+    } else {
+        limit.unwrap_or(DEFAULT_LOG_LIMIT)
+    };
+    let shown = total.min(cap);
+
+    print!("{}", format_log(&entries[..shown]));
+    if shown < total {
+        println!();
+        println!(
+            "{}",
+            style(format!(
+                "… {} older entr{} (use --all or --limit N)",
+                total - shown,
+                if total - shown == 1 { "y" } else { "ies" }
+            ))
+            .dim()
+        );
+    }
+    Ok(())
+}
+
+/// Format log entries (already in display order) into aligned lines.
+/// Pure so it can be unit-tested without the filesystem.
+fn format_log(entries: &[LogEntry]) -> String {
+    let mut s = String::new();
+    for e in entries {
+        let pid = &e.proposal[e.proposal.len().saturating_sub(8)..];
+        let detail = e.detail.as_deref().unwrap_or("");
+        let line = format!(
+            "{}  {:<9} {:<8}  {:<16} {:<10} {}",
+            e.ts, e.event, pid, e.capability, e.by, detail
+        );
+        s.push_str(line.trim_end());
+        s.push('\n');
+    }
+    s
 }
 
 // ---------------------------------------------------------------------------
@@ -1560,6 +1647,63 @@ mod tests {
         assert!(validate_dest("src/ok.rs").is_ok());
         assert!(validate_dest("../escape.rs").is_err());
         assert!(validate_dest("/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn lifecycle_actions_are_recorded_in_the_log_oldest_first() {
+        let store = temp_store();
+        let policy = Policy::defaults();
+        let p = do_propose(
+            &store,
+            &policy,
+            "edit_existing_code",
+            "tweak",
+            None,
+            vec![],
+            "claude".into(),
+        )
+        .unwrap();
+        do_approve(&store, p.short(), "amir".into()).unwrap();
+        do_apply(&store, p.short(), "amir".into()).unwrap();
+
+        let log = store.read_log();
+        let events: Vec<&str> = log.iter().map(|e| e.event.as_str()).collect();
+        assert_eq!(events, vec!["suggested", "approved", "applied"]);
+        assert!(log.iter().all(|e| e.proposal == p.id));
+    }
+
+    #[test]
+    fn format_log_aligns_and_trims() {
+        let entries = vec![
+            LogEntry {
+                id: new_ulid(),
+                ts: "2026-05-30T18:00:00Z".into(),
+                event: "suggested".into(),
+                proposal: "01KSX0N1HYP380HBBFV16F7Z8G".into(),
+                capability: "modify_table".into(),
+                by: "claude".into(),
+                detail: Some("Add phone column".into()),
+            },
+            LogEntry {
+                id: new_ulid(),
+                ts: "2026-05-30T18:01:00Z".into(),
+                event: "blocked".into(),
+                proposal: "-".into(),
+                capability: "security_settings".into(),
+                by: "claude".into(),
+                detail: None,
+            },
+        ];
+        let out = format_log(&entries);
+        // Suffix handle, capability, and detail all present.
+        assert!(out.contains("V16F7Z8G"));
+        assert!(out.contains("Add phone column"));
+        // No trailing whitespace on the detail-less line.
+        for line in out.lines() {
+            assert_eq!(line, line.trim_end(), "line has trailing space: {line:?}");
+        }
+        // The `-` proposal renders as `-`, not a panic on slicing.
+        assert!(out.lines().nth(1).unwrap().contains("blocked"));
     }
 
     #[test]
