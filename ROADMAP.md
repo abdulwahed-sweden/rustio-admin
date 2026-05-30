@@ -215,6 +215,19 @@ The `rustio-admin` binary handles the operationally critical surface for new and
 
 ---
 
+## AI Assistant Permissions
+
+A permissions, approval, and audit layer over external AI coding assistants (Claude Code, Copilot, Cursor, …) working inside a rustio-admin project. The position is clarity, not magic: the developer always knows what the AI can do, what it cannot, what needs approval, and what it changed. The AI is an *external actor* governed by the framework's existing permission / audit / builder primitives — **not** an embedded planner (see the ⛔ note below). Full contract: [`docs/design/DESIGN_AI_ASSISTANT.md`](./docs/design/DESIGN_AI_ASSISTANT.md).
+
+- ⚪ **Policy file (`.rustio/ai.toml`).** Version-controlled single source of truth that sorts every capability into Allowed / Needs approval / Blocked. `edit_ai_policy` is itself Blocked, so the AI can't widen its own access; changing a bucket is a reviewed PR edit.
+- ⚪ **Three capability buckets.** *Allowed* (create models / forms / admin pages, suggest fields, draft migration files), *Needs approval* (apply migration, modify existing table, edit hand-written code, add dependency), *Blocked* (security settings, production deploy, delete data, edit audit log, edit the policy). The files-vs-database split is the core safety rule: writing a model + draft migration is Allowed; *applying* it against Postgres needs approval.
+- ⚪ **Approval lifecycle.** Suggested → Reviewed → Approved → Applied / Rejected. Approval is an authenticated action by a real rustio-admin user (default `administrator`); high-risk capabilities can require two approvers. `apply` is always a separate, explicit step (preview-by-default).
+- ⚪ **Recorded in the existing audit trail.** Every suggestion, approval (who + when), applied change, revert, and blocked attempt lands in `rustio_admin_actions` with the framework's correlation id. "Who changed the schema, and who approved it?" always has an answer.
+- ⚪ **`rustio ai` command surface.** `status` (reads the policy + log, no AI call), `review`, `approve`, `reject`, `apply`, `log`, `allow` / `deny` (prints the `.rustio/ai.toml` diff before editing).
+- 🔬 **Deeper, embedded integration** (model calls / schema planning inside the product) stays out of the core crate — if it ever ships, it is a separate `rustio-pro-*` crate, per the strategic-reset rules.
+
+---
+
 ## Long-Term Ideas
 
 Each item below is real and on the planning surface, but not yet scheduled for an implementation slot. They may grow, shrink, or merge as the framework matures.
@@ -243,7 +256,7 @@ These are open questions. Each may become a roadmap item, may live in a separate
 - 🔬 **GraphQL surface.** See *APIs & Documentation*.
 - 🔬 **Bidirectional embedded text policy.** See *Internationalization & RTL*.
 - 🔬 **Project-side observability hooks.** A `tracing` integration story so project consumers can plug their own observability stack into framework-emitted spans (request, query, audit) without monkey-patching.
-- ⛔ **Schema contracts / drift validation / AI planners.** Explicitly **out of scope** per the strategic-reset rules. If they return to the codebase at all, they ship as a separate `rustio-pro-*` family of crates and never inside `rustio-admin`.
+- ⛔ **Schema contracts / drift validation / AI planners.** Explicitly **out of scope** per the strategic-reset rules. If they return to the codebase at all, they ship as a separate `rustio-pro-*` family of crates and never inside `rustio-admin`. *Note:* "AI planners" means an **embedded** model that designs schemas or calls out to an assistant from inside the product. It does **not** cover the *AI Assistant Permissions* layer above — that governs an external assistant using the framework's own permission / approval / audit primitives, and embeds no model.
 
 ---
 
