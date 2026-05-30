@@ -1,6 +1,6 @@
 # Architecture
 
-Brief module map — read this before contributing or filing a structural bug. The full design rationale lives in [`STRATEGIC_RESET_PLAN.md`](./archive/STRATEGIC_RESET_PLAN.md).
+Module map — read this before contributing or filing a structural bug. The full design rationale lives in [`STRATEGIC_RESET_PLAN.md`](./archive/STRATEGIC_RESET_PLAN.md); security-sensitive subsystems each have a contract under [`design/`](./design/).
 
 ## Workspace
 
@@ -13,143 +13,167 @@ rustio-admin/
 │   │                            users, `theme`, `ai` assistant permissions, builder)
 │   └── rio-theme/             ← build-time theme engine (brand colors → tokens.css)
 └── examples/
-    └── clinic/                ← canonical project skeleton
+    └── clinic/                ← canonical end-to-end consumer of the library
 ```
 
 The `ai` surface (`crates/rustio-admin-cli/src/ai.rs`) is a permissions / approval / audit layer over external AI coding assistants — see [`design/DESIGN_AI_ASSISTANT.md`](./design/DESIGN_AI_ASSISTANT.md). It is offline by default; its `--as <email>` path authenticates an approver and mirrors decisions into `rustio_admin_actions` via three typed `AuditEvent` variants (`ai_proposal_approved` / `_rejected` / `_applied`).
+
+`rio-theme` runs only at build/CLI time (`rustio-admin theme generate`); the runtime library never links it — see [`design/DESIGN_THEME.md`](./design/DESIGN_THEME.md).
 
 Workspace deps (`tokio`, `hyper`, `sqlx`, `minijinja`, `chrono`, `argon2`, …) are pinned at the workspace level for one-place version control. Project-side code never reaches for them transitively — the framework re-exports the surface it cares about (`Db`, `Router`, `Server`, `Templates`, etc.).
 
 ## Module map (`rustio-admin`)
 
+Read top-to-bottom — the crate layers cleanly from the HTTP core up to the admin panel.
+
 | Path | Responsibility |
 |---|---|
 | `error.rs`        | `Error` / `Result` + `From<sqlx::Error>` mapping (constraint violations → 409 Conflict). |
-| `http.rs`         | `Request`, `Response`, `FormData`, typed `Context` for per-request middleware data. |
-| `router.rs`       | Tiny middleware-aware router; `:param` captures; 404 vs 405 distinction. |
-| `server.rs`       | hyper-based `Server` with graceful Ctrl-C shutdown + `serve_static`. |
-| `orm.rs`          | `Db`, `DbOptions`, `Model`, `Value`, `Row`, generic CRUD helpers. Postgres-only. |
+| `http.rs`         | `Request`, `Response`, `FormData`, typed per-request `Context`. |
+| `router.rs`       | Tiny middleware-aware router; `:param` captures; 404 vs 405 distinction; `Next`. |
+| `server.rs`       | hyper-based `Server` with graceful Ctrl-C shutdown + static serving. |
+| `orm.rs`          | `Db`, `DbOptions`, `Model`, `Value`, `Row`, generic CRUD helpers. Postgres-only — **not** an ORM. |
 | `migrations.rs`   | Walks numerically prefixed `*.sql` files; transactional apply with a tracking table. |
-| `templates.rs`    | minijinja loader with disk-override path; embedded admin templates baked via `include_str!`. |
-| `background.rs`   | Tiny periodic task runner (currently only the session sweeper). |
-| `middleware/`     | `logger`, `security_headers`, `rate_limit` (DashMap token bucket), `gzip`, `csrf_protect` (double-submit cookie). |
-| `auth/`           | `Identity`, `Role` ladder, sessions, users (Argon2), per-model permissions with a 60-s cache. |
+| `multipart.rs`    | `multipart/form-data` parser for file-upload widgets and CSV import (16 MB total / 8 MB per-file caps). |
+| `templates.rs`    | minijinja loader; admin templates baked via `include_str!`; disk override via `RUSTIO_TEMPLATE_DIR`. |
+| `background.rs`   | Tiny periodic task runner (currently the session sweeper). |
+| `meta.rs`         | `rustio_admin_meta` key/value table — backs the startup fast-path: `init_tables` / `seed_permissions` stamp a version/fingerprint and skip redundant boot work. |
+| `email/`          | Framework-emitted email (SMTP transport, project-branded HTML) used by the recovery flows. See `design/DESIGN_EMAIL.md`. |
+| `middleware/`     | `logger`, `security_headers`, `rate_limit` (DashMap token bucket), `compression`, `csrf` (double-submit cookie), `correlation_id` (UUID v7, threaded into audit rows), `locale` (`Accept-Language` → `Locale`). |
+| `auth/`           | `Identity`, `Role` ladder, `sessions`, `users` (Argon2id), `permissions` (60-s cache), `recovery` (self-service), `recovery_admin` (admin-driven), `mfa` (TOTP + backup codes), `emergency` (CLI), `guards`. **`sessions::invalidate_sessions` is the single writer for `revoked_at` (Doctrine 22).** |
 | `admin/`          | The whole admin panel — see below. |
 
 ### `admin/` submodules
 
+**Core seam** — the generic engine every model flows through:
+
 | Path | Responsibility |
 |---|---|
-| `types.rs`        | `Admin` builder, `AdminEntry`, `AdminField`, `AdminModel` trait, `AdminTheme`, `SiteBranding`, `ListOpts`/`ListPage`, `AdminOps` trait + `CoreUserOps` stub for the synthetic User entry. |
-| `modeladmin.rs`   | `ModelAdmin` trait + `Fieldset` + `SortDir` + `parse_order_spec`. |
-| `ops.rs`          | `ConcreteOps<M>` — the single live `AdminOps` impl. Builds the SQL list-page query (WHERE / ORDER BY / LIMIT / OFFSET) with `M::COLUMNS` validation. |
-| `routes.rs`       | `register_admin_routes`. Mounts every admin URL with permission/role guards. |
-| `handlers.rs`     | `dashboard`, `list_model`, `show_*_form`, `do_create/update/delete`, `show_log_entries`, `show_password_change`, … one handler per URL. |
-| `render.rs`       | Template context builders (`BaseContext`, `ListCtx`, `FormCtx`, …). All HTML stays in templates; this file produces only `serde::Serialize` data. |
-| `builtin.rs`      | Bespoke pages for `/admin/users/*` and `/admin/groups/*` (richer than the generic CRUD — last-developer guards, perm-grid editor, profile-page tabs). |
-| `audit.rs`        | `rustio_admin_actions` schema + `record` / `recent` / `for_object` queries. |
-| `relations.rs`    | `RelationRegistry` built from `&[AdminEntry]` — drives the delete-confirm cascade list and FK widgets. |
-| `filters.rs`      | `classify_field`, `field_ui_metadata`, `infer_filters` — pure helpers that turn schema metadata into UI hints. |
-| `icons.rs`        | Inline SVG catalogue baked at compile time; exposed via the `icon()` minijinja function. |
+| `types.rs`        | `Admin` builder, `AdminEntry`, `AdminField`, `AdminModel` trait, `AdminTheme`, `SiteBranding`, `ListOpts`/`ListPage`/`ListRow`/`EditRow`/`CellLink`, the `AdminOps` trait. |
+| `modeladmin.rs`   | `ModelAdmin` trait + `Fieldset`, `Inline`, `BulkAction`, `FieldValidationError`, `SortDir`, `parse_order_spec`. |
+| `ops.rs`          | `ConcreteOps<M>` — **the only live `AdminOps` impl**. Builds list-page SQL (WHERE / ORDER BY / LIMIT / OFFSET) validating column names against `M::COLUMNS`. |
+| `routes.rs`       | `register_admin_routes` mounts every admin URL with permission/role guards. Also owns the `ADMIN_CSS` concat + `/static/admin.css` serving (incl. the `RUSTIO_TOKENS_CSS` override). |
+| `handlers.rs`     | Generic CRUD: `dashboard`, `list_model`, `show_*_form`, `do_create/update/delete`, history, password change — one handler per URL. |
+| `render.rs`       | `serde::Serialize` context builders (`BaseContext`, `ListCtx`, `FormCtx`, …). **All HTML stays in templates; render.rs emits no markup.** |
+| `builtin.rs`      | Bespoke `/admin/users/*` and `/admin/groups/*` pages (last-developer guards, perm-grid editor, profile tabs). |
+| `audit.rs`        | `rustio_admin_actions` schema + `record` / `recent` / `for_object`; `AuditEvent` / `ActionType` / `LogEntry`. |
+| `redact.rs`       | Type-level redaction helpers (`redact_password` / `_token` / `_mfa_secret` / `_backup_code`). |
+| `relations.rs`    | `RelationRegistry` from `&[AdminEntry]` — delete-confirm cascade list + FK widgets. |
+| `filters.rs`      | `classify_field`, `infer_filters`, field-UI metadata, `mask_pii` — pure schema-metadata → UI hints. |
+| `icons.rs`        | Inline-SVG catalogue baked at compile time; exposed via the `icon()` minijinja function. |
+
+**Feature surfaces** — each owns one operator-facing capability and its routes:
+
+| Path | Surface |
+|---|---|
+| `bulk.rs`                  | Cascade-aware bulk delete + project `ModelAdmin::bulk_actions()` dispatch. |
+| `csv_export.rs` / `csv_import.rs` | `/admin/:model/export.csv` (10k-row cap) and `…/import.csv`. |
+| `saved_filters.rs`         | Per-operator saved-filter bookmarks. |
+| `json_api.rs`              | `?format=json` / `Accept: application/json` negotiation on read + write paths. |
+| `openapi.rs` / `sdk_gen.rs`| `/admin/apis` — OpenAPI 3.0 doc, HTML companion + playground, TypeScript SDK skeleton. |
+| `db_browser.rs`            | `/admin/db` — read-only schema explorer (Developer-gated). |
+| `feature_flags.rs`         | `rustio_feature_flags` + `feature_enabled(db, key)` + `/admin/feature_flags`. |
+| `notifications.rs`         | `rustio_notifications` + `send_notification(...)` + topbar bell + `/admin/notifications`. |
+| `health_dashboard.rs` / `healthz.rs` | `/admin/health` (web doctor) and public `/admin/healthz` liveness probe. |
+| `docs.rs`                  | `/admin/docs` — renders the bundled `architecture.md` / `modeladmin.md` / `public-api.md`. |
+| `recovery_handlers.rs` / `admin_recovery_handlers.rs` / `mfa_handlers.rs` | Self-service recovery, admin-driven recovery, and TOTP/backup-code HTTP handlers. |
 
 ## Templates
 
-Located under `crates/rustio-admin/assets/templates/admin/`. Baked into the binary via `include_str!` in `templates.rs::EMBEDDED_TEMPLATES`. Disk overrides win at render time when a project sets `RUSTIO_TEMPLATE_DIR` (or passes a path to `Templates::new`).
+Located under `crates/rustio-admin/assets/templates/admin/`, baked into the binary via `include_str!` (`templates.rs`). A disk-side `templates/admin/<page>.html` wins over the embedded copy when a project sets `RUSTIO_TEMPLATE_DIR`; per-model overrides (`templates/admin/<model>/list.html`) win for that model only.
 
-```
-assets/templates/admin/
-├── _base.html                  ← shell with named blocks; inline theme bootstrap script
-├── _topbar.html                ← partial: brand + identity + theme toggle
-├── _sidebar.html               ← partial: nav with model entries + auth links
-├── _theme.html                 ← partial: <style> tag injecting AdminTheme overrides
-├── includes/
-│   ├── _form_field.html        ← single render path for every widget
-│   └── _field_errors.html
-├── login.html
-├── index.html                  ← dashboard
-├── list.html                   ← changelist (toolbar + filters + sort + per-page + pills + numbered pagination + bulk select)
-├── form.html                   ← generic create/edit form
-├── confirm_delete.html
-├── bulk_confirm_delete.html    ← built-in cascade-aware bulk delete confirm
-├── bulk_confirm_action.html    ← generic confirm page for project-defined bulk actions
-├── error.html / forbidden.html
-├── object_history.html / log_entries.html
-├── password_change.html
-├── users_list.html / user_new.html / user_edit.html / user_view.html / user_confirm_delete.html
-└── groups_list.html / group_new.html / group_edit.html / group_confirm_delete.html
-```
+Grouped by area (not exhaustive):
+
+- **Shell partials** — `_base.html`, `_topbar.html`, `_sidebar.html`, `_theme.html` (the `AdminTheme` override `<style>`), `_row_actions.html`, `includes/_form_field.html` (single widget render path), `includes/_field_errors.html`.
+- **Core CRUD** — `index.html` (dashboard), `list.html` (toolbar + filters + sort + pagination + bulk select), `form.html`, `confirm_delete.html`, `bulk_confirm_delete.html`, `bulk_confirm_action.html`, `object_history.html`, `log_entries.html`.
+- **Auth & recovery** — `login.html`, `forgot_password*.html`, `reset_password.html`, `password_change.html`, `must_change_password.html`, `reauth.html`, `account_sessions.html`, `admin_reset_password.html`, `lock_user.html`, `confirm_admin_action.html`.
+- **MFA** — `mfa_enroll*.html`, `mfa_verify.html`, `mfa_disable.html`, `mfa_regenerate*.html`.
+- **Users & groups** — `users_list.html`, `user_new/edit/view/confirm_delete.html`, `groups_list.html`, `group_new/edit/confirm_delete.html`.
+- **Operational surfaces** — `apis_index.html`, `apis_playground.html`, `db_browser.html`, `feature_flags.html`, `notifications.html`, `health.html`, `docs_index.html`, `doc_page.html`, `csv_import_result.html`, `error.html`, `forbidden.html`.
 
 ## CSS + JS
 
-Located under `crates/rustio-admin/assets/static/`. Single hand-written stylesheet (~1.9k LOC) and a minimal JS file (~160 LOC) for the sidebar drawer, dropdown wiring, bulk-select form helper, and FK autocomplete. **No build step.**
+Located under `crates/rustio-admin/assets/static/admin/`. Hand-written, **no build step** (no Tailwind / PostCSS / Sass / bundler). A minimal `admin.js` (~160 LOC) handles the sidebar drawer, dropdown wiring, bulk-select helper, and FK autocomplete.
 
-The stylesheet is the single source of truth for every design token — a single `:root` block defines the whole palette. The framework is **light-only**: there is no dark variant, the OS `prefers-color-scheme` preference is ignored, and no `data-rio-theme` attribute or toggle exists. The token surface is wider than 0.1.x:
+The CSS is a **Primer/Carbon-style multi-file architecture**, concatenated into one bundle served at `/static/admin.css`:
 
-- **Six override-point tokens** that `AdminTheme` can patch: `--rio-accent`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-muted`, `--rio-border`.
-- **Surface ladder** (`--rio-surface`, `--rio-surface-2`, `--rio-surface-3`) for layered depth.
-- **Text scale** (`--rio-text-strong`, `--rio-text`, `--rio-text-muted`, `--rio-text-subtle`) for clear hierarchy.
-- **Border scale** (`--rio-border-soft`, `--rio-border`, `--rio-border-strong`) for hover / dividers / focus rings.
-- **Typography scale** (sizes, line-heights, weights, family fallback chains).
-- **Spacing scale** (`--rio-s1` through `--rio-s7`).
-- **Three soft shadows** (xs / regular / lg) at `0.04–0.10` alpha.
-- **Brand accent semantics** plus **success / warning / danger / info** with hue-tuned variants.
+```
+tokens/ → base/ → layout/ → components/ → pages/ → print/
+```
 
-`_theme.html` is **purely an override patch** — when `AdminTheme` has no fields set, the partial emits no markup at all and `admin.css` is the only style source. When fields are set, the partial emits a `<style>` block *after* `<link rel="stylesheet" href="/static/admin.css">` in `_base.html` with a single `html { ... }` selector so an override wins cascade ties on source order without needing `!important`. Project re-skins are one `Admin::accent_color("…")` call away — tokens you didn't override fall through to the framework defaults.
+- `tokens/` — `colors.css` (itself generated by `rio-theme`), `spacing`, `radius`, `shadows`, `typography`.
+- `base/`, `layout/`, `components/`, `pages/`, `print/` — reset/utilities, shell/topbar/sidebar/footer/responsive, the component library, per-page styles, and print rules.
 
-Three responsive breakpoints (mobile-first):
+**Lock-step invariant:** the `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in the same order — `layout/responsive.css` is intentionally loaded **last** so its mobile-first overrides win.
 
-| Breakpoint | Layout |
-|---|---|
-| `< 768px`  | Single column. Sidebar off-canvas behind a hamburger. Tables horizontally scrollable. |
-| `≥ 768px`  | Two-column flex row. Sidebar `position: sticky` below the topbar with its own internal scroll. |
-| `≥ 1280px` | Wider sidebar, more padding. Main content capped at 1280px so wide monitors don't sprawl table rows. |
+The framework is **light-only**: no dark variant, no `prefers-color-scheme` block, no `data-rio-theme` attribute. Token philosophy is owned by `design/DESIGN_DOCTRINE.md` (visual identity) and `design/DESIGN_SYSTEM.md` (token ownership).
+
+Two project-side override paths, both layered *after* the baked bundle so they win the cascade without `!important`:
+
+- **`AdminTheme`** (`_theme.html`) — a small inline `<style>` patch over six tokens (`--rio-accent`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-muted`, `--rio-border`). Emits nothing when no field is set. One `Admin::accent_color("…")` call away.
+- **`RUSTIO_TOKENS_CSS=<path>`** — appends a whole generated `rio-theme` `tokens.css` to `/static/admin.css` at runtime (read once at router build; degrades to the baked bundle if unreadable). See `design/DESIGN_THEME.md` §12.
+
+Three responsive breakpoints (mobile-first): `< 768px` single column with off-canvas sidebar; `≥ 768px` two-column with a sticky sidebar; `≥ 1280px` wider chrome with content capped so wide monitors don't sprawl rows.
 
 ## Public API surface
 
-Stable export points (in import order of how a project usually meets them):
+Stable export points (canonical list lives in `crates/rustio-admin/src/lib.rs`):
 
 ```rust
 use rustio_admin::{
-    // Core types
+    // HTTP + data core
     Db, DbOptions, Model, Row, Value,
-    Router, Server, Response, Request, FormData,
+    Router, Next, Server, Request, Response, FormData,
     Error, Result,
 
     // Auth
     Identity, Role,
-    auth, background, middleware, migrations,
 
-    // Admin
+    // Admin builder + model customisation
     Admin, AdminField, AdminModel, FieldType,
-    BulkAction, Fieldset, ModelAdmin,
+    ModelAdmin, Fieldset, Inline, BulkAction, FieldValidationError,
+    BulkActionContext, BulkActionResult, BulkActionFailure,
     register_admin_routes,
 
-    // Macros
+    // Embedded-template introspection
+    embedded_template_names, embedded_template_source,
+
+    // Derive macro
     RustioAdmin,
 };
 
-// Sub-namespaces a project may reach into:
-use rustio_admin::admin::{AdminTheme, SiteBranding, UserProfileRow, UserProfileSection};
+// Module namespaces a project may reach into:
+use rustio_admin::{auth, background, middleware, migrations, email};
+use rustio_admin::admin::{
+    AdminTheme, SiteBranding, UserProfileRow, UserProfileSection,
+    feature_enabled, send_notification, Notification, FeatureFlag,
+    // audit + redaction (e.g. for CLI tools mirroring decisions):
+    record, LogEntry, ActionType, AuditEvent,
+};
 use rustio_admin::templates::Templates;
 ```
 
-Everything else (`ConcreteOps`, `AdminOps`, `ListOpts`, `BaseContext`, …) is `pub(crate)` or `pub` within `admin::*` for testing only — projects never touch it directly.
+Everything else (`ConcreteOps`, `AdminOps`, `ListOpts`, `BaseContext`, …) is `pub(crate)` or `pub` within `admin::*` for testing only — projects never touch it directly. See [`public-api.md`](./public-api.md) for the enumerated surface.
 
 ## Hard architectural rules
 
-The full list lives in [§8 of the strategic reset plan](./archive/STRATEGIC_RESET_PLAN.md#8-strict-architectural-rules). The CI pipeline enforces **rule #1** (no Tier 2 features) with a `git grep` guard on every PR:
+The full list lives in [§8 of the strategic reset plan](./archive/STRATEGIC_RESET_PLAN.md#8-strict-architectural-rules). CI enforces **rule #1** (no Tier 2 features) with a `git grep` guard on every PR (scoped to source/TOML, excluding `crates/*/assets/`):
 
-```yaml
+```
 forbidden='HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel'
 ```
 
 If you need any of those for a project, the right layer is a future `rustio-pro` crate — not this one.
 
-Other rules summarised:
+Other rules:
 
-- **Postgres only.** No SQLite branches, no MySQL branches, no abstraction over databases.
-- **No second runtime.** `ConcreteOps<M>` is the runtime. No bridges, no schema-driven sibling.
-- **No magic.** Macros emit obvious code; `cargo expand` should always show the full picture.
-- **Templates and CSS are hand-written.** No Tailwind, no PostCSS, no Sass, no build step.
-- **Boring software.** Prefer obvious code over clever code. Prefer explicit over inferred. Prefer compile-time errors over runtime errors.
+- **Postgres only.** No SQLite/MySQL branches, no abstraction over databases.
+- **No second runtime.** `ConcreteOps<M>` is the runtime — no bridges, no schema-driven sibling.
+- **No build step.** Templates and CSS/JS are hand-written and baked via `include_str!`; `rio-theme` runs at build/CLI time, never at runtime.
+- **No magic.** Macros emit obvious code; `cargo expand` shows the full picture.
+- **Audit by default.** Every authority mutation emits a typed `AuditEvent` with a correlation ID (`design/DESIGN_AUDIT.md`).
+- **Session invalidation has a single writer** (`auth::sessions::invalidate_sessions` — Doctrine 22).
+- **No plaintext at rest.** Argon2id for passwords; SHA-256 for session and reset tokens.
+- **Uniform outward responses** on login and recovery surfaces — every failure mode collapses to one response shape (`design/DESIGN_RECOVERY.md`).
 - **Every public type and method has a doc comment.** No silent contracts.
+- **Boring software.** Prefer obvious over clever; compile-time errors over runtime errors.
