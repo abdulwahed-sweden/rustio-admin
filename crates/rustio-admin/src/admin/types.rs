@@ -1009,6 +1009,22 @@ impl Admin {
     where
         M: super::ModelAdmin + crate::orm::Model,
     {
+        // Loud-fail the FTS footgun: `search_index_column()` is only used
+        // by the list query when the column is also in `Model::COLUMNS`
+        // (injection-safety, see `ops::ConcreteOps::list`). If it isn't,
+        // search silently degrades to a full `ILIKE` scan — so warn at
+        // registration rather than leave the operator guessing.
+        if let Some(col) = M::search_index_column() {
+            if !<M as crate::orm::Model>::COLUMNS.contains(&col) {
+                log::warn!(
+                    "admin model `{}`: search_index_column() = {col:?} is not in Model::COLUMNS, \
+                     so full-text search is disabled and the list falls back to ILIKE. \
+                     Add {col:?} to COLUMNS to enable FTS.",
+                    M::ADMIN_NAME
+                );
+            }
+        }
+
         let ops: Arc<dyn AdminOps> = Arc::new(super::ops::ConcreteOps::<M>::new());
         self.entries.push(AdminEntry {
             admin_name: M::ADMIN_NAME,

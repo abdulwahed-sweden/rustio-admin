@@ -14,7 +14,19 @@ pub struct Patient {
 
 impl Model for Patient {
     const TABLE: &'static str = "patients";
-    const COLUMNS: &'static [&'static str] = &["id", "full_name", "email", "phone", "created_at"];
+    // `search_vector` is listed here even though it is not a struct field:
+    // the framework only honours `search_index_column()` for FTS when the
+    // column is in COLUMNS (an injection-safety check in ops.rs). Without
+    // it, search silently falls back to a slow `ILIKE` scan. It is a
+    // generated `tsvector` (see 0001_patients.sql); `from_row` ignores it.
+    const COLUMNS: &'static [&'static str] = &[
+        "id",
+        "full_name",
+        "email",
+        "phone",
+        "created_at",
+        "search_vector",
+    ];
     const INSERT_COLUMNS: &'static [&'static str] = &["full_name", "email", "phone", "created_at"];
 
     fn id(&self) -> i64 {

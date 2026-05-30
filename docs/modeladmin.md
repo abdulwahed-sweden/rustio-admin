@@ -103,6 +103,19 @@ Opt the list-page search box (and the global ⌘K palette and CSV-export filter)
 
 // 2. Opt in:
 fn search_index_column() -> Option<&'static str> { Some("search_vector") }
+
+// 3. List the tsvector column in `Model::COLUMNS` (see below).
+```
+
+**Required: the column must be in `Model::COLUMNS`.** For injection-safety the
+framework only uses the FTS column if it appears in `COLUMNS`; otherwise search
+**silently falls back to a slow `ILIKE` scan** (and, since 0.25, logs a warning at
+registration). The `tsvector` need not be a struct field — add it to `COLUMNS`
+and `from_row` simply won't read it:
+
+```rust
+const COLUMNS: &'static [&'static str] =
+    &["id", "title", "body", "created_at", "search_vector"];
 ```
 
 ### `ordering`

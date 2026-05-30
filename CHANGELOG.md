@@ -55,7 +55,15 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+
+- **`Admin::model::<M>()` now warns when an FTS opt-in is silently
+  ineffective.** `ModelAdmin::search_index_column()` is only honoured by
+  the list query when the column is also in `Model::COLUMNS` (an
+  injection-safety check); otherwise search quietly falls back to a slow
+  `ILIKE` scan. The framework now logs a `warn!` at model registration
+  naming the model and column, instead of leaving the misconfig silent.
+  `docs/modeladmin.md` documents the COLUMNS requirement.
 
 
 ## [0.24.0] — 2026-05-31
