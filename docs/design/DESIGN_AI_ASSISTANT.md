@@ -229,7 +229,7 @@ The command set stays small and obvious.
 | `rustio ai reject <id> --reason "…"` | Decline, keeping the record. | shipped |
 | `rustio ai apply <id>` | Write the staged files of an approved (or Allowed) proposal. | shipped |
 | `rustio ai log [--limit N] [--proposal <id>] [--all]` | The record of suggestions, approvals, rejections, applies, and blocked attempts, newest first. | shipped |
-| `rustio ai allow` / `deny` | Edit the policy buckets — prints the `.rustio/ai.toml` diff it is about to make. | planned |
+| `rustio ai allow <cap> [--needs-approval]` / `deny <cap>` | Move a capability between buckets (`allow` → allowed, `--needs-approval` → needs_approval, `deny` → blocked). Edits `.rustio/ai.toml` in place, preserving comments, and prints the diff. | shipped |
 
 `<id>` accepts the full ULID or the short suffix handle `status` / `list`
 print. The default `--by` is the OS user.

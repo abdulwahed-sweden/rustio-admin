@@ -165,6 +165,21 @@ pub(crate) enum Action {
         #[arg(long)]
         all: bool,
     },
+    /// Move a capability into `allowed` (or `needs_approval` with
+    /// `--needs-approval`). Edits `.rustio/ai.toml` and prints the diff.
+    Allow {
+        /// Capability key (e.g. `edit_existing_code`).
+        capability: String,
+        /// Place it in `needs_approval` instead of `allowed`.
+        #[arg(long = "needs-approval")]
+        needs_approval: bool,
+    },
+    /// Move a capability into `blocked`. Edits `.rustio/ai.toml` and
+    /// prints the diff.
+    Deny {
+        /// Capability key (e.g. `apply_migration`).
+        capability: String,
+    },
 }
 
 /// Dispatch. Offline and synchronous — no Postgres connection.
@@ -199,6 +214,19 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
             proposal,
             all,
         } => log_cmd(&store, limit, proposal, all),
+        Action::Allow {
+            capability,
+            needs_approval,
+        } => set_bucket(
+            &policy_path,
+            &capability,
+            if needs_approval {
+                Bucket::NeedsApproval
+            } else {
+                Bucket::Allowed
+            },
+        ),
+        Action::Deny { capability } => set_bucket(&policy_path, &capability, Bucket::Blocked),
     }
 }
 
@@ -1345,6 +1373,177 @@ fn init(path: &Path, force: bool) -> Result<(), String> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// allow / deny — edit the policy buckets (DESIGN §6)
+// ---------------------------------------------------------------------------
+
+/// The `.rustio/ai.toml` array name for a bucket.
+fn bucket_field(b: Bucket) -> &'static str {
+    match b {
+        Bucket::Allowed => "allowed",
+        Bucket::NeedsApproval => "needs_approval",
+        Bucket::Blocked => "blocked",
+    }
+}
+
+/// `rustio ai allow` / `deny` — move a capability into `target`, edit the
+/// policy file, and print the diff. Requires the file to exist (run
+/// `rustio ai init` first), so the change is always an explicit edit to a
+/// version-controlled file rather than a surprise creation.
+fn set_bucket(policy_path: &Path, capability: &str, target: Bucket) -> Result<(), String> {
+    if !is_known(capability) {
+        let known: Vec<&str> = CATALOGUE.iter().map(|c| c.key).collect();
+        return Err(format!(
+            "unknown capability {capability:?}. Known capabilities: {}",
+            known.join(", ")
+        ));
+    }
+    let raw = match std::fs::read_to_string(policy_path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(format!(
+                "no {} yet — run `rustio ai init` first, then edit buckets",
+                policy_path.display()
+            ))
+        }
+        Err(e) => return Err(format!("could not read {}: {e}", policy_path.display())),
+    };
+
+    let new = edit_policy_text(&raw, capability, target)?;
+    if new == raw {
+        println!(
+            "`{capability}` is already in `{}`. No change.",
+            bucket_field(target)
+        );
+        return Ok(());
+    }
+
+    println!(
+        "{} → `{}`  in {}",
+        capability,
+        bucket_field(target),
+        policy_path.display()
+    );
+    println!();
+    print!("{}", line_diff(&raw, &new));
+    println!();
+
+    std::fs::write(policy_path, &new)
+        .map_err(|e| format!("could not write {}: {e}", policy_path.display()))?;
+
+    // Moving a capability that is Blocked by default out of `blocked`
+    // widens the AI's reach — call it out, but don't block it: this is a
+    // deliberate developer edit to a reviewed file.
+    if target != Bucket::Blocked {
+        if let Some(cap) = CATALOGUE.iter().find(|c| c.key == capability) {
+            if cap.default == Bucket::Blocked {
+                println!(
+                    "{}",
+                    style(format!(
+                        "note: `{capability}` is blocked by default — this widens what the AI may do."
+                    ))
+                    .yellow()
+                );
+            }
+        }
+    }
+    println!(
+        "Wrote {}. Commit it — the policy is version-controlled.",
+        policy_path.display()
+    );
+    Ok(())
+}
+
+/// Move `capability` into `target`'s bucket array, removing it from the
+/// others, and return the new file text. Uses `toml_edit` in place so the
+/// template's comments and the untouched buckets are preserved. Pure on
+/// its input — unit-tested without the filesystem.
+fn edit_policy_text(raw: &str, capability: &str, target: Bucket) -> Result<String, String> {
+    if !is_known(capability) {
+        return Err(format!("unknown capability {capability:?}"));
+    }
+    let mut doc = raw
+        .parse::<toml_edit::DocumentMut>()
+        .map_err(|e| format!("`.rustio/ai.toml` is not valid TOML: {e}"))?;
+
+    let ai = doc
+        .get_mut("ai")
+        .and_then(|i| i.as_table_mut())
+        .ok_or_else(|| "`.rustio/ai.toml`: missing [ai] table".to_string())?;
+
+    let target_field = bucket_field(target);
+
+    // Remove the capability from every bucket *except* the target, so a
+    // no-op (already in target) leaves the file byte-identical.
+    for field in ["allowed", "needs_approval", "blocked"] {
+        if field == target_field {
+            continue;
+        }
+        if let Some(arr) = ai.get_mut(field).and_then(|i| i.as_array_mut()) {
+            arr.retain(|v| v.as_str() != Some(capability));
+        }
+    }
+
+    // Ensure the target array exists, then add the capability if absent,
+    // matching the template's one-per-line, trailing-comma style.
+    if ai.get(target_field).and_then(|i| i.as_array()).is_none() {
+        ai[target_field] = toml_edit::Item::Value(toml_edit::Value::Array(toml_edit::Array::new()));
+    }
+    let arr = ai
+        .get_mut(target_field)
+        .and_then(|i| i.as_array_mut())
+        .expect("target array ensured above");
+    if !arr.iter().any(|v| v.as_str() == Some(capability)) {
+        arr.push(capability);
+        let last = arr.len() - 1;
+        if let Some(v) = arr.get_mut(last) {
+            v.decor_mut().set_prefix("\n  ");
+        }
+        arr.set_trailing("\n");
+        arr.set_trailing_comma(true);
+    }
+
+    Ok(doc.to_string())
+}
+
+/// A minimal line diff: shared prefix/suffix as context, the changed
+/// middle as `-`/`+`. Enough to show which bucket lines moved without a
+/// diff dependency. Assumes `old != new`.
+fn line_diff(old: &str, new: &str) -> String {
+    let o: Vec<&str> = old.lines().collect();
+    let n: Vec<&str> = new.lines().collect();
+
+    let mut p = 0;
+    while p < o.len() && p < n.len() && o[p] == n[p] {
+        p += 1;
+    }
+    let mut s = 0;
+    while s < o.len().saturating_sub(p)
+        && s < n.len().saturating_sub(p)
+        && o[o.len() - 1 - s] == n[n.len() - 1 - s]
+    {
+        s += 1;
+    }
+
+    let ctx = 2;
+    let mut out = String::new();
+    let lead = p.saturating_sub(ctx);
+    for line in &o[lead..p] {
+        out.push_str(&format!("  {line}\n"));
+    }
+    for line in &o[p..o.len() - s] {
+        out.push_str(&format!("{}\n", style(format!("- {line}")).red()));
+    }
+    for line in &n[p..n.len() - s] {
+        out.push_str(&format!("{}\n", style(format!("+ {line}")).green()));
+    }
+    let tail_end = (o.len() - s + ctx).min(o.len());
+    for line in &o[o.len() - s..tail_end] {
+        out.push_str(&format!("  {line}\n"));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1704,6 +1903,69 @@ mod tests {
         }
         // The `-` proposal renders as `-`, not a panic on slicing.
         assert!(out.lines().nth(1).unwrap().contains("blocked"));
+    }
+
+    // ---- allow / deny (policy editing) ----------------------------------
+
+    #[test]
+    fn edit_moves_capability_and_preserves_comments() {
+        let new = edit_policy_text(DEFAULT_POLICY_TOML, "edit_existing_code", Bucket::Allowed)
+            .expect("edit");
+        let policy = parse_policy(&new, &p()).expect("re-parses");
+        assert_eq!(bucket_for(&policy, "edit_existing_code"), Bucket::Allowed);
+        // It left needs_approval (its default).
+        assert_ne!(
+            bucket_for(&policy, "edit_existing_code"),
+            Bucket::NeedsApproval
+        );
+        // The template's header comment survives the rewrite.
+        assert!(new.contains("# Contract: docs/design/DESIGN_AI_ASSISTANT.md"));
+        // No stray duplicate placement warning.
+        assert!(
+            policy.warnings.is_empty(),
+            "warnings: {:?}",
+            policy.warnings
+        );
+    }
+
+    #[test]
+    fn edit_to_current_bucket_is_a_noop() {
+        // create_model is already Allowed in the template.
+        let new =
+            edit_policy_text(DEFAULT_POLICY_TOML, "create_model", Bucket::Allowed).expect("edit");
+        assert_eq!(new, DEFAULT_POLICY_TOML, "no-op must be byte-identical");
+    }
+
+    #[test]
+    fn deny_then_allow_round_trips_a_capability() {
+        let denied =
+            edit_policy_text(DEFAULT_POLICY_TOML, "create_model", Bucket::Blocked).expect("deny");
+        let denied_policy = parse_policy(&denied, &p()).expect("parses");
+        assert_eq!(bucket_for(&denied_policy, "create_model"), Bucket::Blocked);
+
+        let allowed =
+            edit_policy_text(&denied, "create_model", Bucket::Allowed).expect("allow back");
+        let allowed_policy = parse_policy(&allowed, &p()).expect("parses");
+        assert_eq!(bucket_for(&allowed_policy, "create_model"), Bucket::Allowed);
+        // The capability must appear in exactly one bucket array — its key
+        // is unique to those arrays, so a whole-file count is a fair check.
+        assert_eq!(allowed.matches("\"create_model\"").count(), 1, "{allowed}");
+    }
+
+    #[test]
+    fn edit_rejects_unknown_capability() {
+        let err = edit_policy_text(DEFAULT_POLICY_TOML, "fly", Bucket::Allowed).unwrap_err();
+        assert!(err.contains("unknown capability"), "got: {err}");
+    }
+
+    #[test]
+    fn line_diff_marks_changed_lines() {
+        let old = "a\nb\nc\n";
+        let new = "a\nB\nc\n";
+        let d = line_diff(old, new);
+        assert!(d.contains("- b"), "got: {d}");
+        assert!(d.contains("+ B"), "got: {d}");
+        assert!(d.contains("  a"), "context missing: {d}");
     }
 
     #[test]

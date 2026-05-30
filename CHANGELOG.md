@@ -55,6 +55,17 @@ leaves the alpha track.
 
 ### Added
 
+- **`rustio ai allow` / `deny` — edit the policy buckets.** `allow <cap>`
+  moves a capability into `allowed` (`--needs-approval` into
+  `needs_approval`); `deny <cap>` moves it into `blocked`. The edit is
+  applied to `.rustio/ai.toml` in place via `toml_edit`, **preserving the
+  template's comments and untouched buckets**, and the diff is printed
+  before the write. A no-op is detected (byte-identical), moving a
+  default-Blocked capability out of `blocked` prints a "this widens what
+  the AI may do" note, and the verb requires the file to exist (run
+  `rustio ai init` first) so the change is always an explicit, reviewable
+  edit. With this, the offline `rustio ai` surface is complete except for
+  DB-backed identity / `rustio_admin_actions` mirroring.
 - **`rustio ai log` — the action record.** Renders
   `.rustio/ai/log.jsonl` newest-first (suggestions, approvals,
   rejections, applies, and blocked attempts), with `--proposal <id>` to
