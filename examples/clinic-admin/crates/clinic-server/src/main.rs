@@ -10,7 +10,13 @@ use std::path::PathBuf;
 use rustio_admin::admin::Admin;
 use rustio_admin::middleware;
 use rustio_admin::templates::Templates;
-use rustio_admin::{auth, background, migrations, register_admin_routes, Result, Router, Server};
+use rustio_admin::{
+    auth, background, migrations, register_admin_routes, Response, Result, Router, Server,
+};
+
+/// First-boot homepage served at `/`. Baked at compile time so the binary
+/// stays single-file; edit `templates/home.html` and rebuild to change it.
+const HOMEPAGE_HTML: &str = include_str!("../../../templates/home.html");
 
 /// Where the central, append-only migrations live. Resolved from this
 /// crate's location so `cargo run -p clinic-server` works from anywhere.
@@ -48,11 +54,13 @@ async fn main() -> Result<()> {
     let templates = Templates::new(template_dir)?;
 
     // 5. Serve. Middleware order is fixed by DESIGN_AUDIT.md §11.
+    //    `/` is the homepage; everything else is mounted under /admin.
     let router = Router::new()
         .middleware(middleware::logger)
         .middleware(middleware::correlation_id)
         .middleware(middleware::security_headers)
-        .middleware(middleware::csrf_protect);
+        .middleware(middleware::csrf_protect)
+        .get("/", |_req| async { Ok(Response::html(HOMEPAGE_HTML)) });
     let router = register_admin_routes(router, admin, db, templates);
 
     let addr = "127.0.0.1:8000".parse().expect("valid listen address");

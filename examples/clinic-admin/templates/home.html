@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+  First-boot homepage served at `/` by clinic-server (baked via
+  include_str!). Plain HTML + inline CSS, no build step. Edit the values
+  in :root to re-skin; the admin itself lives under /admin.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clinic</title>
+  <style>
+    :root {
+      --brand:   #059669;   /* emerald-600 — the clinic colour */
+      --brand-d: #047857;   /* emerald-700 — hover */
+      --ink:     #0f172a;   /* slate-900 — text */
+      --muted:   #475569;   /* slate-600 */
+      --surface: #ffffff;
+      --canvas:  #f0fdf4;   /* emerald-50 — page wash */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      font-size: 18px;            /* base type scale */
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid #d1fae5;          /* emerald-100 */
+      border-top: 4px solid var(--brand);
+      border-radius: 12px;
+      padding: 2.5rem 3rem;
+      max-width: 32rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    h1 { margin: 0 0 .5rem; font-size: 1.6rem; color: var(--brand); }
+    p  { margin: 0 0 1.5rem; color: var(--muted); }
+    .btn {
+      display: inline-block;
+      font-size: 18px;
+      font-weight: 600;
+      text-decoration: none;
+      color: #fff;
+      background: var(--brand);
+      padding: .65rem 1.4rem;
+      border-radius: 8px;
+    }
+    .btn:hover { background: var(--brand-d); }
+    .links { margin-top: 1.25rem; font-size: 1rem; }
+    .links a { color: var(--brand-d); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Clinic</h1>
+    <p>A RustIO Admin reference project — patients, scheduling, and billing.</p>
+    <a class="btn" href="/admin">Open the admin →</a>
+    <p class="links">
+      <a href="/admin/docs">Docs</a> ·
+      <a href="/admin/healthz">Health</a>
+    </p>
+  </main>
+</body>
+</html>
