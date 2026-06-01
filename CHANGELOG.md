@@ -100,6 +100,21 @@ leaves the alpha track.
   `FieldType` variants (`Email` / `Phone`). Both columns are
   text-searchable. JSON / OpenAPI surface them as strings (`email`
   gets `format: email`).
+- **`choice` field type — closed value sets.** Vocabulary grows to
+  sixteen tokens. New CLI grammar `name:choice:v1,v2,...` (e.g.
+  `status:choice:active,inactive`); values are restricted to
+  `[A-Za-z0-9_-]` so they embed safely without escaping. Stored as
+  `String` / `TEXT NOT NULL` **with a `CHECK (col IN (...))`
+  constraint** — the one scaffold token that emits a constraint, since
+  the closed set *is* the type. The scaffolder emits
+  `#[rustio(choices = [...])]`, which the derive macro reads to
+  populate `AdminField.choices` (previously always `None`) — so the
+  field renders as a `<select>` (reusing the existing choices
+  machinery, no new `FieldType` variant) and `from_form` rejects
+  values outside the set with a calm validation error in addition to
+  the DB constraint. A Rust-`enum`-backed choice with compile-time
+  type safety remains a deliberate non-goal for this crate (a future
+  `rustio-pro` concern).
 
 
 ## [0.25.0] — 2026-05-31
