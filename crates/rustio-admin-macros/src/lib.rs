@@ -158,7 +158,13 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                     None => String::new(),
                 }));
             },
-            FieldKind::I32 | FieldKind::I64 | FieldKind::F64 => quote! {
+            FieldKind::I32
+            | FieldKind::I64
+            | FieldKind::F64
+            | FieldKind::Decimal
+            | FieldKind::Uuid => quote! {
+                // Decimal and Uuid both round-trip through their
+                // canonical `Display` form (`19.99`, hyphenated UUID).
                 out.push((#fname_str.to_string(), self.#fname.to_string()));
             },
             FieldKind::OptionalI64 => quote! {
@@ -218,6 +224,7 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         let number_msg = format!("{humanised_label} must be a number.");
         let date_invalid_msg = format!("{humanised_label} is not a valid date.");
         let time_invalid_msg = format!("{humanised_label} is not a valid time.");
+        let uuid_invalid_msg = format!("{humanised_label} is not a valid UUID.");
 
         match kind {
             FieldKind::String | FieldKind::FilePath => {
@@ -274,6 +281,25 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                         Some(v) => v,
                         None => { errors.push(#number_msg.to_string()); 0.0 }
                     };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Decimal => {
+                from_form_parses.push(quote! {
+                    let #fname: ::rust_decimal::Decimal =
+                        match form.get(#fname_str).map(str::trim) {
+                            Some(raw) if !raw.is_empty() => match raw.parse() {
+                                Ok(v) => v,
+                                Err(_) => {
+                                    errors.push(#number_msg.to_string());
+                                    ::rust_decimal::Decimal::ZERO
+                                }
+                            },
+                            _ => {
+                                errors.push(#required_msg.to_string());
+                                ::rust_decimal::Decimal::ZERO
+                            }
+                        };
                 });
                 from_form_fields.push(quote! { #fname });
             }
@@ -350,6 +376,24 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                         _ => {
                             errors.push(#required_msg.to_string());
                             ::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                        }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Uuid => {
+                from_form_parses.push(quote! {
+                    let #fname = match form.get(#fname_str).map(str::trim) {
+                        Some(raw) if !raw.is_empty() => match ::uuid::Uuid::parse_str(raw) {
+                            Ok(u) => u,
+                            Err(_) => {
+                                errors.push(#uuid_invalid_msg.to_string());
+                                ::uuid::Uuid::nil()
+                            }
+                        },
+                        _ => {
+                            errors.push(#required_msg.to_string());
+                            ::uuid::Uuid::nil()
                         }
                     };
                 });
@@ -465,11 +509,13 @@ enum FieldKind {
     I32,
     I64,
     F64,
+    Decimal,
     Bool,
     String,
     DateTime,
     Date,
     Time,
+    Uuid,
     DateTimeAuto,
     OptionalString,
     OptionalI64,
@@ -490,11 +536,13 @@ impl FieldKind {
             FieldKind::I32 => format_ident!("I32"),
             FieldKind::I64 => format_ident!("I64"),
             FieldKind::F64 => format_ident!("F64"),
+            FieldKind::Decimal => format_ident!("Decimal"),
             FieldKind::Bool => format_ident!("Bool"),
             FieldKind::String => format_ident!("String"),
             FieldKind::DateTime | FieldKind::DateTimeAuto => format_ident!("DateTime"),
             FieldKind::Date => format_ident!("Date"),
             FieldKind::Time => format_ident!("Time"),
+            FieldKind::Uuid => format_ident!("Uuid"),
             FieldKind::OptionalString => format_ident!("OptionalString"),
             FieldKind::OptionalI64 => format_ident!("OptionalI64"),
             FieldKind::OptionalDateTime => format_ident!("OptionalDateTime"),
@@ -569,11 +617,13 @@ fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
         "i32" => FieldKind::I32,
         "i64" => FieldKind::I64,
         "f64" => FieldKind::F64,
+        "Decimal" | "rust_decimal::Decimal" => FieldKind::Decimal,
         "bool" => FieldKind::Bool,
         "String" => FieldKind::String,
         "DateTime<Utc>" | "chrono::DateTime<chrono::Utc>" => FieldKind::DateTime,
         "NaiveDate" | "chrono::NaiveDate" => FieldKind::Date,
         "NaiveTime" | "chrono::NaiveTime" => FieldKind::Time,
+        "Uuid" | "uuid::Uuid" => FieldKind::Uuid,
         "Option<String>" => FieldKind::OptionalString,
         "Option<i64>" => FieldKind::OptionalI64,
         "Option<DateTime<Utc>>" | "Option<chrono::DateTime<chrono::Utc>>" => {

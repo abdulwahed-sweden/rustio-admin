@@ -177,6 +177,17 @@ fn schema_for_field(field: &AdminField) -> Value {
             obj.insert("type".into(), Value::String("number".into()));
             obj.insert("format".into(), Value::String("double".into()));
         }
+        FieldType::Decimal => {
+            // Arbitrary-precision NUMERIC is serialised as a string to
+            // avoid the precision loss a JSON number would incur; the
+            // OpenAPI `decimal` format documents the intent.
+            obj.insert("type".into(), Value::String("string".into()));
+            obj.insert("format".into(), Value::String("decimal".into()));
+        }
+        FieldType::Uuid => {
+            obj.insert("type".into(), Value::String("string".into()));
+            obj.insert("format".into(), Value::String("uuid".into()));
+        }
         FieldType::String | FieldType::OptionalString => {
             obj.insert("type".into(), Value::String("string".into()));
         }

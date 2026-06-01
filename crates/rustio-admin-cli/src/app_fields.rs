@@ -9,9 +9,9 @@
 //! Discipline (`DESIGN_ONBOARDING.md` §6, PR 2.1 spec §3 / §7.1):
 //!
 //! - The vocabulary is closed: `str / text / int / bigint / float /
-//!   bool / timestamp / date / time / json / fk:<Model>`. Eleven
-//!   tokens, nothing more. Unknown tokens fail with the four-part
-//!   error shape from PR 1.3.
+//!   decimal / bool / timestamp / date / time / uuid / json /
+//!   fk:<Model>`. Thirteen tokens, nothing more. Unknown tokens fail
+//!   with the four-part error shape from PR 1.3.
 //! - No nullability, no defaults beyond the table below, no
 //!   indexes / uniqueness / constraints in the flag syntax. Users
 //!   edit the generated migration to add those.
@@ -34,10 +34,12 @@
 //! | `int`         | `i32`               | `INTEGER NOT NULL`                  |
 //! | `bigint`      | `i64`               | `BIGINT NOT NULL`                   |
 //! | `float`       | `f64`               | `DOUBLE PRECISION NOT NULL`         |
+//! | `decimal`     | `Decimal`           | `NUMERIC NOT NULL`                  |
 //! | `bool`        | `bool`              | `BOOLEAN NOT NULL DEFAULT FALSE`    |
 //! | `timestamp`   | `DateTime<Utc>`     | `TIMESTAMPTZ NOT NULL`              |
 //! | `date`        | `NaiveDate`         | `DATE NOT NULL`                     |
 //! | `time`        | `NaiveTime`         | `TIME NOT NULL`                     |
+//! | `uuid`        | `Uuid`              | `UUID NOT NULL`                     |
 //! | `json`        | `serde_json::Value` | `JSONB NOT NULL`                    |
 //! | `fk:<Model>`  | `i64`               | `BIGINT NOT NULL REFERENCES <models>(id)` |
 
@@ -59,10 +61,12 @@ pub(crate) enum FieldKind {
     Int,
     Bigint,
     Float,
+    Decimal,
     Bool,
     Timestamp,
     Date,
     Time,
+    Uuid,
     Json,
     /// Target model name in CamelCase (e.g. `"Doctor"`).
     Fk(String),
@@ -71,7 +75,7 @@ pub(crate) enum FieldKind {
 impl FieldKind {
     /// Comma-separated list for error messages.
     fn vocabulary_list() -> &'static str {
-        "str, text, int, bigint, bool, timestamp, json, float, date, time, fk:<Model>"
+        "str, text, int, bigint, bool, timestamp, json, float, date, time, decimal, uuid, fk:<Model>"
     }
 }
 
@@ -143,10 +147,12 @@ fn parse_kind(type_str: &str) -> Result<FieldKind, &'static str> {
         "int" => Ok(FieldKind::Int),
         "bigint" => Ok(FieldKind::Bigint),
         "float" => Ok(FieldKind::Float),
+        "decimal" => Ok(FieldKind::Decimal),
         "bool" => Ok(FieldKind::Bool),
         "timestamp" => Ok(FieldKind::Timestamp),
         "date" => Ok(FieldKind::Date),
         "time" => Ok(FieldKind::Time),
+        "uuid" => Ok(FieldKind::Uuid),
         "json" => Ok(FieldKind::Json),
         _ => Err("unknown_type"),
     }
@@ -513,6 +519,14 @@ impl FieldKind {
                 is_text_search: false,
                 needs_import: None,
             },
+            FieldKind::Decimal => FieldSpec {
+                rust_type: "Decimal",
+                sql_decl: "NUMERIC NOT NULL".into(),
+                row_getter: "get_decimal",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: Some("use rust_decimal::Decimal;"),
+            },
             FieldKind::Bool => FieldSpec {
                 rust_type: "bool",
                 sql_decl: "BOOLEAN NOT NULL DEFAULT FALSE".into(),
@@ -544,6 +558,14 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use chrono::NaiveTime;"),
+            },
+            FieldKind::Uuid => FieldSpec {
+                rust_type: "Uuid",
+                sql_decl: "UUID NOT NULL".into(),
+                row_getter: "get_uuid",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: Some("use uuid::Uuid;"),
             },
             FieldKind::Json => FieldSpec {
                 rust_type: "serde_json::Value",
@@ -634,10 +656,12 @@ mod tests {
             ("count:int", FieldKind::Int),
             ("user_id:bigint", FieldKind::Bigint),
             ("price:float", FieldKind::Float),
+            ("amount:decimal", FieldKind::Decimal),
             ("active:bool", FieldKind::Bool),
             ("at:timestamp", FieldKind::Timestamp),
             ("birth_date:date", FieldKind::Date),
             ("start_time:time", FieldKind::Time),
+            ("public_id:uuid", FieldKind::Uuid),
             ("meta:json", FieldKind::Json),
         ];
         for (input, expected) in cases {
@@ -858,6 +882,32 @@ mod tests {
         assert!(r.insert_values_expr.contains("self.birth_date.into()"));
         assert!(r.insert_values_expr.contains("self.start_time.into()"));
         // None are text-searchable.
+        assert_eq!(r.search_fields_literal, "");
+    }
+
+    #[test]
+    fn render_decimal_and_uuid_types() {
+        let r = render(&fs(&["price:decimal", "public_id:uuid"]));
+        assert!(r.struct_fields.contains("    pub price: Decimal,"));
+        assert!(r.struct_fields.contains("    pub public_id: Uuid,"));
+        assert!(r.column_decls_sql.contains(",\n    price NUMERIC NOT NULL"));
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    public_id UUID NOT NULL"));
+        assert!(r
+            .from_row_assignments
+            .contains("price: row.get_decimal(\"price\")?,"));
+        assert!(r
+            .from_row_assignments
+            .contains("public_id: row.get_uuid(\"public_id\")?,"));
+        // Each pulls in only its own type crate.
+        assert!(r.imports.contains("use rust_decimal::Decimal;"));
+        assert!(r.imports.contains("use uuid::Uuid;"));
+        assert!(!r.imports.contains("chrono"));
+        // Both are `Copy` → `.into()` with no `.clone()`.
+        assert!(r.insert_values_expr.contains("self.price.into()"));
+        assert!(r.insert_values_expr.contains("self.public_id.into()"));
+        // Neither is text-searchable.
         assert_eq!(r.search_fields_literal, "");
     }
 

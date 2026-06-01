@@ -5,6 +5,7 @@
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+use rust_decimal::Decimal;
 use serde_json::Value as JsonValue;
 use sqlx::postgres::{PgPoolOptions, PgRow};
 use sqlx::{PgPool, Row as SqlxRow};
@@ -116,6 +117,7 @@ pub enum Value {
     I32(i32),
     I64(i64),
     F64(f64),
+    Decimal(Decimal),
     Bool(bool),
     Text(String),
     DateTime(DateTime<Utc>),
@@ -138,6 +140,11 @@ impl From<i64> for Value {
 impl From<f64> for Value {
     fn from(v: f64) -> Self {
         Value::F64(v)
+    }
+}
+impl From<Decimal> for Value {
+    fn from(v: Decimal) -> Self {
+        Value::Decimal(v)
     }
 }
 impl From<bool> for Value {
@@ -217,6 +224,12 @@ impl<'a> Row<'a> {
         self.inner
             .try_get::<f64, _>(col)
             .map_err(|e| Error::Internal(format!("get_f64({col}): {e}")))
+    }
+    // public:
+    pub fn get_decimal(&self, col: &str) -> Result<Decimal> {
+        self.inner
+            .try_get::<Decimal, _>(col)
+            .map_err(|e| Error::Internal(format!("get_decimal({col}): {e}")))
     }
     // public:
     pub fn get_optional_i64(&self, col: &str) -> Result<Option<i64>> {
@@ -402,6 +415,7 @@ fn bind_value<'a>(
         Value::I32(n) => q.bind(n),
         Value::I64(n) => q.bind(n),
         Value::F64(n) => q.bind(n),
+        Value::Decimal(d) => q.bind(d),
         Value::Bool(b) => q.bind(b),
         Value::Text(s) => q.bind(s),
         Value::DateTime(d) => q.bind(d),
@@ -416,13 +430,20 @@ fn bind_value<'a>(
 mod value_conversion_tests {
     use super::Value;
     use chrono::{NaiveDate, NaiveTime};
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
+    use uuid::Uuid;
 
     #[test]
     fn scalar_from_impls_map_to_their_variants() {
         assert!(matches!(Value::from(3.5_f64), Value::F64(v) if v == 3.5));
+        let dec = Decimal::from_str("19.99").unwrap();
+        assert!(matches!(Value::from(dec), Value::Decimal(v) if v == dec));
         let d = NaiveDate::from_ymd_opt(2026, 6, 2).unwrap();
         assert!(matches!(Value::from(d), Value::Date(v) if v == d));
         let t = NaiveTime::from_hms_opt(9, 30, 0).unwrap();
         assert!(matches!(Value::from(t), Value::Time(v) if v == t));
+        let u = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440000);
+        assert!(matches!(Value::from(u), Value::Uuid(v) if v == u));
     }
 }

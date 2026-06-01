@@ -69,11 +69,13 @@ pub enum FieldType {
     I32,
     I64,
     F64,
+    Decimal,
     Bool,
     String,
     DateTime,
     Date,
     Time,
+    Uuid,
     OptionalI64,
     OptionalString,
     OptionalDateTime,
@@ -96,9 +98,13 @@ impl FieldType {
             FieldType::DateTime | FieldType::OptionalDateTime => "datetime",
             FieldType::Date => "date",
             FieldType::Time => "time",
-            FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 | FieldType::F64 => "number",
+            FieldType::I32
+            | FieldType::I64
+            | FieldType::OptionalI64
+            | FieldType::F64
+            | FieldType::Decimal => "number",
             FieldType::FilePath | FieldType::OptionalFilePath => "file",
-            FieldType::String | FieldType::OptionalString => "text",
+            FieldType::Uuid | FieldType::String | FieldType::OptionalString => "text",
         }
     }
 
@@ -1410,13 +1416,15 @@ mod tests {
     }
 }
 
-/// End-to-end coverage for the `float` / `date` / `time` field types.
+/// End-to-end coverage for the `float` / `date` / `time` / `decimal` /
+/// `uuid` field types.
 ///
 /// Deriving `RustioAdmin` on a struct that uses `f64` / `NaiveDate` /
-/// `NaiveTime` is the only thing in this crate that instantiates the
-/// macro's `classify_type`, `display_values`, and `from_form` arms for
-/// these Rust types — no other in-crate model uses them, so without
-/// this fixture a bug in those expansions would ship uncaught.
+/// `NaiveTime` / `Decimal` / `Uuid` is the only thing in this crate
+/// that instantiates the macro's `classify_type`, `display_values`,
+/// and `from_form` arms for these Rust types — no other in-crate model
+/// uses them, so without this fixture a bug in those expansions would
+/// ship uncaught.
 #[cfg(test)]
 mod scalar_field_type_tests {
     use super::FieldType;
@@ -1424,14 +1432,21 @@ mod scalar_field_type_tests {
     use crate::http::FormData;
     use crate::RustioAdmin;
     use chrono::{NaiveDate, NaiveTime};
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
+    use uuid::Uuid;
 
     #[derive(Debug, RustioAdmin)]
     struct Measurement {
         id: i64,
         weight_kg: f64,
+        unit_price: Decimal,
         taken_on: NaiveDate,
         taken_at: NaiveTime,
+        public_id: Uuid,
     }
+
+    const SAMPLE_UUID: &str = "550e8400-e29b-41d4-a716-446655440000";
 
     fn field_type(name: &str) -> FieldType {
         Measurement::FIELDS
@@ -1444,24 +1459,32 @@ mod scalar_field_type_tests {
     #[test]
     fn classify_maps_each_rust_type_to_its_field_type() {
         assert_eq!(field_type("weight_kg"), FieldType::F64);
+        assert_eq!(field_type("unit_price"), FieldType::Decimal);
         assert_eq!(field_type("taken_on"), FieldType::Date);
         assert_eq!(field_type("taken_at"), FieldType::Time);
+        assert_eq!(field_type("public_id"), FieldType::Uuid);
     }
 
     #[test]
     fn widgets_follow_html_input_types() {
         assert_eq!(FieldType::F64.widget(), "number");
+        assert_eq!(FieldType::Decimal.widget(), "number");
         assert_eq!(FieldType::Date.widget(), "date");
         assert_eq!(FieldType::Time.widget(), "time");
+        assert_eq!(FieldType::Uuid.widget(), "text");
     }
 
     #[test]
     fn from_form_parses_valid_scalars() {
-        let form = FormData::from_urlencoded("weight_kg=72.5&taken_on=2026-06-02&taken_at=09:30");
+        let form = FormData::from_urlencoded(&format!(
+            "weight_kg=72.5&unit_price=19.99&taken_on=2026-06-02&taken_at=09:30&public_id={SAMPLE_UUID}"
+        ));
         let m = Measurement::from_form(&form).expect("valid form parses");
         assert_eq!(m.weight_kg, 72.5);
+        assert_eq!(m.unit_price, Decimal::from_str("19.99").unwrap());
         assert_eq!(m.taken_on, NaiveDate::from_ymd_opt(2026, 6, 2).unwrap());
         assert_eq!(m.taken_at, NaiveTime::from_hms_opt(9, 30, 0).unwrap());
+        assert_eq!(m.public_id, Uuid::parse_str(SAMPLE_UUID).unwrap());
     }
 
     #[test]
@@ -1469,21 +1492,26 @@ mod scalar_field_type_tests {
         let m = Measurement {
             id: 1,
             weight_kg: 72.5,
+            unit_price: Decimal::from_str("19.99").unwrap(),
             taken_on: NaiveDate::from_ymd_opt(2026, 6, 2).unwrap(),
             taken_at: NaiveTime::from_hms_opt(9, 30, 0).unwrap(),
+            public_id: Uuid::parse_str(SAMPLE_UUID).unwrap(),
         };
         let vals: std::collections::HashMap<String, String> =
             m.display_values().into_iter().collect();
         assert_eq!(vals["weight_kg"], "72.5");
+        assert_eq!(vals["unit_price"], "19.99");
         assert_eq!(vals["taken_on"], "2026-06-02");
         assert_eq!(vals["taken_at"], "09:30");
+        assert_eq!(vals["public_id"], SAMPLE_UUID);
     }
 
     #[test]
     fn from_form_rejects_invalid_scalars() {
-        let form =
-            FormData::from_urlencoded("weight_kg=heavy&taken_on=not-a-date&taken_at=99%3A99");
+        let form = FormData::from_urlencoded(
+            "weight_kg=heavy&unit_price=cheap&taken_on=not-a-date&taken_at=99%3A99&public_id=not-a-uuid",
+        );
         let errs = Measurement::from_form(&form).unwrap_err();
-        assert_eq!(errs.len(), 3, "one error per malformed field: {errs:?}");
+        assert_eq!(errs.len(), 5, "one error per malformed field: {errs:?}");
     }
 }
