@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde_json::Value as JsonValue;
 use sqlx::postgres::{PgPoolOptions, PgRow};
 use sqlx::{PgPool, Row as SqlxRow};
@@ -115,9 +115,12 @@ pub enum Value {
     Null,
     I32(i32),
     I64(i64),
+    F64(f64),
     Bool(bool),
     Text(String),
     DateTime(DateTime<Utc>),
+    Date(NaiveDate),
+    Time(NaiveTime),
     Uuid(Uuid),
     Json(JsonValue),
 }
@@ -130,6 +133,11 @@ impl From<i32> for Value {
 impl From<i64> for Value {
     fn from(v: i64) -> Self {
         Value::I64(v)
+    }
+}
+impl From<f64> for Value {
+    fn from(v: f64) -> Self {
+        Value::F64(v)
     }
 }
 impl From<bool> for Value {
@@ -150,6 +158,16 @@ impl<'a> From<&'a str> for Value {
 impl From<DateTime<Utc>> for Value {
     fn from(v: DateTime<Utc>) -> Self {
         Value::DateTime(v)
+    }
+}
+impl From<NaiveDate> for Value {
+    fn from(v: NaiveDate) -> Self {
+        Value::Date(v)
+    }
+}
+impl From<NaiveTime> for Value {
+    fn from(v: NaiveTime) -> Self {
+        Value::Time(v)
     }
 }
 impl From<Uuid> for Value {
@@ -195,6 +213,12 @@ impl<'a> Row<'a> {
             .map_err(|e| Error::Internal(format!("get_i64({col}): {e}")))
     }
     // public:
+    pub fn get_f64(&self, col: &str) -> Result<f64> {
+        self.inner
+            .try_get::<f64, _>(col)
+            .map_err(|e| Error::Internal(format!("get_f64({col}): {e}")))
+    }
+    // public:
     pub fn get_optional_i64(&self, col: &str) -> Result<Option<i64>> {
         self.inner
             .try_get::<Option<i64>, _>(col)
@@ -223,6 +247,18 @@ impl<'a> Row<'a> {
         self.inner
             .try_get::<DateTime<Utc>, _>(col)
             .map_err(|e| Error::Internal(format!("{col}: {e}")))
+    }
+    // public:
+    pub fn get_date(&self, col: &str) -> Result<NaiveDate> {
+        self.inner
+            .try_get::<NaiveDate, _>(col)
+            .map_err(|e| Error::Internal(format!("get_date({col}): {e}")))
+    }
+    // public:
+    pub fn get_time(&self, col: &str) -> Result<NaiveTime> {
+        self.inner
+            .try_get::<NaiveTime, _>(col)
+            .map_err(|e| Error::Internal(format!("get_time({col}): {e}")))
     }
     // public:
     pub fn get_optional_datetime(&self, col: &str) -> Result<Option<DateTime<Utc>>> {
@@ -365,10 +401,28 @@ fn bind_value<'a>(
         Value::Null => q.bind(None::<i64>),
         Value::I32(n) => q.bind(n),
         Value::I64(n) => q.bind(n),
+        Value::F64(n) => q.bind(n),
         Value::Bool(b) => q.bind(b),
         Value::Text(s) => q.bind(s),
         Value::DateTime(d) => q.bind(d),
+        Value::Date(d) => q.bind(d),
+        Value::Time(t) => q.bind(t),
         Value::Uuid(u) => q.bind(u),
         Value::Json(j) => q.bind(j),
+    }
+}
+
+#[cfg(test)]
+mod value_conversion_tests {
+    use super::Value;
+    use chrono::{NaiveDate, NaiveTime};
+
+    #[test]
+    fn scalar_from_impls_map_to_their_variants() {
+        assert!(matches!(Value::from(3.5_f64), Value::F64(v) if v == 3.5));
+        let d = NaiveDate::from_ymd_opt(2026, 6, 2).unwrap();
+        assert!(matches!(Value::from(d), Value::Date(v) if v == d));
+        let t = NaiveTime::from_hms_opt(9, 30, 0).unwrap();
+        assert!(matches!(Value::from(t), Value::Time(v) if v == t));
     }
 }

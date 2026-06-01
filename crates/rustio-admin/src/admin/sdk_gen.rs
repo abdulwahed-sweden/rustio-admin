@@ -84,13 +84,16 @@ fn ts_type_for(field: &AdminField) -> String {
         FieldType::I32
         | FieldType::I64
         | FieldType::OptionalI64
+        | FieldType::F64
         | FieldType::String
         | FieldType::OptionalString
         | FieldType::DateTime
         | FieldType::OptionalDateTime
+        | FieldType::Date
+        | FieldType::Time
         | FieldType::FilePath
         | FieldType::OptionalFilePath => match field.field_type {
-            FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 => "number",
+            FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 | FieldType::F64 => "number",
             _ => "string",
         },
     };

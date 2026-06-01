@@ -173,12 +173,24 @@ fn schema_for_field(field: &AdminField) -> Value {
                 obj.insert("format".into(), Value::String("int64".into()));
             }
         }
+        FieldType::F64 => {
+            obj.insert("type".into(), Value::String("number".into()));
+            obj.insert("format".into(), Value::String("double".into()));
+        }
         FieldType::String | FieldType::OptionalString => {
             obj.insert("type".into(), Value::String("string".into()));
         }
         FieldType::DateTime | FieldType::OptionalDateTime => {
             obj.insert("type".into(), Value::String("string".into()));
             obj.insert("format".into(), Value::String("date-time".into()));
+        }
+        FieldType::Date => {
+            obj.insert("type".into(), Value::String("string".into()));
+            obj.insert("format".into(), Value::String("date".into()));
+        }
+        FieldType::Time => {
+            obj.insert("type".into(), Value::String("string".into()));
+            obj.insert("format".into(), Value::String("time".into()));
         }
         FieldType::FilePath | FieldType::OptionalFilePath => {
             obj.insert("type".into(), Value::String("string".into()));

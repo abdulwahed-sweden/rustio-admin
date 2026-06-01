@@ -56,7 +56,22 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- **Three new `startapp --field` scalar types: `float` / `date` / `time`.**
+  The closed scaffold vocabulary grows from eight tokens to eleven.
+  `name:float` → `f64` / `DOUBLE PRECISION NOT NULL` (`<input type="number">`);
+  `name:date` → `chrono::NaiveDate` / `DATE NOT NULL` (`<input type="date">`);
+  `name:time` → `chrono::NaiveTime` / `TIME NOT NULL` (`<input type="time">`).
+  Each flows end-to-end: the CLI emits the struct field + migration + `from_row`
+  getter (`get_f64` / `get_date` / `get_time`, new on `orm::Row`), the
+  `#[derive(RustioAdmin)]` macro classifies the Rust type and generates form
+  parsing + list display, and the admin UI renders the matching HTML widget.
+  `orm::Value` gains `F64` / `Date` / `Time` variants; the runtime
+  `FieldType` (non-exhaustive) gains `F64` / `Date` / `Time`. Generated
+  models import only the chrono types they use, so a `date`-only model never
+  pulls an unused `DateTime, Utc` import. Scaffolds with no field of a given
+  type are byte-identical to before.
 
 
 ## [0.25.0] — 2026-05-31
