@@ -10,11 +10,14 @@
 //!
 //! - The vocabulary is closed: `str / text / int / bigint / float /
 //!   decimal / bool / timestamp / date / time / uuid / email / phone /
-//!   json / fk:<Model>`. Fifteen tokens, nothing more. Unknown tokens
-//!   fail with the four-part error shape from PR 1.3.
+//!   choice:<v1>,<v2>,... / json / fk:<Model>`. Sixteen tokens,
+//!   nothing more. Unknown tokens fail with the four-part error shape
+//!   from PR 1.3.
 //! - No nullability, no defaults beyond the table below, no
-//!   indexes / uniqueness / constraints in the flag syntax. Users
-//!   edit the generated migration to add those.
+//!   indexes / uniqueness / constraints in the flag syntax -- with one
+//!   exception: `choice` emits a `CHECK (col IN (...))` constraint,
+//!   since the closed value set IS the type. Users edit the generated
+//!   migration to add anything else.
 //! - `timestamp` does NOT default to `NOW()`; `json` does NOT
 //!   default to `'{}'`. Either would imply created_at / settings
 //!   semantics that don't fit every use. Users add defaults by
@@ -42,6 +45,7 @@
 //! | `uuid`        | `Uuid`              | `UUID NOT NULL`                     |
 //! | `email`       | `String` *(+attr)*  | `TEXT NOT NULL`                     |
 //! | `phone`       | `String` *(+attr)*  | `TEXT NOT NULL`                     |
+//! | `choice:a,b`  | `String` *(+attr)*  | `TEXT NOT NULL CHECK (col IN ('a','b'))` |
 //! | `json`        | `serde_json::Value` | `JSONB NOT NULL`                    |
 //! | `fk:<Model>`  | `i64`               | `BIGINT NOT NULL REFERENCES <models>(id)` |
 
@@ -72,6 +76,10 @@ pub(crate) enum FieldKind {
     Time,
     Uuid,
     Json,
+    /// Closed set of allowed string values (e.g.
+    /// `choice:active,inactive`). Stored as `TEXT` with a
+    /// `CHECK (... IN (...))` constraint; rendered as a `<select>`.
+    Choice(Vec<String>),
     /// Target model name in CamelCase (e.g. `"Doctor"`).
     Fk(String),
 }
@@ -79,7 +87,7 @@ pub(crate) enum FieldKind {
 impl FieldKind {
     /// Comma-separated list for error messages.
     fn vocabulary_list() -> &'static str {
-        "str, text, int, bigint, bool, timestamp, json, float, date, time, decimal, uuid, email, phone, fk:<Model>"
+        "str, text, int, bigint, bool, timestamp, json, float, date, time, decimal, uuid, email, phone, choice:<v1>,<v2>,..., fk:<Model>"
     }
 }
 
@@ -145,6 +153,12 @@ fn parse_kind(type_str: &str) -> Result<FieldKind, &'static str> {
     if type_str == "fk" {
         return Err("fk_missing_target");
     }
+    if let Some(rest) = type_str.strip_prefix("choice:") {
+        return parse_choice_values(rest);
+    }
+    if type_str == "choice" {
+        return Err("choice_missing_values");
+    }
     match type_str {
         "str" => Ok(FieldKind::Str),
         "text" => Ok(FieldKind::Text),
@@ -162,6 +176,35 @@ fn parse_kind(type_str: &str) -> Result<FieldKind, &'static str> {
         "json" => Ok(FieldKind::Json),
         _ => Err("unknown_type"),
     }
+}
+
+/// Parse the comma-separated value list after `choice:` into a
+/// [`FieldKind::Choice`]. Values are restricted to
+/// `[A-Za-z0-9_-]` so they embed safely in the generated `CHECK`
+/// constraint, the `#[rustio(choices = [...])]` attribute, and the
+/// `<select>` options without any escaping. Empty list, empty value,
+/// bad characters, and duplicates are all rejected.
+fn parse_choice_values(rest: &str) -> Result<FieldKind, &'static str> {
+    if rest.is_empty() {
+        return Err("choice_missing_values");
+    }
+    let mut values: Vec<String> = Vec::new();
+    for raw in rest.split(',') {
+        if raw.is_empty() {
+            return Err("choice_empty_value");
+        }
+        if !raw
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+        {
+            return Err("choice_bad_value");
+        }
+        if values.iter().any(|v| v == raw) {
+            return Err("choice_dup_value");
+        }
+        values.push(raw.to_string());
+    }
+    Ok(FieldKind::Choice(values))
 }
 
 fn field_name_error(name: &str, code: &str) -> OnboardingError {
@@ -232,6 +275,34 @@ fn field_type_error(type_str: &str, code: &str) -> OnboardingError {
             why: "Rust struct names are CamelCase; the FK references the struct's table by its name (e.g. `Patient` -> `patients`).".into(),
             fix: "Re-run with the CamelCase form, e.g. `fk:Patient` (not `fk:patient` or `fk:my_patient`).".into(),
             retry: "(re-run with a CamelCase model name)".into(),
+            details: None,
+        },
+        "choice_missing_values" => OnboardingError {
+            problem: "`choice` requires a comma-separated list of values.".into(),
+            why: "Expected format: `choice:<v1>,<v2>,...` (e.g. `choice:active,inactive`).".into(),
+            fix: "Re-run with the values, e.g. `--field status:choice:active,inactive`.".into(),
+            retry: "(re-run with `choice:<v1>,<v2>,...`)".into(),
+            details: None,
+        },
+        "choice_empty_value" => OnboardingError {
+            problem: format!("`{type_str}` has an empty choice value."),
+            why: "Every value between commas must be non-empty (no `choice:a,,b` or trailing comma).".into(),
+            fix: "Re-run with non-empty values, e.g. `choice:active,inactive`.".into(),
+            retry: "(re-run with non-empty comma-separated values)".into(),
+            details: None,
+        },
+        "choice_bad_value" => OnboardingError {
+            problem: format!("`{type_str}` has a choice value with invalid characters."),
+            why: "Choice values use ASCII letters, digits, `_`, and `-` only — so they embed safely in the generated CHECK constraint and `<select>` without escaping.".into(),
+            fix: "Re-run with simple tokens, e.g. `choice:in_progress,done` (use `in_progress`, not `in progress`).".into(),
+            retry: "(re-run with `[A-Za-z0-9_-]` values)".into(),
+            details: None,
+        },
+        "choice_dup_value" => OnboardingError {
+            problem: format!("`{type_str}` declares the same choice value twice."),
+            why: "Each choice value must be distinct.".into(),
+            fix: "Re-run with a deduplicated list.".into(),
+            retry: "(re-run with distinct values)".into(),
             details: None,
         },
         _ => OnboardingError {
@@ -369,7 +440,7 @@ pub(crate) fn render(fields: &[Field]) -> Render {
     // reads from these specs -- `spec()` is the single source of
     // truth for the Rust type, DDL, row getter, insert form, import
     // needs, and search eligibility of each kind.
-    let specs: Vec<FieldSpec> = fields.iter().map(|f| f.kind.spec()).collect();
+    let specs: Vec<FieldSpec> = fields.iter().map(|f| f.kind.spec(&f.name)).collect();
 
     // The core import is always present. Any extra `use` line a
     // field's spec requires (e.g. chrono for `timestamp`) is inserted
@@ -391,7 +462,7 @@ pub(crate) fn render(fields: &[Field]) -> Render {
     let struct_fields = fields
         .iter()
         .zip(&specs)
-        .map(|(f, s)| match s.field_attr {
+        .map(|(f, s)| match s.field_attr.as_deref() {
             Some(attr) => format!("    {attr}\n    pub {}: {},", f.name, s.rust_type),
             None => format!("    pub {}: {},", f.name, s.rust_type),
         })
@@ -490,17 +561,20 @@ struct FieldSpec {
     /// any (e.g. `timestamp` pulls in chrono).
     needs_import: Option<&'static str>,
     /// Field-level attribute line emitted immediately above the struct
-    /// field, if any. `email` / `phone` carry
-    /// `#[rustio(format = "...")]` so the derive macro -- which only
-    /// sees the `String` Rust type -- knows to apply the matching
-    /// widget and validator. Indentation is added by the renderer.
-    field_attr: Option<&'static str>,
+    /// field, if any. `email` / `phone` carry `#[rustio(format = "...")]`
+    /// and `choice` carries `#[rustio(choices = [...])]` so the derive
+    /// macro -- which only sees the `String` Rust type -- knows to
+    /// apply the matching widget and validator. Owned because `choice`
+    /// interpolates its value list. Indentation is added by the
+    /// renderer.
+    field_attr: Option<String>,
 }
 
 impl FieldKind {
     /// Resolve this kind's [`FieldSpec`] -- the one match the whole
-    /// renderer pivots on.
-    fn spec(&self) -> FieldSpec {
+    /// renderer pivots on. `name` is the column name, needed by
+    /// `choice` to build its `CHECK (<name> IN (...))` constraint.
+    fn spec(&self, name: &str) -> FieldSpec {
         match self {
             FieldKind::Str | FieldKind::Text => FieldSpec {
                 rust_type: "String",
@@ -518,7 +592,7 @@ impl FieldKind {
                 insert_needs_clone: true,
                 is_text_search: true,
                 needs_import: None,
-                field_attr: Some("#[rustio(format = \"email\")]"),
+                field_attr: Some("#[rustio(format = \"email\")]".into()),
             },
             FieldKind::Phone => FieldSpec {
                 rust_type: "String",
@@ -527,7 +601,7 @@ impl FieldKind {
                 insert_needs_clone: true,
                 is_text_search: true,
                 needs_import: None,
-                field_attr: Some("#[rustio(format = \"phone\")]"),
+                field_attr: Some("#[rustio(format = \"phone\")]".into()),
             },
             FieldKind::Int => FieldSpec {
                 rust_type: "i32",
@@ -619,6 +693,30 @@ impl FieldKind {
                 needs_import: None,
                 field_attr: None,
             },
+            FieldKind::Choice(values) => {
+                // Values are `[A-Za-z0-9_-]` (enforced at parse time),
+                // so quoting them into the SQL `CHECK` and the Rust
+                // attribute needs no escaping.
+                let sql_values = values
+                    .iter()
+                    .map(|v| format!("'{v}'"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let attr_values = values
+                    .iter()
+                    .map(|v| format!("\"{v}\""))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                FieldSpec {
+                    rust_type: "String",
+                    sql_decl: format!("TEXT NOT NULL CHECK ({name} IN ({sql_values}))"),
+                    row_getter: "get_string",
+                    insert_needs_clone: true,
+                    is_text_search: false,
+                    needs_import: None,
+                    field_attr: Some(format!("#[rustio(choices = [{attr_values}])]")),
+                }
+            }
             FieldKind::Fk(target) => FieldSpec {
                 rust_type: "i64",
                 sql_decl: format!(
@@ -715,6 +813,74 @@ mod tests {
             let f = parse_field(input).unwrap_or_else(|e| panic!("{input}: {e}"));
             assert_eq!(f.kind, expected);
         }
+    }
+
+    #[test]
+    fn parse_choice_with_values() {
+        let f = parse_field("status:choice:active,inactive").unwrap();
+        assert_eq!(f.name, "status");
+        assert_eq!(
+            f.kind,
+            FieldKind::Choice(vec!["active".into(), "inactive".into()])
+        );
+    }
+
+    #[test]
+    fn parse_choice_single_value_ok() {
+        let f = parse_field("flag:choice:on").unwrap();
+        assert_eq!(f.kind, FieldKind::Choice(vec!["on".into()]));
+    }
+
+    #[test]
+    fn parse_choice_allows_underscore_and_dash() {
+        let f = parse_field("state:choice:in_progress,on-hold").unwrap();
+        assert_eq!(
+            f.kind,
+            FieldKind::Choice(vec!["in_progress".into(), "on-hold".into()])
+        );
+    }
+
+    #[test]
+    fn parse_rejects_bare_choice() {
+        let e = parse_field("status:choice").unwrap_err();
+        assert!(e.problem.contains("comma-separated list"));
+    }
+
+    #[test]
+    fn parse_rejects_choice_empty_value() {
+        let e = parse_field("status:choice:active,,inactive").unwrap_err();
+        assert!(e.problem.contains("empty choice value"));
+    }
+
+    #[test]
+    fn parse_rejects_choice_bad_chars() {
+        let e = parse_field("status:choice:in progress").unwrap_err();
+        assert!(e.problem.contains("invalid characters"));
+    }
+
+    #[test]
+    fn parse_rejects_choice_duplicate() {
+        let e = parse_field("status:choice:a,a").unwrap_err();
+        assert!(e.problem.contains("twice"));
+    }
+
+    #[test]
+    fn render_choice_emits_check_and_attribute() {
+        let r = render(&fs(&["status:choice:active,inactive"]));
+        // The struct field carries the `choices` attribute the derive
+        // macro reads to populate `AdminField.choices`.
+        assert!(r.struct_fields.contains(
+            "    #[rustio(choices = [\"active\", \"inactive\"])]\n    pub status: String,"
+        ));
+        // The migration carries the DB-level CHECK naming the column.
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    status TEXT NOT NULL CHECK (status IN ('active', 'inactive'))"));
+        assert!(r
+            .from_row_assignments
+            .contains("status: row.get_string(\"status\")?,"));
+        // Categorical, not free-text searchable.
+        assert_eq!(r.search_fields_literal, "");
     }
 
     #[test]

@@ -108,6 +108,26 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             },
             None => kind,
         };
+        // `#[rustio(choices = ["a", "b"])]` promotes a String column to
+        // a dropdown. The values ride in `field_choices`; the `Choice`
+        // kind is just the marker the from_form / display arms and the
+        // `AdminField.choices` slice switch on.
+        let field_choices = parse_choices_attr(&f.attrs)?;
+        let kind = match &field_choices {
+            Some(values) if !values.is_empty() => match kind {
+                FieldKind::String => FieldKind::Choice,
+                other => {
+                    return Err(syn::Error::new_spanned(
+                        f,
+                        format!(
+                            "#[rustio(choices = [...])] is only valid on String fields; \
+                             got {other:?} for `{fname_str}`"
+                        ),
+                    ));
+                }
+            },
+            _ => kind,
+        };
         let editable = fname_str != "id" && kind != FieldKind::DateTimeAuto;
 
         let type_variant = kind.field_type_ident();
@@ -142,6 +162,15 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         // header can wrap on narrow rows instead of dictating a wide
         // column floor. Also reused below for validation messages.
         let humanised_label = humanise_field(&fname_str);
+        // `#[rustio(choices = [...])]` → a `&'static [&'static str]`
+        // the form layer renders as a `<select>`. Absent → `None`.
+        let choices_tokens = match &field_choices {
+            Some(values) => {
+                let lits = values.iter().map(|v| v.as_str());
+                quote! { ::std::option::Option::Some(&[ #(#lits),* ]) }
+            }
+            None => quote! { ::std::option::Option::None },
+        };
         field_metas.push(quote! {
             ::rustio_admin::admin::AdminField {
                 name: #fname_str,
@@ -149,12 +178,7 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 field_type: ::rustio_admin::admin::FieldType::#type_variant,
                 editable: #editable,
                 relation: #relation_tokens,
-                // Derived models don't carry enum choices yet. A future
-                // macro pass will accept `#[rustio(choices = [...])]`
-                // and populate this; today consumers that want a
-                // `<select>` backed by a static value list set this on
-                // the generated AdminField directly.
-                choices: ::std::option::Option::None,
+                choices: #choices_tokens,
             }
         });
 
@@ -166,7 +190,11 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             // identical to the string variants — the stored value
             // IS the relative path, surfaced as plain text on the
             // list page.
-            FieldKind::String | FieldKind::FilePath | FieldKind::Email | FieldKind::Phone => {
+            FieldKind::String
+            | FieldKind::FilePath
+            | FieldKind::Email
+            | FieldKind::Phone
+            | FieldKind::Choice => {
                 quote! {
                     out.push((#fname_str.to_string(), self.#fname.clone()));
                 }
@@ -291,6 +319,31 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                         Some(v) if !v.is_empty() => {
                             if !::rustio_admin::admin::is_valid_phone(v) {
                                 errors.push(#phone_invalid_msg.to_string());
+                            }
+                            v.to_string()
+                        }
+                        _ => { errors.push(#required_msg.to_string()); String::new() }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Choice => {
+                // Required, trimmed, then checked against the declared
+                // set. The DB also carries a `CHECK (... IN (...))`
+                // constraint, but validating here yields a calm form
+                // error instead of a 409 from a constraint violation.
+                let values = field_choices
+                    .as_ref()
+                    .expect("Choice kind is only set when choices are present");
+                let choice_lits = values.iter().map(|v| v.as_str());
+                let choice_invalid_msg =
+                    format!("{humanised_label} must be one of: {}.", values.join(", "));
+                from_form_parses.push(quote! {
+                    let #fname = match form.get(#fname_str).map(str::trim) {
+                        Some(v) if !v.is_empty() => {
+                            const CHOICES: &[&str] = &[ #(#choice_lits),* ];
+                            if !CHOICES.contains(&v) {
+                                errors.push(#choice_invalid_msg.to_string());
                             }
                             v.to_string()
                         }
@@ -575,6 +628,12 @@ enum FieldKind {
     Email,
     /// `String` column flagged with `#[rustio(format = "phone")]`.
     Phone,
+    /// `String` column flagged with `#[rustio(choices = [...])]`.
+    /// Stored as `TEXT`; renders as a `<select>` (driven by
+    /// `AdminField.choices`, not the `FieldType`) and `from_form`
+    /// rejects values outside the declared set. The values
+    /// themselves ride in a side variable, not this `Copy` enum.
+    Choice,
     DateTime,
     Date,
     Time,
@@ -604,6 +663,9 @@ impl FieldKind {
             FieldKind::String => format_ident!("String"),
             FieldKind::Email => format_ident!("Email"),
             FieldKind::Phone => format_ident!("Phone"),
+            // A choice column is a String at the type level; the
+            // `<select>` comes from `AdminField.choices`.
+            FieldKind::Choice => format_ident!("String"),
             FieldKind::DateTime | FieldKind::DateTimeAuto => format_ident!("DateTime"),
             FieldKind::Date => format_ident!("Date"),
             FieldKind::Time => format_ident!("Time"),
@@ -796,12 +858,12 @@ fn parse_relation_attr(
                 // `belongs_to` and `file` without one parser
                 // erroring on the other's keyword.
                 Ok(())
-            } else if m.path.is_ident("format") {
-                // Handled by `parse_format_attr`. Consume its value so
-                // this parser doesn't trip on the `=` / trailing `,`,
+            } else if m.path.is_ident("format") || m.path.is_ident("choices") {
+                // Handled by `parse_format_attr` / `parse_choices_attr`.
+                // Consume the value (a string literal or an array)
+                // generically so this parser doesn't trip on it,
                 // mirroring the `file` marker's pass-through.
-                let _value = m.value()?;
-                let _: Lit = _value.parse()?;
+                let _: syn::Expr = m.value()?.parse()?;
                 Ok(())
             } else {
                 Err(m.error(format!("unknown rustio attribute for field `{field_name}`")))
@@ -840,13 +902,13 @@ fn parse_file_attr(attrs: &[syn::Attribute]) -> syn::Result<bool> {
                 found = true;
                 Ok(())
             } else if m.input.peek(syn::Token![=]) {
-                // Other keys (`belongs_to = "…"`, `display = "…"`)
-                // carry an `=` and a literal we must consume so the
-                // parser doesn't choke on the trailing `,`. We don't
-                // validate the value here — `parse_relation_attr`
-                // owns the surface; this is just lexer-level skip.
-                let _value = m.value()?;
-                let _: Lit = _value.parse()?;
+                // Other keys (`belongs_to = "…"`, `choices = [...]`)
+                // carry an `=` and a value we must consume so the
+                // parser doesn't choke on the trailing `,`. Parse as a
+                // generic `Expr` so array values (`choices`) skip
+                // cleanly alongside literals. We don't validate here —
+                // each key's owning parser does.
+                let _: syn::Expr = m.value()?.parse()?;
                 Ok(())
             } else {
                 // Marker key without `=` (future flags). Just skip.
@@ -885,13 +947,60 @@ fn parse_format_attr(attrs: &[syn::Attribute]) -> syn::Result<Option<String>> {
                 found = Some(v);
                 Ok(())
             } else if m.input.peek(syn::Token![=]) {
-                // Some other `key = value`; consume the literal so the
-                // nested-meta parser doesn't trip on the trailing `,`.
-                let _value = m.value()?;
-                let _: Lit = _value.parse()?;
+                // Some other `key = value` (incl. `choices = [...]`);
+                // consume it as a generic `Expr` so arrays skip
+                // cleanly without tripping the trailing `,`.
+                let _: syn::Expr = m.value()?.parse()?;
                 Ok(())
             } else {
                 // Marker key without `=` (e.g. `file`). Skip.
+                Ok(())
+            }
+        })?;
+        if found.is_some() {
+            return Ok(found);
+        }
+    }
+    Ok(None)
+}
+
+/// Read `#[rustio(choices = ["a", "b", ...])]` off a field. Returns
+/// the declared values in declaration order, or `None` when absent.
+/// An empty array, a non-array value, or a non-string-literal element
+/// is a compile error. Other `rustio` keys are skipped so this
+/// composes with the file / format / relation parsers.
+fn parse_choices_attr(attrs: &[syn::Attribute]) -> syn::Result<Option<Vec<String>>> {
+    for attr in attrs {
+        if !attr.path().is_ident("rustio") {
+            continue;
+        }
+        let mut found: Option<Vec<String>> = None;
+        attr.parse_nested_meta(|m| {
+            if m.path.is_ident("choices") {
+                let array: syn::ExprArray = m.value()?.parse()?;
+                let mut values = Vec::with_capacity(array.elems.len());
+                for elem in &array.elems {
+                    match elem {
+                        syn::Expr::Lit(syn::ExprLit {
+                            lit: Lit::Str(s), ..
+                        }) => values.push(s.value()),
+                        other => {
+                            return Err(syn::Error::new_spanned(
+                                other,
+                                "#[rustio(choices = [...])] elements must be string literals",
+                            ));
+                        }
+                    }
+                }
+                if values.is_empty() {
+                    return Err(m.error("#[rustio(choices = [...])] needs at least one value"));
+                }
+                found = Some(values);
+                Ok(())
+            } else if m.input.peek(syn::Token![=]) {
+                let _: syn::Expr = m.value()?.parse()?;
+                Ok(())
+            } else {
                 Ok(())
             }
         })?;

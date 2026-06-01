@@ -1452,6 +1452,8 @@ mod scalar_field_type_tests {
         contact_email: String,
         #[rustio(format = "phone")]
         contact_phone: String,
+        #[rustio(choices = ["active", "archived"])]
+        status: String,
     }
 
     const SAMPLE_UUID: &str = "550e8400-e29b-41d4-a716-446655440000";
@@ -1475,6 +1477,24 @@ mod scalar_field_type_tests {
         // attribute is the only thing that distinguishes them.
         assert_eq!(field_type("contact_email"), FieldType::Email);
         assert_eq!(field_type("contact_phone"), FieldType::Phone);
+        // A choice column stays `String` at the type level — the
+        // `<select>` is driven by `AdminField.choices`, not FieldType.
+        assert_eq!(field_type("status"), FieldType::String);
+    }
+
+    #[test]
+    fn choice_field_populates_adminfield_choices() {
+        let status = Measurement::FIELDS
+            .iter()
+            .find(|f| f.name == "status")
+            .expect("status field present");
+        assert_eq!(status.choices, Some(&["active", "archived"][..]));
+        // Fields without `#[rustio(choices)]` carry no choice list.
+        let email = Measurement::FIELDS
+            .iter()
+            .find(|f| f.name == "contact_email")
+            .unwrap();
+        assert_eq!(email.choices, None);
     }
 
     #[test]
@@ -1492,7 +1512,7 @@ mod scalar_field_type_tests {
     fn from_form_parses_valid_scalars() {
         let form = FormData::from_urlencoded(&format!(
             "weight_kg=72.5&unit_price=19.99&taken_on=2026-06-02&taken_at=09:30&public_id={SAMPLE_UUID}\
-             &contact_email=alice@example.com&contact_phone=%2B1%20555-123-4567"
+             &contact_email=alice@example.com&contact_phone=%2B1%20555-123-4567&status=active"
         ));
         let m = Measurement::from_form(&form).expect("valid form parses");
         assert_eq!(m.weight_kg, 72.5);
@@ -1502,6 +1522,7 @@ mod scalar_field_type_tests {
         assert_eq!(m.public_id, Uuid::parse_str(SAMPLE_UUID).unwrap());
         assert_eq!(m.contact_email, "alice@example.com");
         assert_eq!(m.contact_phone, "+1 555-123-4567");
+        assert_eq!(m.status, "active");
     }
 
     #[test]
@@ -1515,6 +1536,7 @@ mod scalar_field_type_tests {
             public_id: Uuid::parse_str(SAMPLE_UUID).unwrap(),
             contact_email: "alice@example.com".to_string(),
             contact_phone: "+1 555-123-4567".to_string(),
+            status: "active".to_string(),
         };
         let vals: std::collections::HashMap<String, String> =
             m.display_values().into_iter().collect();
@@ -1525,15 +1547,33 @@ mod scalar_field_type_tests {
         assert_eq!(vals["public_id"], SAMPLE_UUID);
         assert_eq!(vals["contact_email"], "alice@example.com");
         assert_eq!(vals["contact_phone"], "+1 555-123-4567");
+        assert_eq!(vals["status"], "active");
     }
 
     #[test]
     fn from_form_rejects_invalid_scalars() {
         let form = FormData::from_urlencoded(
             "weight_kg=heavy&unit_price=cheap&taken_on=not-a-date&taken_at=99%3A99&public_id=not-a-uuid\
-             &contact_email=nope&contact_phone=call-me",
+             &contact_email=nope&contact_phone=call-me&status=deleted",
         );
         let errs = Measurement::from_form(&form).unwrap_err();
-        assert_eq!(errs.len(), 7, "one error per malformed field: {errs:?}");
+        // 7 malformed scalars + 1 out-of-set choice value.
+        assert_eq!(errs.len(), 8, "one error per malformed field: {errs:?}");
+    }
+
+    #[test]
+    fn choice_from_form_accepts_in_set_rejects_out_of_set() {
+        let base = format!(
+            "weight_kg=1&unit_price=1&taken_on=2026-06-02&taken_at=00:00&public_id={SAMPLE_UUID}\
+             &contact_email=a@b.co&contact_phone=0701234567"
+        );
+        // In-set value parses clean.
+        let ok = FormData::from_urlencoded(&format!("{base}&status=archived"));
+        assert_eq!(Measurement::from_form(&ok).unwrap().status, "archived");
+        // Out-of-set value is the only error.
+        let bad = FormData::from_urlencoded(&format!("{base}&status=pending"));
+        let errs = Measurement::from_form(&bad).unwrap_err();
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert!(errs[0].contains("must be one of: active, archived"));
     }
 }
