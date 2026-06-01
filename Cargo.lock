@@ -2308,6 +2308,7 @@ dependencies = [
  "once_cell",
  "pulldown-cmark",
  "rand 0.8.6",
+ "rust_decimal",
  "rustio-admin-macros",
  "serde",
  "serde_json",

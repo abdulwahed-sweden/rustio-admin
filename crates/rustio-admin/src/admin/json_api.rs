@@ -202,7 +202,13 @@ fn typed_cell(field: &super::types::AdminField, cell: &str) -> serde_json::Value
                 serde_json::Value::String(cell.to_string())
             }
         }
-        FieldType::String
+        // Decimal is surfaced as a string, not a JSON number: JSON's
+        // f64 number type can't hold arbitrary-precision NUMERIC
+        // without silent rounding, so the honest move is the exact
+        // textual form. UUIDs are likewise textual.
+        FieldType::Decimal
+        | FieldType::Uuid
+        | FieldType::String
         | FieldType::DateTime
         | FieldType::Date
         | FieldType::Time

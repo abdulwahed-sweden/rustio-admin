@@ -72,6 +72,20 @@ leaves the alpha track.
   models import only the chrono types they use, so a `date`-only model never
   pulls an unused `DateTime, Utc` import. Scaffolds with no field of a given
   type are byte-identical to before.
+- **Two more `startapp --field` types: `decimal` / `uuid`.** Vocabulary
+  grows to thirteen tokens. `name:decimal` → `rust_decimal::Decimal` /
+  `NUMERIC NOT NULL` (`<input type="number">`); `name:uuid` →
+  `uuid::Uuid` / `UUID NOT NULL` (`<input type="text">`). Both flow
+  end-to-end like the PR-2 scalars. `decimal` and `uuid` are surfaced as
+  **strings** in JSON / OpenAPI (`format: decimal` / `format: uuid`) —
+  a JSON number can't hold arbitrary-precision `NUMERIC` without
+  rounding. `uuid` migrations are bare `UUID NOT NULL` with no
+  `DEFAULT gen_random_uuid()` (matching the "no implicit defaults"
+  discipline — edit the migration if you want one). New dependency:
+  `rust_decimal` (the framework already depended on `uuid`); the
+  `rustio startproject` scaffold gains `uuid` + `rust_decimal` deps so
+  generated models compile. Existing projects adding a `decimal`/`uuid`
+  field must add the matching dependency to their own `Cargo.toml`.
 
 
 ## [0.25.0] — 2026-05-31
