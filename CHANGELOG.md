@@ -86,6 +86,20 @@ leaves the alpha track.
   `rustio startproject` scaffold gains `uuid` + `rust_decimal` deps so
   generated models compile. Existing projects adding a `decimal`/`uuid`
   field must add the matching dependency to their own `Cargo.toml`.
+- **`email` / `phone` field types — validated strings, not new storage
+  types.** Vocabulary grows to fifteen tokens. Both are `String` /
+  `TEXT NOT NULL` at rest (no new dependency, no new `Row` getter, no
+  migration machinery); the scaffolder emits the field with a
+  `#[rustio(format = "email" | "phone")]` attribute that the derive
+  macro reads — the struct's `String` type alone can't distinguish
+  them. `email` renders `<input type="email">` and runs
+  `is_valid_email`; `phone` renders `<input type="tel">` and runs
+  `is_valid_phone`. The checks are deliberately structural typo guards,
+  not RFC 5322 / E.164 parsers. Two new public helpers
+  `rustio_admin::admin::{is_valid_email, is_valid_phone}`; two new
+  `FieldType` variants (`Email` / `Phone`). Both columns are
+  text-searchable. JSON / OpenAPI surface them as strings (`email`
+  gets `format: email`).
 
 
 ## [0.25.0] — 2026-05-31

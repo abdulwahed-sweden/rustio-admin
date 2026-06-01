@@ -1198,8 +1198,14 @@ fn sort_direction_label(
         (DateTime | OptionalDateTime | Date, SortDir::Asc) => "oldest first",
         (Time, SortDir::Desc) => "latest first",
         (Time, SortDir::Asc) => "earliest first",
-        (String | OptionalString | FilePath | OptionalFilePath | Uuid, SortDir::Asc) => "A → Z",
-        (String | OptionalString | FilePath | OptionalFilePath | Uuid, SortDir::Desc) => "Z → A",
+        (
+            String | OptionalString | FilePath | OptionalFilePath | Uuid | Email | Phone,
+            SortDir::Asc,
+        ) => "A → Z",
+        (
+            String | OptionalString | FilePath | OptionalFilePath | Uuid | Email | Phone,
+            SortDir::Desc,
+        ) => "Z → A",
         (I32 | I64 | OptionalI64 | F64 | Decimal, SortDir::Desc) => "highest first",
         (I32 | I64 | OptionalI64 | F64 | Decimal, SortDir::Asc) => "lowest first",
         (Bool, SortDir::Asc) => "off → on",
@@ -2564,6 +2570,8 @@ fn map_field_to_ui(field: &super::types::AdminField) -> (&'static str, &'static 
         DateTime | OptionalDateTime => ("input", "datetime-local"),
         Date => ("input", "date"),
         Time => ("input", "time"),
+        Email => ("input", "email"),
+        Phone => ("input", "tel"),
         FilePath | OptionalFilePath => ("file", "file"),
         Uuid | String | OptionalString => ("input", "text"),
     }
@@ -3023,6 +3031,8 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
         Date => "date",
         Time => "time",
         Uuid => "uuid",
+        Email => "email",
+        Phone => "phone",
         FilePath | OptionalFilePath => "file path",
     }
 }

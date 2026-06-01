@@ -209,6 +209,8 @@ fn typed_cell(field: &super::types::AdminField, cell: &str) -> serde_json::Value
         FieldType::Decimal
         | FieldType::Uuid
         | FieldType::String
+        | FieldType::Email
+        | FieldType::Phone
         | FieldType::DateTime
         | FieldType::Date
         | FieldType::Time

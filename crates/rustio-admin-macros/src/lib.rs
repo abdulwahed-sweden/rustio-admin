@@ -88,6 +88,26 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         } else {
             kind
         };
+        // `#[rustio(format = "email" | "phone")]` promotes a String
+        // column to the validated-string variants. Same discipline as
+        // the file marker: it's only valid on String, and a typo'd
+        // value or a non-String target is a compile error.
+        let kind = match parse_format_attr(&f.attrs)? {
+            Some(fmt) => match kind {
+                FieldKind::String if fmt == "email" => FieldKind::Email,
+                FieldKind::String if fmt == "phone" => FieldKind::Phone,
+                other => {
+                    return Err(syn::Error::new_spanned(
+                        f,
+                        format!(
+                            "#[rustio(format = \"...\")] is only valid on String fields; \
+                             got {other:?} for `{fname_str}`"
+                        ),
+                    ));
+                }
+            },
+            None => kind,
+        };
         let editable = fname_str != "id" && kind != FieldKind::DateTimeAuto;
 
         let type_variant = kind.field_type_ident();
@@ -146,9 +166,11 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             // identical to the string variants — the stored value
             // IS the relative path, surfaced as plain text on the
             // list page.
-            FieldKind::String | FieldKind::FilePath => quote! {
-                out.push((#fname_str.to_string(), self.#fname.clone()));
-            },
+            FieldKind::String | FieldKind::FilePath | FieldKind::Email | FieldKind::Phone => {
+                quote! {
+                    out.push((#fname_str.to_string(), self.#fname.clone()));
+                }
+            }
             FieldKind::OptionalString | FieldKind::OptionalFilePath => quote! {
                 // `Option<String>` does not implement `Display`, so we
                 // can't share the String arm. None → empty string,
@@ -225,6 +247,8 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         let date_invalid_msg = format!("{humanised_label} is not a valid date.");
         let time_invalid_msg = format!("{humanised_label} is not a valid time.");
         let uuid_invalid_msg = format!("{humanised_label} is not a valid UUID.");
+        let email_invalid_msg = format!("{humanised_label} is not a valid email address.");
+        let phone_invalid_msg = format!("{humanised_label} is not a valid phone number.");
 
         match kind {
             FieldKind::String | FieldKind::FilePath => {
@@ -238,6 +262,38 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 from_form_parses.push(quote! {
                     let #fname = match form.get(#fname_str).map(str::trim) {
                         Some(v) if !v.is_empty() => v.to_string(),
+                        _ => { errors.push(#required_msg.to_string()); String::new() }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Email => {
+                // Required, trimmed, then format-checked. The column is
+                // plain TEXT so the trimmed value is stored verbatim
+                // even when the format check fails (the error is what
+                // blocks the save, not a value rewrite).
+                from_form_parses.push(quote! {
+                    let #fname = match form.get(#fname_str).map(str::trim) {
+                        Some(v) if !v.is_empty() => {
+                            if !::rustio_admin::admin::is_valid_email(v) {
+                                errors.push(#email_invalid_msg.to_string());
+                            }
+                            v.to_string()
+                        }
+                        _ => { errors.push(#required_msg.to_string()); String::new() }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Phone => {
+                from_form_parses.push(quote! {
+                    let #fname = match form.get(#fname_str).map(str::trim) {
+                        Some(v) if !v.is_empty() => {
+                            if !::rustio_admin::admin::is_valid_phone(v) {
+                                errors.push(#phone_invalid_msg.to_string());
+                            }
+                            v.to_string()
+                        }
                         _ => { errors.push(#required_msg.to_string()); String::new() }
                     };
                 });
@@ -512,6 +568,13 @@ enum FieldKind {
     Decimal,
     Bool,
     String,
+    /// `String` column flagged with `#[rustio(format = "email")]`.
+    /// Stored as `TEXT`; renders as `<input type="email">` and runs
+    /// [`is_valid_email`](rustio_admin::admin::is_valid_email) in
+    /// `from_form`.
+    Email,
+    /// `String` column flagged with `#[rustio(format = "phone")]`.
+    Phone,
     DateTime,
     Date,
     Time,
@@ -539,6 +602,8 @@ impl FieldKind {
             FieldKind::Decimal => format_ident!("Decimal"),
             FieldKind::Bool => format_ident!("Bool"),
             FieldKind::String => format_ident!("String"),
+            FieldKind::Email => format_ident!("Email"),
+            FieldKind::Phone => format_ident!("Phone"),
             FieldKind::DateTime | FieldKind::DateTimeAuto => format_ident!("DateTime"),
             FieldKind::Date => format_ident!("Date"),
             FieldKind::Time => format_ident!("Time"),
@@ -731,6 +796,13 @@ fn parse_relation_attr(
                 // `belongs_to` and `file` without one parser
                 // erroring on the other's keyword.
                 Ok(())
+            } else if m.path.is_ident("format") {
+                // Handled by `parse_format_attr`. Consume its value so
+                // this parser doesn't trip on the `=` / trailing `,`,
+                // mirroring the `file` marker's pass-through.
+                let _value = m.value()?;
+                let _: Lit = _value.parse()?;
+                Ok(())
             } else {
                 Err(m.error(format!("unknown rustio attribute for field `{field_name}`")))
             }
@@ -786,6 +858,48 @@ fn parse_file_attr(attrs: &[syn::Attribute]) -> syn::Result<bool> {
         }
     }
     Ok(false)
+}
+
+/// Read `#[rustio(format = "email" | "phone")]` off a field. Returns
+/// the lowercase format name, or `None` when no such attribute is
+/// present. Any value other than `"email"` / `"phone"` is a compile
+/// error pointing at the attribute span. Other `rustio` keys
+/// (`belongs_to = "…"`, `display = "…"`, the `file` marker) are
+/// tolerated and skipped so this parser composes with the others.
+fn parse_format_attr(attrs: &[syn::Attribute]) -> syn::Result<Option<String>> {
+    for attr in attrs {
+        if !attr.path().is_ident("rustio") {
+            continue;
+        }
+        let mut found: Option<String> = None;
+        attr.parse_nested_meta(|m| {
+            if m.path.is_ident("format") {
+                let value = m.value()?;
+                let lit: syn::LitStr = value.parse()?;
+                let v = lit.value();
+                if v != "email" && v != "phone" {
+                    return Err(m.error(format!(
+                        "#[rustio(format = \"...\")] accepts only \"email\" or \"phone\"; got \"{v}\""
+                    )));
+                }
+                found = Some(v);
+                Ok(())
+            } else if m.input.peek(syn::Token![=]) {
+                // Some other `key = value`; consume the literal so the
+                // nested-meta parser doesn't trip on the trailing `,`.
+                let _value = m.value()?;
+                let _: Lit = _value.parse()?;
+                Ok(())
+            } else {
+                // Marker key without `=` (e.g. `file`). Skip.
+                Ok(())
+            }
+        })?;
+        if found.is_some() {
+            return Ok(found);
+        }
+    }
+    Ok(None)
 }
 
 fn plural_snake(camel: &str) -> String {

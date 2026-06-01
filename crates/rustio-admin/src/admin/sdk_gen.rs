@@ -88,6 +88,8 @@ fn ts_type_for(field: &AdminField) -> String {
         | FieldType::Decimal
         | FieldType::String
         | FieldType::OptionalString
+        | FieldType::Email
+        | FieldType::Phone
         | FieldType::DateTime
         | FieldType::OptionalDateTime
         | FieldType::Date

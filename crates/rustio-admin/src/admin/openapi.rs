@@ -191,6 +191,15 @@ fn schema_for_field(field: &AdminField) -> Value {
         FieldType::String | FieldType::OptionalString => {
             obj.insert("type".into(), Value::String("string".into()));
         }
+        FieldType::Email => {
+            obj.insert("type".into(), Value::String("string".into()));
+            obj.insert("format".into(), Value::String("email".into()));
+        }
+        FieldType::Phone => {
+            // No standard JSON Schema format for phone numbers; the
+            // honest representation is a plain string.
+            obj.insert("type".into(), Value::String("string".into()));
+        }
         FieldType::DateTime | FieldType::OptionalDateTime => {
             obj.insert("type".into(), Value::String("string".into()));
             obj.insert("format".into(), Value::String("date-time".into()));
