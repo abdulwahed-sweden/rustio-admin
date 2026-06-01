@@ -22,8 +22,9 @@
 //!   a boolean and avoids forcing every insert to specify it.
 //! - The verb stays a scaffold helper, not an ORM front-end.
 //!
-//! Defaults table (single source of truth -- the renderer below and
-//! the §6.4 error messages both reference this):
+//! Defaults table -- the human-readable mirror of [`FieldKind::spec`],
+//! which is the programmatic single source of truth the renderer
+//! reads from. Keep the two in sync when adding a kind:
 //!
 //! | Token         | Rust type           | SQL column                          |
 //! |---------------|---------------------|-------------------------------------|
@@ -342,24 +343,40 @@ pub(crate) struct Render {
 }
 
 pub(crate) fn render(fields: &[Field]) -> Render {
+    // One descriptor per field, resolved once. Every member below
+    // reads from these specs -- `spec()` is the single source of
+    // truth for the Rust type, DDL, row getter, insert form, import
+    // needs, and search eligibility of each kind.
+    let specs: Vec<FieldSpec> = fields.iter().map(|f| f.kind.spec()).collect();
+
+    // The core import is always present. Any extra `use` line a
+    // field's spec requires (e.g. chrono for `timestamp`) is inserted
+    // *before* it, first-seen order preserved and de-duplicated.
     let mut import_lines: Vec<&'static str> =
         vec!["use rustio_admin::{Error, Model, ModelAdmin, Row, RustioAdmin, Value};"];
-    let needs_chrono = fields
-        .iter()
-        .any(|f| matches!(f.kind, FieldKind::Timestamp));
-    if needs_chrono {
-        import_lines.insert(0, "use chrono::{DateTime, Utc};");
+    let mut extra_imports: Vec<&'static str> = Vec::new();
+    for spec in &specs {
+        if let Some(imp) = spec.needs_import {
+            if !extra_imports.contains(&imp) {
+                extra_imports.push(imp);
+            }
+        }
+    }
+    for (i, imp) in extra_imports.into_iter().enumerate() {
+        import_lines.insert(i, imp);
     }
 
     let struct_fields = fields
         .iter()
-        .map(|f| format!("    pub {}: {},", f.name, rust_type(&f.kind)))
+        .zip(&specs)
+        .map(|(f, s)| format!("    pub {}: {},", f.name, s.rust_type))
         .collect::<Vec<_>>()
         .join("\n");
 
     let column_decls_sql = fields
         .iter()
-        .map(|f| format!(",\n    {} {}", f.name, sql_decl(&f.kind)))
+        .zip(&specs)
+        .map(|(f, s)| format!(",\n    {} {}", f.name, s.sql_decl))
         .collect::<String>();
 
     let mut columns: Vec<String> = vec!["\"id\"".into()];
@@ -374,12 +391,11 @@ pub(crate) fn render(fields: &[Field]) -> Render {
 
     let from_row_assignments = fields
         .iter()
-        .map(|f| {
+        .zip(&specs)
+        .map(|(f, s)| {
             format!(
                 "            {}: row.{}(\"{}\")?,",
-                f.name,
-                row_getter(&f.kind),
-                f.name
+                f.name, s.row_getter, f.name
             )
         })
         .collect::<Vec<_>>()
@@ -387,7 +403,14 @@ pub(crate) fn render(fields: &[Field]) -> Render {
 
     let insert_values_expr = fields
         .iter()
-        .map(|f| insert_value_expr(&f.name, &f.kind))
+        .zip(&specs)
+        .map(|(f, s)| {
+            if s.insert_needs_clone {
+                format!("self.{}.clone().into()", f.name)
+            } else {
+                format!("self.{}.into()", f.name)
+            }
+        })
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -395,8 +418,9 @@ pub(crate) fn render(fields: &[Field]) -> Render {
 
     let search_fields: Vec<String> = fields
         .iter()
-        .filter(|f| matches!(f.kind, FieldKind::Str | FieldKind::Text))
-        .map(|f| format!("\"{}\"", f.name))
+        .zip(&specs)
+        .filter(|(_, s)| s.is_text_search)
+        .map(|(f, _)| format!("\"{}\"", f.name))
         .collect();
     let search_fields_literal = search_fields.join(", ");
 
@@ -413,57 +437,100 @@ pub(crate) fn render(fields: &[Field]) -> Render {
     }
 }
 
-fn rust_type(kind: &FieldKind) -> &'static str {
-    match kind {
-        FieldKind::Str | FieldKind::Text => "String",
-        FieldKind::Int => "i32",
-        FieldKind::Bigint | FieldKind::Fk(_) => "i64",
-        FieldKind::Bool => "bool",
-        FieldKind::Timestamp => "DateTime<Utc>",
-        FieldKind::Json => "serde_json::Value",
-    }
+/// Every codegen fact about one [`FieldKind`], resolved in a single
+/// place. This is the programmatic single source of truth the
+/// renderer reads from -- it replaces the former parallel
+/// `rust_type` / `sql_decl` / `row_getter` / `insert_value_expr`
+/// match arms, so adding a field type is one descriptor, not four
+/// edits that can silently drift. The doc-comment defaults table at
+/// the top of this module mirrors these values for humans.
+struct FieldSpec {
+    /// Rust type rendered into the generated struct field.
+    rust_type: &'static str,
+    /// PostgreSQL column DDL (everything after the column name) for
+    /// the `CREATE TABLE`. Owned because `Fk` interpolates its target
+    /// table name.
+    sql_decl: String,
+    /// `orm::Row` accessor the generated `from_row` calls.
+    row_getter: &'static str,
+    /// Whether the `insert_values` expression needs `.clone()` before
+    /// `.into()`: `true` for non-`Copy` types (`String`, json
+    /// `Value`), `false` for `Copy` types (numbers, `bool`, chrono
+    /// `DateTime<Utc>`, FK ids).
+    insert_needs_clone: bool,
+    /// Whether this kind feeds `ModelAdmin::search_fields` (text-like
+    /// columns only).
+    is_text_search: bool,
+    /// Extra `use` line the generated model needs for this kind, if
+    /// any (e.g. `timestamp` pulls in chrono).
+    needs_import: Option<&'static str>,
 }
 
-fn sql_decl(kind: &FieldKind) -> String {
-    match kind {
-        FieldKind::Str | FieldKind::Text => "TEXT NOT NULL".into(),
-        FieldKind::Int => "INTEGER NOT NULL".into(),
-        FieldKind::Bigint => "BIGINT NOT NULL".into(),
-        FieldKind::Bool => "BOOLEAN NOT NULL DEFAULT FALSE".into(),
-        FieldKind::Timestamp => "TIMESTAMPTZ NOT NULL".into(),
-        FieldKind::Json => "JSONB NOT NULL".into(),
-        FieldKind::Fk(target) => {
-            let table = pluralise_camel_to_snake(target);
-            format!("BIGINT NOT NULL REFERENCES {table}(id)")
+impl FieldKind {
+    /// Resolve this kind's [`FieldSpec`] -- the one match the whole
+    /// renderer pivots on.
+    fn spec(&self) -> FieldSpec {
+        match self {
+            FieldKind::Str | FieldKind::Text => FieldSpec {
+                rust_type: "String",
+                sql_decl: "TEXT NOT NULL".into(),
+                row_getter: "get_string",
+                insert_needs_clone: true,
+                is_text_search: true,
+                needs_import: None,
+            },
+            FieldKind::Int => FieldSpec {
+                rust_type: "i32",
+                sql_decl: "INTEGER NOT NULL".into(),
+                row_getter: "get_i32",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: None,
+            },
+            FieldKind::Bigint => FieldSpec {
+                rust_type: "i64",
+                sql_decl: "BIGINT NOT NULL".into(),
+                row_getter: "get_i64",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: None,
+            },
+            FieldKind::Bool => FieldSpec {
+                rust_type: "bool",
+                sql_decl: "BOOLEAN NOT NULL DEFAULT FALSE".into(),
+                row_getter: "get_bool",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: None,
+            },
+            FieldKind::Timestamp => FieldSpec {
+                rust_type: "DateTime<Utc>",
+                sql_decl: "TIMESTAMPTZ NOT NULL".into(),
+                row_getter: "get_datetime",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: Some("use chrono::{DateTime, Utc};"),
+            },
+            FieldKind::Json => FieldSpec {
+                rust_type: "serde_json::Value",
+                sql_decl: "JSONB NOT NULL".into(),
+                row_getter: "get_json",
+                insert_needs_clone: true,
+                is_text_search: false,
+                needs_import: None,
+            },
+            FieldKind::Fk(target) => FieldSpec {
+                rust_type: "i64",
+                sql_decl: format!(
+                    "BIGINT NOT NULL REFERENCES {}(id)",
+                    pluralise_camel_to_snake(target)
+                ),
+                row_getter: "get_i64",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: None,
+            },
         }
-    }
-}
-
-fn row_getter(kind: &FieldKind) -> &'static str {
-    match kind {
-        FieldKind::Str | FieldKind::Text => "get_string",
-        FieldKind::Int => "get_i32",
-        FieldKind::Bigint | FieldKind::Fk(_) => "get_i64",
-        FieldKind::Bool => "get_bool",
-        FieldKind::Timestamp => "get_datetime",
-        FieldKind::Json => "get_json",
-    }
-}
-
-/// Build the per-field insert-values expression. Strings need
-/// `.clone()` so the iterator doesn't move out of `&self`; numeric
-/// and bool types are `Copy`; chrono `DateTime<Utc>` is `Copy`; json
-/// `Value` needs `.clone()`.
-fn insert_value_expr(name: &str, kind: &FieldKind) -> String {
-    match kind {
-        FieldKind::Str | FieldKind::Text | FieldKind::Json => {
-            format!("self.{name}.clone().into()")
-        }
-        FieldKind::Int
-        | FieldKind::Bigint
-        | FieldKind::Bool
-        | FieldKind::Timestamp
-        | FieldKind::Fk(_) => format!("self.{name}.into()"),
     }
 }
 
