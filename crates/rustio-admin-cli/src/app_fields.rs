@@ -9,9 +9,9 @@
 //! Discipline (`DESIGN_ONBOARDING.md` §6, PR 2.1 spec §3 / §7.1):
 //!
 //! - The vocabulary is closed: `str / text / int / bigint / float /
-//!   decimal / bool / timestamp / date / time / uuid / json /
-//!   fk:<Model>`. Thirteen tokens, nothing more. Unknown tokens fail
-//!   with the four-part error shape from PR 1.3.
+//!   decimal / bool / timestamp / date / time / uuid / email / phone /
+//!   json / fk:<Model>`. Fifteen tokens, nothing more. Unknown tokens
+//!   fail with the four-part error shape from PR 1.3.
 //! - No nullability, no defaults beyond the table below, no
 //!   indexes / uniqueness / constraints in the flag syntax. Users
 //!   edit the generated migration to add those.
@@ -40,6 +40,8 @@
 //! | `date`        | `NaiveDate`         | `DATE NOT NULL`                     |
 //! | `time`        | `NaiveTime`         | `TIME NOT NULL`                     |
 //! | `uuid`        | `Uuid`              | `UUID NOT NULL`                     |
+//! | `email`       | `String` *(+attr)*  | `TEXT NOT NULL`                     |
+//! | `phone`       | `String` *(+attr)*  | `TEXT NOT NULL`                     |
 //! | `json`        | `serde_json::Value` | `JSONB NOT NULL`                    |
 //! | `fk:<Model>`  | `i64`               | `BIGINT NOT NULL REFERENCES <models>(id)` |
 
@@ -58,6 +60,8 @@ pub(crate) struct Field {
 pub(crate) enum FieldKind {
     Str,
     Text,
+    Email,
+    Phone,
     Int,
     Bigint,
     Float,
@@ -75,7 +79,7 @@ pub(crate) enum FieldKind {
 impl FieldKind {
     /// Comma-separated list for error messages.
     fn vocabulary_list() -> &'static str {
-        "str, text, int, bigint, bool, timestamp, json, float, date, time, decimal, uuid, fk:<Model>"
+        "str, text, int, bigint, bool, timestamp, json, float, date, time, decimal, uuid, email, phone, fk:<Model>"
     }
 }
 
@@ -144,6 +148,8 @@ fn parse_kind(type_str: &str) -> Result<FieldKind, &'static str> {
     match type_str {
         "str" => Ok(FieldKind::Str),
         "text" => Ok(FieldKind::Text),
+        "email" => Ok(FieldKind::Email),
+        "phone" => Ok(FieldKind::Phone),
         "int" => Ok(FieldKind::Int),
         "bigint" => Ok(FieldKind::Bigint),
         "float" => Ok(FieldKind::Float),
@@ -385,7 +391,10 @@ pub(crate) fn render(fields: &[Field]) -> Render {
     let struct_fields = fields
         .iter()
         .zip(&specs)
-        .map(|(f, s)| format!("    pub {}: {},", f.name, s.rust_type))
+        .map(|(f, s)| match s.field_attr {
+            Some(attr) => format!("    {attr}\n    pub {}: {},", f.name, s.rust_type),
+            None => format!("    pub {}: {},", f.name, s.rust_type),
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -480,6 +489,12 @@ struct FieldSpec {
     /// Extra `use` line the generated model needs for this kind, if
     /// any (e.g. `timestamp` pulls in chrono).
     needs_import: Option<&'static str>,
+    /// Field-level attribute line emitted immediately above the struct
+    /// field, if any. `email` / `phone` carry
+    /// `#[rustio(format = "...")]` so the derive macro -- which only
+    /// sees the `String` Rust type -- knows to apply the matching
+    /// widget and validator. Indentation is added by the renderer.
+    field_attr: Option<&'static str>,
 }
 
 impl FieldKind {
@@ -494,6 +509,25 @@ impl FieldKind {
                 insert_needs_clone: true,
                 is_text_search: true,
                 needs_import: None,
+                field_attr: None,
+            },
+            FieldKind::Email => FieldSpec {
+                rust_type: "String",
+                sql_decl: "TEXT NOT NULL".into(),
+                row_getter: "get_string",
+                insert_needs_clone: true,
+                is_text_search: true,
+                needs_import: None,
+                field_attr: Some("#[rustio(format = \"email\")]"),
+            },
+            FieldKind::Phone => FieldSpec {
+                rust_type: "String",
+                sql_decl: "TEXT NOT NULL".into(),
+                row_getter: "get_string",
+                insert_needs_clone: true,
+                is_text_search: true,
+                needs_import: None,
+                field_attr: Some("#[rustio(format = \"phone\")]"),
             },
             FieldKind::Int => FieldSpec {
                 rust_type: "i32",
@@ -502,6 +536,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: None,
+                field_attr: None,
             },
             FieldKind::Bigint => FieldSpec {
                 rust_type: "i64",
@@ -510,6 +545,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: None,
+                field_attr: None,
             },
             FieldKind::Float => FieldSpec {
                 rust_type: "f64",
@@ -518,6 +554,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: None,
+                field_attr: None,
             },
             FieldKind::Decimal => FieldSpec {
                 rust_type: "Decimal",
@@ -526,6 +563,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use rust_decimal::Decimal;"),
+                field_attr: None,
             },
             FieldKind::Bool => FieldSpec {
                 rust_type: "bool",
@@ -534,6 +572,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: None,
+                field_attr: None,
             },
             FieldKind::Timestamp => FieldSpec {
                 rust_type: "DateTime<Utc>",
@@ -542,6 +581,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use chrono::{DateTime, Utc};"),
+                field_attr: None,
             },
             FieldKind::Date => FieldSpec {
                 rust_type: "NaiveDate",
@@ -550,6 +590,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use chrono::NaiveDate;"),
+                field_attr: None,
             },
             FieldKind::Time => FieldSpec {
                 rust_type: "NaiveTime",
@@ -558,6 +599,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use chrono::NaiveTime;"),
+                field_attr: None,
             },
             FieldKind::Uuid => FieldSpec {
                 rust_type: "Uuid",
@@ -566,6 +608,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use uuid::Uuid;"),
+                field_attr: None,
             },
             FieldKind::Json => FieldSpec {
                 rust_type: "serde_json::Value",
@@ -574,6 +617,7 @@ impl FieldKind {
                 insert_needs_clone: true,
                 is_text_search: false,
                 needs_import: None,
+                field_attr: None,
             },
             FieldKind::Fk(target) => FieldSpec {
                 rust_type: "i64",
@@ -585,6 +629,7 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: None,
+                field_attr: None,
             },
         }
     }
@@ -662,6 +707,8 @@ mod tests {
             ("birth_date:date", FieldKind::Date),
             ("start_time:time", FieldKind::Time),
             ("public_id:uuid", FieldKind::Uuid),
+            ("contact:email", FieldKind::Email),
+            ("mobile:phone", FieldKind::Phone),
             ("meta:json", FieldKind::Json),
         ];
         for (input, expected) in cases {
@@ -909,6 +956,32 @@ mod tests {
         assert!(r.insert_values_expr.contains("self.public_id.into()"));
         // Neither is text-searchable.
         assert_eq!(r.search_fields_literal, "");
+    }
+
+    #[test]
+    fn render_email_and_phone_carry_format_attribute() {
+        let r = render(&fs(&["work_email:email", "mobile:phone"]));
+        // Both land as `String` with the `#[rustio(format = "...")]`
+        // attribute the derive macro reads to pick the widget +
+        // validator (the struct type alone can't tell them apart).
+        assert!(r
+            .struct_fields
+            .contains("    #[rustio(format = \"email\")]\n    pub work_email: String,"));
+        assert!(r
+            .struct_fields
+            .contains("    #[rustio(format = \"phone\")]\n    pub mobile: String,"));
+        // Stored as plain TEXT, read with the string getter.
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    work_email TEXT NOT NULL"));
+        assert!(r.column_decls_sql.contains(",\n    mobile TEXT NOT NULL"));
+        assert!(r
+            .from_row_assignments
+            .contains("work_email: row.get_string(\"work_email\")?,"));
+        // No extra imports — String needs none.
+        assert!(!r.imports.contains("chrono"));
+        // Both are text-like and therefore searchable.
+        assert_eq!(r.search_fields_literal, r#""work_email", "mobile""#);
     }
 
     #[test]

@@ -72,6 +72,8 @@ pub enum FieldType {
     Decimal,
     Bool,
     String,
+    Email,
+    Phone,
     DateTime,
     Date,
     Time,
@@ -98,6 +100,8 @@ impl FieldType {
             FieldType::DateTime | FieldType::OptionalDateTime => "datetime",
             FieldType::Date => "date",
             FieldType::Time => "time",
+            FieldType::Email => "email",
+            FieldType::Phone => "tel",
             FieldType::I32
             | FieldType::I64
             | FieldType::OptionalI64
@@ -1444,6 +1448,10 @@ mod scalar_field_type_tests {
         taken_on: NaiveDate,
         taken_at: NaiveTime,
         public_id: Uuid,
+        #[rustio(format = "email")]
+        contact_email: String,
+        #[rustio(format = "phone")]
+        contact_phone: String,
     }
 
     const SAMPLE_UUID: &str = "550e8400-e29b-41d4-a716-446655440000";
@@ -1463,6 +1471,10 @@ mod scalar_field_type_tests {
         assert_eq!(field_type("taken_on"), FieldType::Date);
         assert_eq!(field_type("taken_at"), FieldType::Time);
         assert_eq!(field_type("public_id"), FieldType::Uuid);
+        // email / phone are `String` in Rust — the `#[rustio(format)]`
+        // attribute is the only thing that distinguishes them.
+        assert_eq!(field_type("contact_email"), FieldType::Email);
+        assert_eq!(field_type("contact_phone"), FieldType::Phone);
     }
 
     #[test]
@@ -1472,12 +1484,15 @@ mod scalar_field_type_tests {
         assert_eq!(FieldType::Date.widget(), "date");
         assert_eq!(FieldType::Time.widget(), "time");
         assert_eq!(FieldType::Uuid.widget(), "text");
+        assert_eq!(FieldType::Email.widget(), "email");
+        assert_eq!(FieldType::Phone.widget(), "tel");
     }
 
     #[test]
     fn from_form_parses_valid_scalars() {
         let form = FormData::from_urlencoded(&format!(
-            "weight_kg=72.5&unit_price=19.99&taken_on=2026-06-02&taken_at=09:30&public_id={SAMPLE_UUID}"
+            "weight_kg=72.5&unit_price=19.99&taken_on=2026-06-02&taken_at=09:30&public_id={SAMPLE_UUID}\
+             &contact_email=alice@example.com&contact_phone=%2B1%20555-123-4567"
         ));
         let m = Measurement::from_form(&form).expect("valid form parses");
         assert_eq!(m.weight_kg, 72.5);
@@ -1485,6 +1500,8 @@ mod scalar_field_type_tests {
         assert_eq!(m.taken_on, NaiveDate::from_ymd_opt(2026, 6, 2).unwrap());
         assert_eq!(m.taken_at, NaiveTime::from_hms_opt(9, 30, 0).unwrap());
         assert_eq!(m.public_id, Uuid::parse_str(SAMPLE_UUID).unwrap());
+        assert_eq!(m.contact_email, "alice@example.com");
+        assert_eq!(m.contact_phone, "+1 555-123-4567");
     }
 
     #[test]
@@ -1496,6 +1513,8 @@ mod scalar_field_type_tests {
             taken_on: NaiveDate::from_ymd_opt(2026, 6, 2).unwrap(),
             taken_at: NaiveTime::from_hms_opt(9, 30, 0).unwrap(),
             public_id: Uuid::parse_str(SAMPLE_UUID).unwrap(),
+            contact_email: "alice@example.com".to_string(),
+            contact_phone: "+1 555-123-4567".to_string(),
         };
         let vals: std::collections::HashMap<String, String> =
             m.display_values().into_iter().collect();
@@ -1504,14 +1523,17 @@ mod scalar_field_type_tests {
         assert_eq!(vals["taken_on"], "2026-06-02");
         assert_eq!(vals["taken_at"], "09:30");
         assert_eq!(vals["public_id"], SAMPLE_UUID);
+        assert_eq!(vals["contact_email"], "alice@example.com");
+        assert_eq!(vals["contact_phone"], "+1 555-123-4567");
     }
 
     #[test]
     fn from_form_rejects_invalid_scalars() {
         let form = FormData::from_urlencoded(
-            "weight_kg=heavy&unit_price=cheap&taken_on=not-a-date&taken_at=99%3A99&public_id=not-a-uuid",
+            "weight_kg=heavy&unit_price=cheap&taken_on=not-a-date&taken_at=99%3A99&public_id=not-a-uuid\
+             &contact_email=nope&contact_phone=call-me",
         );
         let errs = Measurement::from_form(&form).unwrap_err();
-        assert_eq!(errs.len(), 5, "one error per malformed field: {errs:?}");
+        assert_eq!(errs.len(), 7, "one error per malformed field: {errs:?}");
     }
 }

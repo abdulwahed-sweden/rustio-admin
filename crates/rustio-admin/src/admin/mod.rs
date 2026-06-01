@@ -36,6 +36,8 @@ mod render;
 mod routes;
 pub(crate) mod saved_filters;
 mod types;
+// public:
+pub mod validation;
 
 // public:
 pub use audit::{
@@ -69,3 +71,5 @@ pub use types::{
     Admin, AdminEntry, AdminField, AdminModel, AdminRelation, AdminTheme, CellLink, EditRow,
     FieldType, ListOpts, ListPage, ListRow, SiteBranding, UserProfileRow, UserProfileSection,
 };
+// public:
+pub use validation::{is_valid_email, is_valid_phone};
