@@ -158,7 +158,7 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                     None => String::new(),
                 }));
             },
-            FieldKind::I32 | FieldKind::I64 => quote! {
+            FieldKind::I32 | FieldKind::I64 | FieldKind::F64 => quote! {
                 out.push((#fname_str.to_string(), self.#fname.to_string()));
             },
             FieldKind::OptionalI64 => quote! {
@@ -190,6 +190,16 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                     None => String::new(),
                 }));
             },
+            FieldKind::Date => quote! {
+                // `%Y-%m-%d` is exactly what `<input type="date">`
+                // round-trips, so the rendered value drops straight
+                // back into the input's `value=` attribute.
+                out.push((#fname_str.to_string(), self.#fname.format("%Y-%m-%d").to_string()));
+            },
+            FieldKind::Time => quote! {
+                // `%H:%M` matches `<input type="time">` (no seconds).
+                out.push((#fname_str.to_string(), self.#fname.format("%H:%M").to_string()));
+            },
         };
         display_value_arms.push(display_arm);
 
@@ -207,6 +217,7 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         let required_msg = format!("{humanised_label} is required.");
         let number_msg = format!("{humanised_label} must be a number.");
         let date_invalid_msg = format!("{humanised_label} is not a valid date.");
+        let time_invalid_msg = format!("{humanised_label} is not a valid time.");
 
         match kind {
             FieldKind::String | FieldKind::FilePath => {
@@ -257,6 +268,15 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 });
                 from_form_fields.push(quote! { #fname });
             }
+            FieldKind::F64 => {
+                from_form_parses.push(quote! {
+                    let #fname: f64 = match form.get(#fname_str).and_then(|v| v.parse().ok()) {
+                        Some(v) => v,
+                        None => { errors.push(#number_msg.to_string()); 0.0 }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
             FieldKind::OptionalI64 => {
                 // Distinguish "user left it blank" (None, legitimate)
                 // from "user typed garbage" (validation error, NOT
@@ -291,6 +311,46 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                             }
                         }
                         _ => { errors.push(#required_msg.to_string()); ::chrono::Utc::now() }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Date => {
+                from_form_parses.push(quote! {
+                    let #fname = match form.get(#fname_str) {
+                        Some(raw) if !raw.is_empty() => {
+                            match ::chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d") {
+                                Ok(d) => d,
+                                Err(_) => {
+                                    errors.push(#date_invalid_msg.to_string());
+                                    ::chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+                                }
+                            }
+                        }
+                        _ => {
+                            errors.push(#required_msg.to_string());
+                            ::chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+                        }
+                    };
+                });
+                from_form_fields.push(quote! { #fname });
+            }
+            FieldKind::Time => {
+                from_form_parses.push(quote! {
+                    let #fname = match form.get(#fname_str) {
+                        Some(raw) if !raw.is_empty() => {
+                            match ::chrono::NaiveTime::parse_from_str(raw, "%H:%M") {
+                                Ok(t) => t,
+                                Err(_) => {
+                                    errors.push(#time_invalid_msg.to_string());
+                                    ::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                                }
+                            }
+                        }
+                        _ => {
+                            errors.push(#required_msg.to_string());
+                            ::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                        }
                     };
                 });
                 from_form_fields.push(quote! { #fname });
@@ -404,9 +464,12 @@ fn struct_fields(
 enum FieldKind {
     I32,
     I64,
+    F64,
     Bool,
     String,
     DateTime,
+    Date,
+    Time,
     DateTimeAuto,
     OptionalString,
     OptionalI64,
@@ -426,9 +489,12 @@ impl FieldKind {
         match self {
             FieldKind::I32 => format_ident!("I32"),
             FieldKind::I64 => format_ident!("I64"),
+            FieldKind::F64 => format_ident!("F64"),
             FieldKind::Bool => format_ident!("Bool"),
             FieldKind::String => format_ident!("String"),
             FieldKind::DateTime | FieldKind::DateTimeAuto => format_ident!("DateTime"),
+            FieldKind::Date => format_ident!("Date"),
+            FieldKind::Time => format_ident!("Time"),
             FieldKind::OptionalString => format_ident!("OptionalString"),
             FieldKind::OptionalI64 => format_ident!("OptionalI64"),
             FieldKind::OptionalDateTime => format_ident!("OptionalDateTime"),
@@ -502,9 +568,12 @@ fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
     let kind = match as_string.as_str() {
         "i32" => FieldKind::I32,
         "i64" => FieldKind::I64,
+        "f64" => FieldKind::F64,
         "bool" => FieldKind::Bool,
         "String" => FieldKind::String,
         "DateTime<Utc>" | "chrono::DateTime<chrono::Utc>" => FieldKind::DateTime,
+        "NaiveDate" | "chrono::NaiveDate" => FieldKind::Date,
+        "NaiveTime" | "chrono::NaiveTime" => FieldKind::Time,
         "Option<String>" => FieldKind::OptionalString,
         "Option<i64>" => FieldKind::OptionalI64,
         "Option<DateTime<Utc>>" | "Option<chrono::DateTime<chrono::Utc>>" => {

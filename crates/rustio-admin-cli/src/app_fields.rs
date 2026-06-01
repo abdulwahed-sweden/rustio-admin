@@ -8,9 +8,10 @@
 //!
 //! Discipline (`DESIGN_ONBOARDING.md` §6, PR 2.1 spec §3 / §7.1):
 //!
-//! - The vocabulary is closed: `str / text / int / bigint / bool /
-//!   timestamp / json / fk:<Model>`. Eight tokens, nothing more.
-//!   Unknown tokens fail with the four-part error shape from PR 1.3.
+//! - The vocabulary is closed: `str / text / int / bigint / float /
+//!   bool / timestamp / date / time / json / fk:<Model>`. Eleven
+//!   tokens, nothing more. Unknown tokens fail with the four-part
+//!   error shape from PR 1.3.
 //! - No nullability, no defaults beyond the table below, no
 //!   indexes / uniqueness / constraints in the flag syntax. Users
 //!   edit the generated migration to add those.
@@ -32,8 +33,11 @@
 //! | `text`        | `String`            | `TEXT NOT NULL`                     |
 //! | `int`         | `i32`               | `INTEGER NOT NULL`                  |
 //! | `bigint`      | `i64`               | `BIGINT NOT NULL`                   |
+//! | `float`       | `f64`               | `DOUBLE PRECISION NOT NULL`         |
 //! | `bool`        | `bool`              | `BOOLEAN NOT NULL DEFAULT FALSE`    |
 //! | `timestamp`   | `DateTime<Utc>`     | `TIMESTAMPTZ NOT NULL`              |
+//! | `date`        | `NaiveDate`         | `DATE NOT NULL`                     |
+//! | `time`        | `NaiveTime`         | `TIME NOT NULL`                     |
 //! | `json`        | `serde_json::Value` | `JSONB NOT NULL`                    |
 //! | `fk:<Model>`  | `i64`               | `BIGINT NOT NULL REFERENCES <models>(id)` |
 
@@ -54,8 +58,11 @@ pub(crate) enum FieldKind {
     Text,
     Int,
     Bigint,
+    Float,
     Bool,
     Timestamp,
+    Date,
+    Time,
     Json,
     /// Target model name in CamelCase (e.g. `"Doctor"`).
     Fk(String),
@@ -64,7 +71,7 @@ pub(crate) enum FieldKind {
 impl FieldKind {
     /// Comma-separated list for error messages.
     fn vocabulary_list() -> &'static str {
-        "str, text, int, bigint, bool, timestamp, json, fk:<Model>"
+        "str, text, int, bigint, bool, timestamp, json, float, date, time, fk:<Model>"
     }
 }
 
@@ -135,8 +142,11 @@ fn parse_kind(type_str: &str) -> Result<FieldKind, &'static str> {
         "text" => Ok(FieldKind::Text),
         "int" => Ok(FieldKind::Int),
         "bigint" => Ok(FieldKind::Bigint),
+        "float" => Ok(FieldKind::Float),
         "bool" => Ok(FieldKind::Bool),
         "timestamp" => Ok(FieldKind::Timestamp),
+        "date" => Ok(FieldKind::Date),
+        "time" => Ok(FieldKind::Time),
         "json" => Ok(FieldKind::Json),
         _ => Err("unknown_type"),
     }
@@ -495,6 +505,14 @@ impl FieldKind {
                 is_text_search: false,
                 needs_import: None,
             },
+            FieldKind::Float => FieldSpec {
+                rust_type: "f64",
+                sql_decl: "DOUBLE PRECISION NOT NULL".into(),
+                row_getter: "get_f64",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: None,
+            },
             FieldKind::Bool => FieldSpec {
                 rust_type: "bool",
                 sql_decl: "BOOLEAN NOT NULL DEFAULT FALSE".into(),
@@ -510,6 +528,22 @@ impl FieldKind {
                 insert_needs_clone: false,
                 is_text_search: false,
                 needs_import: Some("use chrono::{DateTime, Utc};"),
+            },
+            FieldKind::Date => FieldSpec {
+                rust_type: "NaiveDate",
+                sql_decl: "DATE NOT NULL".into(),
+                row_getter: "get_date",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: Some("use chrono::NaiveDate;"),
+            },
+            FieldKind::Time => FieldSpec {
+                rust_type: "NaiveTime",
+                sql_decl: "TIME NOT NULL".into(),
+                row_getter: "get_time",
+                insert_needs_clone: false,
+                is_text_search: false,
+                needs_import: Some("use chrono::NaiveTime;"),
             },
             FieldKind::Json => FieldSpec {
                 rust_type: "serde_json::Value",
@@ -599,8 +633,11 @@ mod tests {
             ("body:text", FieldKind::Text),
             ("count:int", FieldKind::Int),
             ("user_id:bigint", FieldKind::Bigint),
+            ("price:float", FieldKind::Float),
             ("active:bool", FieldKind::Bool),
             ("at:timestamp", FieldKind::Timestamp),
+            ("birth_date:date", FieldKind::Date),
+            ("start_time:time", FieldKind::Time),
             ("meta:json", FieldKind::Json),
         ];
         for (input, expected) in cases {
@@ -781,6 +818,47 @@ mod tests {
         assert!(r
             .column_decls_sql
             .contains(",\n    h BIGINT NOT NULL REFERENCES doctors(id)"));
+    }
+
+    #[test]
+    fn render_new_scalar_types_float_date_time() {
+        let r = render(&fs(&["price:float", "birth_date:date", "start_time:time"]));
+        // Struct fields use the mapped Rust types.
+        assert!(r.struct_fields.contains("    pub price: f64,"));
+        assert!(r.struct_fields.contains("    pub birth_date: NaiveDate,"));
+        assert!(r.struct_fields.contains("    pub start_time: NaiveTime,"));
+        // SQL DDL per the §2.2 defaults table.
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    price DOUBLE PRECISION NOT NULL"));
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    birth_date DATE NOT NULL"));
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    start_time TIME NOT NULL"));
+        // Row getters.
+        assert!(r
+            .from_row_assignments
+            .contains("price: row.get_f64(\"price\")?,"));
+        assert!(r
+            .from_row_assignments
+            .contains("birth_date: row.get_date(\"birth_date\")?,"));
+        assert!(r
+            .from_row_assignments
+            .contains("start_time: row.get_time(\"start_time\")?,"));
+        // date / time pull in only the chrono types they use — never
+        // the `DateTime, Utc` pair (that would be an unused import and
+        // fail the consumer's `-D warnings` build).
+        assert!(r.imports.contains("use chrono::NaiveDate;"));
+        assert!(r.imports.contains("use chrono::NaiveTime;"));
+        assert!(!r.imports.contains("DateTime"));
+        // All three are `Copy` → `.into()` with no `.clone()`.
+        assert!(r.insert_values_expr.contains("self.price.into()"));
+        assert!(r.insert_values_expr.contains("self.birth_date.into()"));
+        assert!(r.insert_values_expr.contains("self.start_time.into()"));
+        // None are text-searchable.
+        assert_eq!(r.search_fields_literal, "");
     }
 
     #[test]

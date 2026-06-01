@@ -68,9 +68,12 @@ pub(crate) type UserProfileExtensionFuture =
 pub enum FieldType {
     I32,
     I64,
+    F64,
     Bool,
     String,
     DateTime,
+    Date,
+    Time,
     OptionalI64,
     OptionalString,
     OptionalDateTime,
@@ -91,7 +94,9 @@ impl FieldType {
         match self {
             FieldType::Bool => "checkbox",
             FieldType::DateTime | FieldType::OptionalDateTime => "datetime",
-            FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 => "number",
+            FieldType::Date => "date",
+            FieldType::Time => "time",
+            FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 | FieldType::F64 => "number",
             FieldType::FilePath | FieldType::OptionalFilePath => "file",
             FieldType::String | FieldType::OptionalString => "text",
         }
@@ -1402,5 +1407,83 @@ mod tests {
             (2, std::time::Duration::from_secs(120))
         );
         assert!(p.strict_mailer_required());
+    }
+}
+
+/// End-to-end coverage for the `float` / `date` / `time` field types.
+///
+/// Deriving `RustioAdmin` on a struct that uses `f64` / `NaiveDate` /
+/// `NaiveTime` is the only thing in this crate that instantiates the
+/// macro's `classify_type`, `display_values`, and `from_form` arms for
+/// these Rust types — no other in-crate model uses them, so without
+/// this fixture a bug in those expansions would ship uncaught.
+#[cfg(test)]
+mod scalar_field_type_tests {
+    use super::FieldType;
+    use crate::admin::AdminModel;
+    use crate::http::FormData;
+    use crate::RustioAdmin;
+    use chrono::{NaiveDate, NaiveTime};
+
+    #[derive(Debug, RustioAdmin)]
+    struct Measurement {
+        id: i64,
+        weight_kg: f64,
+        taken_on: NaiveDate,
+        taken_at: NaiveTime,
+    }
+
+    fn field_type(name: &str) -> FieldType {
+        Measurement::FIELDS
+            .iter()
+            .find(|f| f.name == name)
+            .unwrap_or_else(|| panic!("field {name} present"))
+            .field_type
+    }
+
+    #[test]
+    fn classify_maps_each_rust_type_to_its_field_type() {
+        assert_eq!(field_type("weight_kg"), FieldType::F64);
+        assert_eq!(field_type("taken_on"), FieldType::Date);
+        assert_eq!(field_type("taken_at"), FieldType::Time);
+    }
+
+    #[test]
+    fn widgets_follow_html_input_types() {
+        assert_eq!(FieldType::F64.widget(), "number");
+        assert_eq!(FieldType::Date.widget(), "date");
+        assert_eq!(FieldType::Time.widget(), "time");
+    }
+
+    #[test]
+    fn from_form_parses_valid_scalars() {
+        let form = FormData::from_urlencoded("weight_kg=72.5&taken_on=2026-06-02&taken_at=09:30");
+        let m = Measurement::from_form(&form).expect("valid form parses");
+        assert_eq!(m.weight_kg, 72.5);
+        assert_eq!(m.taken_on, NaiveDate::from_ymd_opt(2026, 6, 2).unwrap());
+        assert_eq!(m.taken_at, NaiveTime::from_hms_opt(9, 30, 0).unwrap());
+    }
+
+    #[test]
+    fn display_values_use_html_roundtrip_formats() {
+        let m = Measurement {
+            id: 1,
+            weight_kg: 72.5,
+            taken_on: NaiveDate::from_ymd_opt(2026, 6, 2).unwrap(),
+            taken_at: NaiveTime::from_hms_opt(9, 30, 0).unwrap(),
+        };
+        let vals: std::collections::HashMap<String, String> =
+            m.display_values().into_iter().collect();
+        assert_eq!(vals["weight_kg"], "72.5");
+        assert_eq!(vals["taken_on"], "2026-06-02");
+        assert_eq!(vals["taken_at"], "09:30");
+    }
+
+    #[test]
+    fn from_form_rejects_invalid_scalars() {
+        let form =
+            FormData::from_urlencoded("weight_kg=heavy&taken_on=not-a-date&taken_at=99%3A99");
+        let errs = Measurement::from_form(&form).unwrap_err();
+        assert_eq!(errs.len(), 3, "one error per malformed field: {errs:?}");
     }
 }

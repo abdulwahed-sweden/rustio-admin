@@ -1194,12 +1194,14 @@ fn sort_direction_label(
     use super::modeladmin::SortDir;
     use super::types::FieldType::*;
     match (field_type, dir) {
-        (DateTime | OptionalDateTime, SortDir::Desc) => "newest first",
-        (DateTime | OptionalDateTime, SortDir::Asc) => "oldest first",
+        (DateTime | OptionalDateTime | Date, SortDir::Desc) => "newest first",
+        (DateTime | OptionalDateTime | Date, SortDir::Asc) => "oldest first",
+        (Time, SortDir::Desc) => "latest first",
+        (Time, SortDir::Asc) => "earliest first",
         (String | OptionalString | FilePath | OptionalFilePath, SortDir::Asc) => "A → Z",
         (String | OptionalString | FilePath | OptionalFilePath, SortDir::Desc) => "Z → A",
-        (I32 | I64 | OptionalI64, SortDir::Desc) => "highest first",
-        (I32 | I64 | OptionalI64, SortDir::Asc) => "lowest first",
+        (I32 | I64 | OptionalI64 | F64, SortDir::Desc) => "highest first",
+        (I32 | I64 | OptionalI64 | F64, SortDir::Asc) => "lowest first",
         (Bool, SortDir::Asc) => "off → on",
         (Bool, SortDir::Desc) => "on → off",
     }
@@ -2558,8 +2560,10 @@ fn map_field_to_ui(field: &super::types::AdminField) -> (&'static str, &'static 
     use super::types::FieldType::*;
     match field.field_type {
         Bool => ("checkbox", "checkbox"),
-        I32 | I64 | OptionalI64 => ("input", "number"),
+        I32 | I64 | OptionalI64 | F64 => ("input", "number"),
         DateTime | OptionalDateTime => ("input", "datetime-local"),
+        Date => ("input", "date"),
+        Time => ("input", "time"),
         FilePath | OptionalFilePath => ("file", "file"),
         String | OptionalString => ("input", "text"),
     }
@@ -3012,8 +3016,11 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
         Bool => "boolean",
         I32 => "integer (i32)",
         I64 | OptionalI64 => "integer (i64)",
+        F64 => "float (f64)",
         String | OptionalString => "string",
         DateTime | OptionalDateTime => "date-time",
+        Date => "date",
+        Time => "time",
         FilePath | OptionalFilePath => "file path",
     }
 }

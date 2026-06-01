@@ -179,6 +179,12 @@ fn typed_cell(field: &super::types::AdminField, cell: &str) -> serde_json::Value
             Ok(n) => serde_json::Value::Number(n.into()),
             Err(_) => serde_json::Value::String(cell.to_string()),
         },
+        FieldType::F64 => match cell.parse::<f64>() {
+            Ok(n) => serde_json::Number::from_f64(n)
+                .map(serde_json::Value::Number)
+                .unwrap_or_else(|| serde_json::Value::String(cell.to_string())),
+            Err(_) => serde_json::Value::String(cell.to_string()),
+        },
         FieldType::OptionalI64 => {
             if cell.is_empty() {
                 serde_json::Value::Null
@@ -196,9 +202,11 @@ fn typed_cell(field: &super::types::AdminField, cell: &str) -> serde_json::Value
                 serde_json::Value::String(cell.to_string())
             }
         }
-        FieldType::String | FieldType::DateTime | FieldType::FilePath => {
-            serde_json::Value::String(cell.to_string())
-        }
+        FieldType::String
+        | FieldType::DateTime
+        | FieldType::Date
+        | FieldType::Time
+        | FieldType::FilePath => serde_json::Value::String(cell.to_string()),
     }
 }
 
