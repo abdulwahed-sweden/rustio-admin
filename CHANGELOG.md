@@ -122,6 +122,19 @@ leaves the alpha track.
   §3). Identity resolution is shared with `rustio ai` (one pipeline); the
   audit phrasing and event are memory-specific. `--by` stays the offline
   default. Completes audit-by-default for project memory.
+- **`rustio memory verify` — working-tree tamper backstop.** Beyond the
+  freshness + referential-integrity checks, `verify` now flags tracked entry
+  files changed outside the lifecycle: a **modified** entry without the
+  `redacted` flag (a hand-edit of write-once reasoning), a **renamed** entry
+  (the filename is the id), or a **deleted** entry (entries are never
+  removed). A modification that *is* a redaction (carries `redacted = true`)
+  is allowed. Best-effort and git-based: it compares the working tree against
+  HEAD, skips cleanly when not in a git repo, and — honestly (§11) — does not
+  forensically audit committed history and degrades under squash-merge /
+  force-push. Intended to run in **CI** on changes touching `.rustio/memory/`
+  or `CLOUD.md`; non-zero exit on any failure. This closes the
+  implementation against `DESIGN_CLOUD_IMPL.md` (its §14 open items are all
+  resolved or explicitly declined).
 
 
 ## [0.26.0] — 2026-06-02

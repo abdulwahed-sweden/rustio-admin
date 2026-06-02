@@ -582,38 +582,43 @@ just this design.
 
 ---
 
-## 14. Open questions for implementation PRs
+## 14. Open questions — resolution
 
-Narrow, and none may relax Invariants I–III. The review-driven revision
-**settled** several earlier opens — metadata encoding (TOML frontmatter,
-§3.1; refined from YAML to avoid a new dependency), staging location
-(`.rustio/memory/proposals/`, §2.4), entry id (ULID
-filename + UUID v7 audit join, §2.3/§3.1), and the foundational
-second-approver gate (§3.6/§5). What remains:
+The implementation (PRs #7–#12 + the lifecycle refactor and the analytics /
+audit-mirror / tamper slices) closed every open item. None relaxed
+Invariants I–III.
 
-- **Proposed contract amendment (`DESIGN_CLOUD.md` §3).** Apply the
-  one-line redaction-is-not-history-scrubbing clarification drafted in §3.4?
-  It is honesty, not a relaxation, but it edits an approved contract and so
-  is the owner's call. *(Recommended.)*
-- **Freshness-enforcement mechanism.** §2.6 *decides* that CLOUD.md must
-  never be stale and that `verify` checks both append-only and
-  view-freshness; what remains open is the **mechanism** — pre-commit hook,
-  required CI status, or both — plus the honest caveat that the
-  history-based tamper check degrades under squash/force-push.
-- **CLOUD.md merge handling** — on a conflict in the generated CLOUD.md,
-  the resolution is "regenerate via `rustio memory render`." Whether to ship
-  a git merge driver / `.gitattributes` entry that automates this, or leave
-  it manual.
-- **`entries/` directory scale** — the expected order of magnitude is
-  **tens to low-hundreds** of entries (under-capture by design, contract
-  §5.1), where a flat directory and naive `render` are fine. Whether to
-  shard (e.g. by date prefix) only becomes a question far past that — and
-  blowing past it is itself a capture-discipline smell (§11.2 archive
-  death), not a storage problem. (Review pass 2, finding G.)
-- **CLOUD.md in VCS** — confirmed committed (so the assistant and reviewers
-  read it without running tooling); whether a `gitignore`-and-generate-on
-  demand mode is worth offering for teams who prefer it. Note the reviewer
-  ergonomics (review pass 2, finding H): an applied entry shows **two**
-  diffs — the canonical `entries/<ulid>.md` and the derived CLOUD.md
-  re-render; reviewers review the entry file, the CLOUD.md diff is
-  generated.
+**Settled by implementation:**
+
+- **Metadata encoding** — TOML frontmatter (§3.1; refined from YAML to add
+  no dependency).
+- **Staging location** — `.rustio/memory/proposals/` (§2.4).
+- **Entry id** — ULID filename + UUID v7 audit join (§2.3/§3.1).
+- **Foundational second-approver gate** — `required_approvals` floor (§3.6/§5).
+- **Contract amendment (`DESIGN_CLOUD.md` §3)** — **applied** (redaction is
+  not history scrubbing), and surfaced at apply time as an operator warning.
+- **Freshness + tamper enforcement mechanism** — `rustio memory verify` is
+  the gate: it fails (non-zero exit) on a stale `CLOUD.md`, a referential
+  error (dangling/cyclic supersedes), or a working-tree entry change outside
+  a ratified redaction (§11). **Run it in CI** on any change touching
+  `.rustio/memory/` or `CLOUD.md`. Honest caveat (already in §11): the
+  git-based tamper check compares the working tree against HEAD only — it is
+  a backstop and degrades under squash-merge / force-push; it does not
+  forensically audit committed history.
+
+**Considered and declined** (not worth the surface, per the design's own
+scale and ethos):
+
+- **CLOUD.md git merge driver** — manual `rustio memory render` on a
+  conflict in the generated view is sufficient; a `.gitattributes` merge
+  driver is not warranted.
+- **`gitignore`-and-generate VCS mode** — `CLOUD.md` stays committed so the
+  assistant and reviewers read it without running tooling. (Reviewer
+  ergonomics: an applied entry shows two diffs — the canonical
+  `entries/<ulid>.md` and the regenerated `CLOUD.md`; review the entry file,
+  the view diff is generated.)
+- **`entries/` directory sharding** — the under-capture design keeps the
+  count to tens–low-hundreds; a flat directory is fine. Blowing past it is a
+  capture-discipline smell (§11.2 archive death), not a storage problem.
+
+The implementation now matches this design end to end.

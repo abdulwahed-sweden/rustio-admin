@@ -12,6 +12,7 @@
 //! (`DESIGN_CLOUD.md` §12); this is dev-time tooling only.
 
 mod entry;
+mod integrity;
 mod render;
 mod store;
 mod write;
@@ -282,11 +283,31 @@ fn show_cmd(
 }
 
 fn verify_cmd(store: &Store) -> Result<(), String> {
+    // Freshness + referential integrity (§2.6, §3.3).
     render::verify(store)?;
-    println!(
-        "{} CLOUD.md is fresh and entries are well-formed",
-        style("ok").green().bold()
-    );
+    // Working-tree tamper backstop (§11) — best-effort, git-based.
+    match integrity::check(store) {
+        integrity::Report::Tampered(files) => {
+            return Err(format!(
+                "entry files changed outside the lifecycle — only a ratified redaction may edit an \
+                 entry:\n  {}",
+                files.join("\n  ")
+            ));
+        }
+        integrity::Report::NotARepo => {
+            println!(
+                "{} CLOUD.md is fresh and entries are well-formed {}",
+                style("ok").green().bold(),
+                style("(git tamper check skipped — not a git repo)").dim()
+            );
+        }
+        integrity::Report::Clean => {
+            println!(
+                "{} CLOUD.md is fresh, entries are well-formed, and no working-tree tampering",
+                style("ok").green().bold()
+            );
+        }
+    }
     Ok(())
 }
 
