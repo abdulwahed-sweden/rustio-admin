@@ -14,10 +14,10 @@
 >   decision that changes is *superseded* by a new entry, not edited away.
 > - **Human-ratified.** Nothing is recorded without a person approving it.
 >
-> **New here?** That is all you need to use it well — see the README's
-> *Project memory* section for the commands. Everything below is the formal
-> **contract** (deliberately dense) for people changing how memory itself
-> works.
+> **New here?** That is all you need to use it well — the practical guide is
+> [`docs/memory.md`](../memory.md) (commands, recipes, CI). Everything below
+> is the formal **contract** (deliberately dense) for people changing how
+> memory itself works.
 
 A rustio-admin project keeps a single, project-level memory of *why* it is
 the way it is — its business intent, the decisions taken, the ideas

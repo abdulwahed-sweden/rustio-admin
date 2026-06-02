@@ -180,7 +180,8 @@ The surface is grouped into these concerns.
   exception for removing a leaked secret. Entries render into a
   human-readable `CLOUD.md`. The running admin never reads it — dev-time
   tooling only.
-- Contract: [`DESIGN_CLOUD.md`](./docs/design/DESIGN_CLOUD.md).
+- Guide: [`docs/memory.md`](./docs/memory.md). Contract:
+  [`DESIGN_CLOUD.md`](./docs/design/DESIGN_CLOUD.md).
 
 ### Operational
 
