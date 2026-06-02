@@ -60,22 +60,26 @@ mod user;
 mod wizard;
 
 /// Welcome banner printed before clap's auto-generated `--help`
-/// command list. Clarity-first within `DESIGN_ONBOARDING.md` §10: it leads
-/// with *what RustIO is* (so a first-time reader understands before the
-/// command list), then promotes the Phase 1 "Start here" surface. The full
-/// command list still follows below — promoted, never amputated.
+/// command list. Clarity-first within `DESIGN_ONBOARDING.md` §10, and
+/// **value before mechanics**: it leads with what the developer *gets*
+/// (describe structs → a complete admin panel), then frames the
+/// differentiator as the *outcome* they receive — a login, roles, and an
+/// audit trail built in — rather than the governance machinery that
+/// delivers it (contracts, authority model). A first-time reader meets the
+/// value before any mechanism. The "Start here" surface and the full
+/// command list still follow below — promoted, never amputated.
 const WELCOME_HELP: &str = "\
-RustIO Admin — a complete admin panel for Rust apps, built on PostgreSQL.
+RustIO Admin — describe your data as Rust structs, get a complete admin panel.
 
-The Rust answer to \"Django Admin\": describe your data as Rust structs and
-get the admin — list, create, edit, search, delete — with login, roles,
-password recovery, and a full audit trail already wired together.
+You write the structs; RustIO builds the screens: list, create, edit, search,
+and delete — with a login page, user roles, password recovery, and a full
+audit trail already wired in. The Rust answer to \"Django Admin\", on PostgreSQL.
 
 Why RustIO is different
-  Most admin tools treat CRUD as the product and bolt auth, recovery, and
-  audit on afterward. RustIO inverts that: authority — who may do what, how
-  sessions end, how access is recovered, what gets recorded — is designed as
-  ONE system, governed by checked-in contracts, not assembled from parts.
+  That login, those roles, and that audit trail are not add-ons you bolt on
+  later — they come built in, as one system. The admin you get on the very
+  first run is already secure and accountable, with nothing to assemble
+  yourself. Most tools leave that part to you.
 
 Start here
   rustio-admin new <project>     guided setup → a ready-to-run app

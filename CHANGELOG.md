@@ -60,6 +60,21 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **Welcome banner now leads with value, not mechanism.** The `rustio-admin`
+  welcome (bare command / `--help`) previously framed the differentiator in
+  governance vocabulary — *authority: who may do what, how sessions end, …
+  governed by checked-in contracts*. It now opens with what the developer
+  **gets** ("describe your data as Rust structs, get a complete admin panel"),
+  and reframes the "Why RustIO is different" block as the **outcome** they
+  receive — the login, roles, and audit trail come built in, as one system, so
+  the admin is secure and accountable on the first run with nothing to
+  assemble — rather than the machinery that delivers it. Value before
+  mechanics (`DESIGN_ONBOARDING.md` §10): a first-time reader meets the value
+  before any contract or authority concept. Banner text only; no command,
+  flag, or behaviour change, and "Start here" + the full command list are
+  unchanged below the separator.
+
 
 ## [0.27.2] — 2026-06-02
 
