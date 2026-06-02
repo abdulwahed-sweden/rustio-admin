@@ -27,6 +27,11 @@ impl Store {
         Store { root: root.into() }
     }
 
+    /// The project root this store is anchored to.
+    pub(crate) fn root(&self) -> &std::path::Path {
+        &self.root
+    }
+
     /// `.rustio/memory/entries/` — the canonical per-entry files (§2.3).
     pub(crate) fn entries_dir(&self) -> PathBuf {
         self.root.join(".rustio").join("memory").join("entries")
