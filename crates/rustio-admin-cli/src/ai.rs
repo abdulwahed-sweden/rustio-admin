@@ -24,22 +24,22 @@
 //! authenticating the approver against a live admin are later slices —
 //! both need a database; this slice stays offline.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::collections::BTreeMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 
-use chrono::{SecondsFormat, Utc};
 use clap::Subcommand;
 use console::style;
-use serde::{Deserialize, Serialize};
 
 use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry as AuditLogEntry};
 use rustio_admin::auth::emergency::fresh_correlation_id;
 use rustio_admin::auth::{self, StoredUser};
 use rustio_admin::{Db, Role};
 
-use crate::builder::ulid_gen::new_ulid;
+use crate::proposal::{
+    self, do_propose, do_reject, state_label, Bucket, CapabilityPolicy, LogEntry, Proposal,
+    StagedChange, State, Store,
+};
 
 /// `.rustio/ai.toml`, relative to the current working directory — the
 /// same `.rustio/` state directory the builder uses.
@@ -204,7 +204,7 @@ pub(crate) enum Action {
 /// Dispatch. Offline and synchronous — no Postgres connection.
 pub(crate) fn run(action: Action) -> Result<(), String> {
     let policy_path = PathBuf::from(POLICY_PATH);
-    let store = Store::new(".");
+    let store = Store::new(".", "ai");
     match action {
         Action::Status => status(&policy_path, &store),
         Action::Init { force } => init(&policy_path, force),
@@ -260,15 +260,6 @@ const DEFAULT_LOG_LIMIT: usize = 20;
 // ---------------------------------------------------------------------------
 // Policy (DESIGN §2–§3)
 // ---------------------------------------------------------------------------
-
-/// The three buckets a capability can sit in (DESIGN §3).
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Bucket {
-    Allowed,
-    NeedsApproval,
-    Blocked,
-}
 
 /// One known capability and the bucket it falls in by default.
 struct CapDef {
@@ -433,6 +424,28 @@ impl Policy {
     }
 }
 
+/// `ai`'s `Policy` speaks the generic lifecycle's [`CapabilityPolicy`]
+/// language: resolve buckets, count required approvals, and supply the
+/// `ai`-specific error text for unknown / Blocked keys. The lifecycle in
+/// `proposal.rs` reaches the policy only through this trait, so a later
+/// memory policy can reuse the same pipeline.
+impl CapabilityPolicy for Policy {
+    fn bucket_of_key(&self, key: &str) -> Option<Bucket> {
+        Policy::bucket_of_key(self, key)
+    }
+    fn required_approvals(&self, key: &str, bucket: Bucket) -> u8 {
+        Policy::required_approvals(self, key, bucket)
+    }
+    fn known_capability_keys(&self) -> Vec<&str> {
+        CATALOGUE.iter().map(|c| c.key).collect()
+    }
+    fn blocked_hint(&self, key: &str) -> String {
+        format!(
+            "`{key}` is Blocked by the policy — the AI cannot do this. A developer must act by hand, or move it out of `blocked` in {POLICY_PATH} (itself a reviewed change)."
+        )
+    }
+}
+
 /// Load the policy from `path`, or fall back to coded defaults when the
 /// file is absent. A present-but-malformed file is a hard error — a
 /// broken policy must be visible, not silently replaced by defaults.
@@ -536,244 +549,6 @@ fn bucket_label(b: Bucket) -> &'static str {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Proposal model (DESIGN §4)
-// ---------------------------------------------------------------------------
-
-/// The lifecycle state of a proposal.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum State {
-    Suggested,
-    Approved,
-    Rejected,
-    Applied,
-}
-
-fn state_label(s: State) -> &'static str {
-    match s {
-        State::Suggested => "suggested",
-        State::Approved => "approved",
-        State::Rejected => "rejected",
-        State::Applied => "applied",
-    }
-}
-
-/// One approval signature.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Approval {
-    by: String,
-    at: String,
-}
-
-/// A file the proposal will write on apply.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct StagedChange {
-    /// Destination path, relative to the project root.
-    path: String,
-    /// Full content to write.
-    content: String,
-}
-
-/// A change the AI wants to make, plus its lifecycle record. The bucket
-/// and `required_approvals` are snapshotted at creation so a later policy
-/// edit cannot retroactively change a pending proposal's rules.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Proposal {
-    id: String,
-    capability: String,
-    title: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    summary: Option<String>,
-    bucket: Bucket,
-    required_approvals: u8,
-    state: State,
-    created_at: String,
-    created_by: String,
-    changes: Vec<StagedChange>,
-    approvals: Vec<Approval>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    reject_reason: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    decided_by: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    decided_at: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    applied_at: Option<String>,
-}
-
-impl Proposal {
-    /// The last 8 chars of the id — short enough to type, and drawn from
-    /// the ULID's random tail so two proposals created in the same second
-    /// (whose timestamp *prefix* is identical) still get distinct handles.
-    fn short(&self) -> &str {
-        &self.id[self.id.len().saturating_sub(8)..]
-    }
-
-    /// Number of *distinct* approvers — the same person signing twice
-    /// counts once.
-    fn distinct_approvals(&self) -> usize {
-        self.approvals
-            .iter()
-            .map(|a| a.by.as_str())
-            .collect::<BTreeSet<_>>()
-            .len()
-    }
-
-    /// Can this proposal be applied right now?
-    fn is_applyable(&self) -> bool {
-        match self.state {
-            State::Approved => true,
-            // Allowed capabilities (0 required) skip the approval gate.
-            State::Suggested => self.required_approvals == 0,
-            State::Rejected | State::Applied => false,
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Store — proposals + append-only log under .rustio/ai/ (DESIGN §5)
-// ---------------------------------------------------------------------------
-
-/// A line in `.rustio/ai/log.jsonl`. Append-only; one JSON object per
-/// line, mirroring the builder's `history.jsonl` shape.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct LogEntry {
-    /// ULID of the log line itself.
-    id: String,
-    ts: String,
-    /// `suggested` | `approved` | `rejected` | `applied` | `blocked`.
-    event: String,
-    /// Proposal id, or `-` for a blocked attempt that never became one.
-    proposal: String,
-    capability: String,
-    by: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    detail: Option<String>,
-}
-
-/// File-backed proposal store rooted at a project directory. Parameterised
-/// by `root` (rather than assuming the cwd) so the lifecycle is testable
-/// against a temp directory.
-struct Store {
-    root: PathBuf,
-}
-
-impl Store {
-    fn new(root: impl Into<PathBuf>) -> Self {
-        Store { root: root.into() }
-    }
-
-    fn dir(&self) -> PathBuf {
-        self.root.join(".rustio").join("ai")
-    }
-
-    fn proposals_dir(&self) -> PathBuf {
-        self.dir().join("proposals")
-    }
-
-    fn log_path(&self) -> PathBuf {
-        self.dir().join("log.jsonl")
-    }
-
-    /// Write a proposal as pretty JSON, creating directories as needed.
-    fn save(&self, p: &Proposal) -> Result<(), String> {
-        let dir = self.proposals_dir();
-        fs::create_dir_all(&dir).map_err(|e| format!("could not create {}: {e}", dir.display()))?;
-        let path = dir.join(format!("{}.json", p.id));
-        let json = serde_json::to_string_pretty(p)
-            .map_err(|e| format!("could not encode proposal: {e}"))?;
-        fs::write(&path, json).map_err(|e| format!("could not write {}: {e}", path.display()))
-    }
-
-    /// Load every proposal, oldest first (ULIDs sort chronologically).
-    fn load_all(&self) -> Result<Vec<Proposal>, String> {
-        let dir = self.proposals_dir();
-        let entries = match fs::read_dir(&dir) {
-            Ok(e) => e,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(e) => return Err(format!("could not read {}: {e}", dir.display())),
-        };
-        let mut out = Vec::new();
-        for entry in entries {
-            let path = entry
-                .map_err(|e| format!("could not read {}: {e}", dir.display()))?
-                .path();
-            if path.extension().and_then(|e| e.to_str()) != Some("json") {
-                continue;
-            }
-            let raw = fs::read_to_string(&path)
-                .map_err(|e| format!("could not read {}: {e}", path.display()))?;
-            let p: Proposal = serde_json::from_str(&raw)
-                .map_err(|e| format!("{} is not a valid proposal: {e}", path.display()))?;
-            out.push(p);
-        }
-        out.sort_by(|a, b| a.id.cmp(&b.id));
-        Ok(out)
-    }
-
-    /// Resolve a full id, or a unique prefix or suffix, to one proposal.
-    /// The displayed handle ([`Proposal::short`]) is a suffix, so suffix
-    /// matching is what makes a copied handle resolve; prefix matching is
-    /// accepted too for anyone reading the raw id.
-    fn load(&self, query: &str) -> Result<Proposal, String> {
-        let all = self.load_all()?;
-        let matches: Vec<Proposal> = all
-            .into_iter()
-            .filter(|p| p.id == query || p.id.ends_with(query) || p.id.starts_with(query))
-            .collect();
-        match matches.len() {
-            0 => Err(format!("no proposal matches {query:?}")),
-            1 => Ok(matches.into_iter().next().expect("len == 1")),
-            n => Err(format!("{n} proposals match {query:?}; use a longer id")),
-        }
-    }
-
-    /// Append one line to the log. `O_APPEND` keeps concurrent writers
-    /// from interleaving (same guarantee the builder's history relies on).
-    fn append_log(&self, entry: &LogEntry) -> Result<(), String> {
-        let dir = self.dir();
-        fs::create_dir_all(&dir).map_err(|e| format!("could not create {}: {e}", dir.display()))?;
-        let mut line =
-            serde_json::to_string(entry).map_err(|e| format!("could not encode log entry: {e}"))?;
-        line.push('\n');
-        let path = self.log_path();
-        let mut f = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-            .map_err(|e| format!("could not open {}: {e}", path.display()))?;
-        f.write_all(line.as_bytes())
-            .map_err(|e| format!("could not write {}: {e}", path.display()))
-    }
-
-    /// Every log entry, oldest-first. A line that fails to parse is
-    /// skipped rather than aborting the read — the record is best-effort
-    /// readable even if a future field is added.
-    fn read_log(&self) -> Vec<LogEntry> {
-        let raw = match fs::read_to_string(self.log_path()) {
-            Ok(s) => s,
-            Err(_) => return Vec::new(),
-        };
-        raw.lines()
-            .filter(|l| !l.trim().is_empty())
-            .filter_map(|l| serde_json::from_str(l).ok())
-            .collect()
-    }
-
-    /// The most recent `n` log entries, oldest-first.
-    fn recent_log(&self, n: usize) -> Vec<LogEntry> {
-        let mut entries = self.read_log();
-        let start = entries.len().saturating_sub(n);
-        entries.split_off(start)
-    }
-}
-
-/// Current UTC timestamp, RFC 3339 to the second.
-fn now_ts() -> String {
-    Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true)
-}
-
 /// Resolve the acting identity: an explicit `--by`, else the OS user,
 /// else `"unknown"`.
 fn whoami(by: Option<String>) -> String {
@@ -786,198 +561,34 @@ fn whoami(by: Option<String>) -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-fn log_entry(
-    event: &str,
-    proposal: &str,
-    capability: &str,
-    by: &str,
-    detail: Option<String>,
-) -> LogEntry {
-    LogEntry {
-        id: new_ulid(),
-        ts: now_ts(),
-        event: event.to_string(),
-        proposal: proposal.to_string(),
-        capability: capability.to_string(),
-        by: by.to_string(),
-        detail,
-    }
-}
-
 // ---------------------------------------------------------------------------
-// Lifecycle core (pure of the cwd; takes Store + Policy explicitly)
+// Lifecycle wrappers — the shared engine lives in `proposal.rs`; these
+// inject the `ai`-specific command hints and the staged-file apply action.
 // ---------------------------------------------------------------------------
 
-/// Create a proposal. Refuses a Blocked capability (logging the attempt)
-/// and an unknown capability key.
-fn do_propose(
-    store: &Store,
-    policy: &Policy,
-    capability: &str,
-    title: &str,
-    summary: Option<String>,
-    changes: Vec<StagedChange>,
-    actor: String,
-) -> Result<Proposal, String> {
-    let bucket = policy.bucket_of_key(capability).ok_or_else(|| {
-        let known: Vec<&str> = CATALOGUE.iter().map(|c| c.key).collect();
-        format!(
-            "unknown capability {capability:?}. Known capabilities: {}",
-            known.join(", ")
-        )
-    })?;
-
-    if bucket == Bucket::Blocked {
-        store.append_log(&log_entry(
-            "blocked",
-            "-",
-            capability,
-            &actor,
-            Some(title.to_string()),
-        ))?;
-        return Err(format!(
-            "`{capability}` is Blocked by the policy — the AI cannot do this. A developer must act by hand, or move it out of `blocked` in {POLICY_PATH} (itself a reviewed change)."
-        ));
-    }
-
-    let p = Proposal {
-        id: new_ulid(),
-        capability: capability.to_string(),
-        title: title.to_string(),
-        summary,
-        bucket,
-        required_approvals: policy.required_approvals(capability, bucket),
-        state: State::Suggested,
-        created_at: now_ts(),
-        created_by: actor,
-        changes,
-        approvals: Vec::new(),
-        reject_reason: None,
-        decided_by: None,
-        decided_at: None,
-        applied_at: None,
-    };
-    store.save(&p)?;
-    store.append_log(&log_entry(
-        "suggested",
-        &p.id,
-        &p.capability,
-        &p.created_by,
-        Some(p.title.clone()),
-    ))?;
-    Ok(p)
-}
-
-/// Record one approval. Enforces distinct approvers and flips the
-/// proposal to `Approved` once the threshold is met.
+/// Record one approval (offline), delegating to the shared lifecycle with
+/// the `ai` apply-command hint.
 fn do_approve(store: &Store, id: &str, actor: String) -> Result<Proposal, String> {
-    let mut p = store.load(id)?;
-    match p.state {
-        State::Suggested => {}
-        State::Approved => {
-            return Err(format!(
-                "proposal {} is already approved — run `rustio ai apply {}`",
-                p.short(),
-                p.short()
-            ))
-        }
-        State::Applied => return Err(format!("proposal {} was already applied", p.short())),
-        State::Rejected => {
-            return Err(format!(
-                "proposal {} was rejected; it cannot be approved",
-                p.short()
-            ))
-        }
-    }
-    if p.required_approvals == 0 {
-        return Err(format!(
-            "`{}` is Allowed — no approval needed. Run `rustio ai apply {}`.",
-            p.capability,
-            p.short()
-        ));
-    }
-    if p.approvals.iter().any(|a| a.by == actor) {
-        return Err(format!(
-            "{actor} has already approved this; a second, distinct approver is required"
-        ));
-    }
-    p.approvals.push(Approval {
-        by: actor.clone(),
-        at: now_ts(),
-    });
-    if p.distinct_approvals() as u8 >= p.required_approvals {
-        p.state = State::Approved;
-    }
-    store.save(&p)?;
-    store.append_log(&log_entry("approved", &p.id, &p.capability, &actor, None))?;
-    Ok(p)
-}
-
-/// Reject a proposal that has not yet been applied.
-fn do_reject(store: &Store, id: &str, reason: &str, actor: String) -> Result<Proposal, String> {
-    let mut p = store.load(id)?;
-    match p.state {
-        State::Suggested | State::Approved => {}
-        State::Applied => return Err(format!("proposal {} was already applied", p.short())),
-        State::Rejected => return Err(format!("proposal {} is already rejected", p.short())),
-    }
-    p.state = State::Rejected;
-    p.reject_reason = Some(reason.to_string());
-    p.decided_by = Some(actor.clone());
-    p.decided_at = Some(now_ts());
-    store.save(&p)?;
-    store.append_log(&log_entry(
-        "rejected",
-        &p.id,
-        &p.capability,
-        &actor,
-        Some(reason.to_string()),
-    ))?;
-    Ok(p)
+    proposal::do_approve(store, id, actor, "rustio ai apply")
 }
 
 /// Apply an approved (or Allowed) proposal: write its staged files, then
 /// mark it applied. Returns the proposal and the list of paths written.
 fn do_apply(store: &Store, id: &str, actor: String) -> Result<(Proposal, Vec<String>), String> {
-    let mut p = store.load(id)?;
-    match p.state {
-        State::Applied => return Err(format!("proposal {} was already applied", p.short())),
-        State::Rejected => return Err(format!("proposal {} was rejected", p.short())),
-        State::Suggested | State::Approved => {}
-    }
-    if !p.is_applyable() {
-        return Err(format!(
-            "proposal {} needs approval first ({}/{} approvals). Run `rustio ai approve {} --by <name>`.",
-            p.short(),
-            p.distinct_approvals(),
-            p.required_approvals,
-            p.short()
-        ));
-    }
-
-    let mut written = Vec::new();
-    for ch in &p.changes {
-        let dest = store.root.join(&ch.path);
-        if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("could not create {}: {e}", parent.display()))?;
+    proposal::do_apply_with(store, id, actor, "rustio ai approve", |p, root| {
+        let mut written = Vec::new();
+        for ch in &p.changes {
+            let dest = root.join(&ch.path);
+            if let Some(parent) = dest.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("could not create {}: {e}", parent.display()))?;
+            }
+            fs::write(&dest, ch.content.as_bytes())
+                .map_err(|e| format!("could not write {}: {e}", dest.display()))?;
+            written.push(ch.path.clone());
         }
-        fs::write(&dest, ch.content.as_bytes())
-            .map_err(|e| format!("could not write {}: {e}", dest.display()))?;
-        written.push(ch.path.clone());
-    }
-
-    p.state = State::Applied;
-    p.applied_at = Some(now_ts());
-    store.save(&p)?;
-    store.append_log(&log_entry(
-        "applied",
-        &p.id,
-        &p.capability,
-        &actor,
-        Some(format!("{} file(s)", written.len())),
-    ))?;
-    Ok((p, written))
+        Ok(written)
+    })
 }
 
 /// Turn `--stage` specs into staged changes. `DEST=SRC` reads SRC now;
@@ -1372,7 +983,7 @@ fn review(store: &Store, id: &str) -> Result<(), String> {
     } else {
         println!("  changes:");
         for ch in &p.changes {
-            let exists = store.root.join(&ch.path).exists();
+            let exists = store.root().join(&ch.path).exists();
             let verb = if exists { "overwrite" } else { "create" };
             println!(
                 "    {} {} ({} lines, {} bytes)",
@@ -1806,6 +1417,7 @@ fn line_diff(old: &str, new: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::builder::ulid_gen::new_ulid;
 
     fn p() -> PathBuf {
         PathBuf::from(POLICY_PATH)
@@ -1819,7 +1431,7 @@ mod tests {
     fn temp_store() -> Store {
         let root = std::env::temp_dir().join(format!("rustio-ai-test-{}", new_ulid()));
         std::fs::create_dir_all(&root).expect("temp dir");
-        Store::new(root)
+        Store::new(root, "ai")
     }
 
     fn stage(path: &str, content: &str) -> StagedChange {
@@ -2057,7 +1669,7 @@ mod tests {
         let (applied, written) = do_apply(&store, p.short(), "amir".into()).unwrap();
         assert_eq!(applied.state, State::Applied);
         assert_eq!(written, vec!["src/models/customer.rs".to_string()]);
-        let on_disk = std::fs::read_to_string(store.root.join("src/models/customer.rs"))
+        let on_disk = std::fs::read_to_string(store.root().join("src/models/customer.rs"))
             .expect("file written");
         assert_eq!(on_disk, "// the model\n");
     }
