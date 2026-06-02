@@ -70,10 +70,23 @@ leaves the alpha track.
   one-entry-two-successors merge fork is surfaced as an open tension). No
   new dependency — TOML frontmatter is parsed with the already-present
   `toml_edit` (the design's §3.1 was refined from YAML to TOML for exactly
-  this reason). The governed write path (`remember` / `supersede` /
-  `redact`, approval, audit) reuses the `DESIGN_AI_ASSISTANT.md` lifecycle
-  and lands in a later slice. Dev-time tooling only — the running admin
-  never reads CLOUD.md.
+  this reason). Dev-time tooling only — the running admin never reads
+  CLOUD.md.
+- **`rustio memory` — governed write path.** `remember` and `supersede`
+  propose a memory entry; a human `approve`s; `apply` materialises the
+  immutable entry file and re-renders CLOUD.md. It reuses the
+  `DESIGN_AI_ASSISTANT.md` proposal/approval/log lifecycle **unchanged** —
+  one governance pipeline, no parallel path: `write_memory` and
+  `supersede_memory` are new `needs_approval` capabilities in the existing
+  `.rustio/ai.toml`, and memory proposals live under `.rustio/memory/`. The
+  entry is materialised **at apply**, stamping the apply `date`, the
+  approver as `ratified_by`, and a fresh UUID v7 `correlation_id` (a memory
+  entry's audit join). `--foundational` requires **two approvers**.
+  Offline-first: identity via `--by`, the local `log.jsonl` is the record;
+  DB-backed identity + audit mirroring is a later slice (as `rustio ai`
+  shipped). Verbs: `remember` / `supersede` / `pending` / `approve` /
+  `reject` / `apply`. Internally, the shared lifecycle was first extracted
+  from `ai.rs` into a new `proposal` module (pure no-op refactor).
 
 
 ## [0.26.0] — 2026-06-02

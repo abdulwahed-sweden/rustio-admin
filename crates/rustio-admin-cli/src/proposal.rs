@@ -113,6 +113,12 @@ pub(crate) struct Proposal {
     pub(crate) decided_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) applied_at: Option<String>,
+    /// Feature-specific payload. `ai` leaves this `None` (its change is the
+    /// staged files); `memory` stores its entry draft here, since a memory
+    /// entry is materialised at apply (with the apply date and approver),
+    /// not pre-staged. Absent in serialized `ai` proposals.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) metadata: Option<serde_json::Value>,
 }
 
 impl Proposal {
@@ -323,6 +329,29 @@ pub(crate) fn do_propose(
     changes: Vec<StagedChange>,
     actor: String,
 ) -> Result<Proposal, String> {
+    do_propose_meta(
+        store, policy, capability, title, summary, changes, None, 0, actor,
+    )
+}
+
+/// Create a proposal carrying a feature payload (`metadata`) and an
+/// approvals floor. `required_approvals` is the policy's value raised to at
+/// least `required_floor` — `memory` uses the floor to force two approvers
+/// on a foundational entry (a per-entry rule that can't live in the
+/// per-capability `second_approver_for`). `do_propose` is the
+/// `metadata = None, required_floor = 0` case.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn do_propose_meta(
+    store: &Store,
+    policy: &dyn CapabilityPolicy,
+    capability: &str,
+    title: &str,
+    summary: Option<String>,
+    changes: Vec<StagedChange>,
+    metadata: Option<serde_json::Value>,
+    required_floor: u8,
+    actor: String,
+) -> Result<Proposal, String> {
     let bucket = policy.bucket_of_key(capability).ok_or_else(|| {
         let known = policy.known_capability_keys();
         format!(
@@ -348,7 +377,9 @@ pub(crate) fn do_propose(
         title: title.to_string(),
         summary,
         bucket,
-        required_approvals: policy.required_approvals(capability, bucket),
+        required_approvals: policy
+            .required_approvals(capability, bucket)
+            .max(required_floor),
         state: State::Suggested,
         created_at: now_ts(),
         created_by: actor,
@@ -358,6 +389,7 @@ pub(crate) fn do_propose(
         decided_by: None,
         decided_at: None,
         applied_at: None,
+        metadata,
     };
     store.save(&p)?;
     store.append_log(&log_entry(

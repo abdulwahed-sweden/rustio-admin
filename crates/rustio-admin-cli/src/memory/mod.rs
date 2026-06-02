@@ -14,6 +14,7 @@
 mod entry;
 mod render;
 mod store;
+mod write;
 
 use clap::Subcommand;
 use console::style;
@@ -50,6 +51,77 @@ pub(crate) enum Action {
     /// dangling or cyclic supersessions). Non-zero exit on failure — the
     /// freshness gate (§2.6).
     Verify,
+
+    /// Propose a new memory entry (the *why* behind a decision). Creates a
+    /// `needs_approval` proposal; a human approves, then `apply` writes the
+    /// entry and re-renders CLOUD.md. Offline — identity via `--by`.
+    Remember {
+        /// Entry type: decision | rejected | assumption | intent |
+        /// onboarding | history | open-tension.
+        #[arg(long = "type", value_name = "TYPE")]
+        entry_type: String,
+        /// Subject tag (repeatable) — the mechanical retrieval key.
+        #[arg(long = "subject", value_name = "SUBJECT")]
+        subjects: Vec<String>,
+        /// The reasoning prose to remember.
+        #[arg(long)]
+        note: String,
+        /// Mark as foundational (exempt from recency demotion). Requires
+        /// two approvers.
+        #[arg(long)]
+        foundational: bool,
+        /// A supporting reference (repeatable), e.g. `pr#41`.
+        #[arg(long = "source", value_name = "REF")]
+        sources: Vec<String>,
+        /// Who is proposing (defaults to the OS user).
+        #[arg(long)]
+        by: Option<String>,
+    },
+    /// Propose an entry that supersedes an existing one. The superseded
+    /// entry stays in the log, visibly demoted (never removed).
+    Supersede {
+        /// The entry id (full or suffix) being superseded.
+        id: String,
+        /// Type of the new (superseding) entry.
+        #[arg(long = "type", value_name = "TYPE")]
+        entry_type: String,
+        #[arg(long = "subject", value_name = "SUBJECT")]
+        subjects: Vec<String>,
+        #[arg(long)]
+        note: String,
+        #[arg(long)]
+        foundational: bool,
+        #[arg(long = "source", value_name = "REF")]
+        sources: Vec<String>,
+        #[arg(long)]
+        by: Option<String>,
+    },
+    /// List memory proposals awaiting a decision.
+    Pending {
+        #[arg(long)]
+        by: Option<String>,
+    },
+    /// Approve a pending memory proposal (distinct approvers enforced).
+    Approve {
+        id: String,
+        #[arg(long)]
+        by: Option<String>,
+    },
+    /// Reject a memory proposal with a reason, keeping the record.
+    Reject {
+        id: String,
+        #[arg(long)]
+        reason: String,
+        #[arg(long)]
+        by: Option<String>,
+    },
+    /// Apply an approved memory proposal: write the entry file and
+    /// re-render CLOUD.md.
+    Apply {
+        id: String,
+        #[arg(long)]
+        by: Option<String>,
+    },
 }
 
 /// Dispatch. Offline and synchronous — no Postgres connection.
@@ -70,6 +142,27 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
             grep.as_deref(),
         ),
         Action::Verify => verify_cmd(&store),
+        Action::Remember {
+            entry_type,
+            subjects,
+            note,
+            foundational,
+            sources,
+            by,
+        } => write::remember(entry_type, subjects, foundational, sources, note, by),
+        Action::Supersede {
+            id,
+            entry_type,
+            subjects,
+            note,
+            foundational,
+            sources,
+            by,
+        } => write::supersede(id, entry_type, subjects, foundational, sources, note, by),
+        Action::Pending { by } => write::pending(by),
+        Action::Approve { id, by } => write::approve(id, by),
+        Action::Reject { id, reason, by } => write::reject(id, reason, by),
+        Action::Apply { id, by } => write::apply(id, by),
     }
 }
 
