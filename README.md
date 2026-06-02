@@ -20,8 +20,24 @@
 
 ---
 
-Authentication, sessions, audit trails, and recovery are designed
-as one system, not assembled as separate parts.
+## What is RustIO?
+
+RustIO (`rustio-admin`) is an **administrative framework for Rust**, backed
+by Postgres — the Rust answer to "Django Admin." You describe your data as
+plain Rust structs; RustIO gives you the admin panel *and* the things real
+admin tools run on underneath: authentication, sessions, password recovery,
+role-based access, and a complete audit trail.
+
+**What makes it different.** Most admin tools treat CRUD as the product and
+bolt on auth, recovery, and audit afterward. RustIO inverts that.
+*Authority* — who may do what, how sessions end, how access is recovered,
+what gets recorded — is **designed as one system, not assembled from
+separate parts**, and governed by checked-in contract documents. The CRUD is
+the easy layer on top.
+
+**Who it's for.** Rust teams that want a trustworthy internal admin without
+wiring auth + sessions + recovery + audit together from separate crates —
+and without a frontend build step.
 
 Postgres only. No build step. Single binary deployment.
 
@@ -149,6 +165,23 @@ The surface is grouped into these concerns.
   the users table and mirrors the decision into `rustio_admin_actions`.
 - Contract: [`DESIGN_AI_ASSISTANT.md`](./docs/design/DESIGN_AI_ASSISTANT.md).
 
+### Project memory (CLOUD.md)
+
+- `rustio memory` records the *why* behind a project — business intent,
+  decisions, **rejected ideas**, accepted assumptions — as a project memory
+  an AI assistant (or a new teammate) reads to understand years of reasoning
+  in minutes.
+- **Non-authoritative by design.** Code, schema, and the database are the
+  source of truth; memory explains *why*, never *how the system works*. On
+  any conflict, code wins.
+- **Append-only and human-ratified.** It reuses the same
+  propose → approve → apply pipeline as `rustio ai` (one governance path);
+  entries are superseded, never rewritten; `redact` is the one bounded
+  exception for removing a leaked secret. Entries render into a
+  human-readable `CLOUD.md`. The running admin never reads it — dev-time
+  tooling only.
+- Contract: [`DESIGN_CLOUD.md`](./docs/design/DESIGN_CLOUD.md).
+
 ### Operational
 
 - Postgres-only. Hyper, sqlx, and minijinja under the hood.
@@ -263,6 +296,13 @@ Permissions, approval, and audit layer over external AI coding
 assistants — the `rustio ai` policy, proposal lifecycle, and opt-in
 audit mirroring (ships in 0.23.0).
 
+### [`DESIGN_CLOUD.md`](./docs/design/DESIGN_CLOUD.md)
+
+Project memory — the non-authoritative *why-layer* (`rustio memory` /
+CLOUD.md). What it may never become, and the invariants that keep it
+subordinate to code: subordinate, append-only, human-ratified (ships in
+0.27.0). Implementation design: [`DESIGN_CLOUD_IMPL.md`](./docs/design/DESIGN_CLOUD_IMPL.md).
+
 ---
 
 Each document is the source of truth for its surface.
@@ -277,7 +317,7 @@ theme engine, and CLI compilation off the project's hot path.
 |---|---|
 | `rustio-admin`        | The library. Re-exports the macros. |
 | `rustio-admin-macros` | Proc-macros (re-exported from `rustio-admin`). |
-| `rustio-admin-cli`    | The `rustio-admin` binary — `new` (friendly alias for `startproject`), `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `theme`, `ai` (AI assistant permissions), `doctor`, `docs`, `builder new`. |
+| `rustio-admin-cli`    | The `rustio-admin` binary — `new` (friendly alias for `startproject`), `startproject`, `startapp`, `migrate`, `user`, `group`, `perm`, `theme`, `ai` (AI assistant permissions), `memory` (project memory / CLOUD.md), `doctor`, `docs`, `builder new`. |
 | `rio-theme`           | Build-time theme engine. Turns raw brand colors into a WCAG-safe `tokens.css`. Not depended on by `rustio-admin` at runtime. |
 
 ```sh

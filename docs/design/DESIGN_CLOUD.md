@@ -1,5 +1,24 @@
 # Project Memory (CLOUD.md)
 
+> **In one minute — what this is.**
+> CLOUD.md is your project's **memory of *why*** — its business intent, the
+> decisions taken, and especially the **ideas you tried and rejected**. A new
+> teammate or an AI assistant reads it to understand years of reasoning in
+> minutes, instead of re-deriving — or re-litigating — it.
+>
+> Three things define it, and they never change:
+> - **Subordinate to code.** It is *not* a source of truth — code, schema,
+>   and the database are. Memory explains *why*; it never says *how the
+>   system works*. On any conflict, **code wins.**
+> - **Append-only.** You add to memory; you never rewrite its history. A
+>   decision that changes is *superseded* by a new entry, not edited away.
+> - **Human-ratified.** Nothing is recorded without a person approving it.
+>
+> **New here?** That is all you need to use it well — see the README's
+> *Project memory* section for the commands. Everything below is the formal
+> **contract** (deliberately dense) for people changing how memory itself
+> works.
+
 A rustio-admin project keeps a single, project-level memory of *why* it is
 the way it is — its business intent, the decisions taken, the ideas
 considered and rejected, the assumptions accepted, and the history a new
