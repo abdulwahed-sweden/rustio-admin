@@ -84,6 +84,53 @@ const BLOG_EXTRAS: &[(&str, &str)] = &[
     ),
 ];
 
+/// `clinic` preset -- same layering as `blog`. Choosing the `clinic`
+/// project type in the wizard produces a *real* clinic: `Patient` +
+/// `Appointment` models, their migrations (seeded with example rows),
+/// and a `src/main.rs` that already registers both. The point is that
+/// the developer reaches a working, non-empty clinic admin without
+/// hand-editing a single file (`DESIGN_ONBOARDING.md` §6).
+const CLINIC_OVERRIDES: &[(&str, &str)] = &[(
+    "src/main.rs",
+    include_str!("../templates/project_clinic/src/main.rs.tmpl"),
+)];
+
+const CLINIC_EXTRAS: &[(&str, &str)] = &[
+    (
+        "src/patient.rs",
+        include_str!("../templates/project_clinic/src/patient.rs.tmpl"),
+    ),
+    (
+        "src/appointment.rs",
+        include_str!("../templates/project_clinic/src/appointment.rs.tmpl"),
+    ),
+    (
+        "migrations/0001_create_patients.sql",
+        include_str!("../templates/project_clinic/migrations/0001_create_patients.sql"),
+    ),
+    (
+        "migrations/0002_create_appointments.sql",
+        include_str!("../templates/project_clinic/migrations/0002_create_appointments.sql"),
+    ),
+];
+
+/// A slice of `(relative_target_path, template_body)` pairs — the
+/// shape of every template table in this module.
+type TemplateSet = &'static [(&'static str, &'static str)];
+
+/// Select the `(overrides, extras)` template slices for a content
+/// preset, or `None` for the neutral `minimal` scaffold. Keeps the
+/// per-preset wiring in one place so `write_project_files` stays a
+/// straight loop. `overrides` reuse a slot `PROJECT_TEMPLATES` already
+/// wrote (not counted); `extras` are net-new files (counted).
+fn preset_layers(preset: &str) -> Option<(TemplateSet, TemplateSet)> {
+    match preset {
+        "blog" => Some((BLOG_OVERRIDES, BLOG_EXTRAS)),
+        "clinic" => Some((CLINIC_OVERRIDES, CLINIC_EXTRAS)),
+        _ => None,
+    }
+}
+
 /// Humanise the lower-case cargo crate name into a display title
 /// for `Admin::app_name(...)` — splits on `-` / `_`, capitalises
 /// each word, joins with a single space. `clinic` -> `Clinic`,
@@ -120,7 +167,19 @@ fn type_phrase(project_type: &str) -> &'static str {
 
 /// Valid preset names, surfaced verbatim in the error path so
 /// `--preset foo` reports the closed list of choices.
-const VALID_PRESETS: &[&str] = &["minimal", "blog"];
+const VALID_PRESETS: &[&str] = &["minimal", "blog", "clinic"];
+
+/// One-line comment appended to the `rustio-admin migrate apply` step
+/// in the Next-steps block. Content presets ship migrations and say
+/// what they create; the neutral `minimal` scaffold points at
+/// `startapp` for the first one.
+fn migrate_hint(preset: &str) -> &'static str {
+    match preset {
+        "blog" => "creates the posts + comments tables",
+        "clinic" => "creates the patients + appointments tables (with example rows)",
+        _ => "no project migrations yet (`rustio-admin startapp <name>` adds the first)",
+    }
+}
 
 pub fn project(name: &str, preset: &str) -> Result<(), String> {
     // Non-interactive scaffold paths (`rustio-admin startproject` and
@@ -155,14 +214,7 @@ fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Re
     println!("Next steps:");
     println!("  cd {name}");
     println!("  cp .env.example .env       # safe local defaults; edit before production");
-    println!(
-        "  rustio-admin migrate apply # {}",
-        if preset == "blog" {
-            "creates the posts + comments tables"
-        } else {
-            "no project migrations yet (`rustio-admin startapp <name>` adds the first)"
-        }
-    );
+    println!("  rustio-admin migrate apply # {}", migrate_hint(preset));
     println!("  rustio-admin user create --email admin@{name}.local --role administrator");
     println!(
         "  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin + /admin/docs"
@@ -189,14 +241,7 @@ fn project_with_db_in(
     println!();
     println!("Next steps:");
     println!("  cd {name}");
-    println!(
-        "  rustio-admin migrate apply # {}",
-        if preset == "blog" {
-            "creates the posts + comments tables"
-        } else {
-            "no project migrations yet (`rustio-admin startapp <name>` adds the first)"
-        }
-    );
+    println!("  rustio-admin migrate apply # {}", migrate_hint(preset));
     println!("  rustio-admin user create --email admin@{name}.local --role administrator");
     println!(
         "  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin + /admin/docs"
@@ -254,8 +299,8 @@ fn write_project_files(
         written += 1;
     }
 
-    if preset == "blog" {
-        for (rel, body) in BLOG_OVERRIDES.iter().chain(BLOG_EXTRAS.iter()) {
+    if let Some((overrides, extras)) = preset_layers(preset) {
+        for (rel, body) in overrides.iter().chain(extras.iter()) {
             let target = dir.join(rel);
             if let Some(parent) = target.parent() {
                 fs::create_dir_all(parent)
@@ -263,12 +308,13 @@ fn write_project_files(
             }
             let body = body
                 .replace("{{name}}", name)
+                .replace("{{name_title}}", &name_title)
                 .replace("{{type_phrase}}", type_phrase);
             fs::write(&target, body).map_err(|e| format!("write {}: {e}", target.display()))?;
             // Overrides reuse a slot the minimal scaffold already
             // wrote -- don't double-count those. Extras are net-new
             // files; bump the counter for them.
-            if BLOG_EXTRAS.iter().any(|(p, _)| *p == *rel) {
+            if extras.iter().any(|(p, _)| *p == *rel) {
                 written += 1;
             }
         }
@@ -813,6 +859,14 @@ mod tests {
         }
     }
 
+    #[allow(clippy::const_is_empty)]
+    #[test]
+    fn clinic_preset_templates_are_non_empty() {
+        for (rel, body) in CLINIC_OVERRIDES.iter().chain(CLINIC_EXTRAS.iter()) {
+            assert!(!body.is_empty(), "clinic template {rel} is empty");
+        }
+    }
+
     #[test]
     fn project_rejects_unknown_preset_with_valid_list_in_message() {
         let dir = unique_tempdir();
@@ -821,6 +875,66 @@ mod tests {
         assert!(err.contains("unknown preset"), "got: {err}");
         assert!(err.contains("minimal"), "must list minimal: {err}");
         assert!(err.contains("blog"), "must list blog: {err}");
+        assert!(err.contains("clinic"), "must list clinic: {err}");
+    }
+
+    /// The `clinic` preset must produce a *real* clinic — `Patient`
+    /// and `Appointment` models, both migrations, and a `main.rs`
+    /// that registers both — so the developer reaches a working,
+    /// non-empty admin without hand-editing a file.
+    #[test]
+    fn project_clinic_wires_models_and_seeded_migrations() {
+        let dir = unique_tempdir();
+        project_in(&dir, "clinic", "clinic", "clinic").expect("clinic should scaffold");
+        let root = dir.join("clinic");
+
+        for f in [
+            "src/patient.rs",
+            "src/appointment.rs",
+            "migrations/0001_create_patients.sql",
+            "migrations/0002_create_appointments.sql",
+        ] {
+            assert!(root.join(f).exists(), "clinic preset must write {f}");
+        }
+
+        // main.rs registers both models and is fully wired — no
+        // manual edit required on the first run.
+        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+        assert!(
+            main.contains("mod patient;"),
+            "main.rs must declare patient module"
+        );
+        assert!(
+            main.contains("mod appointment;"),
+            "main.rs must declare appointment module"
+        );
+        assert!(
+            main.contains(".model::<Patient>()"),
+            "main.rs must register Patient: {main}"
+        );
+        assert!(
+            main.contains(".model::<Appointment>()"),
+            "main.rs must register Appointment"
+        );
+        // `{{name_title}}` must be substituted, not left literal.
+        assert!(
+            main.contains(".app_name(\"Clinic\")"),
+            "main.rs app_name must be the humanised project name: {main}"
+        );
+        assert!(!main.contains("{{"), "no placeholder may survive: {main}");
+
+        // The appointments migration seeds rows linked by patient name
+        // so the foreign keys are correct regardless of generated ids.
+        let appts =
+            fs::read_to_string(root.join("migrations/0002_create_appointments.sql")).unwrap();
+        assert!(
+            appts.contains("REFERENCES patients(id)"),
+            "appointments must FK to patients"
+        );
+        assert!(
+            appts.contains("SELECT id FROM patients WHERE full_name ="),
+            "seed must link appointments to patients by name"
+        );
     }
 
     /// PR 1.5: the minimal scaffold is neutral — no `post.rs`, no

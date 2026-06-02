@@ -566,15 +566,17 @@ fn dispatch_new(
     }
     if wizard::should_run(no_interactive) {
         let input = wizard::run(name.as_deref())?;
-        // PR 1.5: project_type drives preset selection — only the
-        // explicit `blog` choice writes blog-shaped files. Every
-        // other type (custom / clinic / school / inventory) gets
-        // the neutral minimal scaffold and a project-type-aware
-        // homepage. `DESIGN_ONBOARDING.md` §6.
-        let resolved_preset = if input.project_type == "blog" {
-            "blog"
-        } else {
-            "minimal"
+        // project_type drives preset selection. `blog` and `clinic`
+        // each have a real content preset (models + migrations +
+        // pre-wired main.rs) so the developer reaches a working,
+        // non-empty admin without hand-editing a file. Every other
+        // type (custom / school / inventory) still gets the neutral
+        // minimal scaffold and a project-type-aware homepage.
+        // `DESIGN_ONBOARDING.md` §6.
+        let resolved_preset = match input.project_type.as_str() {
+            "blog" => "blog",
+            "clinic" => "clinic",
+            _ => "minimal",
         };
         return scaffold::project_with_db(
             &input.project_name,
