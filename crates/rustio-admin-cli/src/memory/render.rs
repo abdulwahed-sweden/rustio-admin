@@ -78,6 +78,9 @@ fn render_entry(e: &Entry, status: &Status) -> String {
             "> **⚠ Open tension** — records an unresolved disagreement; closes by supersession.\n\n",
         );
     }
+    if e.redacted {
+        s.push_str("> 🔒 **Redacted** — prohibited content was removed from this entry.\n\n");
+    }
     s.push_str(&e.body);
     s.push('\n');
     if !e.sources.is_empty() {

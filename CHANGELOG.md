@@ -87,6 +87,21 @@ leaves the alpha track.
   shipped). Verbs: `remember` / `supersede` / `pending` / `approve` /
   `reject` / `apply`. Internally, the shared lifecycle was first extracted
   from `ai.rs` into a new `proposal` module (pure no-op refactor).
+- **`rustio memory redact` — the bounded append-only exception.** Removes
+  prohibited content (a leaked secret / PII / etc.) from an existing entry:
+  the **one** operation that edits an entry in place, gated by **two
+  approvers** (`redact_memory` is `needs_approval` + `second_approver_for`).
+  Apply replaces the entry's body with a recorded marker
+  (`[content removed: class=… · date · by=… · audit=…]`), sets a structural
+  `redacted` flag, and re-renders CLOUD.md — the entry stays in the
+  chronology, visibly demoted, never deleted. The `--class` taxonomy is
+  aligned with the framework's existing redaction helpers (`password` /
+  `token` / `mfa_secret` / `backup_code` / `pii` / `credential` /
+  `operational`). **Honesty (DESIGN_CLOUD.md §3):** apply prints that
+  redaction cleans the working tree only — a genuinely leaked secret
+  additionally requires secret rotation and an out-of-band history rewrite
+  (`git filter-repo` / BFG). Offline-first like the rest of the write path;
+  the typed `memory_redacted` audit event ships with the DB-mirror slice.
 
 
 ## [0.26.0] — 2026-06-02

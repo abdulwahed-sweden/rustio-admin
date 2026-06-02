@@ -77,6 +77,7 @@ needs_approval = [
   "add_dependency",
   "write_memory",
   "supersede_memory",
+  "redact_memory",
 ]
 
 # The AI cannot do these at all until the rule is moved out of `blocked`.
@@ -92,7 +93,7 @@ blocked = [
 # Minimum role that may approve a change.
 approver_role = "administrator"
 # Capabilities that require two distinct approvers.
-second_approver_for = ["modify_table", "apply_migration"]
+second_approver_for = ["modify_table", "apply_migration", "redact_memory"]
 "#;
 
 /// `rustio ai` subcommands.
@@ -334,6 +335,11 @@ const CATALOGUE: &[CapDef] = &[
         default: Bucket::NeedsApproval,
     },
     CapDef {
+        key: "redact_memory",
+        label: "Redact prohibited content from a memory entry",
+        default: Bucket::NeedsApproval,
+    },
+    CapDef {
         key: "security_settings",
         label: "Security settings",
         default: Bucket::Blocked,
@@ -394,7 +400,11 @@ impl Policy {
         Policy {
             assistant: "Claude Code".to_string(),
             approver_role: "administrator".to_string(),
-            second_approver_for: vec!["modify_table".to_string(), "apply_migration".to_string()],
+            second_approver_for: vec![
+                "modify_table".to_string(),
+                "apply_migration".to_string(),
+                "redact_memory".to_string(),
+            ],
             overrides: BTreeMap::new(),
             source: Source::Default,
             warnings: Vec::new(),

@@ -72,6 +72,10 @@ pub(crate) struct Entry {
     pub(crate) supersedes: Option<String>,
     /// Curated, second-approver-gated flag (§3.6). Read-only here.
     pub(crate) foundational: bool,
+    /// True once prohibited content has been excised from the body by a
+    /// ratified `redact_memory` (§3.4). The structural signal that this
+    /// entry's body is a redaction marker, not reasoning. Defaults false.
+    pub(crate) redacted: bool,
     /// Cite-or-hedge references (§10). May be empty.
     pub(crate) sources: Vec<String>,
     pub(crate) author: String,
@@ -111,6 +115,10 @@ impl Entry {
             .get("foundational")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
+        let redacted = doc
+            .get("redacted")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         let author = require("author")?;
         let ratified_by = require("ratified_by")?;
         let date = require("date")?;
@@ -127,6 +135,7 @@ impl Entry {
             subjects: str_array(&doc, "subjects"),
             supersedes,
             foundational,
+            redacted,
             sources: str_array(&doc, "sources"),
             author,
             ratified_by,
@@ -158,6 +167,7 @@ impl Entry {
         doc["subjects"] = value(subjects);
         doc["supersedes"] = value(self.supersedes.as_deref().unwrap_or(""));
         doc["foundational"] = value(self.foundational);
+        doc["redacted"] = value(self.redacted);
         doc["sources"] = value(sources);
         doc["author"] = value(self.author.as_str());
         doc["ratified_by"] = value(self.ratified_by.as_str());
@@ -347,6 +357,7 @@ mod tests {
         assert_eq!(reparsed.subjects, original.subjects);
         assert_eq!(reparsed.supersedes, original.supersedes);
         assert_eq!(reparsed.foundational, original.foundational);
+        assert_eq!(reparsed.redacted, original.redacted);
         assert_eq!(reparsed.sources, original.sources);
         assert_eq!(reparsed.author, original.author);
         assert_eq!(reparsed.ratified_by, original.ratified_by);

@@ -122,6 +122,22 @@ pub(crate) enum Action {
         #[arg(long)]
         by: Option<String>,
     },
+    /// Propose redacting prohibited content (a secret / PII / etc.) from an
+    /// existing entry. Two approvers required. Note: redaction cleans the
+    /// working tree only, not git history (see the apply-time warning).
+    Redact {
+        /// The entry id (full or suffix) to redact.
+        id: String,
+        /// Content class: password | token | mfa_secret | backup_code |
+        /// pii | credential | operational.
+        #[arg(long)]
+        class: String,
+        /// Why the content must be removed (recorded).
+        #[arg(long)]
+        reason: String,
+        #[arg(long)]
+        by: Option<String>,
+    },
 }
 
 /// Dispatch. Offline and synchronous — no Postgres connection.
@@ -163,6 +179,12 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
         Action::Approve { id, by } => write::approve(id, by),
         Action::Reject { id, reason, by } => write::reject(id, reason, by),
         Action::Apply { id, by } => write::apply(id, by),
+        Action::Redact {
+            id,
+            class,
+            reason,
+            by,
+        } => write::redact(id, class, reason, by),
     }
 }
 
