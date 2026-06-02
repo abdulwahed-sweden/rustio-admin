@@ -187,28 +187,38 @@ source, and anything precise reads the source directly.
 
 ## 3. The entry model
 
-### 3.1 Per-entry file — Markdown with YAML frontmatter
+### 3.1 Per-entry file — Markdown with TOML frontmatter
 
-Each entry is a Markdown file with a **standard YAML frontmatter** header
-and a prose body. This replaces the prior draft's bespoke
+Each entry is a Markdown file with a **TOML frontmatter** header (fenced by
+`+++`) and a prose body. This replaces the prior draft's bespoke
 HTML-comment metadata block (review #7): frontmatter is a boring, ubiquitous
 format with off-the-shelf parsers, diffs cleanly line-by-line, and renders
 natively in common viewers — consistent with "no magic," and far less
 fragile than parsing structured data out of a comment.
 
+**Refined from YAML to TOML (implementation finding).** The contract left
+metadata encoding to this design, and the original §3.1 draft picked YAML.
+Implementation showed YAML would add a **new dependency** (`serde_yaml`),
+whereas TOML is already the project's config language (`.rustio/ai.toml`)
+and `toml_edit` is **already a CLI dependency** — so TOML frontmatter costs
+**zero new dependencies** while keeping the exact property that motivated
+frontmatter (a boring, off-the-shelf parser, no bespoke format). This
+refines an encoding detail only; it touches **no invariant** (CLAUDE.md:
+"don't add dependencies unless they clearly earn their place").
+
 ```
----
-id: 01J9Z…                   # ULID; also the filename
-type: rejected               # see §3.2
-subjects: [auth, sessions]   # mechanical retrieval keys (§3.5)
-supersedes: null             # entry id this replaces, if any
-foundational: false          # exempt from recency demotion (§9); curated, rare (§3.6)
-sources: [pr#41]             # cite-or-hedge (DESIGN_CLOUD.md §10)
-author: ai:claude-code
-ratified_by: amir@team
-date: 2026-06-02             # apply (ratification) date — the render/show order key (§2.3)
-correlation_id: 0190…        # UUID v7; joins to rustio_admin_actions
----
++++
+id = "01J9Z…"                # ULID; also the filename
+type = "rejected"            # see §3.2
+subjects = ["auth", "sessions"]  # mechanical retrieval keys (§3.5)
+supersedes = ""              # entry id this replaces, if any ("" = none)
+foundational = false         # exempt from recency demotion (§9); curated, rare (§3.6)
+sources = ["pr#41"]          # cite-or-hedge (DESIGN_CLOUD.md §10)
+author = "ai:claude-code"
+ratified_by = "amir@team"
+date = "2026-06-02"          # apply (ratification) date — the render/show order key (§2.3)
+correlation_id = "0190…"     # UUID v7; joins to rustio_admin_actions
++++
 
 We considered LISTEN/NOTIFY for the job runner and rejected it because …
 ```
@@ -575,8 +585,9 @@ just this design.
 ## 14. Open questions for implementation PRs
 
 Narrow, and none may relax Invariants I–III. The review-driven revision
-**settled** several earlier opens — metadata encoding (YAML frontmatter,
-§3.1), staging location (`.rustio/memory/proposals/`, §2.4), entry id (ULID
+**settled** several earlier opens — metadata encoding (TOML frontmatter,
+§3.1; refined from YAML to avoid a new dependency), staging location
+(`.rustio/memory/proposals/`, §2.4), entry id (ULID
 filename + UUID v7 audit join, §2.3/§3.1), and the foundational
 second-approver gate (§3.6/§5). What remains:
 

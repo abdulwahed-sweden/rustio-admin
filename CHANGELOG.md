@@ -57,7 +57,23 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **`rustio memory` — project memory (CLOUD.md), read/derive slice.** First
+  implementation of `docs/design/DESIGN_CLOUD.md` / `DESIGN_CLOUD_IMPL.md`:
+  a per-entry store under `.rustio/memory/entries/<ulid>.md` (TOML
+  frontmatter + Markdown prose; status **derived**, never stored) and a
+  generated, human-readable `CLOUD.md` view. Three offline, read-only verbs:
+  `render` (regenerate CLOUD.md — the only writer of that file), `show`
+  (exact, mechanical filters: `--subject` / `--type` / `--active` / `--grep`
+  — no relevance ranking), and `verify` (CLOUD.md freshness + referential
+  integrity: dangling and cyclic `supersedes:` links are rejected, and a
+  one-entry-two-successors merge fork is surfaced as an open tension). No
+  new dependency — TOML frontmatter is parsed with the already-present
+  `toml_edit` (the design's §3.1 was refined from YAML to TOML for exactly
+  this reason). The governed write path (`remember` / `supersede` /
+  `redact`, approval, audit) reuses the `DESIGN_AI_ASSISTANT.md` lifecycle
+  and lands in a later slice. Dev-time tooling only — the running admin
+  never reads CLOUD.md.
 
 
 ## [0.26.0] — 2026-06-02
