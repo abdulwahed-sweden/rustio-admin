@@ -102,6 +102,15 @@ leaves the alpha track.
   additionally requires secret rotation and an out-of-band history rewrite
   (`git filter-repo` / BFG). Offline-first like the rest of the write path;
   the typed `memory_redacted` audit event ships with the DB-mirror slice.
+- **`rustio memory` — analytics & cache verbs (read-only, mechanical).**
+  `chain <id>` shows an entry's supersession lineage (what it supersedes,
+  transitively, and what supersedes it); `stats` reports counts by type and
+  status plus foundational / redacted counts and subject frequencies;
+  `promote-candidates` flags active entries revised ≥ N times (a mechanical
+  "consequential" signal) as ADR candidates — suggests only, promotion stays
+  a human action (§10); `index` rebuilds the regenerable
+  `.rustio/memory/index.json` mechanical cache (§2.5 — counts and links
+  only, never a source of truth). All counts, never content interpretation.
 
 
 ## [0.26.0] — 2026-06-02

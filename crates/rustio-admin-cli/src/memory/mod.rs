@@ -16,6 +16,8 @@ mod render;
 mod store;
 mod write;
 
+use std::collections::BTreeMap;
+
 use clap::Subcommand;
 use console::style;
 
@@ -138,6 +140,23 @@ pub(crate) enum Action {
         #[arg(long)]
         by: Option<String>,
     },
+    /// Show an entry's supersession lineage — what it supersedes
+    /// (transitively) and what supersedes it.
+    Chain { id: String },
+    /// Mechanical counts: entries by type and status, foundational /
+    /// redacted counts, and subject frequencies. Counts, never content.
+    Stats,
+    /// Entries that look like ADR candidates by a mechanical signal
+    /// (revised at least `--min` times). Suggests only — promotion is a
+    /// human action that writes an ADR (§10).
+    PromoteCandidates {
+        /// Minimum supersession-chain depth to flag (default 2).
+        #[arg(long, default_value_t = 2)]
+        min: usize,
+    },
+    /// Rebuild the derived cache `.rustio/memory/index.json` (§2.5). A
+    /// regenerable mechanical cache, never a source of truth.
+    Index,
 }
 
 /// Dispatch. Offline and synchronous — no Postgres connection.
@@ -185,6 +204,10 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
             reason,
             by,
         } => write::redact(id, class, reason, by),
+        Action::Chain { id } => chain_cmd(&store, &id),
+        Action::Stats => stats_cmd(&store),
+        Action::PromoteCandidates { min } => promote_candidates_cmd(&store, min),
+        Action::Index => index_cmd(&store),
     }
 }
 
@@ -249,6 +272,119 @@ fn verify_cmd(store: &Store) -> Result<(), String> {
     println!(
         "{} CLOUD.md is fresh and entries are well-formed",
         style("ok").green().bold()
+    );
+    Ok(())
+}
+
+fn chain_cmd(store: &Store, query: &str) -> Result<(), String> {
+    let mem = Memory::build(store.load_entries()?)?;
+    let entry = mem.resolve(query)?;
+    let id = entry.id.clone();
+    println!(
+        "{}  {}  {}",
+        style(short(&id)).cyan(),
+        entry.date,
+        entry.entry_type.as_str()
+    );
+    let ancestors = mem.ancestors(&id);
+    if ancestors.is_empty() {
+        println!("    supersedes:     (nothing — original)");
+    } else {
+        let chain: Vec<&str> = ancestors.iter().map(|a| short(a)).collect();
+        println!("    supersedes:     {}", chain.join(" → "));
+    }
+    let successors = mem.successors(&id);
+    if successors.is_empty() {
+        println!("    superseded by:  (nothing — current)");
+    } else {
+        let succ: Vec<&str> = successors.iter().map(|s| short(s)).collect();
+        println!("    superseded by:  {}", succ.join(", "));
+    }
+    Ok(())
+}
+
+fn stats_cmd(store: &Store) -> Result<(), String> {
+    let mem = Memory::build(store.load_entries()?)?;
+    let total = mem.entries.len();
+    let (mut active, mut superseded, mut tension, mut foundational, mut redacted) = (0, 0, 0, 0, 0);
+    let mut by_type: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut subjects: BTreeMap<String, usize> = BTreeMap::new();
+    for e in &mem.entries {
+        *by_type.entry(e.entry_type.as_str()).or_default() += 1;
+        match mem.status_of(&e.id) {
+            Status::Active => active += 1,
+            Status::Superseded(_) => superseded += 1,
+            Status::Forked(_) => tension += 1,
+        }
+        if e.foundational {
+            foundational += 1;
+        }
+        if e.redacted {
+            redacted += 1;
+        }
+        for s in &e.subjects {
+            *subjects.entry(s.clone()).or_default() += 1;
+        }
+    }
+    println!("{}: {total}", style("entries").bold());
+    println!("  status:       {active} active · {superseded} superseded · {tension} open-tension");
+    println!("  foundational: {foundational}    redacted: {redacted}");
+    if !by_type.is_empty() {
+        let types: Vec<String> = by_type.iter().map(|(k, n)| format!("{k} {n}")).collect();
+        println!("  by type:      {}", types.join(" · "));
+    }
+    if !subjects.is_empty() {
+        let subs: Vec<String> = subjects.iter().map(|(k, n)| format!("{k} {n}")).collect();
+        println!("  subjects:     {}", subs.join(" · "));
+    }
+    Ok(())
+}
+
+fn promote_candidates_cmd(store: &Store, min: usize) -> Result<(), String> {
+    let mem = Memory::build(store.load_entries()?)?;
+    let mut shown = 0usize;
+    for e in &mem.entries {
+        // Only an active entry can graduate; depth = how many times the
+        // decision has been revised (a mechanical "consequential" signal).
+        if !matches!(mem.status_of(&e.id), Status::Active) {
+            continue;
+        }
+        let depth = mem.ancestors(&e.id).len();
+        if depth >= min {
+            println!(
+                "{}  {}  {}  (revised {depth}×)",
+                style(short(&e.id)).cyan(),
+                e.date,
+                e.entry_type.as_str()
+            );
+            println!("    {}", e.body.lines().next().unwrap_or(""));
+            shown += 1;
+        }
+    }
+    if shown == 0 {
+        println!(
+            "{}",
+            style(format!("no entries revised ≥ {min}× — nothing to suggest")).dim()
+        );
+    } else {
+        println!(
+            "\n{}",
+            style("promotion is a human action — write an ADR, then supersede the entry with a link (§10).").dim()
+        );
+    }
+    Ok(())
+}
+
+fn index_cmd(store: &Store) -> Result<(), String> {
+    let mem = Memory::build(store.load_entries()?)?;
+    let index = mem.build_index();
+    store.write_index(&index)?;
+    let n = index.entry_count;
+    println!(
+        "{} {} ({n} entr{})",
+        style("rebuilt").green().bold(),
+        store.index_path().display(),
+        if n == 1 { "y" } else { "ies" }
     );
     Ok(())
 }
