@@ -1,8 +1,8 @@
 [package]
 name = "rustio-admin-cli"
 # Tracks the workspace minor. Bundled template pins new projects to
-# `rustio-admin = "0.27.2"`. CI guards this in `.github/workflows/ci.yml`.
-version = "0.27.2"
+# `rustio-admin = "0.27.3"`. CI guards this in `.github/workflows/ci.yml`.
+version = "0.27.3"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -22,7 +22,7 @@ rustio-admin = { workspace = true }
 # generate` subcommand turns raw brand colors into a static tokens.css.
 # Runtime CSS is the generated file; the library does not depend on
 # this crate.
-rio-theme = { path = "../rio-theme", version = "0.27.2" }
+rio-theme = { path = "../rio-theme", version = "0.27.3" }
 
 # CLI surface
 clap      = { version = "4", features = ["derive"] }
