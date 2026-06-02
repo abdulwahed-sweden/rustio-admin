@@ -58,7 +58,16 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+- **Onboarding wizard reads clarity-first.** The interactive `rustio-admin
+  new` wizard now opens by saying *what it does* and *what you'll have at the
+  end* before the first prompt, prefaces each question (name / type /
+  database) with one calm line of *why it matters*, and confirms each
+  answered step with a sober `✓` (`DESIGN_ONBOARDING.md` §9.1 — previously not
+  emitted). Same three questions, same calm no-emoji tone and single divider;
+  clearer framing so a first-time developer never faces a prompt whose purpose
+  they have to guess. The PostgreSQL guidance now leads with *why* Postgres
+  (one database, by design). Behaviour, flags, and validation are unchanged.
 
 
 ## [0.27.0] — 2026-06-02

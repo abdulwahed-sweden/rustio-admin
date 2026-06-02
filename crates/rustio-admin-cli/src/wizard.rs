@@ -6,13 +6,21 @@
 //! the collected inputs back to the scaffold so a matching `.env`
 //! lands alongside the standard files.
 //!
+//! Voice (clarity-first, within `DESIGN_ONBOARDING.md`): the first
+//! screen says *what this is* and *what you'll have at the end* before any
+//! prompt; each question carries one calm line of *why it matters*; each
+//! answered step gets a sober `✓` confirmation (§9.1). Understanding
+//! before mechanics — a first-time reader should never face a prompt whose
+//! purpose they have to guess.
+//!
 //! Discipline:
 //!
 //! - Stdlib-only. No `dialoguer` / `indicatif` / `console`.
 //! - TTY-gated. Pipes, CI, and `--no-interactive` bypass entirely.
 //! - Project-type is recorded as intent only -- PR 1.5 turns it into
 //!   project-typed starter content (`DESIGN_ONBOARDING.md` §6).
-//! - No emojis, no hype, no banners beyond a single divider.
+//! - No emojis, no hype, no banners beyond a single divider. The `✓` is a
+//!   single sober Unicode mark (§9.1), never decoration.
 
 use std::io::{self, IsTerminal, Write};
 
@@ -25,13 +33,15 @@ pub(crate) const PROJECT_TYPES: &[&str] = &["custom", "clinic", "school", "inven
 /// prompt. Text-only -- `DESIGN_ONBOARDING.md` §4 forbids the CLI
 /// from shelling out to package managers.
 const POSTGRES_GUIDANCE: &str = "\
-RustIO uses PostgreSQL. Recommended version: PostgreSQL 16.
+RustIO is built on PostgreSQL — one database, by design (no SQLite fallback).
+If you don't have PostgreSQL 16 yet, install and start it:
 
   macOS    brew install postgresql@16 && brew services start postgresql@16
   Ubuntu   sudo apt install postgresql-16 && sudo systemctl start postgresql
   Windows  https://www.postgresql.org/download/windows/
 
-The wizard does not install PostgreSQL for you -- that is deliberate.";
+The wizard does not install PostgreSQL for you -- that is deliberate. You
+stay in control of your machine.";
 
 /// The inputs the wizard collects before handing off to the scaffold.
 pub(crate) struct WizardInput {
@@ -65,25 +75,32 @@ pub(crate) fn should_run(no_interactive: bool) -> bool {
 /// first prompt can offer it as a default the user just hits
 /// Enter to accept.
 pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
+    println!();
+    println!("Create a new RustIO project");
     println!("────────────────────────────────────────────────────────────");
-    println!("RustIO Project Wizard");
-    println!("────────────────────────────────────────────────────────────");
+    println!("Three short questions, then a ready-to-run admin application you");
+    println!("can migrate and launch in minutes — with authentication, an admin");
+    println!("panel, and an audit trail already wired in.");
+    println!();
+    println!("Press Enter to accept the default shown in [brackets]. Nothing is");
+    println!("written to disk until you've answered all three.");
     println!();
 
     let project_name = ask_project_name(suggested_name)?;
+    println!("  ✓ project    {project_name}");
+
     let project_type = ask_project_type()?;
+    println!("  ✓ type       {project_type}");
 
     println!();
     println!("{POSTGRES_GUIDANCE}");
     println!();
 
     let db_name = ask_db_name(&project_name)?;
-
+    println!("  ✓ database   {db_name}");
     println!();
-    println!("Summary");
-    println!("  project   {project_name}");
-    println!("  type      {project_type}");
-    println!("  database  {db_name}");
+
+    println!("That's everything. Creating your project now…");
     println!();
 
     Ok(WizardInput {
@@ -94,6 +111,8 @@ pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
 }
 
 fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
+    println!("Project name — names the new folder and the Cargo crate.");
+    println!("Letters, digits, '-' and '_'; must start with a letter.");
     loop {
         let prompt = match suggested {
             Some(s) => format!("Project name [{s}]: "),
@@ -118,6 +137,9 @@ fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
 
 fn ask_project_type() -> Result<String, String> {
     println!();
+    println!("Project type — what you're building. `custom` is a clean slate;");
+    println!("the others name a familiar starting point. You can change");
+    println!("direction at any time; this choice locks nothing in.");
     println!("Project type:");
     for (i, t) in PROJECT_TYPES.iter().enumerate() {
         println!("  {}) {t}", i + 1);
@@ -147,6 +169,9 @@ fn ask_project_type() -> Result<String, String> {
 }
 
 fn ask_db_name(project: &str) -> Result<String, String> {
+    println!("Database name — your local PostgreSQL database for development.");
+    println!("RustIO writes it into `.env` as DATABASE_URL; you create it with");
+    println!("`createdb` in the next steps.");
     let default = format!("{project}_dev");
     loop {
         let input = prompt_line(&format!("Database name [{default}]: "))?;
