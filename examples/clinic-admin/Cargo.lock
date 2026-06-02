@@ -1685,9 +1685,9 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin"
-version = "0.27.2"
+version = "0.27.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b6c7c719822c52efabaccb0e3aad2299dd31913c6c1455a02e7e2f53a3ebec3"
+checksum = "fad00fe090918bf2040648a2253a5bb2d4bcd74913098e0247403e40a8dc3448"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1721,9 +1721,9 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-macros"
-version = "0.27.2"
+version = "0.27.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "607933c1ecd341e43429afbe701196b9188b02c27d47ecd82319a9d31596f880"
+checksum = "023e636b27c5fb62f02cc60f90c1cd098a6726a763ba3daea545ba06a21d52e7"
 dependencies = [
  "proc-macro2",
  "quote",
