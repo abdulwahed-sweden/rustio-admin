@@ -31,6 +31,10 @@ cargo install rustio-admin-cli
 | `ai approve <id>` / `reject` / `apply` | Decide on / apply a proposal (`--as <email>` mirrors to the audit trail) |
 | `ai log`                               | Show the AI action record                                   |
 | `ai allow <cap>` / `deny <cap>`        | Move a capability between policy buckets (prints the diff)  |
+| `memory remember` / `supersede` / `redact` | Propose a project-memory entry — the *why* behind the project. Guide: [`memory.md`](./memory.md) |
+| `memory approve <id>` / `reject` / `apply` | Decide on / apply a memory proposal (`--as <email>` mirrors to the audit trail) |
+| `memory render` / `show` / `verify`    | Regenerate `CLOUD.md`, query entries, check freshness + tampering |
+| `memory chain` / `stats` / `promote-candidates` / `index` | Supersession lineage, counts, ADR candidates, rebuild the cache |
 | `override <template>`                  | Copy an embedded admin template to `./templates/`           |
 | `reload`                               | Watch the source tree and re-run `cargo run` on change      |
 | `test-init`                            | Generate a starter integration test at `tests/smoke.rs`     |
