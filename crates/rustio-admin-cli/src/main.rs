@@ -60,29 +60,27 @@ mod user;
 mod wizard;
 
 /// Welcome banner printed before clap's auto-generated `--help`
-/// command list. The Phase 1 surface promoted here is governed by
-/// `docs/design/DESIGN_ONBOARDING.md` §10 (Command-surface doctrine):
-/// promoted, never amputated -- the full command list still follows.
+/// command list. Clarity-first within `DESIGN_ONBOARDING.md` §10: it leads
+/// with *what RustIO is* (so a first-time reader understands before the
+/// command list), then promotes the Phase 1 "Start here" surface. The full
+/// command list still follows below — promoted, never amputated.
 const WELCOME_HELP: &str = "\
-Welcome to RustIO Admin
+RustIO Admin — a Postgres-first admin framework for Rust.
 
-Start a project:
+Describe your data as Rust structs and get a full admin panel, with
+authentication, sessions, password recovery, and an audit trail already
+built in. For clinics, schools, inventory, blogs — or anything custom.
 
-  rustio-admin new <project-name>
+Start here:
 
-You can build:
+  rustio-admin new <project-name>     # guided setup, then a ready-to-run app
 
-  - clinic systems
-  - school systems
-  - inventory systems
-  - blogs
-  - or custom projects
+New to RustIO?
 
-Helpful commands:
+  rustio-admin doctor                 # check your environment is ready
+  rustio-admin docs                   # find the documentation
 
-  rustio-admin doctor
-  rustio-admin docs
-
+Every command is listed below.
 ────────────────────────────────────────────────────────────\
 ";
 
