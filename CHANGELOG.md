@@ -68,6 +68,13 @@ leaves the alpha track.
   clearer framing so a first-time developer never faces a prompt whose purpose
   they have to guess. The PostgreSQL guidance now leads with *why* Postgres
   (one database, by design). Behaviour, flags, and validation are unchanged.
+- **Welcome banner leads with what RustIO is.** The `--help` / no-args banner
+  previously opened with "Welcome to RustIO Admin"; it now states up front
+  that RustIO is a *Postgres-first admin framework for Rust* and what you get
+  (an admin panel with auth, sessions, recovery, and audit built in) before
+  the **Start here** block (`DESIGN_ONBOARDING.md` §10.2) and the full command
+  list. Understanding before the command list; calm, no emoji, single
+  divider. No command added, removed, or reordered.
 
 
 ## [0.27.0] — 2026-06-02
