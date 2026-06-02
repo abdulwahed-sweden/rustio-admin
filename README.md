@@ -358,3 +358,47 @@ The two are different in scope — this project (`rustio-admin`) targets Postgre
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).
+
+
+## Support RustIO
+
+RustIO is an independent open-source project built and maintained over countless evenings, weekends, experiments, failures, lessons, and improvements.
+
+Its mission is simple:
+
+**Build systems quickly.
+Evolve them safely.
+Stay in control.**
+
+In a world where software changes faster than ever — and where AI can generate code in seconds — RustIO is built around a simple belief:
+
+You should never have to choose between speed and control.
+
+You should be able to move fast, benefit from modern tools, embrace AI where it helps, and still understand, maintain, and own your system years later.
+
+There is no company behind RustIO.
+
+No investors.
+
+No external funding.
+
+Every improvement — documentation, testing, tooling, reviews, maintenance, and long-term development — is funded by the time invested in the project itself.
+
+If RustIO has saved you time, helped your team, improved your work, or simply resonates with the way you believe software should be built, you can support its continued development.
+
+Your support helps fund:
+
+* Documentation and learning resources
+* Testing and quality improvements
+* Tooling and developer experience
+* Long-term maintenance and sustainability
+
+Support is appreciated, but never expected.
+
+RustIO will remain free and MIT-licensed regardless.
+
+Thank you for being part of the journey.
+
+**Ethereum · Polygon · Arbitrum · Base (ERC-20)**
+
+`0x3011BfD673a9D09f9761203A7fFCca757Af22587`
