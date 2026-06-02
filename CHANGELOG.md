@@ -59,7 +59,18 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+- **First-contact welcome answers "why RustIO is different".** The
+  `rustio-admin` welcome (shown on the bare command and `--help`) previously
+  led with *what* RustIO is; it now opens with the "Django Admin, for Rust"
+  mental model and a labelled **"Why RustIO is different"** block — authority
+  (who may do what, how sessions end, how access is recovered, what gets
+  recorded) is designed as one system, governed by checked-in contracts, not
+  bolted on — followed by a two-step **Start here** path (`new` → `cargo run`).
+  A first-time developer now grasps the differentiator in seconds, not after
+  reading the docs. Honest framing only — no "AI platform" claim (the
+  framework embeds no model; see README *Non-goals*). Banner text only; no
+  command, flag, or behaviour change.
 
 
 ## [0.27.1] — 2026-06-02

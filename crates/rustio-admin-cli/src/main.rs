@@ -65,20 +65,25 @@ mod wizard;
 /// command list), then promotes the Phase 1 "Start here" surface. The full
 /// command list still follows below — promoted, never amputated.
 const WELCOME_HELP: &str = "\
-RustIO Admin — a Postgres-first admin framework for Rust.
+RustIO Admin — a complete admin panel for Rust apps, built on PostgreSQL.
 
-Describe your data as Rust structs and get a full admin panel, with
-authentication, sessions, password recovery, and an audit trail already
-built in. For clinics, schools, inventory, blogs — or anything custom.
+The Rust answer to \"Django Admin\": describe your data as Rust structs and
+get the admin — list, create, edit, search, delete — with login, roles,
+password recovery, and a full audit trail already wired together.
 
-Start here:
+Why RustIO is different
+  Most admin tools treat CRUD as the product and bolt auth, recovery, and
+  audit on afterward. RustIO inverts that: authority — who may do what, how
+  sessions end, how access is recovered, what gets recorded — is designed as
+  ONE system, governed by checked-in contracts, not assembled from parts.
 
-  rustio-admin new <project-name>     # guided setup, then a ready-to-run app
+Start here
+  rustio-admin new <project>     guided setup → a ready-to-run app
+  cd <project> && cargo run      then sign in at http://127.0.0.1:8000/admin
 
-New to RustIO?
-
-  rustio-admin doctor                 # check your environment is ready
-  rustio-admin docs                   # find the documentation
+Helpful
+  rustio-admin doctor            is my environment ready?
+  rustio-admin docs              where the documentation lives
 
 Every command is listed below.
 ────────────────────────────────────────────────────────────\
