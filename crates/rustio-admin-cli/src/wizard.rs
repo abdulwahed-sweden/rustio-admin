@@ -86,18 +86,21 @@ pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
     println!("written to disk until you've answered all three.");
     println!();
 
+    // Each confirmation leads with `\n` so it terminates the prompt's line
+    // and always lands on its own line — whether the terminal echoed the
+    // user's Enter (interactive) or not (piped / scripted input).
     let project_name = ask_project_name(suggested_name)?;
-    println!("  ✓ project    {project_name}");
+    println!("\n  ✓ project    {project_name}");
 
     let project_type = ask_project_type()?;
-    println!("  ✓ type       {project_type}");
+    println!("\n  ✓ type       {project_type}");
 
     println!();
     println!("{POSTGRES_GUIDANCE}");
     println!();
 
     let db_name = ask_db_name(&project_name)?;
-    println!("  ✓ database   {db_name}");
+    println!("\n  ✓ database   {db_name}");
     println!();
 
     println!("That's everything. Creating your project now…");
