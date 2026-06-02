@@ -320,6 +320,12 @@ framework writes. A drift test in `audit::tests` asserts:
 Future SIEM integrations and analytics tooling tokenise these
 strings, so they are pre-normalised at the type level.
 
+CLI-emitted variants follow the same rules: the `rustio ai` verbs emit
+`ai_proposal_approved` / `_rejected` / `_applied`, and `rustio memory`
+redaction emits `memory_redacted` (recording the class of content removed,
+by whom, when — `DESIGN_CLOUD.md` §3). Each ships with its locked string
+from day one.
+
 The enum is `pub(crate)` in 0.4.0. Promotion to `pub` is planned
 for 0.5.x once the recovery flows have shaken out the variant
 set (R1 may add new ones). The breaking-change risk is low —

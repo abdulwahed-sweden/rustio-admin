@@ -567,6 +567,14 @@ pub enum AuditEvent {
     /// files. Same shape as [`Self::AiProposalApproved`];
     /// `metadata.files` lists the paths written.
     AiProposalApplied,
+    /// A developer applied a ratified `redact_memory` proposal via
+    /// `rustio-admin memory apply --as <email>`, excising prohibited
+    /// content from a project-memory entry. `model_name` is `"users"`;
+    /// `metadata` carries `proposal_id`, `entry_id`, and the redaction
+    /// `class`. The contract requires recording the class of content
+    /// removed, by whom, and when (`DESIGN_CLOUD.md` §3). Redaction cleans
+    /// the working tree only — not version-control history.
+    MemoryRedacted,
 }
 
 impl AuditEvent {
@@ -611,6 +619,7 @@ impl AuditEvent {
             Self::AiProposalApproved => "ai_proposal_approved",
             Self::AiProposalRejected => "ai_proposal_rejected",
             Self::AiProposalApplied => "ai_proposal_applied",
+            Self::MemoryRedacted => "memory_redacted",
         }
     }
 }
@@ -747,6 +756,7 @@ mod tests {
         AuditEvent::AiProposalApproved,
         AuditEvent::AiProposalRejected,
         AuditEvent::AiProposalApplied,
+        AuditEvent::MemoryRedacted,
     ];
 
     /// Drift test (doctrine 18): every variant's `as_str()` is
@@ -857,6 +867,7 @@ mod tests {
             AuditEvent::AiProposalApplied.as_str(),
             "ai_proposal_applied"
         );
+        assert_eq!(AuditEvent::MemoryRedacted.as_str(), "memory_redacted");
     }
 
     /// `ActionType` and `AuditEvent` are intentionally separate

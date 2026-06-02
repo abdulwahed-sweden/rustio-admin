@@ -111,6 +111,17 @@ leaves the alpha track.
   a human action (§10); `index` rebuilds the regenerable
   `.rustio/memory/index.json` mechanical cache (§2.5 — counts and links
   only, never a source of truth). All counts, never content interpretation.
+- **`rustio memory` — DB-backed identity + audit mirror (`--as`).**
+  `approve` / `reject` / `apply` gain `--as <email>` (mutually exclusive
+  with `--by`): the email is authenticated against `rustio_users` (active,
+  role ≥ the policy's `approver_role`, via the shared identity resolver `ai`
+  uses) and the decision is mirrored into `rustio_admin_actions` — reusing
+  the `ai_proposal_approved` / `_rejected` / `_applied` events for
+  write/supersede, and a **new typed `memory_redacted`** `AuditEvent` for
+  redaction (records the class removed, by whom, when — `DESIGN_CLOUD.md`
+  §3). Identity resolution is shared with `rustio ai` (one pipeline); the
+  audit phrasing and event are memory-specific. `--by` stays the offline
+  default. Completes audit-by-default for project memory.
 
 
 ## [0.26.0] — 2026-06-02

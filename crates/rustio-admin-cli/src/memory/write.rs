@@ -11,16 +11,23 @@
 //! its `metadata` and the injected apply action builds the entry file and
 //! re-renders `CLOUD.md`.
 //!
-//! Offline-first: identity comes from `--by`; the local `log.jsonl` is the
-//! record. DB-backed identity + audit mirroring (reusing the
-//! `ai_proposal_*` events) is a later slice, exactly as `rustio ai` shipped.
+//! Identity: `--by` records an offline approver (the local `log.jsonl` is
+//! the record); `--as <email>` authenticates against the DB (active user,
+//! role ≥ the policy's `approver_role`, via the shared
+//! [`ai::resolve_approver`]) and mirrors the decision into
+//! `rustio_admin_actions` — reusing the `ai_proposal_*` events for
+//! write/supersede and the typed `memory_redacted` event for redaction
+//! (`DESIGN_CLOUD_IMPL.md` §6).
 
 use std::path::Path;
 
 use console::style;
 use serde::{Deserialize, Serialize};
 
+use rustio_admin::admin::audit::{record, ActionType, AuditEvent, LogEntry as AuditLogEntry};
 use rustio_admin::auth::emergency::fresh_correlation_id;
+use rustio_admin::auth::StoredUser;
+use rustio_admin::Db;
 
 use crate::ai::{self, POLICY_PATH};
 use crate::proposal::{self, Proposal, Store as ProposalStore};
@@ -103,10 +110,56 @@ pub(crate) fn pending(by: Option<String>) -> Result<(), String> {
     pending_at(Path::new("."))
 }
 
-/// `rustio memory approve` — record one approval.
-pub(crate) fn approve(id: String, by: Option<String>) -> Result<(), String> {
-    let store = ProposalStore::new(".", SUBDIR);
-    let p = proposal::do_approve(&store, &id, ai::whoami(by), "rustio memory apply")?;
+/// `rustio memory approve` — record one approval. `--by` is offline;
+/// `--as <email>` authenticates against the DB and mirrors to the audit
+/// trail.
+pub(crate) fn approve(
+    id: String,
+    by: Option<String>,
+    as_user: Option<String>,
+) -> Result<(), String> {
+    match as_user {
+        Some(email) => approve_db(Path::new("."), &id, &email),
+        None => {
+            let store = ProposalStore::new(".", SUBDIR);
+            let p = proposal::do_approve(&store, &id, ai::whoami(by), "rustio memory apply")?;
+            print_approved(&p, None);
+            Ok(())
+        }
+    }
+}
+
+/// `rustio memory reject` — decline a proposal, keeping the record.
+pub(crate) fn reject(
+    id: String,
+    reason: String,
+    by: Option<String>,
+    as_user: Option<String>,
+) -> Result<(), String> {
+    match as_user {
+        Some(email) => reject_db(Path::new("."), &id, &reason, &email),
+        None => {
+            let store = ProposalStore::new(".", SUBDIR);
+            let p = proposal::do_reject(&store, &id, &reason, ai::whoami(by))?;
+            println!(
+                "{} memory proposal {} rejected",
+                style("ok").yellow(),
+                p.short()
+            );
+            Ok(())
+        }
+    }
+}
+
+/// `rustio memory apply` — materialise an approved entry and re-render.
+pub(crate) fn apply(id: String, by: Option<String>, as_user: Option<String>) -> Result<(), String> {
+    match as_user {
+        Some(email) => apply_db(Path::new("."), &id, &email),
+        None => apply_at(Path::new("."), id, by),
+    }
+}
+
+fn print_approved(p: &Proposal, corr: Option<&str>) {
     if p.state == proposal::State::Approved {
         println!(
             "{} memory proposal {} approved — apply with `rustio memory apply {}`",
@@ -123,24 +176,9 @@ pub(crate) fn approve(id: String, by: Option<String>) -> Result<(), String> {
             p.required_approvals
         );
     }
-    Ok(())
-}
-
-/// `rustio memory reject` — decline a proposal, keeping the record.
-pub(crate) fn reject(id: String, reason: String, by: Option<String>) -> Result<(), String> {
-    let store = ProposalStore::new(".", SUBDIR);
-    let p = proposal::do_reject(&store, &id, &reason, ai::whoami(by))?;
-    println!(
-        "{} memory proposal {} rejected",
-        style("ok").yellow(),
-        p.short()
-    );
-    Ok(())
-}
-
-/// `rustio memory apply` — materialise an approved entry and re-render.
-pub(crate) fn apply(id: String, by: Option<String>) -> Result<(), String> {
-    apply_at(Path::new("."), id, by)
+    if let Some(c) = corr {
+        println!("  audit: rustio_admin_actions row written (correlation {c})");
+    }
 }
 
 // ---- Root-parameterised core (testable against a temp directory) ---------
@@ -225,51 +263,223 @@ fn pending_at(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn apply_at(root: &Path, id: String, by: Option<String>) -> Result<(), String> {
-    let store = ProposalStore::new(root, SUBDIR);
-    let actor = ai::whoami(by);
-    let root_owned = root.to_path_buf();
-    let act = actor.clone();
-    let (p, _written) = proposal::do_apply_with(
-        &store,
-        &id,
-        actor,
-        "rustio memory approve",
-        |p, apply_root| {
-            // Redaction edits an existing entry in place; everything else
-            // materialises a new one (§3.4).
-            if p.capability == "redact_memory" {
-                redact_materialize(p, apply_root, &act)
-            } else {
-                materialize(p, apply_root, &act)
-            }
-        },
-    )?;
+/// The injected apply action, shared by the offline and DB paths.
+/// Redaction edits an existing entry in place; everything else materialises
+/// a new one (§3.4).
+fn apply_action(p: &Proposal, root: &Path, actor: &str) -> Result<Vec<String>, String> {
+    if p.capability == "redact_memory" {
+        redact_materialize(p, root, actor)
+    } else {
+        materialize(p, root, actor)
+    }
+}
 
-    // Re-render the human view from the entry set (§2.6).
-    let count = render::write_view(&EntryStore::new(root_owned))?;
+/// Print the outcome of an apply, including the redaction history-scrub
+/// warning (DESIGN_CLOUD.md §3) and the optional audit correlation id.
+fn print_apply_result(p: &Proposal, count: usize, corr: Option<&str>) {
+    let plural = if count == 1 { "y" } else { "ies" };
     if p.capability == "redact_memory" {
         println!(
-            "{} memory entry redacted; CLOUD.md re-rendered ({} entr{})",
-            style("ok").green().bold(),
-            count,
-            if count == 1 { "y" } else { "ies" }
+            "{} memory entry redacted; CLOUD.md re-rendered ({count} entr{plural})",
+            style("ok").green().bold()
         );
-        // The contract's honesty (DESIGN_CLOUD.md §3): redaction is not
-        // history scrubbing.
         println!(
             "{} redaction cleans the working tree only — the prohibited content remains in git history.\n  A genuinely leaked secret additionally requires:\n    1. rotating / invalidating the secret, and\n    2. rewriting history across all clones (git filter-repo / BFG).",
             style("warning:").yellow().bold()
         );
     } else {
         println!(
-            "{} memory entry {} applied; CLOUD.md re-rendered ({} entr{})",
+            "{} memory entry {} applied; CLOUD.md re-rendered ({count} entr{plural})",
             style("ok").green().bold(),
-            short(&p.id),
-            count,
-            if count == 1 { "y" } else { "ies" }
+            short(&p.id)
         );
     }
+    if let Some(c) = corr {
+        println!("  audit: rustio_admin_actions row written (correlation {c})");
+    }
+}
+
+fn apply_at(root: &Path, id: String, by: Option<String>) -> Result<(), String> {
+    let store = ProposalStore::new(root, SUBDIR);
+    let actor = ai::whoami(by);
+    let act = actor.clone();
+    let (p, _written) =
+        proposal::do_apply_with(&store, &id, actor, "rustio memory approve", |p, r| {
+            apply_action(p, r, &act)
+        })?;
+    let count = render::write_view(&EntryStore::new(root))?;
+    print_apply_result(&p, count, None);
+    Ok(())
+}
+
+// ---- DB-backed identity + audit mirror (`--as`) --------------------------
+
+/// Write one mirrored row into `rustio_admin_actions`, attributed to the
+/// acting user, with the memory proposal in `metadata`. Returns the
+/// correlation id. Identity resolution is shared with `ai`
+/// ([`ai::resolve_approver`]); only the audit phrasing + event differ.
+async fn mirror(
+    db: &Db,
+    user: &StoredUser,
+    p: &Proposal,
+    event: AuditEvent,
+    action: &str,
+    extra: serde_json::Value,
+) -> Result<String, String> {
+    let correlation_id = fresh_correlation_id();
+    let mut md = serde_json::Map::new();
+    md.insert("proposal_id".into(), p.id.clone().into());
+    md.insert("capability".into(), p.capability.clone().into());
+    md.insert("title".into(), p.title.clone().into());
+    md.insert("action".into(), action.to_string().into());
+    if let serde_json::Value::Object(extra) = extra {
+        for (k, v) in extra {
+            md.insert(k, v);
+        }
+    }
+    let summary = format!("memory proposal {} {}: {}", p.short(), action, p.title);
+    let entry = AuditLogEntry {
+        user_id: user.id,
+        action_type: ActionType::Update,
+        model_name: "users",
+        object_id: user.id,
+        ip_address: None,
+        summary,
+        correlation_id: Some(&correlation_id),
+        session_id: None,
+        metadata: Some(serde_json::Value::Object(md)),
+        actor_user_id: None,
+        event: Some(event),
+    };
+    record(db, entry)
+        .await
+        .map_err(|e| format!("audit record failed: {e}"))?;
+    Ok(correlation_id)
+}
+
+fn approve_db(root: &Path, id: &str, email: &str) -> Result<(), String> {
+    let policy = ai::load_policy(&root.join(POLICY_PATH))?;
+    let store = ProposalStore::new(root, SUBDIR);
+    let mut captured: Option<(Proposal, String)> = None;
+    crate::tokio_run(async {
+        let db = crate::db().await?;
+        let user = ai::resolve_approver(&db, email, &policy).await?;
+        let p = proposal::do_approve(&store, id, user.email.clone(), "rustio memory apply")?;
+        let extra = serde_json::json!({
+            "approvals": p.distinct_approvals(),
+            "required_approvals": p.required_approvals,
+            "state": proposal::state_label(p.state),
+        });
+        let corr = mirror(
+            &db,
+            &user,
+            &p,
+            AuditEvent::AiProposalApproved,
+            "approved",
+            extra,
+        )
+        .await
+        .map_err(|e| {
+            format!(
+                "proposal {} is now {} locally, but the audit mirror failed: {e}",
+                p.short(),
+                proposal::state_label(p.state)
+            )
+        })?;
+        captured = Some((p, corr));
+        Ok(())
+    })?;
+    let (p, corr) = captured.expect("set on success");
+    print_approved(&p, Some(&corr));
+    Ok(())
+}
+
+fn reject_db(root: &Path, id: &str, reason: &str, email: &str) -> Result<(), String> {
+    let policy = ai::load_policy(&root.join(POLICY_PATH))?;
+    let store = ProposalStore::new(root, SUBDIR);
+    let mut captured: Option<(Proposal, String)> = None;
+    crate::tokio_run(async {
+        let db = crate::db().await?;
+        let user = ai::resolve_approver(&db, email, &policy).await?;
+        let p = proposal::do_reject(&store, id, reason, user.email.clone())?;
+        let extra = serde_json::json!({ "reason": reason });
+        let corr = mirror(
+            &db,
+            &user,
+            &p,
+            AuditEvent::AiProposalRejected,
+            "rejected",
+            extra,
+        )
+        .await
+        .map_err(|e| {
+            format!(
+                "proposal {} is now rejected locally, but the audit mirror failed: {e}",
+                p.short()
+            )
+        })?;
+        captured = Some((p, corr));
+        Ok(())
+    })?;
+    let (p, corr) = captured.expect("set on success");
+    println!(
+        "{} memory proposal {} rejected (audit {corr})",
+        style("ok").yellow(),
+        p.short()
+    );
+    Ok(())
+}
+
+fn apply_db(root: &Path, id: &str, email: &str) -> Result<(), String> {
+    let policy = ai::load_policy(&root.join(POLICY_PATH))?;
+    let store = ProposalStore::new(root, SUBDIR);
+    let mut captured: Option<(Proposal, usize, String)> = None;
+    crate::tokio_run(async {
+        let db = crate::db().await?;
+        let user = ai::resolve_approver(&db, email, &policy).await?;
+        let act = user.email.clone();
+        let (p, _written) = proposal::do_apply_with(
+            &store,
+            id,
+            user.email.clone(),
+            "rustio memory approve",
+            |p, r| apply_action(p, r, &act),
+        )?;
+        let count = render::write_view(&EntryStore::new(root))?;
+        // write/supersede reuse ai_proposal_applied; redaction is its own
+        // typed event recording the class removed (DESIGN_CLOUD.md §6, §3).
+        let (event, extra) = if p.capability == "redact_memory" {
+            let field = |k: &str| {
+                p.metadata
+                    .as_ref()
+                    .and_then(|m| m.get(k))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string()
+            };
+            (
+                AuditEvent::MemoryRedacted,
+                serde_json::json!({ "entry_id": field("target"), "class": field("class") }),
+            )
+        } else {
+            (
+                AuditEvent::AiProposalApplied,
+                serde_json::json!({ "entry_id": p.id, "entry_count": count }),
+            )
+        };
+        let corr = mirror(&db, &user, &p, event, "applied", extra)
+            .await
+            .map_err(|e| {
+                format!(
+                    "proposal {} is now applied locally, but the audit mirror failed: {e}",
+                    p.short()
+                )
+            })?;
+        captured = Some((p, count, corr));
+        Ok(())
+    })?;
+    let (p, count, corr) = captured.expect("set on success");
+    print_apply_result(&p, count, Some(&corr));
     Ok(())
 }
 
