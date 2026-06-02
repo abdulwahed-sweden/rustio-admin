@@ -235,18 +235,41 @@ fn apply_at(root: &Path, id: String, by: Option<String>) -> Result<(), String> {
         &id,
         actor,
         "rustio memory approve",
-        |p, apply_root| materialize(p, apply_root, &act),
+        |p, apply_root| {
+            // Redaction edits an existing entry in place; everything else
+            // materialises a new one (§3.4).
+            if p.capability == "redact_memory" {
+                redact_materialize(p, apply_root, &act)
+            } else {
+                materialize(p, apply_root, &act)
+            }
+        },
     )?;
 
-    // Re-render the human view from the (now larger) entry set (§2.6).
+    // Re-render the human view from the entry set (§2.6).
     let count = render::write_view(&EntryStore::new(root_owned))?;
-    println!(
-        "{} memory entry {} applied; CLOUD.md re-rendered ({} entr{})",
-        style("ok").green().bold(),
-        short(&p.id),
-        count,
-        if count == 1 { "y" } else { "ies" }
-    );
+    if p.capability == "redact_memory" {
+        println!(
+            "{} memory entry redacted; CLOUD.md re-rendered ({} entr{})",
+            style("ok").green().bold(),
+            count,
+            if count == 1 { "y" } else { "ies" }
+        );
+        // The contract's honesty (DESIGN_CLOUD.md §3): redaction is not
+        // history scrubbing.
+        println!(
+            "{} redaction cleans the working tree only — the prohibited content remains in git history.\n  A genuinely leaked secret additionally requires:\n    1. rotating / invalidating the secret, and\n    2. rewriting history across all clones (git filter-repo / BFG).",
+            style("warning:").yellow().bold()
+        );
+    } else {
+        println!(
+            "{} memory entry {} applied; CLOUD.md re-rendered ({} entr{})",
+            style("ok").green().bold(),
+            short(&p.id),
+            count,
+            if count == 1 { "y" } else { "ies" }
+        );
+    }
     Ok(())
 }
 
@@ -278,6 +301,7 @@ fn materialize(p: &Proposal, root: &Path, approver: &str) -> Result<Vec<String>,
         subjects: draft.subjects,
         supersedes: draft.supersedes,
         foundational: draft.foundational,
+        redacted: false,
         sources: draft.sources,
         author: draft.author,
         ratified_by: approver.to_string(),
@@ -292,6 +316,139 @@ fn materialize(p: &Proposal, root: &Path, approver: &str) -> Result<Vec<String>,
     std::fs::write(&path, entry.to_file_string())
         .map_err(|e| format!("could not write {}: {e}", path.display()))?;
     Ok(vec![format!(".rustio/memory/entries/{}.md", entry.id)])
+}
+
+// ---- Redaction (the bounded append-only exception, §3.4) -----------------
+
+/// The redaction class taxonomy, aligned with the framework's existing
+/// redaction helpers (`admin/redact.rs` + `filters.rs::mask_pii`) rather
+/// than a parallel vocabulary.
+const REDACTION_CLASSES: &[&str] = &[
+    "password",
+    "token",
+    "mfa_secret",
+    "backup_code",
+    "pii",
+    "credential",
+    "operational",
+];
+
+/// The redaction request, carried on a `redact_memory` proposal's metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RedactDraft {
+    target: String,
+    class: String,
+    reason: String,
+}
+
+/// `rustio memory redact` — propose removing prohibited content from an
+/// existing entry. Two approvers required (§5).
+pub(crate) fn redact(
+    target: String,
+    class: String,
+    reason: String,
+    by: Option<String>,
+) -> Result<(), String> {
+    redact_at(Path::new("."), target, class, reason, by)
+}
+
+fn redact_at(
+    root: &Path,
+    target: String,
+    class: String,
+    reason: String,
+    by: Option<String>,
+) -> Result<(), String> {
+    if !REDACTION_CLASSES.contains(&class.as_str()) {
+        return Err(format!(
+            "unknown redaction class {class:?} (expected one of: {})",
+            REDACTION_CLASSES.join(", ")
+        ));
+    }
+    if reason.trim().is_empty() {
+        return Err("a redaction needs a --reason".to_string());
+    }
+    let entries_dir = root.join(".rustio").join("memory").join("entries");
+    if !entries_dir.join(format!("{target}.md")).exists() {
+        return Err(format!(
+            "cannot redact unknown entry {target:?} — no such entry file"
+        ));
+    }
+
+    let actor = ai::whoami(by);
+    let policy = ai::load_policy(&root.join(POLICY_PATH))?;
+    let store = ProposalStore::new(root, SUBDIR);
+    let draft = RedactDraft {
+        target: target.clone(),
+        class: class.clone(),
+        reason,
+    };
+    let metadata =
+        serde_json::to_value(&draft).map_err(|e| format!("could not encode redaction: {e}"))?;
+    let title = format!("redact {} from entry {}", class, short(&target));
+
+    // Floor of 2 enforces the two-approver rule even if the policy file is
+    // edited to drop `redact_memory` from `second_approver_for`.
+    let p = proposal::do_propose_meta(
+        &store,
+        &policy,
+        "redact_memory",
+        &title,
+        None,
+        Vec::new(),
+        Some(metadata),
+        2,
+        actor,
+    )?;
+    println!(
+        "{} redaction proposal {} created — needs {} approvers:\n  rustio memory approve {} --by <name>",
+        style("rustio memory:").bold(),
+        p.short(),
+        p.required_approvals,
+        p.short()
+    );
+    Ok(())
+}
+
+/// The injected apply action for `redact_memory`: replace the target
+/// entry's body with a recorded marker and set its `redacted` flag, leaving
+/// the rest of the frontmatter intact. The single in-place edit a ratified
+/// memory operation may perform (§3.4, §11).
+fn redact_materialize(p: &Proposal, root: &Path, approver: &str) -> Result<Vec<String>, String> {
+    let draft: RedactDraft = p
+        .metadata
+        .clone()
+        .ok_or_else(|| "redaction proposal has no metadata".to_string())
+        .and_then(|v| {
+            serde_json::from_value(v).map_err(|e| format!("malformed redaction metadata: {e}"))
+        })?;
+
+    let entries_dir = root.join(".rustio").join("memory").join("entries");
+    let path = entries_dir.join(format!("{}.md", draft.target));
+    if !path.exists() {
+        return Err(format!(
+            "cannot redact unknown entry {:?} — no such entry file",
+            draft.target
+        ));
+    }
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|e| format!("could not read {}: {e}", path.display()))?;
+    let mut entry =
+        Entry::parse(&draft.target, &raw).map_err(|e| format!("{}: {e}", path.display()))?;
+
+    let correlation = fresh_correlation_id();
+    entry.body = format!(
+        "> [content removed: class={} · {} · by={} · audit={}]",
+        draft.class,
+        today(),
+        approver,
+        correlation
+    );
+    entry.redacted = true;
+
+    std::fs::write(&path, entry.to_file_string())
+        .map_err(|e| format!("could not write {}: {e}", path.display()))?;
+    Ok(vec![format!(".rustio/memory/entries/{}.md", draft.target)])
 }
 
 /// Today's date in the entry order-key format (`YYYY-MM-DD`, UTC).
@@ -423,5 +580,89 @@ mod tests {
         let t = title_from_body(&long);
         assert!(t.chars().count() <= 72, "len {}", t.chars().count());
         assert!(t.ends_with('…'));
+    }
+
+    /// Propose → approve → apply a normal entry, returning its id.
+    fn make_entry(root: &Path, body: &str) -> String {
+        propose_at(root, "write_memory", draft(body), Some("amir".into())).expect("propose");
+        let store = ProposalStore::new(root, SUBDIR);
+        let p = store.load_all().unwrap().into_iter().next().unwrap();
+        proposal::do_approve(&store, &p.id, "amir".into(), "x").expect("approve");
+        apply_at(root, p.id.clone(), Some("sara".into())).expect("apply");
+        p.id
+    }
+
+    #[test]
+    fn redaction_requires_two_approvers_then_excises_body() {
+        let root = temp_root();
+        let entry_id = make_entry(&root, "leaked AKIA-secret-do-not-keep");
+
+        redact_at(
+            &root,
+            entry_id.clone(),
+            "credential".into(),
+            "AWS key pasted by mistake".into(),
+            Some("amir".into()),
+        )
+        .expect("redact propose");
+
+        let store = ProposalStore::new(&root, SUBDIR);
+        let rp = store
+            .load_all()
+            .unwrap()
+            .into_iter()
+            .find(|p| p.capability == "redact_memory")
+            .expect("a redaction proposal");
+        assert_eq!(rp.required_approvals, 2, "redaction needs two approvers");
+
+        // One approval is not enough.
+        proposal::do_approve(&store, &rp.id, "amir".into(), "x").expect("approve 1");
+        assert!(apply_at(&root, rp.id.clone(), Some("amir".into())).is_err());
+
+        // Second distinct approver, then apply.
+        proposal::do_approve(&store, &rp.id, "sara".into(), "x").expect("approve 2");
+        apply_at(&root, rp.id, Some("lee".into())).expect("apply redaction");
+
+        // The prohibited content is gone from the working-tree file; the
+        // entry is marked redacted and CLOUD.md still verifies fresh.
+        let path = root
+            .join(".rustio/memory/entries")
+            .join(format!("{entry_id}.md"));
+        let raw = std::fs::read_to_string(&path).unwrap();
+        assert!(!raw.contains("AKIA-secret-do-not-keep"), "secret excised");
+        assert!(raw.contains("content removed: class=credential"));
+        let reparsed = Entry::parse(&entry_id, &raw).unwrap();
+        assert!(reparsed.redacted);
+        render::verify(&EntryStore::new(&root)).expect("CLOUD.md fresh after redaction");
+    }
+
+    #[test]
+    fn unknown_redaction_class_is_rejected() {
+        let root = temp_root();
+        let entry_id = make_entry(&root, "something");
+        let err = redact_at(
+            &root,
+            entry_id,
+            "selfie".into(),
+            "x".into(),
+            Some("amir".into()),
+        )
+        .unwrap_err();
+        assert!(err.contains("unknown redaction class"), "{err}");
+    }
+
+    #[test]
+    fn redact_unknown_entry_is_rejected_at_propose() {
+        let root = temp_root();
+        std::fs::create_dir_all(root.join(".rustio/memory/entries")).unwrap();
+        let err = redact_at(
+            &root,
+            "ghost".into(),
+            "token".into(),
+            "x".into(),
+            Some("amir".into()),
+        )
+        .unwrap_err();
+        assert!(err.contains("cannot redact unknown entry"), "{err}");
     }
 }
