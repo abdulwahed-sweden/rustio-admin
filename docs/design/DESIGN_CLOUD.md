@@ -19,7 +19,9 @@ criteria by which it is judged a success.
 
 Pull request review runs against this document, not only the diff.
 
-**Status: Approved — 2026-06-02 (Abdulwahed Mansour).** This is an
+**Status: Approved — 2026-06-02 (Abdulwahed Mansour).** Amended 2026-06-02
+(§3 redaction exception clarified: redaction is not history scrubbing —
+surfaced by the implementation design, `DESIGN_CLOUD_IMPL.md`). This is an
 approved **design contract.** It defines architecture, invariants, and
 governance. It deliberately does **not** define file format, syntax,
 command surface, storage location, or runtime behaviour — those are
@@ -166,7 +168,10 @@ write (§4.1). The line is bright: anything merely *wrong* or *outdated* is
 *prohibited*, not content that is *mistaken*. This exception exists solely
 to keep Invariant II from colliding with the absolute prohibition in §2.3
 — without it, the strongest invariant and the most absolute rule are
-mutually unsatisfiable.
+mutually unsatisfiable. **Redaction removes prohibited content going
+forward; it does not remove it from version-control history, which
+additionally requires secret rotation and an out-of-band history rewrite** —
+"redacted" does not mean "the secret is gone."
 
 ### Invariant III — Human-ratified
 
