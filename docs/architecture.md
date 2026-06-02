@@ -18,6 +18,8 @@ rustio-admin/
 
 The `ai` surface (`crates/rustio-admin-cli/src/ai.rs`) is a permissions / approval / audit layer over external AI coding assistants — see [`design/DESIGN_AI_ASSISTANT.md`](./design/DESIGN_AI_ASSISTANT.md). It is offline by default; its `--as <email>` path authenticates an approver and mirrors decisions into `rustio_admin_actions` via three typed `AuditEvent` variants (`ai_proposal_approved` / `_rejected` / `_applied`).
 
+**Project memory (CLOUD.md)** — the non-authoritative *why-layer* an external assistant reads for decision / rejected-idea / business-intent history — is governed by [`design/DESIGN_CLOUD.md`](./design/DESIGN_CLOUD.md). It is **subordinate to code forever, append-only, and human-ratified** (§3 invariants), and composes the `ai` lifecycle above: memory-write is a `needs_approval` capability moving through the same Suggested → Reviewed → Approved → Applied states. **Design-stage — the contract is approved; no runtime exists yet** (format, command surface, and retrieval are deferred to a later implementation design).
+
 `rio-theme` runs only at build/CLI time (`rustio-admin theme generate`); the runtime library never links it — see [`design/DESIGN_THEME.md`](./design/DESIGN_THEME.md).
 
 Workspace deps (`tokio`, `hyper`, `sqlx`, `minijinja`, `chrono`, `argon2`, …) are pinned at the workspace level for one-place version control. Project-side code never reaches for them transitively — the framework re-exports the surface it cares about (`Db`, `Router`, `Server`, `Templates`, etc.).

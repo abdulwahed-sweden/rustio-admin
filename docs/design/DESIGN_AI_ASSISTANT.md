@@ -362,3 +362,19 @@ If a deeper integration ever embeds model calls or schema planning inside
 the product, that integration ships in a separate `rustio-pro-*` crate,
 per the strategic-reset rules — never inside `rustio-admin`. This contract
 governs the **permission and approval primitives**, which are native.
+
+### 8.1 Related contract — project memory (CLOUD.md)
+
+`DESIGN_CLOUD.md` governs **project memory** — the non-authoritative
+*why-layer* (business intent, decisions, rejected ideas, accepted
+assumptions) an external assistant reads for context. It **reuses this
+contract's lifecycle unchanged**: writing a memory entry is an AI
+capability that defaults to the **`needs_approval`** bucket (§3) and moves
+through the same `Suggested → Reviewed → Approved → Applied` states (§4),
+where `Applied` *appends* the entry. The same native/external split
+applies — this framework governs the memory *artifact* (the
+human-ratification gate, the audit record, mechanical bookkeeping), while
+all *reasoning over* memory (relevance, retrieval) stays in the external
+assistant. The memory contract adds **no new trust primitive and no new
+runtime**; it is bound by its own Invariants (subordinate-to-code,
+append-only, human-ratified) and may never relax them.
