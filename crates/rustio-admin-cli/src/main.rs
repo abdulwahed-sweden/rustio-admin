@@ -49,6 +49,7 @@ mod memory;
 mod migrate;
 mod perm;
 mod progress;
+mod proposal;
 mod reload;
 mod scaffold;
 mod template_override;
