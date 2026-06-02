@@ -135,6 +135,37 @@ impl Entry {
             body,
         })
     }
+
+    /// Serialize the entry back to its on-disk form: a `+++`-fenced TOML
+    /// frontmatter header followed by the prose body. Built with
+    /// `toml_edit` so string escaping is always valid. Round-trips with
+    /// [`Entry::parse`].
+    pub(crate) fn to_file_string(&self) -> String {
+        use toml_edit::{value, Array, DocumentMut};
+
+        let mut subjects = Array::new();
+        for s in &self.subjects {
+            subjects.push(s.as_str());
+        }
+        let mut sources = Array::new();
+        for s in &self.sources {
+            sources.push(s.as_str());
+        }
+
+        let mut doc = DocumentMut::new();
+        doc["id"] = value(self.id.as_str());
+        doc["type"] = value(self.entry_type.as_str());
+        doc["subjects"] = value(subjects);
+        doc["supersedes"] = value(self.supersedes.as_deref().unwrap_or(""));
+        doc["foundational"] = value(self.foundational);
+        doc["sources"] = value(sources);
+        doc["author"] = value(self.author.as_str());
+        doc["ratified_by"] = value(self.ratified_by.as_str());
+        doc["date"] = value(self.date.as_str());
+        doc["correlation_id"] = value(self.correlation_id.as_str());
+
+        format!("+++\n{doc}+++\n\n{}\n", self.body)
+    }
 }
 
 /// The display handle: the last 8 characters of the id (ULIDs are ASCII,
@@ -304,5 +335,31 @@ mod tests {
     fn short_handle_is_suffix() {
         assert_eq!(short("01J9ZABCDEFGH"), "ABCDEFGH");
         assert_eq!(short("tiny"), "tiny");
+    }
+
+    #[test]
+    fn serialize_round_trips_through_parse() {
+        let original = Entry::parse("entry-1", &valid_raw("entry-1")).expect("parse");
+        let serialized = original.to_file_string();
+        let reparsed = Entry::parse("entry-1", &serialized).expect("reparse");
+        assert_eq!(reparsed.id, original.id);
+        assert_eq!(reparsed.entry_type, original.entry_type);
+        assert_eq!(reparsed.subjects, original.subjects);
+        assert_eq!(reparsed.supersedes, original.supersedes);
+        assert_eq!(reparsed.foundational, original.foundational);
+        assert_eq!(reparsed.sources, original.sources);
+        assert_eq!(reparsed.author, original.author);
+        assert_eq!(reparsed.ratified_by, original.ratified_by);
+        assert_eq!(reparsed.date, original.date);
+        assert_eq!(reparsed.correlation_id, original.correlation_id);
+        assert_eq!(reparsed.body, original.body);
+    }
+
+    #[test]
+    fn serialized_supersedes_round_trips_as_none() {
+        let e = Entry::parse("x", &valid_raw("x")).expect("parse");
+        // valid_raw has supersedes = "" → None; round-trip preserves None.
+        let reparsed = Entry::parse("x", &e.to_file_string()).expect("reparse");
+        assert_eq!(reparsed.supersedes, None);
     }
 }

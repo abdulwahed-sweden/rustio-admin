@@ -93,6 +93,17 @@ fn render_entry(e: &Entry, status: &Status) -> String {
     s
 }
 
+/// Build the memory model from `store`, render it, and write the result to
+/// the project-root `CLOUD.md`. Returns the entry count. This is the single
+/// writer of `CLOUD.md` (§2.1) — used by `render` and after every `apply`.
+pub(crate) fn write_view(store: &Store) -> Result<usize, String> {
+    let mem = Memory::build(store.load_entries()?)?;
+    let out = render(&mem);
+    let path = store.cloud_md_path();
+    std::fs::write(&path, &out).map_err(|e| format!("could not write {}: {e}", path.display()))?;
+    Ok(mem.entries.len())
+}
+
 /// Verify the store is well-formed and the on-disk `CLOUD.md` is fresh.
 /// Building the [`Memory`] catches dangling/cyclic links (§3.3); the
 /// byte-comparison catches a stale or missing view (§2.6).

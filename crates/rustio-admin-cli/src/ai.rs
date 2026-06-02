@@ -43,7 +43,7 @@ use crate::proposal::{
 
 /// `.rustio/ai.toml`, relative to the current working directory — the
 /// same `.rustio/` state directory the builder uses.
-const POLICY_PATH: &str = ".rustio/ai.toml";
+pub(crate) const POLICY_PATH: &str = ".rustio/ai.toml";
 
 /// The default policy file written by `rustio ai init`. Hand-authored
 /// (not serialised) so the shipped template carries comments. A test
@@ -75,6 +75,8 @@ needs_approval = [
   "modify_table",
   "edit_existing_code",
   "add_dependency",
+  "write_memory",
+  "supersede_memory",
 ]
 
 # The AI cannot do these at all until the rule is moved out of `blocked`.
@@ -322,6 +324,16 @@ const CATALOGUE: &[CapDef] = &[
         default: Bucket::NeedsApproval,
     },
     CapDef {
+        key: "write_memory",
+        label: "Write a project-memory entry",
+        default: Bucket::NeedsApproval,
+    },
+    CapDef {
+        key: "supersede_memory",
+        label: "Supersede a project-memory entry",
+        default: Bucket::NeedsApproval,
+    },
+    CapDef {
         key: "security_settings",
         label: "Security settings",
         default: Bucket::Blocked,
@@ -358,9 +370,11 @@ enum Source {
 }
 
 /// A resolved policy: the catalogue defaults with the file's overrides
-/// applied. Built once, then read by [`status`].
+/// applied. Built once, then read by [`status`]. Shared with `memory`,
+/// which reuses this one policy for its `write_memory` / `supersede_memory`
+/// capabilities (`DESIGN_CLOUD_IMPL.md` §5 — one policy, one pipeline).
 #[derive(Debug)]
-struct Policy {
+pub(crate) struct Policy {
     assistant: String,
     approver_role: String,
     second_approver_for: Vec<String>,
@@ -449,7 +463,7 @@ impl CapabilityPolicy for Policy {
 /// Load the policy from `path`, or fall back to coded defaults when the
 /// file is absent. A present-but-malformed file is a hard error — a
 /// broken policy must be visible, not silently replaced by defaults.
-fn load_policy(path: &Path) -> Result<Policy, String> {
+pub(crate) fn load_policy(path: &Path) -> Result<Policy, String> {
     let raw = match std::fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Policy::defaults()),
@@ -551,7 +565,7 @@ fn bucket_label(b: Bucket) -> &'static str {
 
 /// Resolve the acting identity: an explicit `--by`, else the OS user,
 /// else `"unknown"`.
-fn whoami(by: Option<String>) -> String {
+pub(crate) fn whoami(by: Option<String>) -> String {
     by.map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .or_else(|| std::env::var("USER").ok())
