@@ -59,6 +59,26 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added
+- **`clinic` project type now scaffolds a real clinic.** Choosing *Clinic*
+  in the `rustio-admin new` wizard (or `--preset clinic`) previously produced
+  the neutral empty scaffold; it now ships a working clinic admin out of the
+  box: a `Patient` model (name, date of birth, phone, email) and an
+  `Appointment` model (foreign key to patient, scheduled time, reason, and a
+  status with a CHECK constraint), their migrations **seeded with example
+  rows**, and a `src/main.rs` that already registers both models. The
+  developer reaches a non-empty, searchable clinic admin behind a login
+  without hand-editing a single file — value before mechanics
+  (`DESIGN_ONBOARDING.md` §6). The Next-steps block reflects the real
+  migrations ("creates the patients + appointments tables").
+
+### Fixed
+- **Content presets now substitute `{{name_title}}` in `src/main.rs`.** The
+  preset override pass replaced `{{name}}` and `{{type_phrase}}` but not
+  `{{name_title}}`, so a `blog`-preset project's `Admin::app_name(...)` was
+  left as the literal `{{name_title}}`. The new shared preset-layer path
+  substitutes all three, fixing `blog` and covering `clinic`.
+
 ### Changed
 - **First-contact welcome answers "why RustIO is different".** The
   `rustio-admin` welcome (shown on the bare command and `--help`) previously
