@@ -213,7 +213,7 @@ The library and the CLI ship as separate crates.
 
 ```toml
 [dependencies]
-rustio-admin = "0.27.2"
+rustio-admin = "0.27.3"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
