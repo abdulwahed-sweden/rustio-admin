@@ -17,10 +17,12 @@ Pull request review runs against this document *and* `DESIGN_CLOUD.md` —
 the contract is the higher authority; where this design and the contract
 ever disagree, the contract wins and this document is the bug.
 
-**Status: DRAFT — for review.** Not yet approved. No code exists. Naming,
-exact flags, and on-disk byte layout are proposals open to revision in
-review; the *shape* of the decisions is what this draft asks you to
-ratify.
+**Status: Approved — 2026-06-02 (Abdulwahed Mansour).** This design is
+approved as the basis for implementation. No code exists yet; naming, exact
+flags, and on-disk byte layout remain open to refinement in implementation
+PRs (§14), but the *shape* of the decisions is ratified and binding.
+Implementation PRs are reviewed against this document and the governing
+contract (`DESIGN_CLOUD.md`); none may relax Invariants I–III.
 
 > **Doctrine inheritance**
 > This design adds **no new runtime and no new trust primitive**
