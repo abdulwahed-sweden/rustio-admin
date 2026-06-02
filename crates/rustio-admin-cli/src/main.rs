@@ -45,6 +45,7 @@ mod doctor;
 mod doctor_email;
 mod emergency_ui;
 mod group;
+mod memory;
 mod migrate;
 mod perm;
 mod progress;
@@ -251,6 +252,16 @@ enum Command {
         action: ai::Action,
     },
 
+    /// Project memory (CLOUD.md). `render` regenerates the human-readable
+    /// CLOUD.md from the per-entry files; `show` lists entries with exact
+    /// filters; `verify` checks the view is fresh and the entries are
+    /// well-formed. Offline and read-only -- no AI, no database. See
+    /// `docs/design/DESIGN_CLOUD.md` and `DESIGN_CLOUD_IMPL.md`.
+    Memory {
+        #[command(subcommand)]
+        action: memory::Action,
+    },
+
     /// Copy an embedded admin template into the project's
     /// `templates/` directory so it can be edited. Pair with
     /// `RUSTIO_TEMPLATE_DIR=./templates` at runtime to make the
@@ -446,6 +457,7 @@ fn main() -> ExitCode {
         Command::TestInit { force, out } => test_init::run(force, &out),
         Command::Theme { action } => theme::run(action),
         Command::Ai { action } => ai::run(action),
+        Command::Memory { action } => memory::run(action),
         // Everything else opens a Postgres connection.
         other => tokio_run(async {
             match other {
@@ -461,7 +473,8 @@ fn main() -> ExitCode {
                 | Command::Reload
                 | Command::TestInit { .. }
                 | Command::Theme { .. }
-                | Command::Ai { .. } => unreachable!("handled above"),
+                | Command::Ai { .. }
+                | Command::Memory { .. } => unreachable!("handled above"),
                 Command::Migrate { action } => migrate::run(action).await,
                 Command::User { action } => user::run(action).await,
                 Command::Group { action } => group::run(action).await,
