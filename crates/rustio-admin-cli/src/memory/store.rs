@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
+use serde::Serialize;
+
 use super::entry::Entry;
 
 /// File-backed store rooted at a project directory. Parameterised by `root`
@@ -33,6 +35,23 @@ impl Store {
     /// The generated human view at the project root (§2.1).
     pub(crate) fn cloud_md_path(&self) -> PathBuf {
         self.root.join("CLOUD.md")
+    }
+
+    /// The derived cache path (§2.5).
+    pub(crate) fn index_path(&self) -> PathBuf {
+        self.root.join(".rustio").join("memory").join("index.json")
+    }
+
+    /// Write the derived index cache as pretty JSON.
+    pub(crate) fn write_index(&self, index: &MemoryIndex) -> Result<(), String> {
+        let path = self.index_path();
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("could not create {}: {e}", parent.display()))?;
+        }
+        let json = serde_json::to_string_pretty(index)
+            .map_err(|e| format!("could not encode index: {e}"))?;
+        fs::write(&path, json).map_err(|e| format!("could not write {}: {e}", path.display()))
     }
 
     /// Read and parse every `*.md` entry, sorted by `(date, id)` — the
@@ -132,6 +151,105 @@ impl Memory {
             Some(v) => Status::Forked(v.clone()),
         }
     }
+
+    /// Resolve a full id, a unique suffix, or a unique prefix to an entry —
+    /// mirrors how `proposal::Store` resolves handles.
+    pub(crate) fn resolve(&self, query: &str) -> Result<&Entry, String> {
+        let matches: Vec<&Entry> = self
+            .entries
+            .iter()
+            .filter(|e| e.id == query || e.id.ends_with(query) || e.id.starts_with(query))
+            .collect();
+        match matches.len() {
+            0 => Err(format!("no memory entry matches {query:?}")),
+            1 => Ok(matches[0]),
+            n => Err(format!("{n} entries match {query:?}; use a longer id")),
+        }
+    }
+
+    /// The entries that directly supersede `id` (its successors), sorted.
+    pub(crate) fn successors(&self, id: &str) -> Vec<String> {
+        self.superseded_by.get(id).cloned().unwrap_or_default()
+    }
+
+    /// The ancestors `id` transitively supersedes, nearest first. The graph
+    /// is acyclic (validated in [`Memory::build`]); the entry-count bound is
+    /// a defensive backstop.
+    pub(crate) fn ancestors(&self, id: &str) -> Vec<String> {
+        let by_id: BTreeMap<&str, &Entry> =
+            self.entries.iter().map(|e| (e.id.as_str(), e)).collect();
+        let mut out = Vec::new();
+        let mut cur = id.to_string();
+        while out.len() <= self.entries.len() {
+            match by_id.get(cur.as_str()).and_then(|e| e.supersedes.clone()) {
+                Some(parent) => {
+                    out.push(parent.clone());
+                    cur = parent;
+                }
+                None => break,
+            }
+        }
+        out
+    }
+
+    /// Build the regenerable mechanical cache (§2.5). Counts and links only
+    /// — no content interpretation. Never a source of truth.
+    pub(crate) fn build_index(&self) -> MemoryIndex {
+        let mut subjects: BTreeMap<String, usize> = BTreeMap::new();
+        let mut entries = Vec::with_capacity(self.entries.len());
+        for e in &self.entries {
+            for s in &e.subjects {
+                *subjects.entry(s.clone()).or_default() += 1;
+            }
+            let status = match self.status_of(&e.id) {
+                Status::Active => "active",
+                Status::Superseded(_) => "superseded",
+                Status::Forked(_) => "open-tension",
+            };
+            entries.push(IndexEntry {
+                id: e.id.clone(),
+                entry_type: e.entry_type.as_str().to_string(),
+                subjects: e.subjects.clone(),
+                supersedes: e.supersedes.clone(),
+                superseded_by: self.successors(&e.id),
+                status: status.to_string(),
+                foundational: e.foundational,
+                redacted: e.redacted,
+                date: e.date.clone(),
+            });
+        }
+        MemoryIndex {
+            generated_note: "regenerable mechanical cache — never a source of truth; rebuild with `rustio memory index`".to_string(),
+            entry_count: self.entries.len(),
+            subjects,
+            entries,
+        }
+    }
+}
+
+/// One entry's mechanical metadata in the derived index.
+#[derive(Debug, Serialize)]
+pub(crate) struct IndexEntry {
+    pub(crate) id: String,
+    #[serde(rename = "type")]
+    pub(crate) entry_type: String,
+    pub(crate) subjects: Vec<String>,
+    pub(crate) supersedes: Option<String>,
+    pub(crate) superseded_by: Vec<String>,
+    pub(crate) status: String,
+    pub(crate) foundational: bool,
+    pub(crate) redacted: bool,
+    pub(crate) date: String,
+}
+
+/// The derived cache written to `.rustio/memory/index.json` (§2.5).
+#[derive(Debug, Serialize)]
+pub(crate) struct MemoryIndex {
+    pub(crate) generated_note: String,
+    pub(crate) entry_count: usize,
+    /// Subject → number of entries carrying it (capture-time vocabulary aid).
+    pub(crate) subjects: BTreeMap<String, usize>,
+    pub(crate) entries: Vec<IndexEntry>,
 }
 
 /// Reject a cycle in the supersession graph. Each entry has at most one
@@ -259,5 +377,48 @@ mod tests {
         write_entry(&s, "bbb", "assumption", "2026-02-01", Some("aaa"));
         let err = memory(&s).unwrap_err();
         assert!(err.contains("cycle"), "{err}");
+    }
+
+    #[test]
+    fn ancestors_walk_the_supersession_chain() {
+        let s = temp_store();
+        write_entry(&s, "aaa", "decision", "2026-01-01", None);
+        write_entry(&s, "bbb", "decision", "2026-02-01", Some("aaa"));
+        write_entry(&s, "ccc", "decision", "2026-03-01", Some("bbb"));
+        let m = memory(&s).unwrap();
+        assert_eq!(
+            m.ancestors("ccc"),
+            vec!["bbb".to_string(), "aaa".to_string()]
+        );
+        assert_eq!(m.ancestors("aaa"), Vec::<String>::new());
+        assert_eq!(m.successors("aaa"), vec!["bbb".to_string()]);
+    }
+
+    #[test]
+    fn resolve_matches_suffix_and_rejects_ambiguity() {
+        let s = temp_store();
+        write_entry(&s, "abc", "decision", "2026-01-01", None);
+        write_entry(&s, "xbc", "decision", "2026-02-01", None);
+        let m = memory(&s).unwrap();
+        assert_eq!(m.resolve("abc").unwrap().id, "abc");
+        assert!(m.resolve("bc").is_err(), "ambiguous suffix should error");
+        assert!(m.resolve("zzz").is_err(), "no match should error");
+    }
+
+    #[test]
+    fn index_captures_status_and_subject_counts() {
+        let s = temp_store();
+        write_entry(&s, "aaa", "assumption", "2026-01-01", None);
+        write_entry(&s, "bbb", "assumption", "2026-02-01", Some("aaa"));
+        let m = memory(&s).unwrap();
+        let idx = m.build_index();
+        assert_eq!(idx.entry_count, 2);
+        assert_eq!(idx.subjects.get("core"), Some(&2));
+        let aaa = idx.entries.iter().find(|e| e.id == "aaa").unwrap();
+        assert_eq!(aaa.status, "superseded");
+        assert_eq!(aaa.superseded_by, vec!["bbb".to_string()]);
+        // Round-trips to disk.
+        s.write_index(&idx).expect("write index");
+        assert!(s.index_path().exists());
     }
 }
