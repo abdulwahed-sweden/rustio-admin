@@ -13,7 +13,8 @@ are reviewed against. Everything else lives in **archive**.
 User-facing entry points. Read these first.
 
 - [`getting-started.md`](getting-started.md) — from an empty
-  directory to a logged-in admin in under five minutes.
+  directory to a running admin with your own model: install, create a
+  project, add a model, sign in.
 - [`architecture.md`](architecture.md) — module map and how the
   library, macros, and CLI crates compose.
 - [`modeladmin.md`](modeladmin.md) — authoring guide for
