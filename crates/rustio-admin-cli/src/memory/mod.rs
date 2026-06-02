@@ -104,10 +104,14 @@ pub(crate) enum Action {
         by: Option<String>,
     },
     /// Approve a pending memory proposal (distinct approvers enforced).
+    /// `--by` records an offline approver; `--as <email>` authenticates
+    /// against the database and mirrors the decision to the audit trail.
     Approve {
         id: String,
         #[arg(long)]
         by: Option<String>,
+        #[arg(long = "as", value_name = "EMAIL", conflicts_with = "by")]
+        as_user: Option<String>,
     },
     /// Reject a memory proposal with a reason, keeping the record.
     Reject {
@@ -116,13 +120,18 @@ pub(crate) enum Action {
         reason: String,
         #[arg(long)]
         by: Option<String>,
+        #[arg(long = "as", value_name = "EMAIL", conflicts_with = "by")]
+        as_user: Option<String>,
     },
     /// Apply an approved memory proposal: write the entry file and
-    /// re-render CLOUD.md.
+    /// re-render CLOUD.md. `--as <email>` authenticates and mirrors to the
+    /// audit trail (redaction emits the `memory_redacted` event).
     Apply {
         id: String,
         #[arg(long)]
         by: Option<String>,
+        #[arg(long = "as", value_name = "EMAIL", conflicts_with = "by")]
+        as_user: Option<String>,
     },
     /// Propose redacting prohibited content (a secret / PII / etc.) from an
     /// existing entry. Two approvers required. Note: redaction cleans the
@@ -195,9 +204,14 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
             by,
         } => write::supersede(id, entry_type, subjects, foundational, sources, note, by),
         Action::Pending { by } => write::pending(by),
-        Action::Approve { id, by } => write::approve(id, by),
-        Action::Reject { id, reason, by } => write::reject(id, reason, by),
-        Action::Apply { id, by } => write::apply(id, by),
+        Action::Approve { id, by, as_user } => write::approve(id, by, as_user),
+        Action::Reject {
+            id,
+            reason,
+            by,
+            as_user,
+        } => write::reject(id, reason, by, as_user),
+        Action::Apply { id, by, as_user } => write::apply(id, by, as_user),
         Action::Redact {
             id,
             class,

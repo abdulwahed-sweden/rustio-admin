@@ -798,7 +798,11 @@ fn print_applied(p: &Proposal, written: &[String], correlation: Option<&str>) {
 /// via `--as` (the trust boundary is shell + DATABASE_URL access, as with
 /// the emergency-access CLI) and *authorised* against the users table —
 /// there is no password challenge in a CLI context.
-async fn resolve_approver(db: &Db, email: &str, policy: &Policy) -> Result<StoredUser, String> {
+pub(crate) async fn resolve_approver(
+    db: &Db,
+    email: &str,
+    policy: &Policy,
+) -> Result<StoredUser, String> {
     let user = auth::find_user_by_email(db, email)
         .await
         .map_err(|e| format!("user lookup failed: {e}"))?
