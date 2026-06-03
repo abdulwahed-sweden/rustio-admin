@@ -9,6 +9,8 @@
 use std::fs;
 use std::path::Path;
 
+use crate::style as sty;
+
 /// `(relative_target_path, template_body)` pairs. `target_path` is
 /// relative to the new project's root and creates parent directories
 /// on demand.
@@ -207,17 +209,88 @@ pub fn project_with_db(
 /// Workdir-parameterised variant -- `project()` calls this with
 /// `Path::new(".")`. Pulled out so unit tests can scaffold under
 /// a tempdir without changing the process working directory.
+/// Render the styled "created + next steps" block shared by both
+/// scaffold paths. `steps` is a list of `(command, annotation)` pairs;
+/// the command is bold, the annotation (already styled by the caller —
+/// a dim hint or a cyan URL) trails it. An empty annotation prints the
+/// command alone. Spacing and the divider live here so every scaffold
+/// ends with the same calm rhythm.
+fn print_created_and_next(
+    created_line: &str,
+    heading: &str,
+    steps: &[(String, String)],
+    note: Option<&str>,
+) {
+    println!();
+    println!("  {} {}", sty::check(), created_line);
+    println!();
+    println!("  {}", sty::divider());
+    println!();
+    println!("  {}", sty::heading(heading));
+    println!();
+    // Command on its own line (clean to copy), with any explanation on a
+    // dim line beneath it — so a beginner copies the command without
+    // trailing prose, and still sees what it does.
+    for (cmd, annot) in steps {
+        println!("    {}", sty::command(cmd));
+        if !annot.is_empty() {
+            println!("        {annot}");
+        }
+    }
+    if let Some(n) = note {
+        println!();
+        println!("  {}", sty::hint(n));
+    }
+    println!();
+}
+
+/// The shared "launch" steps. `db` is `Some(name)` on the wizard path
+/// (where the database name is known and `.env` is already written) and
+/// `None` on the bare `startproject` path (where the developer copies
+/// `.env.example` and sets the database themselves).
+fn launch_steps(name: &str, preset: &str, db: Option<&str>) -> Vec<(String, String)> {
+    let mut steps = vec![(format!("cd {name}"), String::new())];
+    match db {
+        Some(db) => steps.push((
+            format!("createdb {db}"),
+            sty::hint("create the local database"),
+        )),
+        None => steps.push((
+            "cp .env.example .env".to_string(),
+            sty::hint("then set DATABASE_URL and run `createdb`"),
+        )),
+    }
+    steps.push((
+        "rustio-admin migrate apply".to_string(),
+        sty::hint(migrate_hint(preset)),
+    ));
+    steps.push((
+        format!("rustio-admin user create --email admin@{name}.local --role administrator"),
+        sty::hint("your admin login"),
+    ));
+    steps.push((
+        "cargo run".to_string(),
+        format!(
+            "{} {}",
+            sty::hint("→"),
+            sty::url("http://127.0.0.1:8000/admin")
+        ),
+    ));
+    steps
+}
+
 fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Result<(), String> {
     let written = write_project_files(parent, name, preset, project_type)?;
-    println!("Created `{name}/` ({preset} preset) with {written} files.");
-    println!();
-    println!("Next steps:");
-    println!("  cd {name}");
-    println!("  cp .env.example .env       # safe local defaults; edit before production");
-    println!("  rustio-admin migrate apply # {}", migrate_hint(preset));
-    println!("  rustio-admin user create --email admin@{name}.local --role administrator");
-    println!(
-        "  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin + /admin/docs"
+    let created = format!(
+        "{}  {}",
+        sty::path(&format!("{name}/")),
+        sty::hint(&format!("· {written} files ({preset} preset)"))
+    );
+    print_created_and_next(
+        &created,
+        "Next — set up and launch:",
+        &launch_steps(name, preset, None),
+        None,
     );
     Ok(())
 }
@@ -234,23 +307,22 @@ fn project_with_db_in(
     let written = write_project_files(parent, name, preset, project_type)?;
     let project_root = parent.join(name);
     write_env_file(&project_root, db_name)?;
-    println!(
-        "Created `{name}/` ({preset} preset) with {} files (including .env).",
-        written + 1
+    let created = format!(
+        "{}  {}",
+        sty::path(&format!("{name}/")),
+        sty::hint(&format!(
+            "· {} files ({preset} preset, incl. .env)",
+            written + 1
+        ))
     );
-    println!();
-    println!("Next steps:");
-    println!("  cd {name}");
-    println!("  rustio-admin migrate apply # {}", migrate_hint(preset));
-    println!("  rustio-admin user create --email admin@{name}.local --role administrator");
-    println!(
-        "  cargo run                  # http://127.0.0.1:8000 (homepage) + /admin + /admin/docs"
+    // First-build expectation note — only on the wizard path, where the
+    // developer may not know a fresh Rust build takes minutes.
+    print_created_and_next(
+        &created,
+        "Next — create the database and launch:",
+        &launch_steps(name, preset, Some(db_name)),
+        Some("The first `cargo run` takes a few minutes — that's normal for a fresh Rust build."),
     );
-    println!();
-    // First-build expectation note. PR 1.4 / DESIGN_ONBOARDING.md §9
-    // -- only printed on the wizard path so script users (who know
-    // what to expect from `cargo build`) don't see it.
-    println!("Note: the first `cargo run` may take several minutes -- that is normal for a fresh Rust project.");
     Ok(())
 }
 

@@ -52,6 +52,7 @@ mod progress;
 mod proposal;
 mod reload;
 mod scaffold;
+mod style;
 mod template_override;
 mod test_init;
 mod theme;
@@ -116,7 +117,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     // ---- Beginner surface (promoted by the welcome banner) ----
-    /// Create a new project (friendly alias for `startproject`).
+    /// Create a new project — a short guided setup (start here).
     ///
     /// In an interactive terminal, a calm wizard collects the
     /// project name, project type, and database name, then writes
@@ -241,40 +242,45 @@ enum Command {
         open: bool,
     },
 
-    /// Curated `AdminTheme` palette presets. Subcommands print a
-    /// Rust snippet to stdout -- the operator pastes it into their
-    /// `Admin::new()` builder chain. The verb never touches
-    /// `main.rs` or any other project file.
+    /// Print a ready-to-paste colour/branding snippet for your admin.
+    ///
+    /// Curated `AdminTheme` palette presets. Subcommands print a Rust
+    /// snippet to stdout — you paste it into your `Admin::new()` builder
+    /// chain. The verb never touches `main.rs` or any other project file.
     Theme {
         #[command(subcommand)]
         action: theme::Action,
     },
 
-    /// AI assistant permissions. `status` shows what an AI coding
-    /// assistant may do here (Allowed / Needs approval / Blocked) by
-    /// reading `.rustio/ai.toml`; `init` writes a default policy. Offline
-    /// and read-only -- no AI is contacted, no database is opened. See
-    /// `docs/design/DESIGN_AI_ASSISTANT.md`.
+    /// Set what an external AI assistant may do here (RustIO runs no AI).
+    ///
+    /// `status` shows what an AI coding assistant may do (Allowed / Needs
+    /// approval / Blocked) by reading `.rustio/ai.toml`; `init` writes a
+    /// default policy. Offline and read-only — no AI is contacted, no
+    /// database is opened. See `docs/design/DESIGN_AI_ASSISTANT.md`.
     Ai {
         #[command(subcommand)]
         action: ai::Action,
     },
 
-    /// Project memory (CLOUD.md). `render` regenerates the human-readable
-    /// CLOUD.md from the per-entry files; `show` lists entries with exact
-    /// filters; `verify` checks the view is fresh and the entries are
-    /// well-formed. Offline and read-only -- no AI, no database. See
+    /// Manage project memory — the recorded "why" behind the project.
+    ///
+    /// CLOUD.md. `render` regenerates the human-readable CLOUD.md from the
+    /// per-entry files; `show` lists entries with exact filters; `verify`
+    /// checks the view is fresh and the entries are well-formed. Offline
+    /// and read-only — no AI, no database. See
     /// `docs/design/DESIGN_CLOUD.md` and `DESIGN_CLOUD_IMPL.md`.
     Memory {
         #[command(subcommand)]
         action: memory::Action,
     },
 
-    /// Copy an embedded admin template into the project's
-    /// `templates/` directory so it can be edited. Pair with
-    /// `RUSTIO_TEMPLATE_DIR=./templates` at runtime to make the
-    /// override take effect. With no arguments, lists every
-    /// available template name.
+    /// Copy a built-in admin page into your project so you can customise it.
+    ///
+    /// Copies an embedded admin template into the project's `templates/`
+    /// directory so it can be edited. Pair with
+    /// `RUSTIO_TEMPLATE_DIR=./templates` at runtime to make the override
+    /// take effect. With no arguments, lists every available template name.
     #[command(name = "override")]
     Override {
         /// Canonical template name (e.g. `admin/list.html`). Omit
@@ -292,16 +298,19 @@ enum Command {
         out: String,
     },
 
-    /// Watch the project's source tree and re-run `cargo run` on
+    /// Auto-rebuild and restart the app whenever you change a source file.
+    ///
+    /// Watches the project's source tree and re-runs `cargo run` on
     /// change. Thin wrapper around `cargo watch -x run`. Requires
     /// `cargo-watch` to be installed; the verb surfaces a friendly
     /// install message when it isn't.
     Reload,
 
-    /// Generate a starter integration test at `./<out>/smoke.rs`.
-    /// The test spawns the project binary, probes the bound port,
-    /// and asserts that `/admin/` redirects to `/admin/login` --
-    /// useful as a project's first CI check.
+    /// Generate a first integration test (a smoke check for CI).
+    ///
+    /// Generates a starter test at `./<out>/smoke.rs`. It spawns the
+    /// project binary, probes the bound port, and asserts that `/admin/`
+    /// redirects to `/admin/login` — useful as a project's first CI check.
     #[command(name = "test-init")]
     TestInit {
         /// Overwrite an existing `<out>/smoke.rs`. Off by default
@@ -320,26 +329,30 @@ enum Command {
     // alias; the canonical Builder bootstrap is now `rustio-admin builder
     // new`. `add`, `plan`, `commit` keep their top-level positions
     // for script compatibility.
-    /// Builder workflow namespace (`DESIGN_BUILDER.md`).
+    /// Build a project from recorded changes, step by step (advanced).
     ///
-    /// Currently exposes `new` (project bootstrap); `add`, `plan`,
-    /// and `commit` keep their top-level positions for script
-    /// compatibility.
+    /// Builder workflow namespace. Currently exposes `new` (project
+    /// bootstrap); `add`, `plan`, and `commit` keep their top-level
+    /// positions for script compatibility. See
+    /// `docs/design/DESIGN_BUILDER.md`.
     Builder {
         #[command(subcommand)]
         action: BuilderAction,
     },
 
-    /// Builder authoring verbs.
+    /// Record a model or field for the Builder to generate (advanced).
+    ///
+    /// Builder authoring verbs (`add model` / `add field`). See
+    /// `docs/design/DESIGN_BUILDER.md`.
     Add {
         #[command(subcommand)]
         action: BuilderAddAction,
     },
 
-    /// Show the diff `commit` would apply. Read-only (Doctrine B8).
+    /// Preview the changes `commit` would make (read-only, advanced).
     Plan,
 
-    /// Apply the plan atomically (Doctrine B8).
+    /// Apply the planned Builder changes in one atomic step (advanced).
     Commit {
         /// Overwrite generator-owned files whose SchemaHash does
         /// not match the current draft. Prior content is

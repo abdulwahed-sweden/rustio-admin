@@ -24,6 +24,8 @@
 
 use std::io::{self, IsTerminal, Write};
 
+use crate::style;
+
 /// Curated project types from `DESIGN_ONBOARDING.md` §6. Order is
 /// the order shown to the user; `custom` is the default and is
 /// listed first.
@@ -76,34 +78,50 @@ pub(crate) fn should_run(no_interactive: bool) -> bool {
 /// Enter to accept.
 pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
     println!();
-    println!("Create a new RustIO project");
-    println!("────────────────────────────────────────────────────────────");
-    println!("Three short questions, then a ready-to-run admin application you");
-    println!("can migrate and launch in minutes — with authentication, an admin");
-    println!("panel, and an audit trail already wired in.");
+    println!("  {}", style::title("RustIO  ›  new project"));
     println!();
-    println!("Press Enter to accept the default shown in [brackets]. Nothing is");
-    println!("written to disk until you've answered all three.");
+    println!(
+        "  {}",
+        style::hint("Three short questions, then a ready-to-run admin panel —")
+    );
+    println!(
+        "  {}",
+        style::hint("login, roles, and an audit trail already wired in.")
+    );
     println!();
+    println!(
+        "  {}",
+        style::hint("Press Enter to accept the default in [brackets]. Nothing is")
+    );
+    println!(
+        "  {}",
+        style::hint("written to disk until you've answered all three.")
+    );
+    println!();
+    println!("  {}", style::divider());
 
-    // Each confirmation leads with `\n` so it terminates the prompt's line
-    // and always lands on its own line — whether the terminal echoed the
-    // user's Enter (interactive) or not (piped / scripted input).
+    // Each step prints its own header, hints, and prompt; `run` owns the
+    // blank-line spacing between stages and the `✓` confirmation after
+    // each answer, so the whole flow reads as: see → answer → confirmed.
+    println!();
+    println!("  {}", style::step(1, 3, "Project name"));
     let project_name = ask_project_name(suggested_name)?;
-    println!("\n  ✓ project    {project_name}");
+    println!("{}", style::confirm(&project_name));
 
+    println!();
+    println!("  {}", style::step(2, 3, "Project type"));
     let project_type = ask_project_type()?;
-    println!("\n  ✓ type       {project_type}");
+    println!("{}", style::confirm(&project_type));
 
     println!();
-    println!("{POSTGRES_GUIDANCE}");
-    println!();
-
+    println!("  {}", style::step(3, 3, "Database"));
     let db_name = ask_db_name(&project_name)?;
-    println!("\n  ✓ database   {db_name}");
-    println!();
+    println!("{}", style::confirm(&db_name));
 
-    println!("That's everything. Creating your project now…");
+    println!();
+    println!("  {}", style::divider());
+    println!();
+    println!("  {}", style::hint("Creating your project…"));
     println!();
 
     Ok(WizardInput {
@@ -114,12 +132,19 @@ pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
 }
 
 fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
-    println!("Project name — names the new folder and the Cargo crate.");
-    println!("Letters, digits, '-' and '_'; must start with a letter.");
+    println!(
+        "  {}",
+        style::hint("Names the new folder and the Cargo crate. Letters, digits,")
+    );
+    println!(
+        "  {}",
+        style::hint("'-' and '_'; must start with a letter.")
+    );
+    println!();
     loop {
         let prompt = match suggested {
-            Some(s) => format!("Project name [{s}]: "),
-            None => "Project name: ".into(),
+            Some(s) => format!("  {} Project name [{s}]: ", style::arrow()),
+            None => format!("  {} Project name: ", style::arrow()),
         };
         let input = prompt_line(&prompt)?;
         let chosen = if input.is_empty() {
@@ -128,12 +153,12 @@ fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
             input
         };
         if chosen.is_empty() {
-            println!("  Project name is required.");
+            println!("    {}", style::warn("Project name is required."));
             continue;
         }
         match validate_project_name(&chosen) {
             Ok(()) => return Ok(chosen),
-            Err(msg) => println!("  {msg}"),
+            Err(msg) => println!("    {}", style::warn(&msg)),
         }
     }
 }
@@ -152,17 +177,30 @@ fn project_type_hint(t: &str) -> &'static str {
 }
 
 fn ask_project_type() -> Result<String, String> {
+    println!(
+        "  {}",
+        style::hint("clinic and blog come with example models you can run right away;")
+    );
+    println!(
+        "  {}",
+        style::hint("the rest start clean. You can change direction at any time.")
+    );
     println!();
-    println!("Project type — `clinic` and `blog` come with example models you can");
-    println!("run right away; the rest start as a clean slate (no models yet). You");
-    println!("can change direction at any time; this choice locks nothing in.");
-    println!("Project type:");
     for (i, t) in PROJECT_TYPES.iter().enumerate() {
-        println!("  {}) {:<10} {}", i + 1, t, project_type_hint(t));
+        // Pad the plain name *before* styling — padding a styled string
+        // would count the invisible escape bytes and misalign the column.
+        println!(
+            "    {}  {} {}",
+            style::accent(&(i + 1).to_string()),
+            style::value(&format!("{t:<9}")),
+            style::hint(project_type_hint(t))
+        );
     }
+    println!();
     loop {
-        let input = prompt_line("Type [custom]: ")?;
+        let input = prompt_line(&format!("  {} Type [1]: ", style::arrow()))?;
         if input.is_empty() {
+            // Item 1 is `custom` — the clean-slate default.
             return Ok("custom".into());
         }
         if let Ok(n) = input.parse::<usize>() {
@@ -177,20 +215,38 @@ fn ask_project_type() -> Result<String, String> {
             return Ok((*t).into());
         }
         println!(
-            "  Choose 1–{}, or one of: {}",
-            PROJECT_TYPES.len(),
-            PROJECT_TYPES.join(", ")
+            "    {}",
+            style::warn(&format!(
+                "Choose 1–{}, or one of: {}",
+                PROJECT_TYPES.len(),
+                PROJECT_TYPES.join(", ")
+            ))
         );
     }
 }
 
 fn ask_db_name(project: &str) -> Result<String, String> {
-    println!("Database name — your local PostgreSQL database for development.");
-    println!("RustIO writes it into `.env` as DATABASE_URL; you create it with");
-    println!("`createdb` in the next steps.");
+    println!(
+        "  {}",
+        style::hint("Your local PostgreSQL database for development. RustIO writes it")
+    );
+    println!(
+        "  {}",
+        style::hint("into .env; you create it with `createdb` in the next steps.")
+    );
+    println!();
+    // The Postgres install/start guidance, dimmed as reference material.
+    for line in POSTGRES_GUIDANCE.lines() {
+        if line.is_empty() {
+            println!();
+        } else {
+            println!("  {}", style::hint(line));
+        }
+    }
+    println!();
     let default = format!("{project}_dev");
     loop {
-        let input = prompt_line(&format!("Database name [{default}]: "))?;
+        let input = prompt_line(&format!("  {} Database name [{default}]: ", style::arrow()))?;
         let chosen = if input.is_empty() {
             default.clone()
         } else {
@@ -198,7 +254,7 @@ fn ask_db_name(project: &str) -> Result<String, String> {
         };
         match validate_db_name(&chosen) {
             Ok(()) => return Ok(chosen),
-            Err(msg) => println!("  {msg}"),
+            Err(msg) => println!("    {}", style::warn(&msg)),
         }
     }
 }
