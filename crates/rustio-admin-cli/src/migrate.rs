@@ -58,7 +58,76 @@ async fn apply(db: rustio_admin::Db, dir: PathBuf) -> Result<(), String> {
             println!("  ✓ {name}");
         }
     }
+    suggest_after_migrate(&db).await;
     Ok(())
+}
+
+/// After `migrate apply`, point the developer at the single next step
+/// for where they now stand: create the first admin login, or — if one
+/// already exists — launch the app. Interactive terminals only; scripts
+/// and CI stay quiet.
+async fn suggest_after_migrate(db: &rustio_admin::Db) {
+    if !crate::style::is_interactive() {
+        return;
+    }
+    if active_admin_exists(db).await {
+        crate::style::next_step(
+            "launch your app",
+            &[(
+                "cargo run".to_string(),
+                format!(
+                    "{} {}",
+                    crate::style::hint("→"),
+                    crate::style::url("http://127.0.0.1:8000/admin")
+                ),
+            )],
+        );
+    } else {
+        let proj = current_project_name();
+        crate::style::next_step(
+            "create your admin login",
+            &[(
+                format!("rustio-admin user create --email admin@{proj}.local --role administrator"),
+                String::new(),
+            )],
+        );
+    }
+}
+
+/// True when the auth tables exist and hold at least one active
+/// administrator/developer. Any query failure is treated as "no admin
+/// yet" — this pointer must never crash the command it follows.
+async fn active_admin_exists(db: &rustio_admin::Db) -> bool {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables WHERE table_name = 'rustio_users'
+        )",
+    )
+    .fetch_one(db.pool())
+    .await
+    .unwrap_or(false);
+    if !exists {
+        return false;
+    }
+    let n: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM rustio_users \
+         WHERE role IN ('administrator', 'developer') AND is_active = TRUE",
+    )
+    .fetch_one(db.pool())
+    .await
+    .unwrap_or(0);
+    n > 0
+}
+
+/// The current directory's name, used to suggest a sensible admin email
+/// (`admin@<project>.local`) — mirroring what `new` printed. Falls back
+/// to `app` if the directory name can't be read.
+fn current_project_name() -> String {
+    std::env::current_dir()
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "app".to_string())
 }
 
 async fn status(db: rustio_admin::Db, dir: PathBuf) -> Result<(), String> {
