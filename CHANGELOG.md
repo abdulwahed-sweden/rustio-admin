@@ -76,6 +76,14 @@ leaves the alpha track.
   degrades to identical plain text under `NO_COLOR` / non-TTY / CI. Doctrine:
   new `DESIGN_ONBOARDING.md` §13 (Visual language), superseding the old
   colourless-wizard stance.
+- **Commands now point to the next step (contextual).** After
+  `rustio-admin migrate apply`, the CLI shows the single next step for where
+  you stand — *create your admin login* if no administrator exists yet, or
+  *launch your app* (`cargo run` → the admin URL) if one does. After
+  `rustio-admin user create`, it points to `cargo run`. So the first run reads
+  as one continuous thread (scaffold → migrate → user → launch) instead of
+  leaving you to remember what's next. Interactive terminals only — scripts and
+  CI stay quiet (`DESIGN_ONBOARDING.md` §13.4).
 - **Clearer `--help` command list.** The command summaries were dense
   multi-sentence paragraphs (and `plan` / `commit` leaked the internal
   "Doctrine B8" jargon into user-facing help). Each command now shows one

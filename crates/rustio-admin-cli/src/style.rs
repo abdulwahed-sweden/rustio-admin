@@ -23,6 +23,8 @@
 //!   `NO_COLOR`, non-TTY, or a dumb terminal, so piped/CI output stays
 //!   plain text with the same words and spacing.
 
+use std::io::IsTerminal;
+
 use console::style;
 
 /// The single accent colour — a warm amber in the 256-colour cube
@@ -110,4 +112,28 @@ pub(crate) fn step(n: usize, total: usize, title: &str) -> String {
 /// A confirmation line: `  ✓ huntclick`.
 pub(crate) fn confirm(value_text: &str) -> String {
     format!("  {} {}", check(), value(value_text))
+}
+
+/// True when output is going to an interactive human (a TTY, not CI).
+/// The contextual "Next" pointers a command prints after it runs are
+/// guidance for a person mid-flow — scripts and CI runs stay quiet.
+pub(crate) fn is_interactive() -> bool {
+    std::io::stdout().is_terminal() && std::env::var_os("CI").is_none()
+}
+
+/// Print a "Next — <what>:" pointer: a bold accent heading, then each
+/// command on its own copy-clean line, with any (already-styled)
+/// annotation on a dim line beneath it. The shared shape behind the
+/// post-command guidance so `migrate`, `user create`, and the scaffold
+/// all point forward the same way.
+pub(crate) fn next_step(what: &str, steps: &[(String, String)]) {
+    println!();
+    println!("  {}", heading(&format!("Next — {what}:")));
+    println!();
+    for (cmd, annot) in steps {
+        println!("    {}", command(cmd));
+        if !annot.is_empty() {
+            println!("        {annot}");
+        }
+    }
 }

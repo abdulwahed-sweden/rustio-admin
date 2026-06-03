@@ -396,6 +396,21 @@ async fn create(
             println!("Added to group: {group_name}");
         }
     }
+    // With a login in place, the next step is to launch and sign in.
+    // Interactive terminals only — scripted user-creation stays quiet.
+    if crate::style::is_interactive() {
+        crate::style::next_step(
+            "launch your app and sign in",
+            &[(
+                "cargo run".to_string(),
+                format!(
+                    "{} {}",
+                    crate::style::hint("→"),
+                    crate::style::url("http://127.0.0.1:8000/admin")
+                ),
+            )],
+        );
+    }
     Ok(())
 }
 
