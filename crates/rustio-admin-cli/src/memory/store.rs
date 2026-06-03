@@ -224,7 +224,7 @@ impl Memory {
             });
         }
         MemoryIndex {
-            generated_note: "regenerable mechanical cache — never a source of truth; rebuild with `rustio memory index`".to_string(),
+            generated_note: "regenerable mechanical cache — never a source of truth; rebuild with `rustio-admin memory index`".to_string(),
             entry_count: self.entries.len(),
             subjects,
             entries,

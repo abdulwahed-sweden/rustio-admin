@@ -1,4 +1,4 @@
-//! `rustio memory` — project memory (CLOUD.md).
+//! `rustio-admin memory` — project memory (CLOUD.md).
 //!
 //! Implements the read/derive half of `docs/design/DESIGN_CLOUD_IMPL.md`:
 //! the per-entry store (§2), the entry model and derived status (§3), and
@@ -25,7 +25,7 @@ use console::style;
 use entry::{short, Entry, EntryType};
 use store::{Memory, Status, Store};
 
-/// `rustio memory` subcommands (read-only slice).
+/// `rustio-admin memory` subcommands (read-only slice).
 #[derive(Subcommand)]
 pub(crate) enum Action {
     /// Regenerate `CLOUD.md` from the entry files. Idempotent; the only

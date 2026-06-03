@@ -62,6 +62,17 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Fixed
+- **`ai` / `memory` printed the wrong binary name in their guidance.** The
+  `ai` and `memory` subcommands told you to run `rustio ai apply …`,
+  `rustio ai init`, `rustio memory …`, etc. — but the binary is
+  **`rustio-admin`**. Following those instructions literally invoked the
+  *sibling* `rustio` project instead, which fails with
+  `rustio.schema.json not found`. Every printed command (and the related doc
+  text) now uses `rustio-admin`, so copy-pasting the suggested next step runs
+  the right tool. (The binary was renamed to `rustio-admin` in v0.22.0; these
+  two modules' output strings were missed.)
+
 ### Changed
 - **`--help` is now grouped, colour-coded, and beginner-first.** The bare
   `rustio-admin` / `--help` welcome was a flat wall of 21 commands; it now opens
