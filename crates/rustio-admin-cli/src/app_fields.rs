@@ -469,10 +469,15 @@ pub(crate) fn render(fields: &[Field]) -> Render {
         .collect::<Vec<_>>()
         .join("\n");
 
+    // Column names are quoted in the DDL so a field whose name is a
+    // reserved SQL keyword (e.g. `order`, `user`, `group`) produces valid
+    // SQL instead of a syntax error. This matches `columns_literal` /
+    // `insert_columns_literal` below, which already quote, and the
+    // `from_row` getters, which look the column up by its exact name.
     let column_decls_sql = fields
         .iter()
         .zip(&specs)
-        .map(|(f, s)| format!(",\n    {} {}", f.name, s.sql_decl))
+        .map(|(f, s)| format!(",\n    \"{}\" {}", f.name, s.sql_decl))
         .collect::<String>();
 
     let mut columns: Vec<String> = vec!["\"id\"".into()];
@@ -709,7 +714,7 @@ impl FieldKind {
                     .join(", ");
                 FieldSpec {
                     rust_type: "String",
-                    sql_decl: format!("TEXT NOT NULL CHECK ({name} IN ({sql_values}))"),
+                    sql_decl: format!("TEXT NOT NULL CHECK (\"{name}\" IN ({sql_values}))"),
                     row_getter: "get_string",
                     insert_needs_clone: true,
                     is_text_search: false,
@@ -873,9 +878,9 @@ mod tests {
             "    #[rustio(choices = [\"active\", \"inactive\"])]\n    pub status: String,"
         ));
         // The migration carries the DB-level CHECK naming the column.
-        assert!(r
-            .column_decls_sql
-            .contains(",\n    status TEXT NOT NULL CHECK (status IN ('active', 'inactive'))"));
+        assert!(r.column_decls_sql.contains(
+            ",\n    \"status\" TEXT NOT NULL CHECK (\"status\" IN ('active', 'inactive'))"
+        ));
         assert!(r
             .from_row_assignments
             .contains("status: row.get_string(\"status\")?,"));
@@ -1032,29 +1037,55 @@ mod tests {
             "h:fk:Doctor",
         ]));
         // Per the §2.2 / module-doc defaults table.
-        assert!(r.column_decls_sql.contains(",\n    n TEXT NOT NULL"));
-        assert!(r.column_decls_sql.contains(",\n    b TEXT NOT NULL"));
-        assert!(r.column_decls_sql.contains(",\n    c INTEGER NOT NULL"));
-        assert!(r.column_decls_sql.contains(",\n    d BIGINT NOT NULL"));
+        assert!(r.column_decls_sql.contains(",\n    \"n\" TEXT NOT NULL"));
+        assert!(r.column_decls_sql.contains(",\n    \"b\" TEXT NOT NULL"));
+        assert!(r.column_decls_sql.contains(",\n    \"c\" INTEGER NOT NULL"));
+        assert!(r.column_decls_sql.contains(",\n    \"d\" BIGINT NOT NULL"));
         assert!(r
             .column_decls_sql
-            .contains(",\n    e BOOLEAN NOT NULL DEFAULT FALSE"));
+            .contains(",\n    \"e\" BOOLEAN NOT NULL DEFAULT FALSE"));
         // PR 2.1 design adjustment: NO `DEFAULT NOW()` for timestamp.
         assert!(
             r.column_decls_sql
-                .contains(",\n    f TIMESTAMPTZ NOT NULL\n")
-                || r.column_decls_sql.ends_with("f TIMESTAMPTZ NOT NULL")
+                .contains(",\n    \"f\" TIMESTAMPTZ NOT NULL\n")
+                || r.column_decls_sql.ends_with("\"f\" TIMESTAMPTZ NOT NULL")
                 || r.column_decls_sql
-                    .contains(",\n    f TIMESTAMPTZ NOT NULL,")
+                    .contains(",\n    \"f\" TIMESTAMPTZ NOT NULL,")
         );
         assert!(!r.column_decls_sql.contains("DEFAULT NOW()"));
         // PR 2.1 design adjustment: NO `DEFAULT '{}'::jsonb` for json.
-        assert!(r.column_decls_sql.contains(",\n    g JSONB NOT NULL"));
+        assert!(r.column_decls_sql.contains(",\n    \"g\" JSONB NOT NULL"));
         assert!(!r.column_decls_sql.contains("'{}'"));
         // FK uses the target's snake-pluralised table.
         assert!(r
             .column_decls_sql
-            .contains(",\n    h BIGINT NOT NULL REFERENCES doctors(id)"));
+            .contains(",\n    \"h\" BIGINT NOT NULL REFERENCES doctors(id)"));
+    }
+
+    /// Regression: a field whose name is a reserved SQL keyword (here
+    /// `order`, plus a `choice` named `group`) must produce valid,
+    /// quoted DDL — otherwise `migrate apply` fails with a Postgres
+    /// `syntax error at or near "order"`. The quoting must match the
+    /// already-quoted `columns_literal` so the model is consistent.
+    #[test]
+    fn render_quotes_reserved_keyword_columns() {
+        let r = render(&fs(&["order:fk:Order", "group:choice:a,b"]));
+        // Migration DDL quotes the column name (and the CHECK column ref).
+        assert!(
+            r.column_decls_sql
+                .contains(",\n    \"order\" BIGINT NOT NULL REFERENCES orders(id)"),
+            "reserved fk column must be quoted: {}",
+            r.column_decls_sql
+        );
+        assert!(
+            r.column_decls_sql
+                .contains(",\n    \"group\" TEXT NOT NULL CHECK (\"group\" IN ('a', 'b'))"),
+            "reserved choice column must be quoted in decl and CHECK: {}",
+            r.column_decls_sql
+        );
+        // The runtime COLUMNS literal already quotes — they now agree.
+        assert!(r.columns_literal.contains("\"order\""));
+        assert!(r.columns_literal.contains("\"group\""));
     }
 
     #[test]
@@ -1067,13 +1098,13 @@ mod tests {
         // SQL DDL per the §2.2 defaults table.
         assert!(r
             .column_decls_sql
-            .contains(",\n    price DOUBLE PRECISION NOT NULL"));
+            .contains(",\n    \"price\" DOUBLE PRECISION NOT NULL"));
         assert!(r
             .column_decls_sql
-            .contains(",\n    birth_date DATE NOT NULL"));
+            .contains(",\n    \"birth_date\" DATE NOT NULL"));
         assert!(r
             .column_decls_sql
-            .contains(",\n    start_time TIME NOT NULL"));
+            .contains(",\n    \"start_time\" TIME NOT NULL"));
         // Row getters.
         assert!(r
             .from_row_assignments
@@ -1103,10 +1134,12 @@ mod tests {
         let r = render(&fs(&["price:decimal", "public_id:uuid"]));
         assert!(r.struct_fields.contains("    pub price: Decimal,"));
         assert!(r.struct_fields.contains("    pub public_id: Uuid,"));
-        assert!(r.column_decls_sql.contains(",\n    price NUMERIC NOT NULL"));
         assert!(r
             .column_decls_sql
-            .contains(",\n    public_id UUID NOT NULL"));
+            .contains(",\n    \"price\" NUMERIC NOT NULL"));
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    \"public_id\" UUID NOT NULL"));
         assert!(r
             .from_row_assignments
             .contains("price: row.get_decimal(\"price\")?,"));
@@ -1139,8 +1172,10 @@ mod tests {
         // Stored as plain TEXT, read with the string getter.
         assert!(r
             .column_decls_sql
-            .contains(",\n    work_email TEXT NOT NULL"));
-        assert!(r.column_decls_sql.contains(",\n    mobile TEXT NOT NULL"));
+            .contains(",\n    \"work_email\" TEXT NOT NULL"));
+        assert!(r
+            .column_decls_sql
+            .contains(",\n    \"mobile\" TEXT NOT NULL"));
         assert!(r
             .from_row_assignments
             .contains("work_email: row.get_string(\"work_email\")?,"));

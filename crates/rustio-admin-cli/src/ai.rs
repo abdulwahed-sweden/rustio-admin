@@ -1145,6 +1145,11 @@ fn format_log(entries: &[LogEntry]) -> String {
 fn status(policy_path: &Path, store: &Store) -> Result<(), String> {
     let policy = load_policy(policy_path)?;
 
+    // RustIO embeds no model and never calls one; these verbs only govern
+    // what an external AI assistant may do. Stated up front so the `ai`
+    // command is not misread as "run an AI".
+    println!("RustIO runs no AI itself — this governs what an external AI assistant may do here.");
+    println!();
     println!("AI Assistant: {}", policy.assistant);
     match &policy.source {
         Source::File(p) => println!(
@@ -1265,6 +1270,8 @@ fn init(path: &Path, force: bool) -> Result<(), String> {
         .map_err(|e| format!("could not write {}: {e}", path.display()))?;
 
     println!("rustio ai: wrote {}", path.display());
+    println!();
+    println!("This is a policy for an external AI assistant — RustIO runs no AI itself.");
     println!();
     println!("next step:");
     println!("  rustio ai status        # see what the AI may do");
