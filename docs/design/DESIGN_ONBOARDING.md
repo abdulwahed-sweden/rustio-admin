@@ -471,7 +471,55 @@ These rules are violated only by explicit doctrine amendment.
 
 ---
 
-## 13. Acceptance criteria for this document
+## 13. Visual language — colour and spacing
+
+The first-run surfaces — the `rustio-admin new` wizard, the scaffold
+summaries, and the post-command "Next" pointers — share one calm visual
+language, implemented in `crates/rustio-admin-cli/src/style.rs`. This
+section **supersedes the earlier "stdlib-only, colourless wizard" stance**:
+colour is allowed and encouraged, within these rules. It stays consistent
+with §9.2 — colour is enhancement, never information.
+
+### 13.1 One accent
+
+A single accent colour — a warm amber (256-colour `173`) — marks only the
+*active* element of a stage: a step title, the prompt arrow `›`, the "Next"
+heading. The accent is never decoration.
+
+### 13.2 Roles, not rainbows
+
+Success is green (`✓`). Paths and URLs are cyan. Commands the developer
+types are bold. Secondary / explanatory text is dim. Validation corrections
+are yellow. Nothing else is coloured.
+
+### 13.3 Spacing
+
+Stages are separated by blank lines; a dim divider opens and closes the
+flow. Cramped, wall-of-text output is a defect — comfortable vertical rhythm
+is the default.
+
+### 13.4 Staged rhythm
+
+Every first-run surface follows the same beat: **show what to run → run it
+visibly (the §9 spinner) → confirm the result (`✓`) → point to the single
+next step.** A developer should always know where they stand and what comes
+next.
+
+### 13.5 Commands are copy-clean
+
+A command the developer is meant to run sits alone on its line; any
+explanation goes on a dim line beneath it, never trailing the command — so a
+copy-paste never drags prose into the shell.
+
+### 13.6 Degradation (per §9.2)
+
+All colour drops under `NO_COLOR`, non-TTY, and dumb terminals; the words and
+spacing stay identical. The plain-text output must read just as clearly as
+the coloured one.
+
+---
+
+## 14. Acceptance criteria for this document
 
 This document is complete when:
 

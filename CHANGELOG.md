@@ -61,6 +61,42 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **First-run terminal experience: colour, spacing, and a clear staged
+  rhythm.** The `rustio-admin new` wizard and the scaffold summaries were flat,
+  cramped, single-colour text; they now share one calm visual language
+  (`crates/rustio-admin-cli/src/style.rs`): a single warm-amber accent for the
+  *active* element (step titles, the `›` prompt, the "Next" heading), green
+  `✓` confirmations, cyan paths/URLs, bold commands, dim explanations — with
+  blank-line spacing between stages. The wizard now shows **Step _n_ of 3**
+  headers; the post-create block leads with a `Next —` heading and lists each
+  command on its own copy-clean line with a dim explanation beneath (so a
+  copy-paste never drags prose into the shell). The next-steps now include the
+  previously-missing **`createdb`** step on the wizard path. All colour
+  degrades to identical plain text under `NO_COLOR` / non-TTY / CI. Doctrine:
+  new `DESIGN_ONBOARDING.md` §13 (Visual language), superseding the old
+  colourless-wizard stance.
+- **Clearer `--help` command list.** The command summaries were dense
+  multi-sentence paragraphs (and `plan` / `commit` leaked the internal
+  "Doctrine B8" jargon into user-facing help). Each command now shows one
+  concise, beginner-readable line in the list, with full detail still on
+  `<command> --help`; advanced Builder verbs are marked `(advanced)`.
+
+### Fixed
+- **`startapp` generated invalid SQL for reserved-keyword field names.** A
+  `--field order:fk:Order` produced an unquoted `order` column and `migrate
+  apply` failed with `syntax error at or near "order"`. Generated column names
+  are now quoted in the migration DDL (declaration + `choice` CHECK), matching
+  the already-quoted runtime `COLUMNS`. *(Shipped via #32; recorded here for the
+  release notes.)*
+
+### Onboarding
+- The `new` wizard no longer advertises `school` / `inventory` as "a familiar
+  starting point" — only `clinic` and `blog` ship example models, so the menu
+  now labels each type honestly ("example models …" vs "clean slate"). And
+  `rustio-admin ai status` / `ai init` state up front that RustIO runs no AI
+  itself. *(Shipped via #32.)*
+
 
 ## [0.27.3] — 2026-06-03
 
