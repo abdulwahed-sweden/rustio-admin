@@ -138,14 +138,27 @@ fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
     }
 }
 
+/// One-line honest hint shown beside each project type. Only the types
+/// with a real content preset (`clinic`, `blog`) advertise example
+/// models; every other type produces the neutral `minimal` scaffold, so
+/// it is labelled a clean slate rather than a "starting point" it does
+/// not deliver. Keep in lock-step with `scaffold::preset_layers`.
+fn project_type_hint(t: &str) -> &'static str {
+    match t {
+        "clinic" => "example models — patients, appointments",
+        "blog" => "example models — posts, comments",
+        _ => "clean slate (no models yet)",
+    }
+}
+
 fn ask_project_type() -> Result<String, String> {
     println!();
-    println!("Project type — what you're building. `custom` is a clean slate;");
-    println!("the others name a familiar starting point. You can change");
-    println!("direction at any time; this choice locks nothing in.");
+    println!("Project type — `clinic` and `blog` come with example models you can");
+    println!("run right away; the rest start as a clean slate (no models yet). You");
+    println!("can change direction at any time; this choice locks nothing in.");
     println!("Project type:");
     for (i, t) in PROJECT_TYPES.iter().enumerate() {
-        println!("  {}) {t}", i + 1);
+        println!("  {}) {:<10} {}", i + 1, t, project_type_hint(t));
     }
     loop {
         let input = prompt_line("Type [custom]: ")?;
