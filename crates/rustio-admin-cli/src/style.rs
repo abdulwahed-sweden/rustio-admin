@@ -32,6 +32,16 @@ use console::style;
 /// alarming. Used only for the active element of a stage.
 pub(crate) const ACCENT: u8 = 173;
 
+/// The wordmark colour — a lighter gold (`#ffaf5f`) than the working
+/// accent, reserved for the `RustIO` brand line in the welcome banner so
+/// it reads as distinct and a touch elevated without clashing.
+pub(crate) const BRAND: u8 = 215;
+
+/// The brand wordmark (gold + bold), used only in the welcome banner.
+pub(crate) fn brand(s: &str) -> String {
+    style(s).color256(BRAND).bold().to_string()
+}
+
 /// A screen/section title (accent + bold). E.g. `RustIO  ›  new project`.
 pub(crate) fn title(s: &str) -> String {
     style(s).color256(ACCENT).bold().to_string()
@@ -112,6 +122,86 @@ pub(crate) fn step(n: usize, total: usize, title: &str) -> String {
 /// A confirmation line: `  ✓ huntclick`.
 pub(crate) fn confirm(value_text: &str) -> String {
     format!("  {} {}", check(), value(value_text))
+}
+
+/// The grouped, coloured welcome banner shown before `--help` and on a
+/// bare invocation. Organised by what a developer wants to *do* (not a
+/// flat list of 21 verbs): a getting-started path first, advanced
+/// subsystems second, help last — so a first-timer is never lost. The
+/// full clap command list still follows below. Colour degrades to plain
+/// text under `NO_COLOR` / non-TTY (`DESIGN_ONBOARDING.md` §13).
+pub(crate) fn welcome_banner() -> String {
+    // Pad the plain command to a column *before* styling (styling a
+    // padded string would count the escape bytes and misalign).
+    let row =
+        |cmd: &str, desc: &str| format!("    {}  {}", command(&format!("{cmd:<30}")), hint(desc));
+    let mut out: Vec<String> = Vec::new();
+    out.push(String::new());
+    out.push(format!(
+        "  {}  {}",
+        brand("RustIO"),
+        hint("· the admin for your Rust app")
+    ));
+    out.push(String::new());
+    out.push(format!(
+        "  {}",
+        hint("Describe your data as Rust structs and get a complete admin —")
+    ));
+    out.push(format!(
+        "  {}",
+        hint("list, create, edit, search, delete — with login, roles, recovery,")
+    ));
+    out.push(format!(
+        "  {}",
+        hint("and an audit trail already wired in.")
+    ));
+    out.push(String::new());
+
+    out.push(format!("  {}", heading("Getting started")));
+    out.push(row(
+        "rustio-admin new <project>",
+        "create a project (guided)",
+    ));
+    out.push(row(
+        "rustio-admin startapp <model>",
+        "add a model — table + admin page",
+    ));
+    out.push(row(
+        "rustio-admin migrate apply",
+        "apply database migrations",
+    ));
+    out.push(row("rustio-admin user create", "create a login"));
+    out.push(format!(
+        "    {}  {} {}",
+        command(&format!("{:<30}", "cargo run")),
+        hint("launch →"),
+        url("http://127.0.0.1:8000/admin")
+    ));
+    out.push(String::new());
+
+    out.push(format!("  {}", heading("When you need more")));
+    out.push(row("rustio-admin ai", "govern an external AI assistant"));
+    out.push(row(
+        "rustio-admin memory",
+        "record the \"why\" behind the project",
+    ));
+    out.push(row("rustio-admin builder", "build from recorded changes"));
+    out.push(String::new());
+
+    out.push(format!("  {}", heading("Help")));
+    out.push(row("rustio-admin doctor", "is my environment ready?"));
+    out.push(row("rustio-admin docs", "where the documentation lives"));
+    out.push(row(
+        "rustio-admin <command> --help",
+        "full, example-rich help for any command",
+    ));
+    out.push(String::new());
+    out.push(format!(
+        "  {}",
+        hint("The complete command list follows below.")
+    ));
+    out.push(format!("  {}", divider()));
+    out.join("\n")
 }
 
 /// True when output is going to an interactive human (a TTY, not CI).

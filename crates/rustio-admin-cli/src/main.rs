@@ -60,46 +60,16 @@ mod ui;
 mod user;
 mod wizard;
 
-/// Welcome banner printed before clap's auto-generated `--help`
-/// command list. Clarity-first within `DESIGN_ONBOARDING.md` §10, and
-/// **value before mechanics**: it leads with what the developer *gets*
-/// (describe structs → a complete admin panel), then frames the
-/// differentiator as the *outcome* they receive — a login, roles, and an
-/// audit trail built in — rather than the governance machinery that
-/// delivers it (contracts, authority model). A first-time reader meets the
-/// value before any mechanism. The "Start here" surface and the full
-/// command list still follow below — promoted, never amputated.
-const WELCOME_HELP: &str = "\
-RustIO Admin — describe your data as Rust structs, get a complete admin panel.
-
-You write the structs; RustIO builds the screens: list, create, edit, search,
-and delete — with a login page, user roles, password recovery, and a full
-audit trail already wired in. The Rust answer to \"Django Admin\", on PostgreSQL.
-
-Why RustIO is different
-  That login, those roles, and that audit trail are not add-ons you bolt on
-  later — they come built in, as one system. The admin you get on the very
-  first run is already secure and accountable, with nothing to assemble
-  yourself. Most tools leave that part to you.
-
-Start here
-  rustio-admin new <project>     guided setup → a ready-to-run app
-  cd <project> && cargo run      then sign in at http://127.0.0.1:8000/admin
-
-Helpful
-  rustio-admin doctor            is my environment ready?
-  rustio-admin docs              where the documentation lives
-
-Every command is listed below.
-────────────────────────────────────────────────────────────\
-";
+// The welcome banner shown before `--help` and on a bare invocation is
+// built at runtime (grouped + coloured) by `style::welcome_banner` and
+// injected via the clap builder in `main`, so it can adapt to colour
+// support. See `DESIGN_ONBOARDING.md` §13.
 
 #[derive(Parser)]
 #[command(
     name = "rustio-admin",
     version,
-    about = "The rustio-admin command-line tool.",
-    before_help = WELCOME_HELP,
+    about = "The rustio-admin command-line tool."
 )]
 struct Cli {
     /// Suppress progress spinners and status feedback. Errors still
@@ -169,21 +139,44 @@ enum Command {
         #[arg(long, default_value = "minimal")]
         preset: String,
     },
-    /// Scaffold a new model + migration inside the current project.
-    #[command(name = "startapp")]
+    /// Add a model — a table, an admin page, search, and a migration.
+    #[command(
+        name = "startapp",
+        long_about = "Add a model to your project: a Postgres table, an admin page \
+(list / create / edit / search / delete), and a migration.\n\
+\n\
+SIMPLE\n  \
+  rustio-admin startapp patient\n\
+\n\
+WITH FIELDS\n  \
+  rustio-admin startapp patient \\\n    \
+    --field full_name:str \\\n    \
+    --field email:email \\\n    \
+    --field date_of_birth:date\n\
+\n\
+FIELD TYPES\n  \
+  str  text  int  bigint  float  decimal  bool\n  \
+  timestamp  date  time  uuid  email  phone  json\n\
+\n\
+RELATIONS  (a foreign key to another model)\n  \
+  --field clinic:fk:Clinic\n\
+\n\
+CHOICES  (a fixed set, shown as a dropdown)\n  \
+  --field status:choice:pending,paid,cancelled\n\
+\n\
+Tip: name fields after your business domain — RustIO generates the model, \
+admin page, forms, search, and migration for you. When it finishes it prints \
+the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
+`cargo run`."
+    )]
     Startapp {
-        /// Singular lowercase identifier (e.g. `post`, `course`,
-        /// `book_review`). Becomes both the module file name and
-        /// the snake_case prefix; the struct gets the CamelCase
-        /// form (`Post`, `BookReview`); the table gets the
-        /// pluralised form (`posts`, `book_reviews`).
+        /// Singular lowercase name for the model (e.g. `patient`,
+        /// `order_item`). It becomes the module and the table; the
+        /// Rust struct is the CamelCase form (`Patient`, `OrderItem`).
         name: String,
-        /// Field declaration in `<name>:<type>` form, repeatable.
-        /// Closed vocabulary: `str / text / int / bigint / bool /
-        /// timestamp / json / fk:<Model>`. PR 2.1 of
-        /// `DESIGN_ONBOARDING.md`. Omit the flag entirely (or
-        /// run interactively at a TTY) to get the historical
-        /// one-field placeholder model.
+        /// A field, as `name:type` — repeat for each one. See the
+        /// examples and field-type list above (`startapp --help`).
+        /// Omit entirely to get a one-column placeholder model.
         #[arg(long = "field", value_name = "NAME:TYPE")]
         fields: Vec<String>,
         /// Skip the interactive field-prompt loop even when running
@@ -431,8 +424,16 @@ fn main() -> ExitCode {
     let _ = dotenvy::dotenv();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
-    let cli = match Cli::try_parse() {
-        Ok(c) => c,
+    // Build the command from the derive, then attach the grouped,
+    // coloured welcome banner at runtime (it adapts to colour support).
+    // Parse via matches so the banner shows on `--help` and on a bare
+    // invocation, while the InvalidValue rewrite below still applies.
+    let command = <Cli as clap::CommandFactory>::command().before_help(style::welcome_banner());
+    let cli = match command.try_get_matches() {
+        Ok(matches) => match <Cli as clap::FromArgMatches>::from_arg_matches(&matches) {
+            Ok(c) => c,
+            Err(e) => e.exit(),
+        },
         Err(e) => {
             // Intercept clap's InvalidValue error (e.g. `--role admin`
             // when valid roles are user/staff/...) and reformat using
