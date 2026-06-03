@@ -1,4 +1,4 @@
-//! `rustio memory` write path — propose / approve / apply memory entries
+//! `rustio-admin memory` write path — propose / approve / apply memory entries
 //! through the **shared** proposal lifecycle (`DESIGN_CLOUD_IMPL.md` §4,
 //! §7). There is no parallel governance path: memory-write is a capability
 //! in `.rustio/ai.toml` (`write_memory` / `supersede_memory`, both
@@ -59,7 +59,7 @@ pub(crate) struct Draft {
 
 // ---- CLI entry points (rooted at the cwd) --------------------------------
 
-/// `rustio memory remember` — propose a new memory entry.
+/// `rustio-admin memory remember` — propose a new memory entry.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn remember(
     entry_type: String,
@@ -81,7 +81,7 @@ pub(crate) fn remember(
     propose_at(Path::new("."), "write_memory", draft, by)
 }
 
-/// `rustio memory supersede` — propose an entry that supersedes another.
+/// `rustio-admin memory supersede` — propose an entry that supersedes another.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn supersede(
     target: String,
@@ -104,13 +104,13 @@ pub(crate) fn supersede(
     propose_at(Path::new("."), "supersede_memory", draft, by)
 }
 
-/// `rustio memory pending` — list memory proposals awaiting a decision.
+/// `rustio-admin memory pending` — list memory proposals awaiting a decision.
 pub(crate) fn pending(by: Option<String>) -> Result<(), String> {
     let _ = by;
     pending_at(Path::new("."))
 }
 
-/// `rustio memory approve` — record one approval. `--by` is offline;
+/// `rustio-admin memory approve` — record one approval. `--by` is offline;
 /// `--as <email>` authenticates against the DB and mirrors to the audit
 /// trail.
 pub(crate) fn approve(
@@ -122,14 +122,14 @@ pub(crate) fn approve(
         Some(email) => approve_db(Path::new("."), &id, &email),
         None => {
             let store = ProposalStore::new(".", SUBDIR);
-            let p = proposal::do_approve(&store, &id, ai::whoami(by), "rustio memory apply")?;
+            let p = proposal::do_approve(&store, &id, ai::whoami(by), "rustio-admin memory apply")?;
             print_approved(&p, None);
             Ok(())
         }
     }
 }
 
-/// `rustio memory reject` — decline a proposal, keeping the record.
+/// `rustio-admin memory reject` — decline a proposal, keeping the record.
 pub(crate) fn reject(
     id: String,
     reason: String,
@@ -151,7 +151,7 @@ pub(crate) fn reject(
     }
 }
 
-/// `rustio memory apply` — materialise an approved entry and re-render.
+/// `rustio-admin memory apply` — materialise an approved entry and re-render.
 pub(crate) fn apply(id: String, by: Option<String>, as_user: Option<String>) -> Result<(), String> {
     match as_user {
         Some(email) => apply_db(Path::new("."), &id, &email),
@@ -162,7 +162,7 @@ pub(crate) fn apply(id: String, by: Option<String>, as_user: Option<String>) -> 
 fn print_approved(p: &Proposal, corr: Option<&str>) {
     if p.state == proposal::State::Approved {
         println!(
-            "{} memory proposal {} approved — apply with `rustio memory apply {}`",
+            "{} memory proposal {} approved — apply with `rustio-admin memory apply {}`",
             style("ok").green().bold(),
             p.short(),
             p.short()
@@ -218,17 +218,17 @@ fn propose_at(
     )?;
 
     let hint = if p.required_approvals == 0 {
-        format!("apply directly:\n  rustio memory apply {}", p.short())
+        format!("apply directly:\n  rustio-admin memory apply {}", p.short())
     } else {
         format!(
-            "needs {} approval(s):\n  rustio memory approve {} --by <name>",
+            "needs {} approval(s):\n  rustio-admin memory approve {} --by <name>",
             p.required_approvals,
             p.short()
         )
     };
     println!(
         "{} memory proposal {} created ({})\n  {}\n\n{}",
-        style("rustio memory:").bold(),
+        style("rustio-admin memory:").bold(),
         p.short(),
         capability,
         p.title,
@@ -304,7 +304,7 @@ fn apply_at(root: &Path, id: String, by: Option<String>) -> Result<(), String> {
     let actor = ai::whoami(by);
     let act = actor.clone();
     let (p, _written) =
-        proposal::do_apply_with(&store, &id, actor, "rustio memory approve", |p, r| {
+        proposal::do_apply_with(&store, &id, actor, "rustio-admin memory approve", |p, r| {
             apply_action(p, r, &act)
         })?;
     let count = render::write_view(&EntryStore::new(root))?;
@@ -364,7 +364,7 @@ fn approve_db(root: &Path, id: &str, email: &str) -> Result<(), String> {
     crate::tokio_run(async {
         let db = crate::db().await?;
         let user = ai::resolve_approver(&db, email, &policy).await?;
-        let p = proposal::do_approve(&store, id, user.email.clone(), "rustio memory apply")?;
+        let p = proposal::do_approve(&store, id, user.email.clone(), "rustio-admin memory apply")?;
         let extra = serde_json::json!({
             "approvals": p.distinct_approvals(),
             "required_approvals": p.required_approvals,
@@ -442,7 +442,7 @@ fn apply_db(root: &Path, id: &str, email: &str) -> Result<(), String> {
             &store,
             id,
             user.email.clone(),
-            "rustio memory approve",
+            "rustio-admin memory approve",
             |p, r| apply_action(p, r, &act),
         )?;
         let count = render::write_view(&EntryStore::new(root))?;
@@ -551,7 +551,7 @@ struct RedactDraft {
     reason: String,
 }
 
-/// `rustio memory redact` — propose removing prohibited content from an
+/// `rustio-admin memory redact` — propose removing prohibited content from an
 /// existing entry. Two approvers required (§5).
 pub(crate) fn redact(
     target: String,
@@ -611,8 +611,8 @@ fn redact_at(
         actor,
     )?;
     println!(
-        "{} redaction proposal {} created — needs {} approvers:\n  rustio memory approve {} --by <name>",
-        style("rustio memory:").bold(),
+        "{} redaction proposal {} created — needs {} approvers:\n  rustio-admin memory approve {} --by <name>",
+        style("rustio-admin memory:").bold(),
         p.short(),
         p.required_approvals,
         p.short()

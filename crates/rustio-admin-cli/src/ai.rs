@@ -1,8 +1,8 @@
-//! `rustio ai` — AI assistant permissions.
+//! `rustio-admin ai` — AI assistant permissions.
 //!
 //! Implements `docs/design/DESIGN_AI_ASSISTANT.md`: the `.rustio/ai.toml`
 //! policy file (§2–§3), the proposal model and approval lifecycle
-//! (§4–§5), and the `rustio ai` verbs (§6). The whole surface is
+//! (§4–§5), and the `rustio-admin ai` verbs (§6). The whole surface is
 //! **offline** — no AI is contacted and no database is opened.
 //!
 //! The policy sorts every known capability into one of three buckets:
@@ -45,7 +45,7 @@ use crate::proposal::{
 /// same `.rustio/` state directory the builder uses.
 pub(crate) const POLICY_PATH: &str = ".rustio/ai.toml";
 
-/// The default policy file written by `rustio ai init`. Hand-authored
+/// The default policy file written by `rustio-admin ai init`. Hand-authored
 /// (not serialised) so the shipped template carries comments. A test
 /// (`default_template_matches_coded_defaults`) asserts it parses back to
 /// exactly the coded defaults, so the two can never drift.
@@ -96,7 +96,7 @@ approver_role = "administrator"
 second_approver_for = ["modify_table", "apply_migration", "redact_memory"]
 "#;
 
-/// `rustio ai` subcommands.
+/// `rustio-admin ai` subcommands.
 #[derive(Subcommand)]
 pub(crate) enum Action {
     /// Show what the AI assistant may do (Allowed / Needs approval /
@@ -257,7 +257,7 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
     }
 }
 
-/// Default number of log entries shown by `rustio ai log`.
+/// Default number of log entries shown by `rustio-admin ai log`.
 const DEFAULT_LOG_LIMIT: usize = 20;
 
 // ---------------------------------------------------------------------------
@@ -268,7 +268,7 @@ const DEFAULT_LOG_LIMIT: usize = 20;
 struct CapDef {
     /// Stable key used in `.rustio/ai.toml`.
     key: &'static str,
-    /// Human label shown by `rustio ai status`.
+    /// Human label shown by `rustio-admin ai status`.
     label: &'static str,
     /// Bucket used when the policy file does not mention this key.
     default: Bucket,
@@ -593,13 +593,13 @@ pub(crate) fn whoami(by: Option<String>) -> String {
 /// Record one approval (offline), delegating to the shared lifecycle with
 /// the `ai` apply-command hint.
 fn do_approve(store: &Store, id: &str, actor: String) -> Result<Proposal, String> {
-    proposal::do_approve(store, id, actor, "rustio ai apply")
+    proposal::do_approve(store, id, actor, "rustio-admin ai apply")
 }
 
 /// Apply an approved (or Allowed) proposal: write its staged files, then
 /// mark it applied. Returns the proposal and the list of paths written.
 fn do_apply(store: &Store, id: &str, actor: String) -> Result<(Proposal, Vec<String>), String> {
-    proposal::do_apply_with(store, id, actor, "rustio ai approve", |p, root| {
+    proposal::do_apply_with(store, id, actor, "rustio-admin ai approve", |p, root| {
         let mut written = Vec::new();
         for ch in &p.changes {
             let dest = root.join(&ch.path);
@@ -670,7 +670,7 @@ fn propose(
     let changes = parse_stages(stage)?;
     let p = do_propose(store, &policy, capability, title, summary, changes, actor)?;
 
-    println!("rustio ai: proposal {} created", p.short());
+    println!("rustio-admin ai: proposal {} created", p.short());
     println!(
         "  capability: {}  ({})",
         p.capability,
@@ -683,7 +683,7 @@ fn propose(
     println!();
     if p.required_approvals == 0 {
         println!("This capability is Allowed — apply it directly:");
-        println!("  rustio ai apply {}", p.short());
+        println!("  rustio-admin ai apply {}", p.short());
     } else {
         let approvers = if p.required_approvals == 1 {
             "1 approver".to_string()
@@ -691,8 +691,8 @@ fn propose(
             format!("{} distinct approvers", p.required_approvals)
         };
         println!("Needs approval ({approvers}) before it can be applied:");
-        println!("  rustio ai review  {}", p.short());
-        println!("  rustio ai approve {} --by <name>", p.short());
+        println!("  rustio-admin ai review  {}", p.short());
+        println!("  rustio-admin ai approve {} --by <name>", p.short());
     }
     Ok(())
 }
@@ -726,7 +726,7 @@ fn reject(
         None => {
             let actor = whoami(by);
             let p = do_reject(store, id, reason, actor)?;
-            println!("rustio ai: proposal {} rejected", p.short());
+            println!("rustio-admin ai: proposal {} rejected", p.short());
             Ok(())
         }
     }
@@ -751,10 +751,10 @@ fn apply(
 
 /// Shared printer for an approval (offline or DB-backed).
 fn print_approved(actor: &str, p: &Proposal, correlation: Option<&str>) {
-    println!("rustio ai: {actor} approved proposal {}", p.short());
+    println!("rustio-admin ai: {actor} approved proposal {}", p.short());
     if p.state == State::Approved {
         println!("  fully approved — apply it:");
-        println!("    rustio ai apply {}", p.short());
+        println!("    rustio-admin ai apply {}", p.short());
     } else {
         let have = p.distinct_approvals();
         let need = p.required_approvals as usize;
@@ -770,7 +770,7 @@ fn print_approved(actor: &str, p: &Proposal, correlation: Option<&str>) {
 
 /// Shared printer for an apply (offline or DB-backed).
 fn print_applied(p: &Proposal, written: &[String], correlation: Option<&str>) {
-    println!("rustio ai: proposal {} applied", p.short());
+    println!("rustio-admin ai: proposal {} applied", p.short());
     if written.is_empty() {
         println!("  (no files staged)");
     } else {
@@ -937,7 +937,7 @@ fn reject_db(store: &Store, id: &str, reason: &str, email: &str) -> Result<(), S
         }
     })?;
     let (p, corr) = captured.expect("set on success");
-    println!("rustio ai: proposal {} rejected", p.short());
+    println!("rustio-admin ai: proposal {} rejected", p.short());
     println!("  audit: rustio_admin_actions row written (correlation {corr})");
     Ok(())
 }
@@ -1026,19 +1026,22 @@ fn review(store: &Store, id: &str) -> Result<(), String> {
     match p.state {
         State::Suggested if p.required_approvals == 0 => {
             println!();
-            println!("  apply →  rustio ai apply {}", p.short());
+            println!("  apply →  rustio-admin ai apply {}", p.short());
         }
         State::Suggested => {
             println!();
-            println!("  approve →  rustio ai approve {} --by <name>", p.short());
             println!(
-                "  reject  →  rustio ai reject {} --reason \"...\"",
+                "  approve →  rustio-admin ai approve {} --by <name>",
+                p.short()
+            );
+            println!(
+                "  reject  →  rustio-admin ai reject {} --reason \"...\"",
                 p.short()
             );
         }
         State::Approved => {
             println!();
-            println!("  apply →  rustio ai apply {}", p.short());
+            println!("  apply →  rustio-admin ai apply {}", p.short());
         }
         State::Rejected | State::Applied => {}
     }
@@ -1076,7 +1079,7 @@ fn list(store: &Store, all: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// `rustio ai log` — render the action record, newest first.
+/// `rustio-admin ai log` — render the action record, newest first.
 fn log_cmd(
     store: &Store,
     limit: Option<usize>,
@@ -1140,7 +1143,7 @@ fn format_log(entries: &[LogEntry]) -> String {
 // status / init
 // ---------------------------------------------------------------------------
 
-/// `rustio ai status` — print the resolved policy plus pending proposals
+/// `rustio-admin ai status` — print the resolved policy plus pending proposals
 /// and recent actions from the local store.
 fn status(policy_path: &Path, store: &Store) -> Result<(), String> {
     let policy = load_policy(policy_path)?;
@@ -1158,7 +1161,7 @@ fn status(policy_path: &Path, store: &Store) -> Result<(), String> {
             policy.approver_role
         ),
         Source::Default => println!(
-            "Policy:       defaults — no {POLICY_PATH} (run `rustio ai init`)   (approver: {})",
+            "Policy:       defaults — no {POLICY_PATH} (run `rustio-admin ai init`)   (approver: {})",
             policy.approver_role
         ),
     }
@@ -1254,7 +1257,7 @@ fn print_bucket(policy: &Policy, heading: &str, bucket: Bucket, glyph: String) {
     }
 }
 
-/// `rustio ai init` — write the default policy file.
+/// `rustio-admin ai init` — write the default policy file.
 fn init(path: &Path, force: bool) -> Result<(), String> {
     if path.exists() && !force {
         return Err(format!(
@@ -1269,12 +1272,12 @@ fn init(path: &Path, force: bool) -> Result<(), String> {
     std::fs::write(path, DEFAULT_POLICY_TOML)
         .map_err(|e| format!("could not write {}: {e}", path.display()))?;
 
-    println!("rustio ai: wrote {}", path.display());
+    println!("rustio-admin ai: wrote {}", path.display());
     println!();
     println!("This is a policy for an external AI assistant — RustIO runs no AI itself.");
     println!();
     println!("next step:");
-    println!("  rustio ai status        # see what the AI may do");
+    println!("  rustio-admin ai status        # see what the AI may do");
     Ok(())
 }
 
@@ -1291,9 +1294,9 @@ fn bucket_field(b: Bucket) -> &'static str {
     }
 }
 
-/// `rustio ai allow` / `deny` — move a capability into `target`, edit the
+/// `rustio-admin ai allow` / `deny` — move a capability into `target`, edit the
 /// policy file, and print the diff. Requires the file to exist (run
-/// `rustio ai init` first), so the change is always an explicit edit to a
+/// `rustio-admin ai init` first), so the change is always an explicit edit to a
 /// version-controlled file rather than a surprise creation.
 fn set_bucket(policy_path: &Path, capability: &str, target: Bucket) -> Result<(), String> {
     if !is_known(capability) {
@@ -1307,7 +1310,7 @@ fn set_bucket(policy_path: &Path, capability: &str, target: Bucket) -> Result<()
         Ok(s) => s,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Err(format!(
-                "no {} yet — run `rustio ai init` first, then edit buckets",
+                "no {} yet — run `rustio-admin ai init` first, then edit buckets",
                 policy_path.display()
             ))
         }
