@@ -8,6 +8,57 @@ impl ModelAdmin for Post {}            // accept every default
 
 Override only what you care about; the rest inherit framework defaults.
 
+## A worked example
+
+One model, the four hooks most projects reach for, and exactly what each one
+produces. Say you scaffolded an `Article`:
+
+```sh
+rustio-admin startapp article \
+  --field title:str \
+  --field body:text \
+  --field author:str \
+  --field status:choice:draft,published,archived \
+  --field published_at:timestamp
+```
+
+`startapp` writes the struct and `impl Model` for you. You add the
+customisation:
+
+```rust
+impl ModelAdmin for Article {
+    fn list_display()  -> &'static [&'static str] { &["title", "author", "status", "published_at"] }
+    fn list_filter()   -> &'static [&'static str] { &["status", "author"] }
+    fn search_fields() -> &'static [&'static str] { &["title", "body"] }
+    fn ordering()      -> &'static [&'static str] { &["-published_at"] }
+}
+```
+
+`/admin/articles` now renders:
+
+```
+Articles                              search: title, body   [ + Add article ]
+  Status ▾   Author ▾                 ← filter chips
+
+  TITLE                  AUTHOR        STATUS      PUBLISHED AT
+  Launch announcement    Sarah Ahmed   published   2026-05-30      ← newest first
+  Q2 roadmap             John Okoro    draft       2026-05-28
+  Migration notes        Maria Lopez   archived    2026-05-21
+```
+
+Line by line, that came from:
+
+| Hook | What it did here |
+|---|---|
+| `list_display` | the four columns, in that order (`id` is always a link to the edit form, listed or not) |
+| `list_filter` | the **Status ▾** / **Author ▾** chips — `status` is a `choice`, so a dropdown of its values; `author` a dropdown of distinct values |
+| `search_fields` | the search box scans `title` + `body` (`?q=` → ILIKE) |
+| `ordering` | `-published_at` → newest first |
+
+Everything else — read-only fields, validation, child rows (`inlines`), form
+sections (`fieldsets`), bulk actions — is opt-in, and each is shown on its own
+below. Start with these four; add the rest when a page needs them.
+
 ## Why no blanket impl?
 
 An earlier prototype shipped `impl<T: AdminModel> ModelAdmin for T {}` so every derived model would auto-pick-up defaults. That collides with Rust's coherence rules — without `feature(specialization)` (nightly-only), a blanket impl forbids per-type impls, which would block the project overrides this trait exists for. The opt-in `impl ModelAdmin for X {}` is the standard stable-Rust pattern (serde's `Serialize`, axum's `Handler`, std's various marker traits).
