@@ -279,6 +279,32 @@ fn launch_steps(name: &str, preset: &str, db: Option<&str>) -> Vec<(String, Stri
     steps
 }
 
+/// A `minimal`/`custom` project ships with no domain models, so the most
+/// important next move is `startapp`. Show it by example (one concrete
+/// command) rather than describing it — and point at the rich help for
+/// the rest. Only shown for model-less presets; `clinic`/`blog` already
+/// have models to explore.
+fn print_first_model_hint() {
+    println!();
+    println!("  {}", sty::heading("Add your first model:"));
+    println!();
+    println!("    {}", sty::command("rustio-admin startapp product \\"));
+    println!(
+        "    {}",
+        sty::command("  --field name:str --field price:decimal --field in_stock:bool")
+    );
+    println!(
+        "        {}",
+        sty::hint("a table, an admin page, search, and a migration")
+    );
+    println!();
+    println!(
+        "  {}",
+        sty::hint("Field types, relations, and choices:  rustio-admin startapp --help")
+    );
+    println!();
+}
+
 fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Result<(), String> {
     let written = write_project_files(parent, name, preset, project_type)?;
     let created = format!(
@@ -292,6 +318,9 @@ fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Re
         &launch_steps(name, preset, None),
         None,
     );
+    if preset_layers(preset).is_none() {
+        print_first_model_hint();
+    }
     Ok(())
 }
 
@@ -323,6 +352,9 @@ fn project_with_db_in(
         &launch_steps(name, preset, Some(db_name)),
         Some("The first `cargo run` takes a few minutes — that's normal for a fresh Rust build."),
     );
+    if preset_layers(preset).is_none() {
+        print_first_model_hint();
+    }
     Ok(())
 }
 

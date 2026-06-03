@@ -62,6 +62,24 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **`--help` is now grouped, colour-coded, and beginner-first.** The bare
+  `rustio-admin` / `--help` welcome was a flat wall of 21 commands; it now opens
+  with a grouped, coloured map organised by what you want to *do* — **Getting
+  started** (new → startapp → migrate → user → run), **When you need more** (ai,
+  memory, builder), **Help** — with the `RustIO` wordmark in a distinct gold,
+  group headings in accent, commands bold, descriptions dim, and breathing room
+  between groups. The full command list still follows below (nothing hidden).
+- **`startapp` now has the best help in the tool — by example, not prose.**
+  `rustio-admin startapp --help` opens with a one-line summary, then runnable
+  examples (SIMPLE, WITH FIELDS), the full field-type list, RELATIONS
+  (`fk:Model`) and CHOICES (`choice:a,b`) shown as snippets, and a closing tip —
+  so a beginner copies a working command instead of reading a paragraph.
+- **First-model nudge after `new`.** A model-less (`minimal`/`custom`) project
+  now ends its scaffold output with `Add your first model:` and a concrete
+  `startapp` example, pointing at `startapp --help` for more — so the developer
+  always knows the next move instead of stalling at an empty admin.
+
 
 ## [0.27.4] — 2026-06-03
 
