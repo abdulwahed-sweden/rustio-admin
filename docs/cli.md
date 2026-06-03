@@ -12,7 +12,7 @@ cargo install rustio-admin-cli
 
 | Command                                | What it does                                                |
 |----------------------------------------|-------------------------------------------------------------|
-| `new <name>`                           | Scaffold a new project (friendly alias for `startproject`)  |
+| `new <name>`                           | Create a new project — a short guided setup (start here)    |
 | `startproject <name>`                  | Scaffold a new project at `./<name>`                        |
 | `startapp <name>`                      | Add a model + migration to the current project              |
 | `migrate apply`                        | Apply pending SQL migrations                                |
