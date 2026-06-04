@@ -3122,6 +3122,18 @@ pub(crate) struct CsvImportResultCtx {
     pub inserted: usize,
     pub failed: usize,
     pub outcomes: Vec<CsvOutcomeCtx>,
+    /// Postgres table backing this model — used in the generated
+    /// `ALTER TABLE` migration on the result page.
+    pub table: String,
+    /// CSV columns that don't match a declared field; their values
+    /// were skipped. Empty when every header column matched.
+    pub ignored_columns: Vec<String>,
+    /// One generated field-definition per ignored column, so the
+    /// developer can capture that data instead of losing it.
+    pub suggested_fields: Vec<SuggestedFieldCtx>,
+    /// Ready-to-run `ALTER TABLE` covering every ignored column.
+    /// Empty when there are none.
+    pub migration_sql: String,
 }
 
 #[derive(Serialize)]
@@ -3130,6 +3142,16 @@ pub(crate) struct CsvOutcomeCtx {
     pub status: &'static str, // "inserted" | "failed"
     pub id: Option<i64>,
     pub errors: Vec<String>,
+}
+
+/// Template view of one [`crate::admin::csv_import::SuggestedField`].
+#[derive(Serialize)]
+pub(crate) struct SuggestedFieldCtx {
+    pub column: String,
+    pub sql_type: &'static str,
+    pub rust_field: String,
+    pub from_row: String,
+    pub insert_value: String,
 }
 
 pub(crate) fn csv_import_result_ctx(
@@ -3158,6 +3180,37 @@ pub(crate) fn csv_import_result_ctx(
             },
         })
         .collect();
+    // Turn the skipped columns into a generated migration + model
+    // snippet so a mismatched upload becomes a guided next step,
+    // not a dead end.
+    let suggested: Vec<crate::admin::csv_import::SuggestedField> = report
+        .ignored_columns
+        .iter()
+        .map(|c| crate::admin::csv_import::suggest_field(c))
+        .collect();
+
+    let migration_sql = if suggested.is_empty() {
+        String::new()
+    } else {
+        let cols = suggested
+            .iter()
+            .map(|s| format!("  ADD COLUMN \"{}\" {}", s.column, s.sql_type))
+            .collect::<Vec<_>>()
+            .join(",\n");
+        format!("ALTER TABLE {}\n{};", entry.table, cols)
+    };
+
+    let suggested_fields = suggested
+        .into_iter()
+        .map(|s| SuggestedFieldCtx {
+            column: s.column,
+            sql_type: s.sql_type,
+            rust_field: s.rust_field,
+            from_row: s.from_row,
+            insert_value: s.insert_value,
+        })
+        .collect();
+
     CsvImportResultCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: format!("CSV import — {}", entry.display_name),
@@ -3173,6 +3226,10 @@ pub(crate) fn csv_import_result_ctx(
         inserted: report.inserted,
         failed: report.failed,
         outcomes,
+        table: entry.table.to_string(),
+        ignored_columns: report.ignored_columns,
+        suggested_fields,
+        migration_sql,
     }
 }
 

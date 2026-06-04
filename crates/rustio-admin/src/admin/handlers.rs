@@ -2917,21 +2917,11 @@ pub(crate) async fn import_model_csv(
         ));
     }
 
-    // Header columns must be a subset of declared fields — flag
-    // any unknown columns up-front so the operator notices the
-    // mismatch before per-row errors flood the result page.
-    let known: std::collections::HashSet<&str> = entry.fields.iter().map(|f| f.name).collect();
-    let unknown: Vec<String> = header
-        .iter()
-        .filter(|h| !known.contains(h.as_str()))
-        .cloned()
-        .collect();
-    if !unknown.is_empty() {
-        return Err(Error::BadRequest(
-            super::csv_import::ParseError::UnknownColumns { columns: unknown }.message(),
-        ));
-    }
-
+    // Unknown columns are NOT a hard error: the importer skips them
+    // per-row (see `import_csv_rows`) and the result page reports
+    // which were ignored, plus a generated migration to capture them.
+    // A dead-end 400 here used to contradict that lenient design and
+    // left developers with no next step.
     let report = super::csv_import::import_csv_rows(&ctx.db, entry, &header, rows).await;
     let mut view =
         render::csv_import_result_ctx(&identity, &ctx.admin, csrf_token(&req), entry, report);
