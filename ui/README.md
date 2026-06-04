@@ -22,16 +22,20 @@ MIT-licensed, loaded via CDN).
 | `rio-tokens.css` | Tokens only. Colors, type, spacing, radius, shadows, layout, topbar. Single source of truth. |
 | `rio-admin.css` | Layout + all components. Reads tokens, never hardcodes values. |
 | `rio-admin.html` | Reference dashboard. Links the two CSS files. |
-| `rio-admin-standalone.html` | Same page, CSS inlined — for instant preview. |
-| `build-standalone.mjs` | Generator: inlines the two CSS files into `rio-admin-standalone.html`. Run `node build-standalone.mjs`. |
+| `rio-admin.js` | Optional, dependency-free behavior for the interactive components (modal, tabs, toast, dropdown). No `localStorage`. |
+| `rio-admin-standalone.html` | Same page, CSS + JS inlined — for instant preview. |
+| `build-standalone.mjs` | Generator: inlines the two CSS files **and** `rio-admin.js` into `rio-admin-standalone.html`. Run `node build-standalone.mjs`. |
 
-Load order in any page: fonts -> Bootstrap Icons -> `rio-tokens.css` -> `rio-admin.css`.
+Load order in any page: fonts -> Bootstrap Icons -> `rio-tokens.css` -> `rio-admin.css`,
+then `rio-admin.js` at the end of `<body>` (only if you use the interactive components).
 
 ```html
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link rel="stylesheet" href="rio-tokens.css">
 <link rel="stylesheet" href="rio-admin.css">
+<!-- … page … -->
+<script src="rio-admin.js"></script>
 ```
 
 ---
@@ -167,6 +171,45 @@ All values are Smarty-exact unless noted. RGB triplets exist for `rgba()` use.
 - `.rio-pagination` (`.rio-page-info`, `.rio-page-btn` with `.is-active`).
 - `.rio-feed-item` (`.rio-feed-glyph` + `.rio-feed-text` + `.rio-feed-time`);
   glyph gets `.f-success` for green.
+
+### Interactive components (need `rio-admin.js`)
+
+**Dropdown** — `.rio-dropdown` wraps a trigger marked `data-rio-dropdown` and a
+`.rio-dropdown-menu`. Inside: `.rio-dropdown-label`, `.rio-dropdown-item`
+(add `.is-danger` for destructive), `.rio-dropdown-divider`. Menu opens right-aligned;
+add `.rio-dropdown-start` for left-aligned. JS toggles `.is-open`; click-outside / Esc close it.
+```html
+<div class="rio-dropdown">
+  <button class="rio-btn rio-btn-secondary rio-btn-sm" data-rio-dropdown>Actions <i class="bi bi-chevron-down"></i></button>
+  <div class="rio-dropdown-menu">
+    <button class="rio-dropdown-item"><i class="bi bi-pencil"></i> Edit</button>
+    <div class="rio-dropdown-divider"></div>
+    <button class="rio-dropdown-item is-danger"><i class="bi bi-trash"></i> Delete</button>
+  </div>
+</div>
+```
+
+**Tabs** — `.rio-tabs` holds `.rio-tab` buttons (`data-rio-tab="#panelId"`); panels are
+`.rio-tab-panel` siblings under the same parent. Active tab + panel carry `.is-active`.
+```html
+<div class="rio-tabs">
+  <button class="rio-tab is-active" data-rio-tab="#p1">Overview</button>
+  <button class="rio-tab" data-rio-tab="#p2">Settings</button>
+</div>
+<div id="p1" class="rio-tab-panel is-active">…</div>
+<div id="p2" class="rio-tab-panel">…</div>
+```
+
+**Modal** — `.rio-modal-backdrop` (with an `id`) wraps `.rio-modal` ->
+`.rio-modal-header` (`.rio-modal-title` + `.rio-modal-close`), `.rio-modal-body`,
+`.rio-modal-footer`. Size: `.rio-modal-sm` / `.rio-modal-lg`. Open with a trigger
+`data-rio-modal-open="#id"`; close via `[data-rio-modal-close]`, backdrop click, or Esc.
+The backdrop holds `.is-open` while visible.
+
+**Toast** — fire one from JS: `RIO.toast({ variant, title, text, duration })`
+(`variant`: `success` / `warning` / `danger` / default; `duration` ms, `0` = sticky).
+Or declaratively on any element: `data-rio-toast="success"` + `data-rio-toast-title` +
+`data-rio-toast-text`. Toasts mount in a `.rio-toast-host` (auto-created) and auto-dismiss.
 
 ### State / modifier conventions
 - State: `.is-active` (current nav item / page button).

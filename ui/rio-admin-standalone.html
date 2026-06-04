@@ -123,6 +123,7 @@
   --rio-danger-rgb:  246, 78, 96;     /* #f64e60 as triplet, for rgba() */
   --rio-primary-2:   #34557d;         /* brand-mark gradient end */
   --rio-logout-fg:   #ffd2d6;         /* light danger text on the dark topbar */
+  --rio-backdrop:    rgba(20, 30, 56, 0.55);  /* modal / overlay scrim */
 }
 
 /* ==========================================================================
@@ -468,6 +469,132 @@ h1, h2, h3, h4, h5 { margin: 0; font-weight: var(--rio-fw-medium); line-height: 
 @media (max-width: 1100px) { .rio-stats { grid-template-columns: repeat(2, 1fr); } .rio-grid-2 { grid-template-columns: 1fr; } }
 @media (max-width: 768px)  { .rio-sidebar { display: none; } .rio-main { padding: 1.1rem; } }
 
+/* ==========================================================================
+   Interactive components — modal, tabs, toast, dropdown
+   State is toggled via .is-open / .is-active (see rio-admin.js). #fff appears
+   only as text-on-fill; everything else references a token.
+   ========================================================================== */
+
+/* ---- Dropdown ------------------------------------------------------------ */
+.rio-dropdown { position: relative; display: inline-block; }
+.rio-dropdown-menu {
+  position: absolute; top: calc(100% + 0.4rem); right: 0; z-index: 60;
+  min-width: 210px; padding: 0.4rem;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-lg);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+.rio-dropdown-menu.rio-dropdown-start { right: auto; left: 0; }
+.rio-dropdown.is-open > .rio-dropdown-menu { opacity: 1; visibility: visible; transform: none; }
+.rio-dropdown-label { padding: 0.45rem 0.7rem 0.3rem; font-size: 0.76rem; font-weight: var(--rio-fw-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-faint); }
+.rio-dropdown-item {
+  display: flex; align-items: center; gap: 0.6rem; width: 100%;
+  padding: 0.55rem 0.7rem; border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--rio-radius); text-align: left;
+  font: inherit; font-size: 0.97rem; font-weight: var(--rio-fw-medium);
+  color: var(--rio-text); transition: background 0.15s, color 0.15s;
+}
+.rio-dropdown-item .bi { width: 18px; text-align: center; font-size: 1rem; color: var(--rio-gray-700); transition: color 0.15s; }
+.rio-dropdown-item:hover { background: var(--rio-primary-hover-bg); color: var(--rio-primary); }
+.rio-dropdown-item:hover .bi { color: var(--rio-primary); }
+.rio-dropdown-item.is-danger { color: var(--rio-danger); }
+.rio-dropdown-item.is-danger .bi { color: var(--rio-danger); }
+.rio-dropdown-item.is-danger:hover { background: var(--rio-danger-subtle); color: var(--rio-danger-emphasis); }
+.rio-dropdown-item.is-danger:hover .bi { color: var(--rio-danger-emphasis); }
+.rio-dropdown-divider { height: 1px; margin: 0.35rem 0.2rem; background: var(--rio-border-soft); }
+
+/* ---- Tabs ---------------------------------------------------------------- */
+.rio-tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--rio-border); flex-wrap: wrap; }
+.rio-tab {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  margin-bottom: -1px; padding: 0.7rem 1rem;
+  border: 0; border-bottom: 2px solid transparent; background: transparent;
+  cursor: pointer; font: inherit; font-size: 1rem; font-weight: var(--rio-fw-medium);
+  color: var(--rio-text-muted); transition: color 0.18s, border-color 0.18s;
+}
+.rio-tab .bi { font-size: 1rem; }
+.rio-tab:hover { color: var(--rio-primary); }
+.rio-tab.is-active { color: var(--rio-primary); border-bottom-color: var(--rio-primary); font-weight: var(--rio-fw-bold); }
+.rio-tab-panel { display: none; padding-top: 1.25rem; font-size: 1rem; color: var(--rio-text-muted); }
+.rio-tab-panel.is-active { display: block; }
+
+/* ---- Modal --------------------------------------------------------------- */
+.rio-modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  display: grid; place-items: center; padding: 1.25rem;
+  background: var(--rio-backdrop); backdrop-filter: blur(3px);
+  opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s;
+}
+.rio-modal-backdrop.is-open { opacity: 1; visibility: visible; }
+.rio-modal {
+  width: 100%; max-width: 480px;
+  background: var(--rio-surface);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-lg);
+  overflow: hidden;
+  transform: translateY(10px) scale(0.98); transition: transform 0.2s ease;
+}
+.rio-modal-backdrop.is-open .rio-modal { transform: none; }
+.rio-modal-sm { max-width: 380px; }
+.rio-modal-lg { max-width: 720px; }
+.rio-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.35rem var(--rio-card-px); border-bottom: 1px solid var(--rio-border-soft);
+}
+.rio-modal-title { font-size: 1.1rem; font-weight: var(--rio-fw-bold); }
+.rio-modal-close {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 0; background: transparent; border-radius: var(--rio-radius); cursor: pointer;
+  color: var(--rio-text-faint); font-size: 1.1rem; transition: background 0.15s, color 0.15s;
+}
+.rio-modal-close:hover { background: var(--rio-surface-2); color: var(--rio-text); }
+.rio-modal-body { padding: var(--rio-card-px); font-size: 1rem; color: var(--rio-text-muted); }
+.rio-modal-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;
+  padding: 1.1rem var(--rio-card-px); border-top: 1px solid var(--rio-border-soft);
+  background: var(--rio-surface-3);
+}
+
+/* ---- Toast --------------------------------------------------------------- */
+.rio-toast-host {
+  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 1100;
+  display: flex; flex-direction: column; gap: 0.65rem;
+}
+@keyframes rio-toast-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.rio-toast {
+  display: flex; align-items: flex-start; gap: 0.7rem;
+  width: 340px; max-width: calc(100vw - 2.5rem);
+  padding: 0.9rem 1rem;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-border);
+  border-left: 3px solid var(--rio-primary);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-lg);
+  animation: rio-toast-in 0.2s ease;
+}
+.rio-toast.is-hiding { opacity: 0; transform: translateX(14px); transition: opacity 0.2s ease, transform 0.2s ease; }
+.rio-toast-glyph { margin-top: 0.05rem; font-size: 1.15rem; color: var(--rio-primary); }
+.rio-toast-body { flex: 1; min-width: 0; }
+.rio-toast-title { font-size: 0.97rem; font-weight: var(--rio-fw-bold); color: var(--rio-text); }
+.rio-toast-text { margin-top: 0.1rem; font-size: 0.9rem; color: var(--rio-text-muted); }
+.rio-toast-close {
+  flex: none; width: 26px; height: 26px; display: grid; place-items: center;
+  border: 0; background: transparent; border-radius: var(--rio-radius-sm); cursor: pointer;
+  color: var(--rio-text-faint); font-size: 0.9rem; transition: background 0.15s, color 0.15s;
+}
+.rio-toast-close:hover { background: var(--rio-surface-2); color: var(--rio-text); }
+.rio-toast-success { border-left-color: var(--rio-success); }
+.rio-toast-success .rio-toast-glyph { color: var(--rio-success-emphasis); }
+.rio-toast-warning { border-left-color: var(--rio-warning); }
+.rio-toast-warning .rio-toast-glyph { color: var(--rio-warning-emphasis); }
+.rio-toast-danger  { border-left-color: var(--rio-danger); }
+.rio-toast-danger .rio-toast-glyph { color: var(--rio-danger-emphasis); }
+
+@media (max-width: 480px) { .rio-toast-host { left: 1.25rem; right: 1.25rem; } .rio-toast { width: auto; } }
+
 </style>
 </head>
 <body>
@@ -514,14 +641,24 @@ h1, h2, h3, h4, h5 { margin: 0; font-weight: var(--rio-fw-medium); line-height: 
         <a href="#" class="rio-topbar-link" title="Open the public site"><i class="bi bi-box-arrow-up-right"></i> View Site</a>
         <span class="rio-topbar-sep"></span>
         <button class="rio-icon-btn" title="Notifications"><i class="bi bi-bell"></i><span class="rio-dot"></span></button>
-        <button class="rio-user" title="Account menu">
-          <span class="rio-user-badge">AM</span>
-          <span class="rio-user-meta">
-            <span class="rio-user-name">Abdulwahed</span>
-            <span class="rio-user-role">Administrator</span>
-          </span>
-          <i class="bi bi-chevron-down rio-user-caret"></i>
-        </button>
+        <div class="rio-dropdown">
+          <button class="rio-user" data-rio-dropdown title="Account menu">
+            <span class="rio-user-badge">AM</span>
+            <span class="rio-user-meta">
+              <span class="rio-user-name">Abdulwahed</span>
+              <span class="rio-user-role">Administrator</span>
+            </span>
+            <i class="bi bi-chevron-down rio-user-caret"></i>
+          </button>
+          <div class="rio-dropdown-menu">
+            <div class="rio-dropdown-label">Account</div>
+            <button class="rio-dropdown-item"><i class="bi bi-person"></i> Profile</button>
+            <button class="rio-dropdown-item"><i class="bi bi-gear"></i> Settings</button>
+            <button class="rio-dropdown-item"><i class="bi bi-life-preserver"></i> Help &amp; support</button>
+            <div class="rio-dropdown-divider"></div>
+            <button class="rio-dropdown-item is-danger"><i class="bi bi-box-arrow-right"></i> Sign out</button>
+          </div>
+        </div>
         <span class="rio-topbar-sep"></span>
         <a href="#" class="rio-topbar-link rio-logout" title="Sign out"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
@@ -646,8 +783,185 @@ h1, h2, h3, h4, h5 { margin: 0; font-weight: var(--rio-fw-medium); line-height: 
         </div>
 
       </section>
+
+      <section class="rio-card" style="margin-top:1.75rem">
+        <div class="rio-card-header">
+          <h2 class="rio-card-title">UI Components</h2>
+          <div class="rio-dropdown">
+            <button class="rio-btn rio-btn-secondary rio-btn-sm" data-rio-dropdown>Actions <i class="bi bi-chevron-down"></i></button>
+            <div class="rio-dropdown-menu">
+              <div class="rio-dropdown-label">Export</div>
+              <button class="rio-dropdown-item"><i class="bi bi-filetype-csv"></i> Download CSV</button>
+              <button class="rio-dropdown-item"><i class="bi bi-filetype-pdf"></i> Download PDF</button>
+              <div class="rio-dropdown-divider"></div>
+              <button class="rio-dropdown-item is-danger"><i class="bi bi-trash"></i> Delete all</button>
+            </div>
+          </div>
+        </div>
+        <div class="rio-card-body">
+          <div class="rio-tabs">
+            <button class="rio-tab is-active" data-rio-tab="#tab-overview"><i class="bi bi-card-text"></i> Overview</button>
+            <button class="rio-tab" data-rio-tab="#tab-activity"><i class="bi bi-activity"></i> Activity</button>
+            <button class="rio-tab" data-rio-tab="#tab-settings"><i class="bi bi-gear"></i> Settings</button>
+          </div>
+          <div id="tab-overview" class="rio-tab-panel is-active">
+            Tabs, modal, toast, and dropdown are all driven by <strong>data-*</strong> attributes plus the optional <strong>rio-admin.js</strong> helper — no framework required.
+          </div>
+          <div id="tab-activity" class="rio-tab-panel">
+            The Activity panel. Switching tabs just toggles <strong>.is-active</strong> on the clicked tab and its matching panel.
+          </div>
+          <div id="tab-settings" class="rio-tab-panel">
+            The Settings panel. Every component above stays styled by tokens only — re-theme by overriding <strong>--rio-primary</strong>.
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:1.5rem">
+            <button class="rio-btn rio-btn-primary" data-rio-modal-open="#demo-modal"><i class="bi bi-window"></i> Open modal</button>
+            <button class="rio-btn rio-btn-secondary" data-rio-toast="success" data-rio-toast-title="Saved" data-rio-toast-text="Your changes were saved."><i class="bi bi-check-circle"></i> Success toast</button>
+            <button class="rio-btn rio-btn-secondary" data-rio-toast="warning" data-rio-toast-title="Heads up" data-rio-toast-text="Storage is 80% full."><i class="bi bi-exclamation-triangle"></i> Warning toast</button>
+            <button class="rio-btn rio-btn-danger" data-rio-toast="danger" data-rio-toast-title="Failed" data-rio-toast-text="Could not reach the server."><i class="bi bi-x-octagon"></i> Error toast</button>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </div>
+
+<!-- Modal (hidden until [data-rio-modal-open] adds .is-open) -->
+<div class="rio-modal-backdrop" id="demo-modal">
+  <div class="rio-modal">
+    <div class="rio-modal-header">
+      <h3 class="rio-modal-title">Create record</h3>
+      <button class="rio-modal-close" data-rio-modal-close aria-label="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="rio-modal-body">
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="rio-field"><label>Name</label><input class="rio-input" placeholder="e.g. Lina Karlsson"></div>
+        <div class="rio-field"><label>Status</label><select class="rio-select"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
+      </div>
+    </div>
+    <div class="rio-modal-footer">
+      <button class="rio-btn rio-btn-secondary" data-rio-modal-close>Cancel</button>
+      <button class="rio-btn rio-btn-primary" data-rio-modal-close><i class="bi bi-check-lg"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inlined from rio-admin.js -->
+<script>
+/* ==========================================================================
+   RustIO UI — minimal interactivity
+   --------------------------------------------------------------------------
+   No dependencies, no localStorage. Wires data-attributes to the
+   .is-open / .is-active state classes that rio-admin.css styles.
+
+   Markup hooks:
+     Dropdown : <div class="rio-dropdown"><button data-rio-dropdown>…</button>
+                <div class="rio-dropdown-menu">…</div></div>
+     Modal    : opener  <button data-rio-modal-open="#id">
+                close    [data-rio-modal-close] / backdrop click / Esc
+     Tabs     : <div class="rio-tabs"><button data-rio-tab="#panel">…</button>…</div>
+                panels   <div id="panel" class="rio-tab-panel">…</div>
+     Toast    : <button data-rio-toast="success" data-rio-toast-title="…"
+                        data-rio-toast-text="…">  — or  RIO.toast({…})
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  /* ---- Dropdown ---------------------------------------------------------- */
+  document.addEventListener('click', function (e) {
+    var toggle = e.target.closest('[data-rio-dropdown]');
+    var open = document.querySelectorAll('.rio-dropdown.is-open');
+    if (toggle) {
+      var dd = toggle.closest('.rio-dropdown');
+      var wasOpen = dd.classList.contains('is-open');
+      open.forEach(function (m) { m.classList.remove('is-open'); });
+      if (!wasOpen) { dd.classList.add('is-open'); }
+      return;
+    }
+    if (!e.target.closest('.rio-dropdown-menu')) {
+      open.forEach(function (m) { m.classList.remove('is-open'); });
+    }
+  });
+
+  /* ---- Modal ------------------------------------------------------------- */
+  function closeModal(m) { if (m) { m.classList.remove('is-open'); } }
+  document.addEventListener('click', function (e) {
+    var opener = e.target.closest('[data-rio-modal-open]');
+    if (opener) {
+      var m = document.querySelector(opener.getAttribute('data-rio-modal-open'));
+      if (m) { m.classList.add('is-open'); }
+      return;
+    }
+    if (e.target.closest('[data-rio-modal-close]')) {
+      closeModal(e.target.closest('.rio-modal-backdrop'));
+      return;
+    }
+    if (e.target.classList.contains('rio-modal-backdrop')) { closeModal(e.target); }
+  });
+
+  /* ---- Tabs -------------------------------------------------------------- */
+  document.addEventListener('click', function (e) {
+    var tab = e.target.closest('[data-rio-tab]');
+    if (!tab) { return; }
+    var group = tab.closest('.rio-tabs');
+    group.querySelectorAll('.rio-tab').forEach(function (t) { t.classList.remove('is-active'); });
+    tab.classList.add('is-active');
+    var scope = group.parentElement;
+    scope.querySelectorAll('.rio-tab-panel').forEach(function (p) { p.classList.remove('is-active'); });
+    var panel = scope.querySelector(tab.getAttribute('data-rio-tab'));
+    if (panel) { panel.classList.add('is-active'); }
+  });
+
+  /* ---- Esc closes open modals + dropdowns ------------------------------- */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') { return; }
+    document.querySelectorAll('.rio-modal-backdrop.is-open').forEach(closeModal);
+    document.querySelectorAll('.rio-dropdown.is-open').forEach(function (d) { d.classList.remove('is-open'); });
+  });
+
+  /* ---- Toast ------------------------------------------------------------- */
+  var ICON = {
+    default: 'bi-info-circle-fill', success: 'bi-check-circle-fill',
+    danger: 'bi-exclamation-octagon-fill', warning: 'bi-exclamation-triangle-fill'
+  };
+  function host() {
+    var h = document.querySelector('.rio-toast-host');
+    if (!h) { h = document.createElement('div'); h.className = 'rio-toast-host'; document.body.appendChild(h); }
+    return h;
+  }
+  function toast(opts) {
+    opts = opts || {};
+    var variant = opts.variant || 'default';
+    var el = document.createElement('div');
+    el.className = 'rio-toast' + (variant !== 'default' ? ' rio-toast-' + variant : '');
+    el.innerHTML =
+      '<i class="bi ' + (ICON[variant] || ICON.default) + ' rio-toast-glyph"></i>' +
+      '<div class="rio-toast-body">' +
+        (opts.title ? '<div class="rio-toast-title"></div>' : '') +
+        (opts.text ? '<div class="rio-toast-text"></div>' : '') +
+      '</div>' +
+      '<button class="rio-toast-close" type="button" aria-label="Dismiss"><i class="bi bi-x-lg"></i></button>';
+    if (opts.title) { el.querySelector('.rio-toast-title').textContent = opts.title; }
+    if (opts.text) { el.querySelector('.rio-toast-text').textContent = opts.text; }
+    function close() { el.classList.add('is-hiding'); setTimeout(function () { el.remove(); }, 200); }
+    el.querySelector('.rio-toast-close').addEventListener('click', close);
+    host().appendChild(el);
+    if (opts.duration !== 0) { setTimeout(close, opts.duration || 4000); }
+    return el;
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-rio-toast]');
+    if (!t) { return; }
+    toast({
+      variant: t.getAttribute('data-rio-toast') || 'default',
+      title: t.getAttribute('data-rio-toast-title') || '',
+      text: t.getAttribute('data-rio-toast-text') || ''
+    });
+  });
+
+  window.RIO = { toast: toast };
+})();
+
+</script>
 </body>
 </html>
