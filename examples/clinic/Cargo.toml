@@ -1,46 +1,33 @@
-[package]
-name = "clinic"
+# The canonical RustIO Admin project workspace.
+#
+# This is the shape `rustio startproject` produces and the structure
+# every RustIO project keeps for its whole life: one workspace, one
+# foundation crate (`clinic-core`), one crate per business capability
+# (`patients`, `scheduling`, `billing`), and one server crate
+# (`clinic-server`) that boots everything. See docs/ARCHITECTURE.md.
+#
+# It is a standalone workspace (its own Cargo.lock) and depends on the
+# published framework, exactly like a real project would.
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
 version = "0.1.0"
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
+edition = "2021"
 publish = false
 
-# Standalone data-layer crate for the clinic schema in
-# `migrations/0001_clinic_schema.sql`.
-#
-# NOT wired to rustio-admin: the schema uses UUID primary keys,
-# which the rustio-admin admin runtime does not support today
-# (every URL / ORM call assumes `i64`). Treat this crate as the
-# typed data layer you can later wrap in any HTTP framework
-# (axum / actix / a future UUID-aware admin layer).
-
-[lib]
-path = "src/lib.rs"
-
-# HTTP server — `cargo run -p clinic` boots an axum web app that
-# renders four HTML pages (dashboard, appointments, patients,
-# worklist) and four JSON endpoints. Inline CSS, no template
-# engine, no JS — minimum-dep production-shape demo. See src/main.rs.
-[[bin]]
-name = "clinic"
-path = "src/main.rs"
-
-[dependencies]
-axum         = "0.7"
-chrono       = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+[workspace.dependencies]
+rustio-admin = "0.27.6"
+chrono       = { version = "0.4", features = ["serde"] }
+tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
 dotenvy      = "0.15"
-rust_decimal = { version = "1", features = ["serde"] }
-serde        = { version = "1", features = ["derive"] }
-serde_json   = "1"
-sqlx         = { version = "0.8", default-features = false, features = [
-    "runtime-tokio",
-    "postgres",
-    "uuid",
-    "chrono",
-    "rust_decimal",
-    "macros",
-] }
-thiserror    = "1"
-tokio        = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
-uuid         = { version = "1", features = ["v4", "serde"] }
+env_logger   = "0.11"
+log          = "0.4"
+
+# Internal crates, wired by path. Capabilities depend ONLY on
+# clinic-core — never on each other.
+clinic-core = { path = "crates/clinic-core" }
+patients    = { path = "crates/patients" }
+scheduling  = { path = "crates/scheduling" }
+billing     = { path = "crates/billing" }

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop · RustIO</title>
+  <style>
+    /* Edit these three tokens to give the project its own surface
+       colour without hunting through the file. Everything below
+       inherits from them. */
+    :root {
+      --brand:        #1e3a5f;   /* accent — Deep Navy (matches ui/ kit)   */
+      --brand-strong: #15293f;   /* accent hover / pressed                */
+      --accent2:      #e0912b;   /* warm amber — light, joyful secondary  */
+      --text:         #15233b;   /* primary text                          */
+      --muted:        #51607a;   /* secondary text, section eyebrows      */
+
+      /* Neutrals + surfaces */
+      --subtle: #8a93a6;
+      --line:   #dde4ea;
+      --surface:#ffffff;
+      --bg:     #f6f8fb;
+      --wash:   #eef2f7;         /* faint brand tint (hover surfaces)     */
+
+      /* Type scale — mirrors the admin's canonical tokens:
+         14 metadata · 16 secondary · 17 body · 20 titles · 24 · 32 */
+      --fs-xs: 0.875rem;   /* 14px */
+      --fs-sm: 1rem;       /* 16px */
+      --fs-md: 1.0625rem;  /* 17px */
+      --fs-lg: 1.25rem;    /* 20px */
+      --fs-xl: 1.5rem;     /* 24px */
+      --fs-display: 2rem;  /* 32px */
+
+      --radius: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable",
+                   "Segoe UI", system-ui, sans-serif;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 4.5rem 1.5rem 3rem;
+      color: var(--text);
+      line-height: 1.6;
+      background:
+        radial-gradient(900px 360px at 12% -8%, var(--wash), transparent 60%),
+        var(--bg);
+      font-size: var(--fs-md);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- hero --------------------------------------------------- */
+    .brandbar { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1.75rem; }
+    .monogram {
+      width: 38px; height: 38px;
+      display: grid; place-items: center;
+      background: var(--brand); color: #fff;
+      font-weight: 700; font-size: var(--fs-lg);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 4px 12px rgb(13 148 136 / 0.30);
+    }
+    .wordmark { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.01em; }
+    .env-badge {
+      margin-left: auto;
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 12px;
+      font-size: var(--fs-xs); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--brand-strong);
+      background: var(--wash);
+      border: 1px solid #c4cfdd;
+      border-radius: 999px;
+    }
+    .env-badge::before {
+      content: ""; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent2);
+      box-shadow: 0 0 0 3px rgb(13 148 136 / 0.18);
+    }
+
+    h1 {
+      font-size: var(--fs-display);
+      line-height: 1.15;
+      margin: 0 0 0.6rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    .lead {
+      color: var(--muted);
+      margin: 0 0 1.75rem;
+      font-size: var(--fs-lg);
+      line-height: 1.5;
+      max-width: 46ch;
+    }
+
+    .cta { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      text-decoration: none;
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      background: var(--surface);
+      transition: border-color .14s ease, background .14s ease, transform .14s ease;
+    }
+    .btn:hover { background: #fbfdfd; border-color: var(--subtle); transform: translateY(-1px); }
+    .btn--primary {
+      background: var(--brand); color: #fff; border-color: var(--brand);
+      box-shadow: 0 6px 16px rgb(13 148 136 / 0.24);
+    }
+    .btn--primary:hover { background: var(--brand-strong); border-color: var(--brand-strong); }
+
+    /* ---- sections ----------------------------------------------- */
+    section { margin: 2.75rem 0 0; }
+    .eyebrow {
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--brand-strong);
+      margin: 0 0 0.9rem;
+    }
+
+    /* status row */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .status-card {
+      display: flex; align-items: flex-start; gap: 0.65rem;
+      padding: 0.9rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .status-card .dot {
+      flex-shrink: 0; margin-top: 0.45rem;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent2);
+      box-shadow: 0 0 0 3px rgb(224 145 43 / 0.18);
+    }
+    .status-card strong { display: block; font-size: var(--fs-sm); font-weight: 600; }
+    .status-card span { font-size: var(--fs-xs); color: var(--muted); }
+
+    /* model grid */
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+      gap: 0.75rem;
+    }
+    .model {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.85rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      text-decoration: none; color: var(--text);
+      transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease;
+    }
+    .model:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgb(13 148 136 / 0.12);
+    }
+    .model__icon {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      display: grid; place-items: center;
+      color: var(--brand);
+      background: var(--wash);
+      border-radius: var(--radius-sm);
+    }
+    .model__icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .model__text { min-width: 0; }
+    .model__name { display: block; font-size: var(--fs-md); font-weight: 600; line-height: 1.25; }
+    .model__path { font-size: var(--fs-xs); color: var(--subtle); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+    /* get-started terminal */
+    .terminal {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid #0b1220;
+      box-shadow: 0 16px 40px rgb(15 23 42 / 0.18);
+    }
+    .terminal__bar {
+      display: flex; align-items: center; gap: 7px;
+      padding: 0.6rem 0.9rem;
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+    }
+    .terminal__bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .terminal__bar i:nth-child(1) { background: #ff5f56; }
+    .terminal__bar i:nth-child(2) { background: #ffbd2e; }
+    .terminal__bar i:nth-child(3) { background: #27c93f; }
+    .terminal__bar span { margin-left: 0.5rem; font-size: var(--fs-xs); color: #94a3b8; }
+    .terminal pre {
+      margin: 0;
+      padding: 1.1rem 1.2rem;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.9375rem;
+      line-height: 1.75;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      overflow-x: auto;
+    }
+    .terminal pre .p { color: #9db8d8; }   /* prompt $ */
+    .terminal pre .c { color: #64748b; }   /* comment  */
+
+    code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.9em;
+      background: #eef1f3; padding: 0.1em 0.4em; border-radius: 5px;
+    }
+
+    footer {
+      margin-top: 3.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--line);
+      color: var(--subtle);
+      font-size: var(--fs-xs);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--brand-strong); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brandbar">
+      <span class="monogram">S</span>
+      <span class="wordmark">Shop</span>
+      <span class="env-badge">Development</span>
+    </div>
+    <h1>Shop administration</h1>
+    <p class="lead">
+      A RustIO-powered control panel for your store — products, orders, customers
+      and payments, all typed, searchable, and audited from a single place.
+    </p>
+    <div class="cta">
+      <a class="btn btn--primary" href="/admin">Open admin panel →</a>
+      <a class="btn" href="/admin/docs">Documentation</a>
+      <a class="btn" href="/admin/health">Health</a>
+    </div>
+  </header>
+
+  <section>
+    <p class="eyebrow">Live overview</p>
+    <div class="status-grid">
+      <div class="status-card">
+        <span class="dot"></span>
+        <div><strong>PostgreSQL</strong><span>Connected · <code>{{DB_NAME}}</code> · v{{PG_MAJOR}}</span></div>
+      </div>
+      <div class="status-card">
+        <span class="dot"></span>
+        <div><strong>Catalog</strong><span>{{PRODUCTS}} products · {{CUSTOMERS}} customers</span></div>
+      </div>
+      <div class="status-card">
+        <span class="dot"></span>
+        <div><strong>Orders</strong><span>{{ORDERS}} orders · ${{REVENUE}} booked</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Data models · {{MODELS}}</p>
+    <div class="model-grid">
+      <a class="model" href="/admin/products">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+        <span class="model__text"><span class="model__name">Products</span><span class="model__path">/admin/products</span></span>
+      </a>
+      <a class="model" href="/admin/categories">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
+        <span class="model__text"><span class="model__name">Categories</span><span class="model__path">/admin/categories</span></span>
+      </a>
+      <a class="model" href="/admin/customers">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <span class="model__text"><span class="model__name">Customers</span><span class="model__path">/admin/customers</span></span>
+      </a>
+      <a class="model" href="/admin/orders">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+        <span class="model__text"><span class="model__name">Orders</span><span class="model__path">/admin/orders</span></span>
+      </a>
+      <a class="model" href="/admin/order_items">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
+        <span class="model__text"><span class="model__name">Order items</span><span class="model__path">/admin/order_items</span></span>
+      </a>
+      <a class="model" href="/admin/addresses">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+        <span class="model__text"><span class="model__name">Addresses</span><span class="model__path">/admin/addresses</span></span>
+      </a>
+      <a class="model" href="/admin/product_images">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+        <span class="model__text"><span class="model__name">Product images</span><span class="model__path">/admin/product_images</span></span>
+      </a>
+      <a class="model" href="/admin/cart_items">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
+        <span class="model__text"><span class="model__name">Cart items</span><span class="model__path">/admin/cart_items</span></span>
+      </a>
+      <a class="model" href="/admin/payments">
+        <span class="model__icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
+        <span class="model__text"><span class="model__name">Payments</span><span class="model__path">/admin/payments</span></span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Get started</p>
+    <div class="terminal">
+      <div class="terminal__bar"><i></i><i></i><i></i><span>bash — shop</span></div>
+<pre><span class="c"># apply migrations, create your first operator, then run</span>
+<span class="p">$</span> rustio-admin migrate apply
+<span class="p">$</span> rustio-admin user create --email admin@shop.local --role administrator
+<span class="p">$</span> cargo run</pre>
+    </div>
+  </section>
+
+  <footer>
+    <span>Edit this page in <code>templates/home.html</code>.</span>
+    <span>Powered by <a href="https://github.com/abdulwahed-sweden/rustio-admin">RustIO</a>.</span>
+  </footer>
+
+</body>
+</html>

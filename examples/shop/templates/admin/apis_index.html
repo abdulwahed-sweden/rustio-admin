@@ -1,0 +1,116 @@
+{% extends "admin/_base.html" %}
+
+{# Redesigned API-surface page: one card per model, each with colored HTTP
+ # method badges (GET=read, POST=write, delete=danger), an endpoint list,
+ # and a fields table. Scoped under `.api`; amber via the accent2 fallback. #}
+{% block extra_head %}
+<style>
+  .pgx-head { margin-bottom: var(--rio-s5); }
+  .pgx-head__row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--rio-s4); flex-wrap: wrap; }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
+  .pgx-lead { margin-top: var(--rio-s2); max-width: 80ch; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
+  .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-surface-2); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
+  .pgx-actions { display: flex; gap: var(--rio-s2); flex-wrap: wrap; }
+
+  .api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--rio-s5); }
+  .api-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
+  .api-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
+  .api-card__glyph { width: 38px; height: 38px; flex: none; border-radius: var(--rio-radius-sm); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
+  .api-card__glyph .rio-icon { width: 18px; height: 18px; }
+  .api-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
+  .api-card__title a { color: inherit; }
+  .api-card__title a:hover { color: var(--rio-accent); }
+  .api-card__sub { font-weight: var(--rio-fw-regular); color: var(--rio-text-subtle); font-size: var(--rio-fs-sm); }
+  .api-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-muted); }
+
+  .api-endpoints { display: flex; flex-direction: column; }
+  .api-ep { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
+  .api-verb { flex: none; min-width: 52px; text-align: center; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); letter-spacing: 0.03em; padding: 0.18rem 0.5rem; border-radius: var(--rio-radius-sm); }
+  .api-verb--get { background: var(--rio-success-bg); color: var(--rio-success); }
+  .api-verb--post { background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
+  .api-verb--del { background: var(--rio-danger-bg); color: var(--rio-danger); }
+  .api-path { font-family: var(--rio-font-mono); font-size: var(--rio-fs-sm); color: var(--rio-text); overflow-x: auto; }
+  .api-ep__action { margin-left: auto; flex: none; font-size: var(--rio-fs-xs); color: var(--rio-text-subtle); }
+
+  .api-fields { padding: var(--rio-s4) var(--rio-s5) var(--rio-s5); }
+  .api-fields__label { font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-subtle); margin-bottom: var(--rio-s3); }
+  .api-ftable { width: 100%; border-collapse: collapse; font-size: var(--rio-fs-sm); }
+  .api-ftable td { padding: 0.45rem 0; border-bottom: 1px solid var(--rio-border-soft); }
+  .api-ftable tr:last-child td { border-bottom: 0; }
+  .api-ftable .api-fname { font-family: var(--rio-font-mono); color: var(--rio-text); }
+  .api-ftable .api-ftype { color: var(--rio-text-muted); }
+  .api-ftable .api-fnull { text-align: right; color: var(--rio-text-subtle); font-size: var(--rio-fs-xs); }
+  .api-fnull--yes { color: var(--rio-warning); font-weight: var(--rio-fw-semibold); }
+
+  @media (max-width: 720px) { .api-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="pgx-head">
+  <div class="pgx-head__row">
+    <div>
+      <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+      <h1 class="pgx-title">{{ page_title }}</h1>
+    </div>
+    <div class="pgx-actions">
+      <a class="rio-button rio-button--ghost" href="{{ openapi_url }}">OpenAPI 3.0 spec</a>
+      <a class="rio-button rio-button--ghost" href="/admin/apis/sdk.ts">TypeScript SDK</a>
+      <a class="rio-button rio-button--primary" href="/admin/apis/playground">Open playground →</a>
+    </div>
+  </div>
+  <p class="pgx-lead">
+    Every registered project model is reachable via JSON content negotiation. Read paths accept
+    <code>Accept: application/json</code> or <code>?format=json</code>; write paths return JSON
+    envelopes on the same URLs the HTML forms post to.
+  </p>
+</header>
+
+{% if apis %}
+<div class="api-grid">
+  {% for m in apis %}
+  <article class="api-card">
+    <header class="api-card__head">
+      <span class="api-card__glyph">{{ icon("table", class="rio-icon") }}</span>
+      <span class="api-card__title"><a href="/admin/{{ m.admin_name }}">{{ m.display_name }}</a> <span class="api-card__sub">· {{ m.singular_name }}</span></span>
+      <span class="api-card__count">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
+    </header>
+
+    <div class="api-endpoints">
+      <div class="api-ep"><span class="api-verb api-verb--get">GET</span><span class="api-path">{{ m.list_path }}</span><span class="api-ep__action">List rows</span></div>
+      <div class="api-ep"><span class="api-verb api-verb--post">POST</span><span class="api-path">{{ m.list_path }}</span><span class="api-ep__action">Create</span></div>
+      <div class="api-ep"><span class="api-verb api-verb--get">GET</span><span class="api-path">{{ m.detail_path }}</span><span class="api-ep__action">Detail</span></div>
+      <div class="api-ep"><span class="api-verb api-verb--post">POST</span><span class="api-path">{{ m.detail_path }}/edit</span><span class="api-ep__action">Update</span></div>
+      <div class="api-ep"><span class="api-verb api-verb--del">POST</span><span class="api-path">{{ m.detail_path }}/delete</span><span class="api-ep__action">Delete</span></div>
+    </div>
+
+    <div class="api-fields">
+      <div class="api-fields__label">Fields</div>
+      <table class="api-ftable">
+        <tbody>
+          {% for f in m.fields %}
+          <tr>
+            <td class="api-fname">{{ f.name }}</td>
+            <td class="api-ftype">{{ f.type_label }}</td>
+            <td class="api-fnull{% if f.nullable %} api-fnull--yes{% endif %}">{% if f.nullable %}nullable{% else %}required{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="rio-card rio-card--quiet">
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("table", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No project models registered yet</h3>
+    <p class="rio-empty-state__lead">
+      Register a model in your <code>main.rs</code> via
+      <code>Admin::new().model::&lt;YourModel&gt;()</code> and its endpoints will appear here automatically.
+    </p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
