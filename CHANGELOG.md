@@ -10,7 +10,7 @@ leaves the alpha track.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
-| **0.27.6** | 2026-06-03 | **Documentation by example.** `docs/getting-started.md` was rewritten to *show* rather than *tell*: it opens with a "See it work now" clinic walkthrough (`rustio-admin new clinic` → a real Patient/Appointment admin with seeded rows, signed into in minutes, zero code), then a "build your own" path where each `startapp` is shown as *Creates → Generates → wire → live URL*. `docs/modeladmin.md` gains a worked example showing the common hooks (`list_display` / `list_filter` / `search_fields` / `ordering`) together on one model with the list page they render. Docs only — no code change since 0.27.5 (the published crates are identical). |
+| **0.27.6** | 2026-06-05 | **CSV-import guidance + admin redesign.** A CSV header with columns the model doesn't declare no longer dead-ends on a `400` — the rows import, the skipped columns are reported, and a ready-to-run migration + model snippet is generated to capture them. The docs index, doc viewer, API surface, account-sessions, audit-log, and CSV-import-result pages are restyled with the shared card / badge / glyph language. Also the example-first docs rewrite (`getting-started.md`, `modeladmin.md`). |
 | **0.27.5** | 2026-06-03 | **Beginner-first help + a binary-name fix.** `--help` is now a grouped, colour-coded map (Getting started · When you need more · Help) with the `RustIO` wordmark in a distinct gold, instead of a flat wall of 21 commands — the full list still follows below. `rustio-admin startapp --help` became the best help in the tool: example-first (SIMPLE / WITH FIELDS), with the field-type list, relations (`fk:Model`) and choices (`choice:a,b`) shown as snippets. After `new`, a model-less project ends with an "Add your first model" example so you always know the next move. **Fix:** the `ai` / `memory` commands printed next-step guidance using the bare name `rustio` (e.g. `rustio ai apply …`) — but the binary is `rustio-admin`, so copy-pasting ran the sibling `rustio` project and failed with `rustio.schema.json not found`; all printed commands now use `rustio-admin`. |
 | **0.27.4** | 2026-06-03 | **First-run terminal experience redesigned.** The `rustio-admin new` wizard and scaffold output were flat, cramped, single-colour text; they now share one calm visual language (a warm-amber accent for the *active* element, green `✓`, cyan paths/URLs, bold commands, dim explanations, comfortable spacing), show **Step _n_ of 3** headers, and list each next command on its own copy-clean line. Commands now point forward **contextually**: after `migrate apply` → *create your admin login* (or *launch* if an admin exists); after `user create` → `cargo run`. The `--help` command list was trimmed to one beginner-readable line per command (internal "Doctrine B8" jargon removed; advanced verbs flagged). The `new` wizard no longer advertises `school`/`inventory` as starters they aren't, and `ai status`/`init` state up front that RustIO runs no AI. **Fixes** a blocker where `startapp` generated invalid SQL for reserved-keyword field names (e.g. `order`) — column names are now quoted in the migration DDL. All colour degrades to plain text under `NO_COLOR`/non-TTY/CI. New doctrine: `DESIGN_ONBOARDING.md` §13 (Visual language). |
 | **0.27.3** | 2026-06-03 | **Welcome banner leads with value, not mechanism.** The `rustio-admin` welcome (bare command / `--help`) previously explained the differentiator in governance vocabulary (*authority: who may do what, how sessions end, … governed by checked-in contracts*) before a first-time reader had felt any value. It now opens with what the developer **gets** ("describe your data as Rust structs, get a complete admin panel") and reframes "Why RustIO is different" as the **outcome** — login, roles, and audit trail built in as one system, so the admin is secure and accountable on the first run with nothing to assemble — rather than the machinery that delivers it. Value before mechanics (`DESIGN_ONBOARDING.md` §10). Banner text only — no command, flag, or behaviour change; "Start here" and the full command list are unchanged below the separator. |
@@ -65,7 +65,26 @@ leaves the alpha track.
 ## [Unreleased]
 
 
-## [0.27.6] — 2026-06-03
+## [0.27.6] — 2026-06-05
+
+### Fixed
+- **CSV import no longer dead-ends on an unrecognised column.** A header with
+  columns the model doesn't declare used to return a bare `400 Bad request`,
+  even though the importer was already built to skip them. The handler now
+  matches that design: unknown columns are skipped, reported on the result
+  page, and turned into a ready-to-run `ALTER TABLE` migration plus the
+  matching struct / `from_row` / `insert_values` snippet, with column types
+  inferred from the column names. Removes the now-unused
+  `ParseError::UnknownColumns` variant.
+
+### Changed
+- **Admin pages restyled.** The framework-docs index, the markdown doc viewer,
+  the API surface, the account-sessions page, the audit log, and the
+  CSV-import result page were redesigned with the shared card / badge / glyph
+  component language (page heads, colored status/method badges, avatar cells,
+  typeset documentation prose). Token-only; secondary accents read
+  `var(--rio-accent2, var(--rio-accent))` so a project that defines an amber
+  secondary picks it up while the framework default falls back to its accent.
 
 ### Documentation
 - **`getting-started.md` rewritten example-first.** Opens with a "See it work
@@ -81,8 +100,12 @@ leaves the alpha track.
   map of each hook to its effect — before the per-hook reference.
 - **`cli.md`** `new` description corrected to match the current CLI help.
 
-_No code change since 0.27.5 — the published crates are byte-identical; this
-release tags the documentation pass._
+### Internal
+- `examples/` reorganised into two admin projects: the canonical multi-crate
+  reference renamed `clinic-admin` → `clinic`, the unused axum `clinic` demo
+  dropped, and a new single-crate `shop` (e-commerce admin: nine related
+  models, inline relations, validation, a navy + amber theme) added. Repo
+  layout only — not part of the published crate.
 
 
 ## [0.27.5] — 2026-06-03
