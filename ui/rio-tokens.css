@@ -111,4 +111,5 @@
   --rio-danger-rgb:  246, 78, 96;     /* #f64e60 as triplet, for rgba() */
   --rio-primary-2:   #34557d;         /* brand-mark gradient end */
   --rio-logout-fg:   #ffd2d6;         /* light danger text on the dark topbar */
+  --rio-backdrop:    rgba(20, 30, 56, 0.55);  /* modal / overlay scrim */
 }

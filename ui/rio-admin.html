@@ -55,14 +55,24 @@
         <a href="#" class="rio-topbar-link" title="Open the public site"><i class="bi bi-box-arrow-up-right"></i> View Site</a>
         <span class="rio-topbar-sep"></span>
         <button class="rio-icon-btn" title="Notifications"><i class="bi bi-bell"></i><span class="rio-dot"></span></button>
-        <button class="rio-user" title="Account menu">
-          <span class="rio-user-badge">AM</span>
-          <span class="rio-user-meta">
-            <span class="rio-user-name">Abdulwahed</span>
-            <span class="rio-user-role">Administrator</span>
-          </span>
-          <i class="bi bi-chevron-down rio-user-caret"></i>
-        </button>
+        <div class="rio-dropdown">
+          <button class="rio-user" data-rio-dropdown title="Account menu">
+            <span class="rio-user-badge">AM</span>
+            <span class="rio-user-meta">
+              <span class="rio-user-name">Abdulwahed</span>
+              <span class="rio-user-role">Administrator</span>
+            </span>
+            <i class="bi bi-chevron-down rio-user-caret"></i>
+          </button>
+          <div class="rio-dropdown-menu">
+            <div class="rio-dropdown-label">Account</div>
+            <button class="rio-dropdown-item"><i class="bi bi-person"></i> Profile</button>
+            <button class="rio-dropdown-item"><i class="bi bi-gear"></i> Settings</button>
+            <button class="rio-dropdown-item"><i class="bi bi-life-preserver"></i> Help &amp; support</button>
+            <div class="rio-dropdown-divider"></div>
+            <button class="rio-dropdown-item is-danger"><i class="bi bi-box-arrow-right"></i> Sign out</button>
+          </div>
+        </div>
         <span class="rio-topbar-sep"></span>
         <a href="#" class="rio-topbar-link rio-logout" title="Sign out"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
@@ -187,8 +197,69 @@
         </div>
 
       </section>
+
+      <section class="rio-card" style="margin-top:1.75rem">
+        <div class="rio-card-header">
+          <h2 class="rio-card-title">UI Components</h2>
+          <div class="rio-dropdown">
+            <button class="rio-btn rio-btn-secondary rio-btn-sm" data-rio-dropdown>Actions <i class="bi bi-chevron-down"></i></button>
+            <div class="rio-dropdown-menu">
+              <div class="rio-dropdown-label">Export</div>
+              <button class="rio-dropdown-item"><i class="bi bi-filetype-csv"></i> Download CSV</button>
+              <button class="rio-dropdown-item"><i class="bi bi-filetype-pdf"></i> Download PDF</button>
+              <div class="rio-dropdown-divider"></div>
+              <button class="rio-dropdown-item is-danger"><i class="bi bi-trash"></i> Delete all</button>
+            </div>
+          </div>
+        </div>
+        <div class="rio-card-body">
+          <div class="rio-tabs">
+            <button class="rio-tab is-active" data-rio-tab="#tab-overview"><i class="bi bi-card-text"></i> Overview</button>
+            <button class="rio-tab" data-rio-tab="#tab-activity"><i class="bi bi-activity"></i> Activity</button>
+            <button class="rio-tab" data-rio-tab="#tab-settings"><i class="bi bi-gear"></i> Settings</button>
+          </div>
+          <div id="tab-overview" class="rio-tab-panel is-active">
+            Tabs, modal, toast, and dropdown are all driven by <strong>data-*</strong> attributes plus the optional <strong>rio-admin.js</strong> helper — no framework required.
+          </div>
+          <div id="tab-activity" class="rio-tab-panel">
+            The Activity panel. Switching tabs just toggles <strong>.is-active</strong> on the clicked tab and its matching panel.
+          </div>
+          <div id="tab-settings" class="rio-tab-panel">
+            The Settings panel. Every component above stays styled by tokens only — re-theme by overriding <strong>--rio-primary</strong>.
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:1.5rem">
+            <button class="rio-btn rio-btn-primary" data-rio-modal-open="#demo-modal"><i class="bi bi-window"></i> Open modal</button>
+            <button class="rio-btn rio-btn-secondary" data-rio-toast="success" data-rio-toast-title="Saved" data-rio-toast-text="Your changes were saved."><i class="bi bi-check-circle"></i> Success toast</button>
+            <button class="rio-btn rio-btn-secondary" data-rio-toast="warning" data-rio-toast-title="Heads up" data-rio-toast-text="Storage is 80% full."><i class="bi bi-exclamation-triangle"></i> Warning toast</button>
+            <button class="rio-btn rio-btn-danger" data-rio-toast="danger" data-rio-toast-title="Failed" data-rio-toast-text="Could not reach the server."><i class="bi bi-x-octagon"></i> Error toast</button>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </div>
+
+<!-- Modal (hidden until [data-rio-modal-open] adds .is-open) -->
+<div class="rio-modal-backdrop" id="demo-modal">
+  <div class="rio-modal">
+    <div class="rio-modal-header">
+      <h3 class="rio-modal-title">Create record</h3>
+      <button class="rio-modal-close" data-rio-modal-close aria-label="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="rio-modal-body">
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="rio-field"><label>Name</label><input class="rio-input" placeholder="e.g. Lina Karlsson"></div>
+        <div class="rio-field"><label>Status</label><select class="rio-select"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
+      </div>
+    </div>
+    <div class="rio-modal-footer">
+      <button class="rio-btn rio-btn-secondary" data-rio-modal-close>Cancel</button>
+      <button class="rio-btn rio-btn-primary" data-rio-modal-close><i class="bi bi-check-lg"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<script src="rio-admin.js"></script>
 </body>
 </html>
