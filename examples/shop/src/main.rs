@@ -167,7 +167,7 @@ async fn render_home(db: &Db) -> String {
 /// Format a money amount with thousands separators and two decimals,
 /// e.g. `5432.1` -> `5,432.10`.
 fn group_thousands(v: f64) -> String {
-    let s = format!("{:.2}", v);
+    let s = format!("{v:.2}");
     let (int_part, frac) = s.split_once('.').unwrap_or((s.as_str(), "00"));
     let neg = int_part.starts_with('-');
     let digits = int_part.trim_start_matches('-');
