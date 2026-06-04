@@ -1,27 +1,55 @@
 {% extends "admin/_base.html" %}
+
+{# Redesigned framework-docs index: a responsive grid of doc cards with a
+ # glyph, title, and source path — replacing the flat list. Scoped under
+ # `.pgx` with framework tokens; `var(--rio-accent2, var(--rio-accent))`
+ # gives the shop its amber accent and falls back to the framework accent. #}
+{% block extra_head %}
+<style>
+  .pgx-head { margin-bottom: var(--rio-s6); }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
+  .pgx-lead { margin-top: var(--rio-s2); max-width: 70ch; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
+  .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-surface-2); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
+
+  .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--rio-s4); }
+  .docs-card { display: flex; align-items: center; gap: var(--rio-s4); padding: var(--rio-s5); background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
+  .docs-card:hover { border-color: var(--rio-accent); transform: translateY(-2px); box-shadow: var(--rio-shadow-lg); }
+  .docs-card__glyph { width: 46px; height: 46px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
+  .docs-card__glyph .rio-icon { width: 22px; height: 22px; }
+  .docs-card__body { min-width: 0; display: flex; flex-direction: column; }
+  .docs-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); transition: color .14s ease; }
+  .docs-card:hover .docs-card__title { color: var(--rio-accent); }
+  .docs-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-muted); }
+  .docs-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-subtle); transition: transform .14s ease, color .14s ease; }
+  .docs-card:hover .docs-card__arrow { transform: translateX(3px); color: var(--rio-accent); }
+</style>
+{% endblock %}
+
 {% block content %}
-<header class="rio-page-header">
+<header class="pgx-head">
   <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
-  <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">
-    Read the framework's own documentation inside the admin chrome.
-    Source lives at <code>docs/*.md</code> in the
-    <code>rustio-admin</code> repository; rendered server-side via
-    pulldown-cmark.
+  <h1 class="pgx-title">{{ page_title }}</h1>
+  <p class="pgx-lead">
+    Read the framework's own documentation inside the admin chrome. Source lives at
+    <code>docs/*.md</code> in the <code>rustio-admin</code> repository; rendered server-side via pulldown-cmark.
   </p>
 </header>
 
-<section class="rio-card rio-card--quiet">
-  {% if docs %}
-  <ul class="rio-doc-list">
-    {% for d in docs %}
-    <li><a href="/admin/docs/{{ d.slug }}" class="rio-doc-list__link">
-      <strong>{{ d.title }}</strong>
-      <span class="rio-meta">/admin/docs/{{ d.slug }}</span>
-    </a></li>
-    {% endfor %}
-  </ul>
-  {% else %}
+{% if docs %}
+<div class="docs-grid">
+  {% for d in docs %}
+  <a href="/admin/docs/{{ d.slug }}" class="docs-card">
+    <span class="docs-card__glyph">{{ icon("bookmark", class="rio-icon") }}</span>
+    <span class="docs-card__body">
+      <span class="docs-card__title">{{ d.title }}</span>
+      <span class="docs-card__path">/admin/docs/{{ d.slug }}</span>
+    </span>
+    <span class="docs-card__arrow" aria-hidden="true">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="rio-card rio-card--quiet">
   <div class="rio-empty-state">
     <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
     <h3 class="rio-empty-state__title">No embedded docs registered</h3>
@@ -30,6 +58,6 @@
       and register it in <code>src/admin/docs.rs</code> — it appears here next build.
     </p>
   </div>
-  {% endif %}
-</section>
+</div>
+{% endif %}
 {% endblock %}
