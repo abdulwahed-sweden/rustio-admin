@@ -255,7 +255,8 @@ Where to start depends on the work.
 **Building on the published crate**
 → Install above
 → [`docs/modeladmin.md`](./docs/modeladmin.md)
-→ [`examples/clinic/`](./examples/clinic/)
+→ [`examples/clinic/`](./examples/clinic/) — multi-crate reference project
+→ [`examples/shop/`](./examples/shop/) — single-crate e-commerce admin
 
 **Understanding scope and design history**
 → [`docs/architecture.md`](./docs/architecture.md)

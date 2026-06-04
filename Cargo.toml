@@ -5,12 +5,14 @@ members = [
     "crates/rustio-admin-macros",
     "crates/rustio-admin-cli",
     "crates/rio-theme",
-    "examples/clinic",
 ]
-# `examples/clinic-admin` is the canonical multi-crate reference project.
-# It is its OWN standalone workspace (depends on the published
-# rustio-admin), so it is excluded from this framework workspace.
-exclude = ["examples/clinic-admin"]
+# The example projects are each their OWN standalone workspace (own
+# Cargo.lock), so they're excluded from the framework workspace:
+#   examples/clinic — canonical multi-crate reference; pins the
+#                     published rustio-admin (CI patches it to HEAD).
+#   examples/shop   — single-crate e-commerce admin; path-deps the
+#                     in-repo framework directly (always builds HEAD).
+exclude = ["examples/clinic", "examples/shop"]
 
 [workspace.package]
 version = "0.27.6"

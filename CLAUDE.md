@@ -102,7 +102,7 @@ The narrow surface is the point. If a feature feels like it wants schema-driven 
 - Touching CSS, tokens, or templates → `docs/design/DESIGN_DOCTRINE.md` § 1 (tokens), § 7 (source layout), § 9 (adding a fragment). The PR template requires a token disclosure and a visual regression checklist (`.github/pull_request_template.md`).
 - Changing what's public → `docs/public-api.md` is generated/descriptive; the canonical `pub use` surface lives in `crates/rustio-admin/src/lib.rs`. Anything not re-exported there is `pub(crate)` or `pub` inside `admin::*` for testing only.
 - Understanding scope and history → `ROADMAP.md`, `CHANGELOG.md`, and `docs/archive/STRATEGIC_RESET_PLAN.md` § 8 (strict architectural rules).
-- The canonical end-to-end consumer of the library lives at `examples/clinic/`.
+- The end-to-end consumers of the library live under `examples/`: `examples/clinic/` is the canonical multi-crate reference (pins the published crate; CI patches it to HEAD), and `examples/shop/` is a single-crate e-commerce admin that path-deps the in-repo framework directly. Both are standalone workspaces, excluded from the framework workspace.
 
 ## Workflow conventions
 

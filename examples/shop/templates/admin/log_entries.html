@@ -1,0 +1,123 @@
+{% extends "admin/_base.html" %}
+
+{# Redesigned global audit log: a single polished card with colored action
+ # badges, an avatar in the "By" column, styled date dividers, and inline
+ # field diffs. Scoped under `.lx`; amber via the accent2 fallback. #}
+{% block extra_head %}
+<style>
+  .pgx-head { margin-bottom: var(--rio-s5); }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
+  .pgx-lead { margin-top: var(--rio-s2); max-width: 80ch; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
+
+  .lx-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
+  .lx-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
+  .lx-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
+  .lx-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-muted); }
+
+  .lx-table { width: 100%; border-collapse: collapse; font-size: var(--rio-fs-base); }
+  .lx-table thead th { text-align: left; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); letter-spacing: 0.05em; text-transform: uppercase; color: var(--rio-text-muted); background: var(--rio-surface-2); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-border); }
+  .lx-table tbody td { padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); vertical-align: middle; }
+  .lx-table tbody tr:hover td { background: var(--rio-surface-2); }
+  .lx-table .lx-when { color: var(--rio-text-muted); white-space: nowrap; }
+  .lx-table .lx-ip { font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-subtle); }
+  .lx-table a { color: var(--rio-accent); }
+
+  .lx-date { background: var(--rio-surface-3); }
+  .lx-date th { padding: 0.4rem var(--rio-s5) !important; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); letter-spacing: 0.04em; text-transform: uppercase; color: var(--rio-text-subtle); }
+
+  .lx-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); padding: 0.2rem 0.6rem; border-radius: 999px; text-transform: capitalize; white-space: nowrap; }
+  .lx-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .lx-badge--success { background: var(--rio-success-bg); color: var(--rio-success); }
+  .lx-badge--danger  { background: var(--rio-danger-bg); color: var(--rio-danger); }
+  .lx-badge--warning { background: var(--rio-warning-bg); color: var(--rio-warning); }
+  .lx-badge--info    { background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
+  .lx-badge--neutral { background: var(--rio-surface-2); color: var(--rio-text-muted); }
+
+  .lx-by { display: inline-flex; align-items: center; gap: var(--rio-s2); }
+  .lx-avatar { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--rio-accent-soft); color: var(--rio-accent); display: grid; place-items: center; font-weight: var(--rio-fw-bold); font-size: var(--rio-fs-xs); }
+
+  .lx-diff { margin: var(--rio-s2) 0 0; display: grid; gap: 2px; }
+  .lx-diff__row { display: flex; align-items: baseline; gap: 0.5rem; font-size: var(--rio-fs-xs); }
+  .lx-diff__label { color: var(--rio-text-subtle); min-width: 90px; }
+  .lx-diff__old { color: var(--rio-danger); text-decoration: line-through; }
+  .lx-diff__arrow { color: var(--rio-text-subtle); }
+  .lx-diff__new { color: var(--rio-success); }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="pgx-head">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1 class="pgx-title">{{ page_title }}</h1>
+  <p class="pgx-lead">Full history of every authority mutation. Filter by user via the link in any row's "By" column.</p>
+</header>
+
+{% if user_filter_label %}
+<section class="rio-active-filters" aria-label="Active history filters" style="margin-bottom: var(--rio-s4)">
+  <span class="rio-active-filters-label">Filtered</span>
+  <span class="rio-active-pill">
+    <span class="rio-active-pill-key">By:</span>
+    {{ user_filter_label }}
+    <a href="/admin/history" class="rio-active-pill-x" aria-label="Clear user filter">×</a>
+  </span>
+</section>
+{% endif %}
+
+<div class="lx-card">
+  <div class="lx-card__head">
+    <span class="lx-card__title">Audit log</span>
+    <span class="lx-card__count">{{ history_entries|length }} entr{% if history_entries|length == 1 %}y{% else %}ies{% endif %}</span>
+  </div>
+
+  {% if history_entries %}
+  <table class="lx-table">
+    <thead><tr><th>When</th><th>Action</th><th>Record</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
+    <tbody>
+      {% for e in history_entries %}
+      {% if e.is_new_day %}
+      <tr class="lx-date"><th colspan="6" scope="rowgroup">{{ e.date_iso }}</th></tr>
+      {% endif %}
+      <tr>
+        <td class="lx-when" title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
+        <td><span class="lx-badge lx-badge--{{ e.pill_class }}">{{ e.label }}</span></td>
+        <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
+        <td>
+          <a class="lx-by" href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}">
+            <span class="lx-avatar">{{ e.user_email | first | upper }}</span>{{ e.user_email }}
+          </a>
+        </td>
+        <td>
+          {{ e.summary }}
+          {% if e.changes %}
+          <dl class="lx-diff" aria-label="Changed fields">
+            {% for c in e.changes %}
+            <div class="lx-diff__row" data-field="{{ c.field }}">
+              <dt class="lx-diff__label">{{ c.label }}</dt>
+              <dd style="margin:0">{% if c.from %}<span class="lx-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
+              <dd class="lx-diff__arrow" style="margin:0" aria-hidden="true">→</dd>
+              <dd style="margin:0">{% if c.to %}<span class="lx-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
+            </div>
+            {% endfor %}
+          </dl>
+          {% endif %}
+        </td>
+        <td class="lx-ip">{{ e.ip_address }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="rio-empty-state">
+    <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
+    <h3 class="rio-empty-state__title">No actions recorded</h3>
+    <p class="rio-empty-state__lead">
+      {% if user_filter_label %}
+      No history entries for <strong>{{ user_filter_label }}</strong>. <a href="/admin/history">Clear filter</a> to see every actor.
+      {% else %}
+      Once operators start creating, editing, or deleting rows, the audit feed lights up here.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

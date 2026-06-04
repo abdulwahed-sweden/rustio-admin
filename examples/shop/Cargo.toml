@@ -1,0 +1,24 @@
+[package]
+name = "shop"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# This example path-deps the in-repo framework, so it always builds against
+# the current source (HEAD) — the complement to examples/clinic, which pins
+# the published crate. A real downstream project would instead write
+# `rustio-admin = "0.27"`.
+rustio-admin = { path = "../../crates/rustio-admin" }
+tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
+chrono       = { version = "0.4", features = ["serde"] }
+uuid         = { version = "1", features = ["v4", "serde"] }
+rust_decimal = "1"
+sqlx         = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres"] }
+dotenvy      = "0.15"
+env_logger   = "0.11"
+log          = "0.4"
+
+# Standalone workspace (own Cargo.lock); excluded from the framework
+# workspace in the repo-root Cargo.toml, exactly like examples/clinic.
+[workspace]

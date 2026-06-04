@@ -178,7 +178,7 @@ jobs:
       - name: reference example pin tracks workspace version
         run: |
           set -eu
-          # The canonical reference project (examples/clinic-admin) pins
+          # The canonical reference project (examples/clinic) pins
           # the published rustio-admin. On a version bump it MUST be
           # re-pinned in lock-step — re-pinning the reference is part of
           # the release, enforced here (same convention as the scaffold
@@ -191,20 +191,20 @@ jobs:
             in_section && $1 == "version" { gsub(/"/, "", $3); print $3; exit }
           ' Cargo.toml)
           example=$(grep -E '^rustio-admin\s*=\s*"' \
-            examples/clinic-admin/Cargo.toml \
+            examples/clinic/Cargo.toml \
             | head -1 | cut -d'"' -f2)
           if [ -z "$workspace" ] || [ -z "$example" ]; then
             echo "::error::reference-example-pin guard could not extract both values (workspace='$workspace', example='$example'). Fix the regex or the file format."
             exit 1
           fi
           if [ "$workspace" != "$example" ]; then
-            echo "::error::Workspace version ($workspace) and examples/clinic-admin pin ($example) have drifted. Re-pin examples/clinic-admin/Cargo.toml [workspace.dependencies] to 'rustio-admin = \"$workspace\"' as part of the release."
+            echo "::error::Workspace version ($workspace) and examples/clinic pin ($example) have drifted. Re-pin examples/clinic/Cargo.toml [workspace.dependencies] to 'rustio-admin = \"$workspace\"' as part of the release."
             exit 1
           fi
           echo "OK: workspace and reference example both pin $workspace"
 
   reference-example:
-    name: reference example (clinic-admin)
+    name: reference example (clinic)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -217,20 +217,48 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: examples/clinic-admin
+          workspaces: examples/clinic
 
-      # `examples/clinic-admin` is the canonical reference project. It is
+      # `examples/clinic` is the canonical reference project. It is
       # its own workspace and pins the published `rustio-admin`, but here
       # we build it against the framework at HEAD (via `[patch.crates-io]`)
       # so a breaking change to the public API trips THIS job — that's the
       # whole point. If a framework *minor* bump makes the pin mismatch the
-      # patch, re-pin examples/clinic-admin to the new version as part of
+      # patch, re-pin examples/clinic to the new version as part of
       # the release (same convention as the scaffold-template pin).
       - name: fmt + clippy + build (against framework HEAD)
-        working-directory: examples/clinic-admin
+        working-directory: examples/clinic
         run: |
           set -eu
           cargo fmt --all --check
           printf '\n[patch.crates-io]\nrustio-admin = { path = "../../crates/rustio-admin" }\n' >> Cargo.toml
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo build --workspace
+
+  example-shop:
+    name: example (shop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.88
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/shop
+
+      # `examples/shop` is a single-crate e-commerce admin example. Unlike
+      # examples/clinic it path-deps the in-repo framework directly, so it
+      # already builds against HEAD — no version pin or `[patch.crates-io]`
+      # needed. A breaking change to the framework trips THIS job.
+      - name: fmt + clippy + build (against framework HEAD)
+        working-directory: examples/shop
+        run: |
+          set -eu
+          cargo fmt --all --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo build --workspace

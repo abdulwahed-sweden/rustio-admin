@@ -13,7 +13,7 @@ Update every pin — two of these are enforced by CI guards, so a miss fails the
       comment, and the `rio-theme` dependency `version`.
 - [ ] `crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl` — the
       scaffold pin. *(CI: “scaffold template pin tracks workspace minor”.)*
-- [ ] `examples/clinic-admin/Cargo.toml` — `[workspace.dependencies]`
+- [ ] `examples/clinic/Cargo.toml` — `[workspace.dependencies]`
       `rustio-admin`. *(CI: “reference example pin tracks workspace version”.)*
 - [ ] `README.md` — the `rustio-admin = "NEW"` dependency snippet.
 - [ ] `cargo build --workspace` to regenerate `Cargo.lock`.
@@ -36,7 +36,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo build  --workspace --all-targets
 cargo test   --workspace --all-targets
 # reference example builds against HEAD:
-( cd examples/clinic-admin && cargo build --workspace )
+( cd examples/clinic && cargo build --workspace )
 # Tier-2 guard (expect no matches):
 git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel' \
     -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'
