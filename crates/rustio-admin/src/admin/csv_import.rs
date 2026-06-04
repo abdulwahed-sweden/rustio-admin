@@ -55,6 +55,95 @@ pub(crate) struct ImportReport {
     pub inserted: usize,
     pub failed: usize,
     pub outcomes: Vec<RowOutcome>,
+    /// Header columns that don't match any declared `AdminField`.
+    /// Their values are skipped (not imported); the result page
+    /// reports them and offers a generated migration to capture
+    /// them. In CSV order, de-duplicated.
+    pub ignored_columns: Vec<String>,
+}
+
+/// A guessed schema + model definition for one unrecognised CSV
+/// column, used to generate the "add these fields" snippet on the
+/// import result page. Heuristic only — the developer reviews and
+/// adjusts before committing the migration.
+#[derive(Debug, Clone)]
+pub(crate) struct SuggestedField {
+    /// The CSV column name, verbatim.
+    pub column: String,
+    /// Postgres column definition, e.g. `BOOLEAN NOT NULL DEFAULT FALSE`.
+    pub sql_type: &'static str,
+    /// Struct field line, e.g. `pub is_active: bool,`.
+    pub rust_field: String,
+    /// `from_row` line, e.g. `is_active: row.get_bool("is_active")?,`.
+    pub from_row: String,
+    /// `insert_values` line, e.g. `self.is_active.into(),`.
+    pub insert_value: String,
+}
+
+/// Guess a sensible column type from its name. Pure name heuristic
+/// (no value sampling) so the suggestion is deterministic: booleans
+/// from `is_`/`has_` prefixes and known flag words, integers from
+/// quantity/count/id words, decimals from money words, text for the
+/// rest. The generated Rust uses the `Row` getters every scaffolded
+/// model already imports.
+pub(crate) fn suggest_field(column: &str) -> SuggestedField {
+    let c = column.to_ascii_lowercase();
+    let is_bool = c.starts_with("is_")
+        || c.starts_with("has_")
+        || matches!(
+            c.as_str(),
+            "active" | "enabled" | "published" | "visible" | "archived" | "featured" | "available"
+        );
+    let is_int = !is_bool
+        && (c.ends_with("_id")
+            || c.contains("quantity")
+            || c.contains("qty")
+            || c.contains("count")
+            || c.contains("stock")
+            || c.contains("number")
+            || c.contains("year")
+            || c.contains("position")
+            || c.contains("rank"));
+    let is_decimal = !is_bool
+        && !is_int
+        && (c.contains("price")
+            || c.contains("amount")
+            || c.contains("cost")
+            || c.contains("total")
+            || c.contains("rate")
+            || c.contains("discount")
+            || c.contains("tax")
+            || c.contains("balance")
+            || c.contains("weight"));
+
+    let (sql_type, rust_ty, getter, insert) = if is_bool {
+        ("BOOLEAN NOT NULL DEFAULT FALSE", "bool", "get_bool", "into")
+    } else if is_int {
+        ("BIGINT NOT NULL DEFAULT 0", "i64", "get_i64", "into")
+    } else if is_decimal {
+        (
+            "NUMERIC NOT NULL DEFAULT 0",
+            "rust_decimal::Decimal",
+            "get_decimal",
+            "into",
+        )
+    } else {
+        ("TEXT NOT NULL DEFAULT ''", "String", "get_string", "clone")
+    };
+
+    let insert_value = if insert == "clone" {
+        format!("self.{column}.clone().into(),")
+    } else {
+        format!("self.{column}.into(),")
+    };
+
+    SuggestedField {
+        column: column.to_string(),
+        sql_type,
+        rust_field: format!("pub {column}: {rust_ty},"),
+        from_row: format!("{column}: row.{getter}(\"{column}\")?,"),
+        insert_value,
+    }
 }
 
 /// Errors raised before any row is attempted — header problems,
@@ -67,7 +156,6 @@ pub(crate) enum ParseError {
     TooManyRows { rows: usize, cap: usize },
     HeaderMissing,
     HeaderEmptyColumn,
-    UnknownColumns { columns: Vec<String> },
 }
 
 impl ParseError {
@@ -82,12 +170,6 @@ impl ParseError {
             }
             ParseError::HeaderMissing => "First row must be a header.".into(),
             ParseError::HeaderEmptyColumn => "Header has an empty column name.".into(),
-            ParseError::UnknownColumns { columns } => {
-                format!(
-                    "Header includes columns the model doesn't declare: {}.",
-                    columns.join(", ")
-                )
-            }
         }
     }
 }
@@ -140,8 +222,19 @@ pub(crate) async fn import_csv_rows(
         .map(|h| known_fields.contains_key(h.as_str()))
         .collect();
 
+    // Columns the model doesn't declare are skipped per-row below;
+    // collect them (in order, de-duplicated) so the result page can
+    // report what was ignored and offer a migration to capture it.
+    let mut ignored_columns: Vec<String> = Vec::new();
+    for (h, known) in header.iter().zip(&header_known) {
+        if !known && !ignored_columns.contains(h) {
+            ignored_columns.push(h.clone());
+        }
+    }
+
     let mut report = ImportReport {
         total: rows.len(),
+        ignored_columns,
         ..Default::default()
     };
 
