@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RustIO UI — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="rio-tokens.css">
+<link rel="stylesheet" href="rio-admin.css">
+</head>
+<body>
+<div class="rio-layout">
+
+  <aside class="rio-sidebar">
+    <div class="rio-brand">
+      <div class="rio-brand-mark">R</div>
+      <div class="rio-brand-name">Rust<span>IO</span></div>
+    </div>
+
+    <nav class="rio-nav">
+      <div class="rio-nav-label">Core</div>
+      <a class="rio-nav-item is-active" href="#"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-activity"></i> Activity</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+
+      <div class="rio-nav-label">Data</div>
+      <a class="rio-nav-item" href="#"><i class="bi bi-table"></i> Records <span class="rio-nav-badge">12</span></a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-collection-fill"></i> Collections</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-file-earmark-bar-graph"></i> Reports</a>
+
+      <div class="rio-nav-label">System</div>
+      <a class="rio-nav-item" href="#"><i class="bi bi-people-fill"></i> Users</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-shield-lock-fill"></i> Permissions</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-gear-fill"></i> Settings</a>
+
+      <div class="rio-nav-label">Development</div>
+      <a class="rio-nav-item" href="#"><i class="bi bi-diagram-3-fill"></i> Schema</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-arrow-up-right-circle"></i> Migrations</a>
+      <a class="rio-nav-item" href="#"><i class="bi bi-braces"></i> API Explorer</a>
+    </nav>
+  </aside>
+
+  <div class="rio-content">
+
+    <header class="rio-header">
+      <div class="rio-search">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search records, users, settings…">
+        <button class="rio-search-btn" title="Search"><i class="bi bi-arrow-return-left"></i></button>
+      </div>
+      <div class="rio-header-actions">
+        <a href="#" class="rio-topbar-link" title="Open the public site"><i class="bi bi-box-arrow-up-right"></i> View Site</a>
+        <span class="rio-topbar-sep"></span>
+        <button class="rio-icon-btn" title="Notifications"><i class="bi bi-bell"></i><span class="rio-dot"></span></button>
+        <button class="rio-user" title="Account menu">
+          <span class="rio-user-badge">AM</span>
+          <span class="rio-user-meta">
+            <span class="rio-user-name">Abdulwahed</span>
+            <span class="rio-user-role">Administrator</span>
+          </span>
+          <i class="bi bi-chevron-down rio-user-caret"></i>
+        </button>
+        <span class="rio-topbar-sep"></span>
+        <a href="#" class="rio-topbar-link rio-logout" title="Sign out"><i class="bi bi-box-arrow-right"></i> Logout</a>
+      </div>
+    </header>
+
+    <main class="rio-main">
+
+      <div class="rio-page-head">
+        <div>
+          <h1 class="rio-page-title">Good morning, Abdulwahed</h1>
+          <div class="rio-page-sub"><i class="bi bi-check-circle-fill"></i> You've got 2 new records today</div>
+        </div>
+        <button class="rio-btn rio-btn-primary"><i class="bi bi-plus-lg"></i> New Record</button>
+      </div>
+
+      <section class="rio-stats">
+        <div class="rio-stat">
+          <div class="rio-stat-top"><span class="rio-stat-label">Total Records</span><span class="rio-stat-glyph"><i class="bi bi-table"></i></span></div>
+          <div class="rio-stat-value">15,204</div>
+          <div class="rio-stat-delta up"><i class="bi bi-arrow-up-short"></i> 12% <span>vs last month</span></div>
+        </div>
+        <div class="rio-stat">
+          <div class="rio-stat-top"><span class="rio-stat-label">Revenue</span><span class="rio-stat-glyph"><i class="bi bi-currency-dollar"></i></span></div>
+          <div class="rio-stat-value">$245,000</div>
+          <div class="rio-stat-delta up"><i class="bi bi-arrow-up-short"></i> 8% <span>vs last month</span></div>
+        </div>
+        <div class="rio-stat">
+          <div class="rio-stat-top"><span class="rio-stat-label">Orders</span><span class="rio-stat-glyph"><i class="bi bi-bag-check-fill"></i></span></div>
+          <div class="rio-stat-value">5,221</div>
+          <div class="rio-stat-delta up"><i class="bi bi-arrow-up-short"></i> 24% <span>vs last month</span></div>
+        </div>
+        <div class="rio-stat">
+          <div class="rio-stat-top"><span class="rio-stat-label">Active Users</span><span class="rio-stat-glyph"><i class="bi bi-people-fill"></i></span></div>
+          <div class="rio-stat-value">3,891</div>
+          <div class="rio-stat-delta down"><i class="bi bi-arrow-down-short"></i> 3% <span>vs last month</span></div>
+        </div>
+      </section>
+
+      <section class="rio-grid-2">
+
+        <div class="rio-card">
+          <div class="rio-card-header">
+            <h2 class="rio-card-title">Recent Records</h2>
+            <a href="#" class="rio-btn rio-btn-ghost rio-btn-sm">View all <i class="bi bi-arrow-right"></i></a>
+          </div>
+
+          <div class="rio-toolbar">
+            <button class="rio-btn rio-btn-primary rio-btn-sm"><i class="bi bi-plus-lg"></i> Add</button>
+            <select class="rio-select" aria-label="Status filter">
+              <option>Status: All</option><option>Active</option><option>Pending</option>
+            </select>
+            <span class="rio-spacer"></span>
+            <button class="rio-btn rio-btn-secondary rio-btn-sm"><i class="bi bi-download"></i> Export</button>
+            <button class="rio-btn rio-btn-danger rio-btn-sm"><i class="bi bi-trash"></i> Delete</button>
+          </div>
+
+          <div class="rio-card-body flush">
+            <table class="rio-table">
+              <thead><tr><th>Name</th><th>Reference</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div class="rio-cell-user"><span class="rio-cell-avatar">JD</span><div><div class="rio-cell-name">John Doe</div><div class="rio-cell-sub">john@example.com</div></div></div></td>
+                  <td><span class="rio-cell-ref">#RIO-2042</span></td>
+                  <td><span class="rio-badge rio-badge-success">Active</span></td>
+                  <td>Jun 02, 2026</td>
+                  <td><a href="#" class="rio-btn rio-btn-ghost rio-btn-sm"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+                <tr>
+                  <td><div class="rio-cell-user"><span class="rio-cell-avatar">SL</span><div><div class="rio-cell-name">Sarah Lee</div><div class="rio-cell-sub">sarah@example.com</div></div></div></td>
+                  <td><span class="rio-cell-ref">#RIO-2041</span></td>
+                  <td><span class="rio-badge rio-badge-warning">Pending</span></td>
+                  <td>May 28, 2026</td>
+                  <td><a href="#" class="rio-btn rio-btn-ghost rio-btn-sm"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+                <tr>
+                  <td><div class="rio-cell-user"><span class="rio-cell-avatar">AA</span><div><div class="rio-cell-name">Ahmed Ali</div><div class="rio-cell-sub">ahmed@example.com</div></div></div></td>
+                  <td><span class="rio-cell-ref">#RIO-2038</span></td>
+                  <td><span class="rio-badge rio-badge-success">Active</span></td>
+                  <td>Jun 01, 2026</td>
+                  <td><a href="#" class="rio-btn rio-btn-ghost rio-btn-sm"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+                <tr>
+                  <td><div class="rio-cell-user"><span class="rio-cell-avatar">MN</span><div><div class="rio-cell-name">Maria Nilsson</div><div class="rio-cell-sub">maria@example.com</div></div></div></td>
+                  <td><span class="rio-cell-ref">#RIO-2035</span></td>
+                  <td><span class="rio-badge rio-badge-danger">Inactive</span></td>
+                  <td>Apr 15, 2026</td>
+                  <td><a href="#" class="rio-btn rio-btn-ghost rio-btn-sm"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="rio-pagination">
+            <span class="rio-page-info">Showing 1–4 of 15,204</span>
+            <button class="rio-page-btn"><i class="bi bi-chevron-left"></i></button>
+            <button class="rio-page-btn is-active">1</button>
+            <button class="rio-page-btn">2</button>
+            <button class="rio-page-btn">3</button>
+            <button class="rio-page-btn"><i class="bi bi-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1.75rem">
+          <div class="rio-card">
+            <div class="rio-card-header"><h2 class="rio-card-title">Recent Activity</h2></div>
+            <div class="rio-card-body">
+              <div class="rio-feed-item"><div class="rio-feed-glyph f-success"><i class="bi bi-check-lg"></i></div><div><div class="rio-feed-text"><strong>Record #2042</strong> was approved</div><div class="rio-feed-time">12 minutes ago</div></div></div>
+              <div class="rio-feed-item"><div class="rio-feed-glyph"><i class="bi bi-person-plus"></i></div><div><div class="rio-feed-text"><strong>Ahmed Ali</strong> created a new record</div><div class="rio-feed-time">1 hour ago</div></div></div>
+              <div class="rio-feed-item"><div class="rio-feed-glyph"><i class="bi bi-arrow-up-right-circle"></i></div><div><div class="rio-feed-text">Migration <strong>0027_add_index</strong> applied</div><div class="rio-feed-time">3 hours ago</div></div></div>
+              <div class="rio-feed-item"><div class="rio-feed-glyph"><i class="bi bi-gear"></i></div><div><div class="rio-feed-text">Settings updated by <strong>admin</strong></div><div class="rio-feed-time">Yesterday</div></div></div>
+            </div>
+          </div>
+
+          <div class="rio-card">
+            <div class="rio-card-header"><h2 class="rio-card-title">Quick Add</h2></div>
+            <div class="rio-card-body" style="display:flex;flex-direction:column;gap:1rem">
+              <div class="rio-field"><label>Name</label><input class="rio-input" placeholder="e.g. Lina Karlsson"></div>
+              <div class="rio-field"><label>Status</label><select class="rio-select"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
+              <button class="rio-btn rio-btn-primary"><i class="bi bi-plus-lg"></i> Create Record</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+</div>
+</body>
+</html>
