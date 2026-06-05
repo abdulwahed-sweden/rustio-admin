@@ -256,7 +256,9 @@ Where to start depends on the work.
 → Install above
 → [`docs/modeladmin.md`](./docs/modeladmin.md)
 → [`examples/clinic/`](./examples/clinic/) — multi-crate reference project
-→ [`examples/shop/`](./examples/shop/) — single-crate e-commerce admin
+→ [`examples/shop/`](./examples/shop/) — single-crate e-commerce admin, also a
+  standalone project: **[abdulwahed-sweden/shop](https://github.com/abdulwahed-sweden/shop)**
+  ([`v0.1.0`](https://github.com/abdulwahed-sweden/shop/releases/tag/v0.1.0), on rustio-admin 0.27.6)
 
 **Understanding scope and design history**
 → [`docs/architecture.md`](./docs/architecture.md)
