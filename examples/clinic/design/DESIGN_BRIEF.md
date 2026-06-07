@@ -58,7 +58,8 @@ administrator who manages users/groups.
 
 ## Visual & Accessibility Floor
 
-- **Palette (current, from `static/tokens.css`):** accent `#059669` (emerald-600),
+- **Palette (now owned by `rustio.design.toml` `[colors]`, served via
+  `RUSTIO_TOKENS_CSS`; was `static/tokens.css`):** accent `#059669` (emerald-600),
   accent-hover `#047857` (emerald-700), bg `#f8fafc` (slate-50), surface `#ffffff`,
   text `#0f172a` (slate-900), muted `#475569` (slate-600), border `#e2e8f0`.
 - **Accessibility:** WCAG AA is the floor; the framework's rio-theme is the

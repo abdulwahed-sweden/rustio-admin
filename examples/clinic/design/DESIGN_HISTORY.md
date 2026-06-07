@@ -9,6 +9,25 @@ updated: 2026-06-07
 
 > How the clinic's design understanding evolved, and why. Reverse-chronological.
 
+## 2026-06-07 — v1 design direction + Tier 1 slice (D-05)
+
+Claude Design proposed a v1 direction from the context; reviewed and accepted as
+**R-05 / D-05**. Implemented **Tier 1 only** — the changes that fit the existing
+safe design seam (tokens + validated `custom_css` + the `[navigation]` layer), with
+**no new model semantics**: capability-grouped navigation (Vitals hidden),
+search-first emphasis, status colour-coding (cell-level), emerald/slate kept within
+existing token values. Provider/calendar/reporting/portal, the aggregate patient
+profile, the patient picker, and relation-aware FK rendering are explicitly out of
+scope; true status pills, USD money formatting, per-column PII de-emphasis, and
+role-scoped nav are recorded as needing later model/framework support.
+
+**Browser review found one regression and fixed it:** enabling
+`RUSTIO_TEMPLATE_DIR=templates` (to serve the generated `_sidebar.html`) also
+activated the clinic's pre-existing *empty* `templates/admin/patients/list.html`
+stub, which blanked the patient list. Removed the stub (its own comment sanctioned
+this) so the framework default renders. Verified: grouped sidebar, status
+colour-coding, and the emphasised patient search all render correctly.
+
 ## 2026-06-07 — Gap-closing reasoning pass
 
 A no-source validation (Claude Design reading only the design artifacts) confirmed
