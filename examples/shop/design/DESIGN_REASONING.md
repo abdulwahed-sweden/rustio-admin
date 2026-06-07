@@ -11,6 +11,58 @@ updated: 2026-06-07
 > `rustio.design.toml` traces to an entry here. ADR-style; newest on top.
 > Drive new entries with `/design-reason`.
 
+## R-008 · Group the sidebar by domain; bury junction models
+
+- **Date:** 2026-06-07
+- **Status:** accepted
+- **Serves:** Brief → "open an order, understand it, act — no hunting"; Architecture
+  → "Orders and Products one click away; line items / cart items / product images
+  reached through their parent, not the nav."
+- **Context:** the live admin renders a **flat list of all 9 models** in
+  registration order (Product, Category, Customer, Order, OrderItem, Address,
+  ProductImage, CartItem, Payment). Junction/secondary tables sit beside primary
+  entities and compete for attention; the operator's domain mental model
+  (Catalogue / Customers / Sales) is invisible. The existing
+  `DESIGN_ARCHITECTURE.md` nav tree is also internally inconsistent: it shows
+  *Addresses* as a visible nav item, yet the IA note says secondary records are
+  reached through their parent.
+- **Options considered:**
+  1. **Status quo — flat 9-model list.** Zero work; but noisy, and four
+     junction/secondary tables (Order items, Cart items, Product images,
+     Addresses) clutter the sidebar and bury the three that matter.
+  2. **Grouped, all 9 visible.** Domains become clear (Catalogue/Customers/Sales),
+     but the sidebar still surfaces tables operators never navigate to directly.
+  3. **Grouped, primary-only (proposed).** Three domains; only the primary
+     entities in the sidebar; junction/secondary models reached inline through
+     their parent (still reachable by URL), not listed in nav.
+- **Decision:** option 3. Target sidebar:
+  ```
+  Dashboard
+  Catalogue   → Products · Categories
+  Customers   → Customers
+  Sales       → Orders · Payments
+  ```
+  `OrderItem`, `CartItem`, `ProductImage`, **and `Address`** are removed from the
+  sidebar and reached through their parent record. (This buries `Address`, which
+  resolves the architecture inconsistency above — a deliberate change from the
+  earlier tree that listed it.)
+- **Rationale:** 5 focused destinations instead of 9, organised by the operator's
+  mental model. Realises both the Brief ("no hunting") and the Architecture
+  ("one click vs buried") with no loss of access — secondary records still open
+  inline and by URL.
+- **Rejected because:** status quo hides the domain model and dilutes the primary
+  entities; all-9-grouped still puts join tables in the operator's path.
+- **Spec impact:** **none** to `rustio.design.toml` — tokens are unchanged. This is
+  a WHAT-layer (navigation) decision, not a HOW-layer one.
+- **Architecture impact:** revise `DESIGN_ARCHITECTURE.md` → Navigation Structure
+  to the tree above and mark `Address` as buried (reached via Customer).
+- **Application note (seam not built yet):** navigation generation is tracked by
+  rustio-design#1. On approval, this pass updates `DESIGN_ARCHITECTURE.md` +
+  `DESIGN_DECISIONS.md` + `DESIGN_HISTORY.md` to record the decision; the *rendered*
+  grouped sidebar lands when #1 picks a seam (proposed: a generated
+  `_sidebar.html` override served via `RUSTIO_TEMPLATE_DIR`, the recompile-free
+  parallel to `RUSTIO_TOKENS_CSS`).
+
 ## R-007 · Migrate the theme into rustio-design's declarative stack
 
 - **Date:** 2026-06-07

@@ -35,16 +35,18 @@ Catalogue
   ├─ Products
   └─ Categories
 Customers
-  ├─ Customers
-  └─ Addresses
+  └─ Customers
 Sales
   ├─ Orders
   └─ Payments
 ```
 
 - **Top-level sections (ordered):** Dashboard · Catalogue · Customers · Sales.
-- **One click away vs buried:** Orders and Products are one click away; line items,
-  cart items, and product images are reached *through* their parent, not the nav.
+- **Primary entities in the sidebar:** Products, Categories, Customers, Orders,
+  Payments — five focused destinations.
+- **Buried (reached through their parent, and by URL — not in nav):** `OrderItem`,
+  `CartItem`, `ProductImage`, and `Address`. Addresses open through a Customer.
+  (Decision D-008 / R-008.)
 - **Terminology / labels:** the operator's words — "Orders", "Customers",
   "Catalogue" — never the schema's join-table names.
 
