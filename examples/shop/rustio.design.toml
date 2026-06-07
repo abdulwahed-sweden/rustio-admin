@@ -94,6 +94,16 @@ default = "7px"
 sm      = "5px"
 lg      = "9px"
 
+# ── Navigation (WHAT → output) — decided in DESIGN_ARCHITECTURE.md per
+#    R-008 / D-008: group by domain, primary entities only. Compiles to a
+#    _sidebar.html override served via RUSTIO_TEMPLATE_DIR (= templates).
+[navigation]
+Catalogue = "Products, Categories"
+Customers = "Customers"
+Sales     = "Orders, Payments"
+_hidden   = "Order items, Cart items, Product images, Address"
+_out      = "templates/admin/_sidebar.html"
+
 # ── The parts that aren't :root tokens: the amber secondary accent
 #    (--rio-accent2*, used by the dashboard/list templates) and the dark
 #    navy chrome remap for the sidebar + topbar. Migrated verbatim from

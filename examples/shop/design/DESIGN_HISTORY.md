@@ -18,9 +18,9 @@ which hides the operator's domain model and lets join tables compete with primar
 entities. Decided to group by domain — **Catalogue · Customers · Sales** — and show
 primary entities only; `OrderItem`, `CartItem`, `ProductImage`, and `Address` are
 reached through their parent (and by URL), not the nav. Recorded in
-`DESIGN_ARCHITECTURE.md`. The rendered grouped sidebar lands when navigation
-generation is built (rustio-design#1, proposed seam: a generated `_sidebar.html`
-override served via `RUSTIO_TEMPLATE_DIR`).
+`DESIGN_ARCHITECTURE.md`. **Now rendered:** the `[navigation]` section compiles to
+`templates/admin/_sidebar.html` (rustio-design#1) — the sidebar shows
+Catalogue · Customers · Sales, served via `RUSTIO_TEMPLATE_DIR`. Browser-verified.
 
 ## 2026-06-07 — Adopt the rustio-design stack
 
