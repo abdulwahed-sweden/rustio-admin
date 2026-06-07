@@ -18,6 +18,7 @@ updated: 2026-06-07
 | D-02  | 2026-06-07 | Status lifecycle: forward + corrections (reschedule; paid↔unpaid) | accepted | R-02      |
 | D-03  | 2026-06-07 | Money displayed as USD, en-US ($1,234.56)                        | accepted | R-03      |
 | D-04  | 2026-06-07 | Desktop-first, single-provider, modest-scale deployment posture  | accepted | R-04      |
+| D-05  | 2026-06-07 | Adopt v1 design direction; implement Tier 1 (safe seam) only    | accepted | R-05      |
 
 _Observed facts that informed these (not decisions) live in `DESIGN_REASONING.md`
 as OBS-08 (detail = own fields; FK is a number), OBS-09 (no provider entity),

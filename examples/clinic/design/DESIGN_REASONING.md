@@ -88,7 +88,8 @@ updated: 2026-06-07
 - **Status:** accepted (observed)
 - **Evidence:** framework 5-tier RBAC (Developer→…→User) + per-model permissions
   (`seed_permissions`) + audit-by-default; light-only theming via `--rio-*` tokens;
-  emerald accent `#059669` set in `main.rs` and `static/tokens.css`.
+  emerald accent `#059669` set in `main.rs` (and, since D-05, in the rustio-design
+  `[colors]` spec — formerly `static/tokens.css`).
 - **Rationale:** security and theming are the framework's contract, not the
   clinic's to reinvent; the clinic only chooses a brand colour.
 - **Design implication:** design within the token system and light-only palette;
@@ -126,6 +127,62 @@ updated: 2026-06-07
   which is why it had to be decided for design purposes (see D-01).
 
 ---
+
+# Design proposal — v1 direction (2026-06-07)
+
+## R-05 · Adopt the v1 design direction; implement Tier 1 only → D-05
+
+- **Status:** accepted (reviewed)
+- **What the context says:** the patient is the spine (OBS-01); search is the one
+  primary nav surface (OBS-02); status is the headline scannable signal (OBS-04);
+  the FK is a bare number and detail shows only own fields (OBS-05/08); the frame is
+  light-only `--rio-*` tokens, no build step, desktop-first single-provider
+  (OBS-07, D-04), with role-scoped access (D-01), forward+correcting status (D-02),
+  and USD money (D-03).
+- **Proposed direction (Claude Design v1):** a calm, desktop-dense clinical admin
+  that makes "find a patient and act" effortless — search-first patient list;
+  the patient record as the human anchor (children aggregated); status read at a
+  glance via a chip language; money humanised to USD; deletes that name their
+  cascade; PII de-emphasised; navigation grouped by capability and scoped per role.
+- **Alternatives rejected:**
+  - *Dashboard-first / KPI home* — the context optimises for lookup, not metrics;
+    reporting is an explicit non-goal.
+  - *Calendar-centric scheduling* — there is no provider/room/time-slot model
+    (OBS-09); a calendar would imply data that does not exist.
+  - *Card/gallery layouts* — desktop-dense tables fit operator scanning (D-04).
+  - *Big-bang implementation (all tiers at once)* — would force model/framework
+    changes before the safe, reversible visual layer is proven.
+- **Why Tier 1 is the right first slice:** it lives entirely in the **existing safe
+  design seam** — tokens + validated `custom_css` (served via `RUSTIO_TOKENS_CSS`)
+  and the `[navigation]` layer (served via `RUSTIO_TEMPLATE_DIR`). It introduces
+  **no new model semantics**, is drift-detected, fully reversible, and
+  independently shippable — so the governance loop (Context → Reasoning → Approved
+  Slice → Safe Implementation → Browser Review) can be proven before any
+  model/framework work is risked.
+- **Tier 1 scope (this pass implements only this):**
+  - Navigation **grouping** by capability (Patients / Scheduling / Billing;
+    Vitals hidden, reached via a patient).
+  - **Search-first** emphasis on the patient list (`.rio-search-bar`).
+  - **Status colour-coding** via cell-level CSS on existing markup
+    (`td.rio-td--text[title="…"]` for the known status values).
+  - **Emerald/slate** refinement within the existing token values.
+- **Intentionally OUT of scope (now and for Tier 1):** provider/room/calendar,
+  reporting, patient portal, dark mode, an aggregate patient profile, the patient
+  picker, and relation-aware FK (name-anchor) rendering. No new model semantics.
+- **Requires later model/framework support (discovered while scoping the seam):**
+  - *True status **pills*** need a wrapping element → a per-model list template
+    (Tier 3). Tier 1 ships cell-level colour-coding instead.
+  - *USD money **formatting*** (cents → `$1,234.56`) cannot be done in CSS and has
+    no per-field hook → needs a formatting hook / template (later). Tier 1 leaves
+    the value as-is.
+  - *Per-column **PII de-emphasis*** — email/phone share `rio-td--text` with no
+    column hook → needs a per-column class/template (later). Deferred.
+  - *Role-**scoped** navigation* — the nav layer emits one static sidebar; per-role
+    visibility needs framework support (later). Tier 1 ships grouping only.
+  - *Cascade-naming **delete** copy* — the framework already lists cascades on the
+    delete-confirm page (RelationRegistry); bespoke copy needs a template override
+    (later). Not shipped to avoid a fragile override.
+  - *Patient anchor / picker / aggregate profile* — Tier 2 / Tier 3.
 
 # Forward decisions — gap-closing pass (2026-06-07)
 

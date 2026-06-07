@@ -1,16 +1,14 @@
 # ════════════════════════════════════════════════════════════════════
 #  clinic — rustio.design.toml
 #
-#  Wires the clinic's design memory into the rustio-design stack. The
-#  [design] manifest below points at the WHY/WHAT artifacts extracted for
-#  Claude Design; assemble the whole stack with `rustio-design context`.
+#  The clinic's design memory (WHY/WHAT via [design]) + the Tier-1 visual
+#  slice approved in DESIGN_REASONING R-05 / D-05. Everything here fits the
+#  safe design seam: tokens + validated custom_css (served via
+#  RUSTIO_TOKENS_CSS) and the [navigation] layer (served via
+#  RUSTIO_TEMPLATE_DIR). NO new model semantics; no provider/calendar/
+#  reporting/portal/aggregate profile/picker/relation-FK (out of scope).
 #
-#  NOTE: the clinic keeps its hand-authored `static/tokens.css` as its
-#  theme (emerald on slate, served via RUSTIO_TOKENS_CSS). This spec does
-#  NOT generate or own tokens — it exists to wire the design-memory layers.
-#  The `[brand]` colour below is informational (shown in `context`), not
-#  compiled. A future pass could migrate static/tokens.css into a [colors]
-#  block after a /design-reason decision.
+#  Run `rustio-design context` to read the whole stack before changing this.
 # ════════════════════════════════════════════════════════════════════
 
 [project]
@@ -20,15 +18,50 @@ rustio_admin_path = "../.."
 
 # ── Design memory (WHY / WHAT) — reason from these before any design. ──
 [design]
-brief        = "design/DESIGN_BRIEF.md"         # WHY  — domain, intent, visual & a11y floor
-reasoning    = "design/DESIGN_REASONING.md"     # observed decisions (reverse-engineered ADRs)
-architecture = "design/DESIGN_ARCHITECTURE.md"  # WHAT — entities, screens, info hierarchy
-decisions    = "design/DESIGN_DECISIONS.md"     # accepted decisions (gap-closing pass: D-01..D-04)
-history      = "design/DESIGN_HISTORY.md"       # evolution of the design understanding
-# A consolidated, self-contained reduction also lives in
-# design/DESIGN_CONTEXT.md (curated synthesis of the above).
+brief        = "design/DESIGN_BRIEF.md"
+reasoning    = "design/DESIGN_REASONING.md"
+architecture = "design/DESIGN_ARCHITECTURE.md"
+decisions    = "design/DESIGN_DECISIONS.md"
+history      = "design/DESIGN_HISTORY.md"
 
-# Informational only — the clinic's current accent (hand-authored in
-# static/tokens.css). Not compiled by this spec.
-[brand]
-color = "#059669"
+# ── Emerald/slate palette (Tier 1: migrated verbatim from the former
+#    static/tokens.css — same values, now stack-governed + drift-checked). ──
+[colors]
+accent       = "#059669"   # emerald-600 — clinic brand (fills, primary buttons)
+accent-hover = "#047857"   # emerald-700 — hover / text-contrast pairing
+bg           = "#f8fafc"   # slate-50 page canvas
+surface      = "#ffffff"   # cards, topbar, table body
+text         = "#0f172a"   # slate-900
+text-muted   = "#475569"   # slate-600
+border       = "#e2e8f0"   # slate-200
+
+# ── Navigation grouping (Tier 1 — grouping only; role-scoping needs later
+#    framework support). Vitals is reached via a patient, so it is hidden. ──
+[navigation]
+Patients   = "Patients"
+Scheduling = "Appointments"
+Billing    = "Invoices"
+_hidden    = "Vitals"
+_out       = "templates/admin/_sidebar.html"
+
+# ── Safe visual seam (Tier 1). custom_css is validated (no @import / remote
+#    url / markup). Status pills, USD money formatting, and per-column PII
+#    de-emphasis are intentionally NOT here — they need template/model hooks
+#    (see DESIGN_REASONING R-05 "requires later support"). ──
+[custom_css]
+rules = """
+/* Tier 1 (D-05) — refinements that fit the existing markup only. */
+
+/* Search-first: the patient list search is the primary navigation (OBS-02). */
+.rio-search-bar   { max-width: 640px; }
+.rio-search-input { font-size: var(--rio-fs-lg, 1.125rem); padding-block: 0.6rem; }
+
+/* Status colour-coding (cell-level). The framework mirrors a text cell's
+   value into its title attribute, so we can colour the known status values
+   without a template. True pills need a wrapping element (deferred). */
+td.rio-td--text[title="scheduled"] { color: var(--rio-accent);     font-weight: 600; }
+td.rio-td--text[title="completed"],
+td.rio-td--text[title="paid"]      { color: var(--rio-success);    font-weight: 600; }
+td.rio-td--text[title="unpaid"]    { color: var(--rio-warning);    font-weight: 600; }
+td.rio-td--text[title="cancelled"] { color: var(--rio-text-muted); }
+"""
