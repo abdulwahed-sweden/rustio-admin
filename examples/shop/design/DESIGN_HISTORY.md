@@ -11,6 +11,17 @@ updated: 2026-06-07
 > Token churn lives in git; this is the human-readable arc tying changes to the
 > decisions (`D-NNN`) that drove them.
 
+## 2026-06-07 — Decide the navigation structure (D-008)
+
+Reasoned through the sidebar (R-008): the admin still renders a flat 9-model list,
+which hides the operator's domain model and lets join tables compete with primary
+entities. Decided to group by domain — **Catalogue · Customers · Sales** — and show
+primary entities only; `OrderItem`, `CartItem`, `ProductImage`, and `Address` are
+reached through their parent (and by URL), not the nav. Recorded in
+`DESIGN_ARCHITECTURE.md`. **Now rendered:** the `[navigation]` section compiles to
+`templates/admin/_sidebar.html` (rustio-design#1) — the sidebar shows
+Catalogue · Customers · Sales, served via `RUSTIO_TEMPLATE_DIR`. Browser-verified.
+
 ## 2026-06-07 — Adopt the rustio-design stack
 
 The hand-coded navy/amber theme moved out of `templates/admin/_theme.html`'s
