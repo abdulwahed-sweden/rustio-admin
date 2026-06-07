@@ -125,19 +125,37 @@ clinical, restrained.
 
 ---
 
-## What Claude Design needs to decide before proposing a design
+## Resolved context (gap-closing pass — 2026-06-07)
 
-*(Open questions surfaced by the analysis — framed, not answered. Reason about
-these against the brief; do not assume.)*
+The open questions the no-source validation surfaced are now resolved — facts
+recovered from source, and decisions approved by review (`DESIGN_DECISIONS.md`):
 
-- How to make the **patient the visible anchor** on child records (vitals/
-  appointments/invoices) given the FK is currently a bare number.
-- How **status** should read at a glance (appointments, invoices) within the
-  light-only token palette and semantic colours.
-- How to humanise **money** (cents → currency) consistently.
-- How to make **delete** of a patient feel as consequential as its cascade is.
-- How prominent **patient search** should be as the primary navigation path.
-- Whether/how to signal **PII** so contact data isn't exposed more than necessary.
+- **Detail composition (fact, OBS-08):** patient detail = the patient's own fields;
+  children via filtered lists, not inline; child FK is a plain number input. → The
+  prime design opportunity is making the patient the visible anchor on child records.
+- **Permissions (D-01):** role-scoped — Reception (patients + scheduling), Clinical
+  (patients + vitals + scheduling), Billing (invoices + patient read), Administrator
+  (all + user/group mgmt). Design per-role scope and landing.
+- **Status lifecycle (D-02):** forward + corrections — appointment reschedule
+  allowed; invoice paid↔unpaid for corrections. Present known states, allow reversal.
+- **Money (D-03):** USD/en-US `$1,234.56`, tabular/right-aligned.
+- **Deployment (D-04):** desktop-first, single-site, single-provider, modest scale;
+  no provider entity (OBS-09) — scheduling is clinic-level.
 
-Everything above is grounded in the actual models, migrations, and admin config —
-no source reading required to act on it.
+### Still genuinely open (no evidence; smaller residuals)
+
+- Exact patient/appointment **volume** (affects pagination/density tuning).
+- Whether **multi-provider / tablet** use ever becomes a requirement (currently out).
+- Empty / error / loading **state copy** per screen.
+
+### Design explorations these unlock (not commitments)
+
+- Patient name as the anchor wherever `patient_id` appears; a patient picker on
+  child create.
+- Semantic status chips with the approved transitions.
+- Cents → USD money formatting; unpaid emphasised.
+- A delete confirmation that names the cascade.
+- Search promoted as the primary navigation path; deliberate PII exposure.
+
+Everything above is grounded in the actual models, migrations, and admin config
+plus the reviewed decisions — no source reading required to act on it.

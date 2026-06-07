@@ -23,11 +23,10 @@ rustio_admin_path = "../.."
 brief        = "design/DESIGN_BRIEF.md"         # WHY  — domain, intent, visual & a11y floor
 reasoning    = "design/DESIGN_REASONING.md"     # observed decisions (reverse-engineered ADRs)
 architecture = "design/DESIGN_ARCHITECTURE.md"  # WHAT — entities, screens, info hierarchy
-# Read-only analysis pass — no forward decision ledger / history yet.
+decisions    = "design/DESIGN_DECISIONS.md"     # accepted decisions (gap-closing pass: D-01..D-04)
+history      = "design/DESIGN_HISTORY.md"       # evolution of the design understanding
 # A consolidated, self-contained reduction also lives in
-# design/DESIGN_CONTEXT.md (curated synthesis of the three above).
-# decisions = "design/DESIGN_DECISIONS.md"
-# history   = "design/DESIGN_HISTORY.md"
+# design/DESIGN_CONTEXT.md (curated synthesis of the above).
 
 # Informational only — the clinic's current accent (hand-authored in
 # static/tokens.css). Not compiled by this spec.

@@ -112,3 +112,25 @@ as a per-patient clinical sub-record.
   The patient's name — the natural human anchor — is not surfaced on child records.
   (Stated as an observed information-hierarchy gap, not a redesign.)
 - **Money is stored as integer cents** and currently displays as raw cents.
+
+## Resolved Context (gap-closing pass — 2026-06-07)
+
+Clarifications that earlier blocked confident design (facts from source + approved
+decisions; see `DESIGN_REASONING.md` / `DESIGN_DECISIONS.md`):
+
+- **Detail composition (OBS-08):** the patient record page is the patient's *own
+  fields*; vitals/appointments/invoices are reached via their own lists filtered by
+  patient — not aggregated inline. Child create/edit shows `patient_id` as a plain
+  number (no picker). The biggest legibility opportunity.
+- **No provider entity (OBS-09):** appointments are clinic-level; design cannot show
+  "which clinician." Single-provider is assumed (D-04).
+- **Permissions (OBS-10 → D-01):** per-model perms are seeded; assignment is the
+  administrator's. **Design per-role scope:** Reception → patients + scheduling;
+  Clinical → patients + vitals + scheduling; Billing → invoices + patient (read);
+  Administrator → all + user/group management.
+- **Status lifecycle (D-02):** Appointment scheduled → completed/cancelled, with
+  reschedule; Invoice unpaid → paid, with paid → unpaid for corrections. Present
+  known states; allow reversal; tolerate unexpected free-text values.
+- **Money (D-03):** format as USD/en-US `$1,234.56` — tabular, right-aligned.
+- **Deployment (D-04):** desktop-first, single-site, single-provider, modest scale;
+  optimise for desktop density + keyboard. Tablet/multi-provider are future needs.
