@@ -93,3 +93,100 @@ updated: 2026-06-07
   clinic's to reinvent; the clinic only chooses a brand colour.
 - **Design implication:** design within the token system and light-only palette;
   assume authority gating and an audit trail exist; do not invent a theming layer.
+
+## OBS-08 · Detail = the record's own fields; children via filtered lists; FK is a number
+
+- **Status:** accepted (observed)
+- **Evidence:** the framework supports a relation widget (`AdminRelation`), but the
+  clinic's models opt out (`relation: None`; vitals.rs: "relation widgets are an
+  opt-in"). No inline configuration. `Vitals` carries `list_filter = [patient_id]`.
+- **Design implication:** the patient detail page shows the **patient's own fields
+  only** — it does *not* aggregate vitals/appointments/invoices inline today; those
+  are reached via each model's list filtered by patient. On a child create/edit,
+  `patient_id` is a **plain number input** (no patient picker). This is the largest
+  legibility gap a design will feel; closing it is a design exploration, not a fact.
+
+## OBS-09 · No provider / clinician / room entity
+
+- **Status:** accepted (observed)
+- **Evidence:** the four entities are Patient, Vitals, Appointment, Invoice. An
+  `Appointment` is `patient + scheduled_at + reason + status` — there is no provider
+  or room foreign key.
+- **Design implication:** scheduling is **clinic-level, not provider-level**; a
+  design cannot show "which clinician" because the data does not exist. Treated as
+  intentional for a single-provider reference (see D-04).
+
+## OBS-10 · Permissions are seeded per-model; assignment is operator policy
+
+- **Status:** accepted (observed)
+- **Evidence:** `seed_permissions` creates `{app}.{add,change,delete,view}_{singular}`
+  for every model; it does **not** bind them to personas — an administrator assigns
+  them via groups/users.
+- **Design implication:** "who sees what" is a deployment policy, not a code fact —
+  which is why it had to be decided for design purposes (see D-01).
+
+---
+
+# Forward decisions — gap-closing pass (2026-06-07)
+
+> These resolve the open questions the no-source validation surfaced, so Claude
+> Design can proceed confidently. They are **design-memory decisions for a
+> reference app — they do NOT change clinic code.** Approved by review. Each maps
+> to a row in `DESIGN_DECISIONS.md`.
+
+## R-01 · Role-scoped permission policy → D-01
+
+- **Status:** accepted
+- **Context:** OBS-10 — code seeds perms but assigns none; a designer needs to know
+  who sees what.
+- **Options:** role-scoped least-privilege · flat (all staff see all) · leave
+  operator-configured.
+- **Decision:** **role-scoped** — Reception: patients + scheduling · Clinical:
+  patients + vitals + scheduling · Billing: invoices + patient (read) ·
+  Administrator: everything + user/group management.
+- **Rationale:** PHI and money warrant separation; realistic least privilege; gives
+  each role a scoped navigation/landing.
+- **Rejected because:** flat exposes sensitive data to all; operator-undecided
+  blocks the design.
+- **Design implication:** design **per-role views/nav scope** — not every user sees
+  all four models; Reception lands on patients, Billing on invoices.
+
+## R-02 · Status lifecycle: forward with corrections → D-02
+
+- **Status:** accepted
+- **Context:** OBS-04 — status is free-text with no enforced transitions.
+- **Decision:** Appointment `scheduled → completed | cancelled`, **reschedule
+  allowed** (back to scheduled / new time). Invoice `unpaid → paid`, with
+  **`paid → unpaid` permitted** for corrections/refunds. Present the known states;
+  allow reversal.
+- **Rationale:** clinics reschedule and correct billing; a one-way model forces
+  workarounds.
+- **Rejected because:** strictly one-way has no correction path; fully unconstrained
+  gives no affordance guidance.
+- **Design implication:** status controls offer the known transitions including
+  reversal, while still tolerating unexpected stored values (free-text).
+
+## R-03 · Money display: USD, en-US → D-03
+
+- **Status:** accepted
+- **Context:** OBS-03 — amount is bare integer cents, no currency stored.
+- **Decision:** format money as **$1,234.56 (USD, en-US)** everywhere it appears.
+- **Rationale:** a concrete, legible default for the reference; raw cents must never
+  be shown.
+- **Rejected because:** EUR is not this reference; fully agnostic defers a needed
+  concrete format.
+- **Design implication:** a money-format slot (cents → USD), right-aligned and
+  tabular for scanning.
+
+## R-04 · Deployment posture: desktop-first, single-provider, modest scale → D-04
+
+- **Status:** accepted
+- **Context:** scale/device are not in the code; OBS-09 (no provider entity).
+- **Decision:** design for a **single-site, single-provider** clinic; staff work at
+  a **reception/back-office desktop**; hundreds–low-thousands of patients. Treat the
+  absence of a provider entity as intentional here.
+- **Rationale:** matches the modeled data and the back-office nature of the tool.
+- **Rejected because:** tablet/exam-room responsive has no evidence and adds scope;
+  unspecified blocks density decisions.
+- **Design implication:** optimise for **desktop density and keyboard**;
+  multi-provider and tablet use are explicit *future* needs, not designed for now.
