@@ -22,6 +22,10 @@ auditable *why* (D-007). The output directory moved from `design/` to
 7/5/9px (D-005), and the validator surfaced a borderline tertiary-text contrast,
 now tracked rather than silently shipped (D-006).
 
+Verified in a real browser (system Chrome) after migration — login, dashboard,
+and the Products list render the navy chrome, amber `accent2`, and sharpened
+corners correctly. Visual record: `design/screenshots/` (also attached to PR #48).
+
 ## 2026-05 — The "Deep Navy" identity
 
 The shop established its visual identity on `rustio-admin`: Deep Navy primary
