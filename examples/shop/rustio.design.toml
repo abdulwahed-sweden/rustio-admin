@@ -1,0 +1,162 @@
+# ════════════════════════════════════════════════════════════════════
+#  shop — rustio.design.toml
+#
+#  The single source of truth for the shop admin's look. This file
+#  REPLACES the two hand-coded <style> blocks that used to live inline in
+#  templates/admin/_theme.html (the "Deep Navy" palette + the type scale).
+#
+#  This is the HOW layer of the design stack. The WHY/WHAT live in
+#  design/DESIGN_*.md (see [design] below); read them with `rustio-design
+#  context`. Edit THIS file only after reasoning in DESIGN_REASONING.md.
+#
+#  Edit, then:   rustio-design build
+#  It compiles to generated/tokens.css, served via RUSTIO_TOKENS_CSS (see
+#  .env) — appended after the framework's baked CSS, so these win.
+# ════════════════════════════════════════════════════════════════════
+
+[project]
+name = "Shop"
+out_dir = "generated"
+# Point at the framework checkout so `[brand].derive` could compute a
+# WCAG-safe ramp via rio-theme. shop keeps its exact hand-tuned navy, so
+# the colors below are literal; the path is here for when you want derive.
+rustio_admin_path = "../.."
+
+# ── Design memory (WHY / WHAT) — reason from these before touching tokens.
+#    Assemble the whole stack with `rustio-design context`. ──
+[design]
+brief        = "design/DESIGN_BRIEF.md"         # WHY  — context, intent, visual direction
+reasoning    = "design/DESIGN_REASONING.md"     # the ADR trail behind every token below
+architecture = "design/DESIGN_ARCHITECTURE.md"  # WHAT — IA, navigation, UX hierarchy
+decisions    = "design/DESIGN_DECISIONS.md"     # accepted-decision ledger
+history      = "design/DESIGN_HISTORY.md"       # evolution over time
+
+# ── Deep Navy identity (migrated from _theme.html :root) ──────────────
+[colors]
+accent          = "#1e3a5f"
+accent-hover    = "#15293f"
+accent-rgb      = "30 58 95"
+accent-soft     = "#e3e9f0"
+accent-border   = "#c4cfdd"
+
+brand-light     = "#1e3a5f"
+brand-dark      = "#1e3a5f"
+brand-adaptive  = "#1e3a5f"
+brand-surface   = "#1e3a5f"
+brand-accent    = "#1e3a5f"
+brand-secondary = "#34557d"
+brand-hover     = "#15293f"
+brand-active    = "#15293f"
+brand-tint      = "#e3e9f0"
+brand-text      = "#1e3a5f"
+
+surface-chrome  = "#1b2a4e"
+bg              = "#eef2fa"
+surface         = "#ffffff"
+surface-2       = "#f1f4f8"
+surface-3       = "#f9fbfd"
+
+text-strong     = "#15233b"
+text            = "#1c2540"
+text-muted      = "#51607a"
+text-subtle     = "#6b7894"
+
+border          = "#dde4ea"
+border-soft     = "#eef2f5"
+border-strong   = "#c4cfdd"
+
+success         = "#5aa524"
+warning         = "#c2820a"
+danger          = "#e23b4d"
+success-bg      = "#e2f1d6"
+warning-bg      = "#fef7e4"
+danger-bg       = "#fddcdf"
+info-bg         = "#e3fafd"
+
+# ── Type scale (migrated from _theme.html html{} block) ───────────────
+[typography]
+fs-xs      = "0.875rem"
+fs-sm      = "1rem"
+fs-md      = "1.0625rem"
+fs-base    = "1.0625rem"
+fs-lg      = "1.25rem"
+fs-xl      = "1.5rem"
+fs-h3      = "1.25rem"
+fs-h2      = "1.5rem"
+fs-h1      = "2rem"
+fs-display = "2rem"
+
+# ── A deliberate, live design change: sharper "premium SaaS" corners.
+#    The framework default is 10/6/12px; one edit here re-rounds every
+#    card, button, input and badge admin-wide. Proves the spec is live.
+[radius]
+default = "7px"
+sm      = "5px"
+lg      = "9px"
+
+# ── The parts that aren't :root tokens: the amber secondary accent
+#    (--rio-accent2*, used by the dashboard/list templates) and the dark
+#    navy chrome remap for the sidebar + topbar. Migrated verbatim from
+#    _theme.html. Validated (no @import / remote url / markup).
+[custom_css]
+rules = """
+/* Secondary accent — warm amber/gold (the classic navy companion). */
+:root {
+  --rio-accent2:      #e0912b;
+  --rio-accent2-ink:  #b06d0e;
+  --rio-accent2-soft: #fbeed9;
+  --rio-accent2-rgb:  224 145 43;
+}
+
+/* Dark navy chrome (sidebar + footer): light text, accent lifted to a
+   light steel-blue so the active item reads on navy. */
+.rio-sidebar,
+.rio-footer {
+  --rio-text-strong: #f5f8fc;
+  --rio-text:        #ccd6e6;
+  --rio-text-muted:  #93a1bd;
+  --rio-text-subtle: #74819e;
+  --rio-surface-2:   #243454;
+  --rio-surface-3:   #2c3c5e;
+  --rio-border-soft:   #243454;
+  --rio-border:        #2e3f60;
+  --rio-border-strong: #3a4d73;
+  --rio-accent:        #9db8d8;
+  --rio-accent-hover:  #b9cde6;
+  --rio-accent-rgb:    157 184 216;
+  --rio-accent-soft:   #2a3f63;
+  --rio-accent-border: #3a5680;
+}
+
+/* rio dark-navy top frame. */
+.rio-topbar { background: #1e3a5f; border-bottom-color: #15293f; }
+.rio-topbar-brand { color: #ffffff; }
+.rio-topbar-identity,
+.rio-topbar-link { color: rgba(255, 255, 255, 0.72); }
+.rio-topbar-link:hover { color: #ffffff; }
+.rio-topbar-account__toggle,
+.rio-topbar-account__toggle:hover,
+.rio-dropdown.is-open .rio-topbar-account__toggle {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.rio-topbar-account__toggle:hover,
+.rio-dropdown.is-open .rio-topbar-account__toggle { background: rgba(255, 255, 255, 0.16); }
+.rio-topbar-account__email { color: rgba(255, 255, 255, 0.90); }
+.rio-topbar-bell__badge { background: var(--rio-danger); }
+.rio-sidebar-toggle { color: #ffffff; border-color: rgba(255, 255, 255, 0.25); }
+.rio-search-trigger {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.75);
+}
+.rio-search-trigger:hover { background: rgba(255, 255, 255, 0.16); }
+.rio-search-trigger__label,
+.rio-search-trigger__icon { color: rgba(255, 255, 255, 0.78); }
+.rio-search-trigger__kbd {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.82);
+}
+"""
