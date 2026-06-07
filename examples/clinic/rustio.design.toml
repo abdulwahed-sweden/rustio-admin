@@ -1,0 +1,35 @@
+# ════════════════════════════════════════════════════════════════════
+#  clinic — rustio.design.toml
+#
+#  Wires the clinic's design memory into the rustio-design stack. The
+#  [design] manifest below points at the WHY/WHAT artifacts extracted for
+#  Claude Design; assemble the whole stack with `rustio-design context`.
+#
+#  NOTE: the clinic keeps its hand-authored `static/tokens.css` as its
+#  theme (emerald on slate, served via RUSTIO_TOKENS_CSS). This spec does
+#  NOT generate or own tokens — it exists to wire the design-memory layers.
+#  The `[brand]` colour below is informational (shown in `context`), not
+#  compiled. A future pass could migrate static/tokens.css into a [colors]
+#  block after a /design-reason decision.
+# ════════════════════════════════════════════════════════════════════
+
+[project]
+name = "Clinic"
+out_dir = "generated"
+rustio_admin_path = "../.."
+
+# ── Design memory (WHY / WHAT) — reason from these before any design. ──
+[design]
+brief        = "design/DESIGN_BRIEF.md"         # WHY  — domain, intent, visual & a11y floor
+reasoning    = "design/DESIGN_REASONING.md"     # observed decisions (reverse-engineered ADRs)
+architecture = "design/DESIGN_ARCHITECTURE.md"  # WHAT — entities, screens, info hierarchy
+# Read-only analysis pass — no forward decision ledger / history yet.
+# A consolidated, self-contained reduction also lives in
+# design/DESIGN_CONTEXT.md (curated synthesis of the three above).
+# decisions = "design/DESIGN_DECISIONS.md"
+# history   = "design/DESIGN_HISTORY.md"
+
+# Informational only — the clinic's current accent (hand-authored in
+# static/tokens.css). Not compiled by this spec.
+[brand]
+color = "#059669"
