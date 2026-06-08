@@ -25,7 +25,7 @@
 .rio-table th, .rio-table td {
   /* v0.16: 16/24 padding → ~56px row height (24px text block +
    * 32px padding). Comfortable to scan, easy to click. */
-  padding: var(--rio-s4) var(--rio-s5);
+  padding: var(--rio-space-16) var(--rio-space-24);
   text-align: start;
   border-bottom: 1px solid var(--rio-line);
   vertical-align: middle;
@@ -35,17 +35,17 @@
    * still a quiet scan-anchor. 600 weight + tracked allcaps lands
    * the Bloomberg / Stripe / Linear tone without dominating cell
    * content. */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   font-size: var(--rio-fs-xs);                  /* 14px — quiet label */
   color: var(--rio-text-mute);
   text-transform: uppercase;
-  letter-spacing: var(--rio-tracking-allcaps);
+  letter-spacing: var(--rio-tracking-caps);
   background: var(--rio-sunken);
   border-bottom: 1px solid var(--rio-line);
   white-space: nowrap;
   /* Header rows can be shorter than body rows — operators don't
    * need a 56px header. 12px vertical padding gets header to ~40px. */
-  padding-block: var(--rio-s3);
+  padding-block: var(--rio-space-12);
 }
 .rio-table tbody tr:last-child td { border-bottom: none; }
 .rio-table tbody tr { transition: background-color 0.1s; }
@@ -57,7 +57,7 @@
  * Works whether the row starts with a checkbox or not. */
 .rio-table tbody td:first-child:not(.rio-td--checkbox),
 .rio-table tbody .rio-td--checkbox + td {
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   color: var(--rio-text-hi);
 }
 
@@ -163,18 +163,18 @@
 .rio-bulk-bar {
   display: none;
   align-items: center;
-  gap: var(--rio-s3);
-  padding: 0.7rem var(--rio-s4);
-  margin-bottom: var(--rio-s3);
+  gap: var(--rio-space-12);
+  padding: 0.7rem var(--rio-space-16);
+  margin-bottom: var(--rio-space-12);
   background: var(--rio-text-hi);
   color: var(--rio-surface);
-  border-radius: var(--rio-radius);
+  border-radius: var(--rio-radius-md);
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-semibold);
-  box-shadow: var(--rio-shadow);
+  font-weight: var(--rio-weight-semibold);
+  box-shadow: var(--rio-shadow-md);
 }
 .rio-bulk-form.is-active .rio-bulk-bar { display: flex; }
-.rio-bulk-bar-count strong { font-weight: var(--rio-fw-bold); }
+.rio-bulk-bar-count strong { font-weight: var(--rio-weight-bold); }
 /* Inverted button — solid surface inside the dark bar so the action
  * stays high-contrast without bleeding into the strip. */
 .rio-bulk-bar .rio-button {
@@ -203,7 +203,7 @@
   border: none;
   color: rgba(255, 255, 255, 0.7);
   font: inherit;
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: var(--rio-radius-sm);
@@ -244,24 +244,24 @@
  * permissions matrix (their own component) inherit nothing from this
  * scope. */
 .rio-list .rio-table th,
-.rio-list .rio-table td { padding-inline-start: var(--rio-s3); padding-inline-end: var(--rio-s3); }
+.rio-list .rio-table td { padding-inline-start: var(--rio-space-12); padding-inline-end: var(--rio-space-12); }
 .rio-list .rio-table th:first-child,
-.rio-list .rio-table td:first-child { padding-inline-start: var(--rio-s4); }
+.rio-list .rio-table td:first-child { padding-inline-start: var(--rio-space-16); }
 /* Actions cell sits at the right edge with `width: 1%; white-space:
  * nowrap`, so its content width is already minimal. Match the middle-
- * cell gutter (`--rio-s3` = 12px) so the trailing button isn't bumped
+ * cell gutter (`--rio-space-12` = 12px) so the trailing button isn't bumped
  * past the card width by a wider right gutter, which used to leave a
  * residual ~4px overflow and surface a horizontal scrollbar on the
  * list card even after every other cell was trimmed. */
 .rio-list .rio-table th:last-child,
-.rio-list .rio-table td:last-child { padding-inline-end: var(--rio-s3); }
+.rio-list .rio-table td:last-child { padding-inline-end: var(--rio-space-12); }
 /* Action column packs Edit + Delete buttons; the two side-by-side
  * ghost buttons used to push wide rows past the content area. The
- * inter-button gap now sits at `--rio-s1` (4px) instead of the
- * default `--rio-s2` (8px) — small, taut, and the icons keep their
+ * inter-button gap now sits at `--rio-space-4` (4px) instead of the
+ * default `--rio-space-8` (8px) — small, taut, and the icons keep their
  * visual separation. */
 .rio-list .rio-table .rio-td--actions { white-space: nowrap; }
-.rio-list .rio-table .rio-td--actions .rio-button + .rio-button { margin-inline-start: var(--rio-s1); }
+.rio-list .rio-table .rio-td--actions .rio-button + .rio-button { margin-inline-start: var(--rio-space-4); }
 /* Allow multi-token list-page headers to wrap. The base `.rio-table th`
  * rule applies `white-space: nowrap` so labels like
  * `PERFORMED_BY_TECHNICIAN` set a hard column-width floor and push the
@@ -275,14 +275,14 @@
 .rio-dl {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: var(--rio-s2) var(--rio-s5);
+  gap: var(--rio-space-8) var(--rio-space-24);
   margin: 0;
 }
 .rio-dl dt { font-weight: 600; color: var(--rio-text-mute); }
 .rio-dl dd { margin: 0; }
 
 .rio-api-model {
-  padding: var(--rio-s4) 0;
+  padding: var(--rio-space-16) 0;
   border-bottom: 1px solid var(--rio-line);
 }
 .rio-api-model:last-child { border-bottom: 0; }
@@ -290,26 +290,26 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s3);
+  gap: var(--rio-space-12);
+  margin-bottom: var(--rio-space-12);
 }
 .rio-api-model__title { margin: 0; font-size: var(--rio-fs-lg); }
 .rio-api-model__endpoints,
 .rio-api-model__fields {
-  margin-top: var(--rio-s2);
-  margin-bottom: var(--rio-s3);
+  margin-top: var(--rio-space-8);
+  margin-bottom: var(--rio-space-12);
 }
 
 .rio-playground__form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s5);
+  gap: var(--rio-space-12);
+  margin-bottom: var(--rio-space-24);
 }
 .rio-playground__field {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s1);
+  gap: var(--rio-space-4);
   font-size: var(--rio-fs-sm);
   color: var(--rio-text-mute);
 }
@@ -322,8 +322,8 @@
 .rio-health__summary {
   display: flex;
   align-items: center;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s4);
+  gap: var(--rio-space-12);
+  margin-bottom: var(--rio-space-16);
 }
 .rio-health__row--error td { background: rgba(220, 38, 38, 0.04); }
 .rio-health__row--warn td { background: rgba(217, 119, 6, 0.04); }
@@ -336,10 +336,10 @@
 .rio-doc-list__link {
   display: flex;
   flex-direction: column;
-  padding: var(--rio-s3) var(--rio-s4);
+  padding: var(--rio-space-12) var(--rio-space-16);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
-  margin-bottom: var(--rio-s2);
+  border-radius: var(--rio-radius-md);
+  margin-bottom: var(--rio-space-8);
   text-decoration: none;
   color: var(--rio-text);
 }
@@ -349,11 +349,11 @@
   max-width: 880px;
   line-height: var(--rio-line-height, 1.55);
 }
-.rio-doc h1, .rio-doc h2, .rio-doc h3 { margin-top: var(--rio-s5); }
+.rio-doc h1, .rio-doc h2, .rio-doc h3 { margin-top: var(--rio-space-24); }
 .rio-doc pre {
   background: var(--rio-sunken);
-  padding: var(--rio-s3);
-  border-radius: var(--rio-radius);
+  padding: var(--rio-space-12);
+  border-radius: var(--rio-radius-md);
   overflow-x: auto;
   font-size: var(--rio-fs-sm);
 }
@@ -364,17 +364,17 @@
   font-size: 0.9em;
 }
 .rio-doc pre code { background: transparent; padding: 0; }
-.rio-doc table { width: 100%; border-collapse: collapse; margin: var(--rio-s3) 0; }
+.rio-doc table { width: 100%; border-collapse: collapse; margin: var(--rio-space-12) 0; }
 .rio-doc th, .rio-doc td {
   border-bottom: 1px solid var(--rio-line);
-  padding: var(--rio-s2) var(--rio-s3);
+  padding: var(--rio-space-8) var(--rio-space-12);
   text-align: start;
 }
 .rio-playground__actions {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: var(--rio-s3);
+  gap: var(--rio-space-12);
   flex-wrap: wrap;
 }
 .rio-playground__url {
@@ -382,13 +382,13 @@
   word-break: break-all;
 }
 .rio-playground__status {
-  margin-bottom: var(--rio-s2);
+  margin-bottom: var(--rio-space-8);
 }
 .rio-playground__body {
   background: var(--rio-sunken);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
-  padding: var(--rio-s3);
+  border-radius: var(--rio-radius-md);
+  padding: var(--rio-space-12);
   margin: 0;
   max-height: 60vh;
   overflow: auto;

@@ -210,33 +210,33 @@ blockquote:lang(ar),
   font-family: var(--rio-font-arabic-body);
   line-height: var(--rio-lh-arabic);
   font-size: var(--rio-fs-lg);
-  font-weight: var(--rio-fw-regular);
+  font-weight: var(--rio-weight-regular);
 }
 
 /* ---- Headings, links, paragraphs, code ----------------------- */
 
 h1, h2, h3, h4 {
-  margin: 0 0 var(--rio-s3);
+  margin: 0 0 var(--rio-space-12);
   line-height: var(--rio-lh-tight);
-  letter-spacing: var(--rio-tracking-heading);
+  letter-spacing: var(--rio-tracking-display);
   color: var(--rio-text);
 }
 h1 {
   font-size: var(--rio-fs-h1);            /* 34px */
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   letter-spacing: var(--rio-tracking-display);
 }
 h2 {
   font-size: var(--rio-fs-h2);            /* 26px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
 h3 {
   font-size: var(--rio-fs-h3);            /* 22px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
 h4 {
   font-size: var(--rio-fs-md);            /* 15px — section subtitle */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   letter-spacing: 0;
 }
 
@@ -267,12 +267,12 @@ h1, h2,
 h1:lang(ar), h2:lang(ar), h3:lang(ar), h4:lang(ar) {
   letter-spacing: 0;
   font-family: var(--rio-font-arabic);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
 }
 
-p { margin: 0 0 var(--rio-s4); }
+p { margin: 0 0 var(--rio-space-16); }
 
-a { color: var(--rio-rust); text-decoration: none; font-weight: var(--rio-fw-medium); }
+a { color: var(--rio-rust); text-decoration: none; font-weight: var(--rio-weight-medium); }
 a:hover { text-decoration: underline; }
 
 code, kbd, samp {
@@ -293,10 +293,10 @@ pre {
   font-feature-settings: "kern";
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
-  padding: var(--rio-s3) var(--rio-s4);
+  border-radius: var(--rio-radius-md);
+  padding: var(--rio-space-12) var(--rio-space-16);
   overflow-x: auto;
-  margin: 0 0 var(--rio-s4);
+  margin: 0 0 var(--rio-space-16);
 }
 pre code {
   background: none;

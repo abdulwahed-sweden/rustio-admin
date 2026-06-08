@@ -37,16 +37,16 @@
    * the primary affordance in the topbar instead of a cramped pill. */
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   height: 40px;
   min-width: 300px;
-  padding: 0 var(--rio-s3);
+  padding: 0 var(--rio-space-12);
   background: var(--rio-bg);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);                 /* 16px */
-  font-weight: var(--rio-fw-regular);
+  font-weight: var(--rio-weight-regular);
   cursor: pointer;
   transition: background-color 0.12s, border-color 0.12s, color 0.12s,
               box-shadow 0.12s;
@@ -70,7 +70,7 @@
 .rio-search-trigger__label {
   flex: 1;
   text-align: start;
-  letter-spacing: var(--rio-tracking-body);
+  letter-spacing: var(--rio-tracking-tight);
 }
 .rio-search-trigger__kbd {
   display: inline-flex;
@@ -78,7 +78,7 @@
   padding: 2px 7px;
   font-family: var(--rio-font-mono);
   font-size: 11px;
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
   border-radius: 4px;
@@ -94,7 +94,7 @@
 @media (max-width: 767px) {
   .rio-search-trigger {
     min-width: 0;
-    padding: 0 var(--rio-s2);
+    padding: 0 var(--rio-space-8);
   }
   .rio-search-trigger__label,
   .rio-search-trigger__kbd {
@@ -139,8 +139,8 @@
    * dominant visual element of the palette, not an afterthought. */
   display: flex;
   align-items: center;
-  gap: var(--rio-s3);
-  padding: var(--rio-s4) var(--rio-s5);
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-16) var(--rio-space-24);
   border-bottom: 1px solid var(--rio-line);
   flex-shrink: 0;
 }
@@ -157,7 +157,7 @@
   border: 0;
   outline: none;
   font-size: var(--rio-fs-xl);                 /* 20px — search input is the page */
-  font-weight: var(--rio-fw-regular);
+  font-weight: var(--rio-weight-regular);
   line-height: var(--rio-lh-ui);
   color: var(--rio-text-hi);
 }
@@ -170,20 +170,20 @@
 .rio-search-palette__list {
   list-style: none;
   margin: 0;
-  padding: var(--rio-s2);
+  padding: var(--rio-space-8);
   overflow-y: auto;
   flex: 1;
 }
 .rio-search-palette__group + .rio-search-palette__group {
-  margin-top: var(--rio-s2);
+  margin-top: var(--rio-space-8);
 }
 .rio-search-palette__group-label {
   display: block;
-  padding: var(--rio-s2) var(--rio-s3) var(--rio-s1);
+  padding: var(--rio-space-8) var(--rio-space-12) var(--rio-space-4);
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--rio-tracking-allcaps);
+  letter-spacing: var(--rio-tracking-caps);
   color: var(--rio-text-mute);
 }
 .rio-search-palette__result {
@@ -191,8 +191,8 @@
    * clickable rows instead of cramped lines of text. ~44px tall. */
   display: flex;
   align-items: baseline;
-  gap: var(--rio-s3);
-  padding: var(--rio-s3) var(--rio-s4);
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-12) var(--rio-space-16);
   border-radius: var(--rio-radius-sm);
   color: var(--rio-text);
   font-size: var(--rio-fs-md);                 /* 16px */
@@ -221,7 +221,7 @@
 /* ---- Empty / hint states --------------------------------------- */
 
 .rio-search-palette__empty {
-  padding: var(--rio-s5) var(--rio-s4);
+  padding: var(--rio-space-24) var(--rio-space-16);
   color: var(--rio-text-mute);
   text-align: center;
   font-size: var(--rio-fs-sm);
@@ -233,8 +233,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--rio-s3);
-  padding: var(--rio-s2) var(--rio-s4);
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-8) var(--rio-space-16);
   border-top: 1px solid var(--rio-line);
   background: var(--rio-sunken);
   font-size: var(--rio-fs-xs);
@@ -244,7 +244,7 @@
 .rio-search-palette__footer-item {
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s1);
+  gap: var(--rio-space-4);
 }
 .rio-search-palette__footer-kbd {
   display: inline-flex;

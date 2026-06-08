@@ -4,8 +4,6 @@
  * sm = inputs / chips / row checkboxes; md = the default for cards /
  * popovers; lg = page-level fieldset / login card; xl = hero panels;
  * pill = fully-rounded chips & toggles.
- *
- * Phase-0 bridge: the old default --rio-radius (10px) maps to --rio-radius-md.
  * ============================================================ */
 
 :root {
@@ -14,7 +12,4 @@
   --rio-radius-lg:   12px;
   --rio-radius-xl:   16px;
   --rio-radius-pill: 999px;
-
-  /* --- Phase-0 compatibility alias --- */
-  --rio-radius: var(--rio-radius-md);
 }

@@ -29,7 +29,7 @@
 }
 
 .rio-banner {
-  padding: var(--rio-s2) var(--rio-s4);
+  padding: var(--rio-space-8) var(--rio-space-16);
   text-align: center;
   font-weight: 600;
   font-size: var(--rio-fs-sm);
@@ -66,7 +66,7 @@
 .rio-main {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--rio-s5) var(--rio-s6) var(--rio-s6);
+  padding: var(--rio-space-24) var(--rio-space-32) var(--rio-space-32);
 }
 .rio-main > * {
   max-width: var(--rio-content-max);

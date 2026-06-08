@@ -8,14 +8,14 @@
  * ============================================================ */
 
 /* v0.19 — "Quiet expert" surface language. Pre-0.19 cards leaned
- * on `--rio-shadow` (4-px blur) which over-stated their lift on the
+ * on `--rio-shadow-md` (4-px blur) which over-stated their lift on the
  * pale canvas. New baseline:
- *   - Cards use the lighter `--rio-shadow-xs` (1-px lift), still
+ *   - Cards use the lighter `--rio-shadow-sm` (1-px lift), still
  *     paired with `border-soft` for the edge — what Stripe/Linear
  *     call a "raised surface" without theatrical depth.
  *   - `.rio-card--quiet` opts out of the shadow entirely, for
  *     inline cards stacked inside other regions.
- *   - `.rio-card--elevated` opts INTO the heavier `--rio-shadow`
+ *   - `.rio-card--elevated` opts INTO the heavier `--rio-shadow-md`
  *     for floating panels (modals, dropdowns already use
  *     `--rio-shadow-lg`; this is the in-between tier).
  *
@@ -32,25 +32,25 @@
    * the dashboard's "headline cluster" so titles, deck, badges,
    * and the first KPI strip don't push the table below the fold
    * on a 1280-px laptop. */
-  margin-bottom: var(--rio-s5);
+  margin-bottom: var(--rio-space-24);
 }
 .rio-breadcrumbs {
   font-size: var(--rio-fs-xs);
   color: var(--rio-text-faint);
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   letter-spacing: 0.01em;
-  margin-bottom: var(--rio-s2);
+  margin-bottom: var(--rio-space-8);
 }
 .rio-breadcrumbs a {
   color: var(--rio-text-mute);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
 .rio-breadcrumbs a:hover { color: var(--rio-text-hi); }
 .rio-page-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--rio-s4);
+  gap: var(--rio-space-16);
   flex-wrap: wrap;
 }
 .rio-page-actions h1 {
@@ -61,12 +61,12 @@
   font-size: 1.5rem;
   line-height: 1.25;
   margin: 0;
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   letter-spacing: -0.005em;
 }
 /* Optional meta line under the title (subtle, used as a deck). */
 .rio-page-header__lead {
-  margin: var(--rio-s2) 0 0;
+  margin: var(--rio-space-8) 0 0;
   font-size: var(--rio-fs-md);
   color: var(--rio-text-mute);
 }
@@ -78,7 +78,7 @@
 .rio-page-actions__group {
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   flex-wrap: wrap;
 }
 
@@ -86,15 +86,15 @@
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6);
-  margin-bottom: var(--rio-s5);
-  box-shadow: var(--rio-shadow-xs);
+  padding: var(--rio-space-32);
+  margin-bottom: var(--rio-space-24);
+  box-shadow: var(--rio-shadow-sm);
 }
 .rio-card--quiet  { box-shadow: none; }
-.rio-card--elevated { box-shadow: var(--rio-shadow); }
+.rio-card--elevated { box-shadow: var(--rio-shadow-md); }
 .rio-card-section {
-  margin-top: var(--rio-s5);
-  padding-top: var(--rio-s4);
+  margin-top: var(--rio-space-24);
+  padding-top: var(--rio-space-16);
   border-top: 1px solid var(--rio-line);
 }
 
@@ -106,15 +106,15 @@
  * `.rio-section__title` is the H2-sized region heading,
  * `.rio-section__lead` is the optional caption beneath. */
 .rio-section {
-  margin-bottom: var(--rio-s6);
+  margin-bottom: var(--rio-space-32);
 }
 .rio-section__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--rio-s4);
+  gap: var(--rio-space-16);
   flex-wrap: wrap;
-  margin-bottom: var(--rio-s3);
+  margin-bottom: var(--rio-space-12);
 }
 .rio-section__heading {
   display: flex;
@@ -124,14 +124,14 @@
 }
 .rio-section__label {
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-faint);
 }
 .rio-section__title {
   font-size: 1.125rem;       /* 18 px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-hi);
   margin: 0;
   letter-spacing: -0.005em;
@@ -157,7 +157,7 @@
  *     <a class="rio-button rio-button--primary" href="...">Add post</a>
  *   </div>                                                          */
 .rio-empty {
-  padding: var(--rio-s6);
+  padding: var(--rio-space-32);
   text-align: center;
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);
@@ -166,9 +166,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--rio-s3);
+  gap: var(--rio-space-12);
   text-align: center;
-  padding: var(--rio-s7) var(--rio-s5);
+  padding: var(--rio-space-48) var(--rio-space-24);
   color: var(--rio-text-mute);
 }
 .rio-empty-state__icon {
@@ -182,7 +182,7 @@
 .rio-empty-state__title {
   margin: 0;
   font-size: 1rem;            /* 16 px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-hi);
 }
 .rio-empty-state__lead {
@@ -231,9 +231,9 @@
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6);
-  margin-bottom: var(--rio-s5);
-  box-shadow: var(--rio-shadow-xs);
+  padding: var(--rio-space-32);
+  margin-bottom: var(--rio-space-24);
+  box-shadow: var(--rio-shadow-sm);
   /* Left-edge stripe carries the destructive cue without flooding
    * the card with red — calm-but-noticeable. */
   border-inline-start: 4px solid var(--rio-line);
@@ -247,8 +247,8 @@
 .rio-confirm__header {
   display: flex;
   align-items: flex-start;
-  gap: var(--rio-s4);
-  margin-bottom: var(--rio-s4);
+  gap: var(--rio-space-16);
+  margin-bottom: var(--rio-space-16);
 }
 .rio-confirm__icon {
   flex-shrink: 0;
@@ -270,19 +270,19 @@
 .rio-confirm__title {
   margin: 0;
   font-size: 1.125rem;        /* 18 px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-hi);
   letter-spacing: -0.005em;
 }
 .rio-confirm__lead {
-  margin: var(--rio-s1) 0 0;
+  margin: var(--rio-space-4) 0 0;
   font-size: var(--rio-fs-md);
   color: var(--rio-text);
   line-height: var(--rio-lh-body);
 }
 .rio-confirm__lead strong {
   color: var(--rio-text-hi);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
 .rio-confirm__lead code {
   font-family: var(--rio-font-mono);
@@ -294,16 +294,16 @@
 .rio-confirm__warnings {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s2);
-  margin-bottom: var(--rio-s4);
+  gap: var(--rio-space-8);
+  margin-bottom: var(--rio-space-16);
 }
 .rio-confirm__warnings .rio-flash {
   margin: 0;
 }
 .rio-confirm__items {
   list-style: none;
-  margin: 0 0 var(--rio-s4);
-  padding: var(--rio-s3) 0;
+  margin: 0 0 var(--rio-space-16);
+  padding: var(--rio-space-12) 0;
   border-top: 1px solid var(--rio-line);
   border-bottom: 1px solid var(--rio-line);
 }
@@ -319,16 +319,16 @@
   color: var(--rio-text-mute);
 }
 .rio-confirm__small {
-  margin: 0 0 var(--rio-s4);
+  margin: 0 0 var(--rio-space-16);
   font-size: var(--rio-fs-sm);
   color: var(--rio-text-mute);
 }
 
 /* Cascade items section header (within a confirm block). */
 .rio-confirm__section-title {
-  margin: var(--rio-s4) 0 var(--rio-s2);
+  margin: var(--rio-space-16) 0 var(--rio-space-8);
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-faint);

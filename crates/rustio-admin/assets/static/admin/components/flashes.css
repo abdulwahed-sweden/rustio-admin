@@ -7,11 +7,11 @@
  * ============================================================ */
 
 .rio-flash {
-  padding: 0.85rem var(--rio-s4);
-  border-radius: var(--rio-radius);
-  margin-bottom: var(--rio-s4);
+  padding: 0.85rem var(--rio-space-16);
+  border-radius: var(--rio-radius-md);
+  margin-bottom: var(--rio-space-16);
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   border: 1px solid transparent;
 }
 .rio-flash--success {
@@ -34,4 +34,4 @@
   color: var(--rio-rust);
   border-color: rgb(var(--rio-rust-rgb) / 0.18);
 }
-.rio-flash ul { margin: var(--rio-s2) 0 0; padding-inline-start: var(--rio-s5); }
+.rio-flash ul { margin: var(--rio-space-8) 0 0; padding-inline-start: var(--rio-space-24); }

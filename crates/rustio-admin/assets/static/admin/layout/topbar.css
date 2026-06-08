@@ -9,11 +9,11 @@
 .rio-topbar {
   display: flex;
   align-items: center;
-  gap: var(--rio-s4);
+  gap: var(--rio-space-16);
   /* v0.16 — 24px horizontal padding. Topbar stops feeling cramped
    * beside the brand and there's real breathing room between
    * topbar items. */
-  padding: 0 var(--rio-s5);
+  padding: 0 var(--rio-space-24);
   height: var(--rio-topbar-h);
   /* Light topbar on the light page canvas. `--rio-surface`
    * (now pure `#FFFFFF`) sits one tier above the canvas — GitHub /
@@ -30,28 +30,28 @@
   z-index: var(--rio-z-topbar);
 }
 .rio-topbar-brand {
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   font-size: var(--rio-fs-lg);                 /* 18px */
   color: var(--rio-text-hi);
-  letter-spacing: var(--rio-tracking-heading);
+  letter-spacing: var(--rio-tracking-display);
 }
 .rio-topbar-brand:hover { text-decoration: none; }
 .rio-topbar-nav {
   margin-inline-start: auto;
   display: flex;
   align-items: center;
-  gap: var(--rio-s4);
+  gap: var(--rio-space-16);
   flex-wrap: wrap;
 }
 .rio-topbar-identity {
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);                 /* 16px */
-  font-weight: var(--rio-fw-regular);
+  font-weight: var(--rio-weight-regular);
 }
 .rio-topbar-link {
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);                 /* 16px */
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
 }
 .rio-topbar-link:hover { color: var(--rio-text); }
 .rio-topbar-bell {
@@ -70,7 +70,7 @@
   background: var(--rio-rust, #b22222);
   color: #fff;
   font-size: 11px;
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   line-height: 16px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -89,14 +89,14 @@
    * topbar gravity is less than a content card. */
   padding: 0.35rem 0.55rem 0.35rem 0.4rem;
   gap: 0.5rem;
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
 }
 .rio-topbar-account__avatar {
   width: 26px; height: 26px;
   border-radius: 50%;
   background: var(--rio-rust-tint, var(--rio-rust-tint));
   color: var(--rio-rust, var(--rio-rust));
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   font-size: var(--rio-fs-sm);
   display: inline-flex;
   align-items: center; justify-content: center;
@@ -116,7 +116,7 @@
   margin: 0;
   font-size: var(--rio-fs-sm);
   color: var(--rio-text);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   word-break: break-all;
 }
 /* The account panel is narrower than a filter panel — the menu
@@ -135,7 +135,7 @@
   background: none;
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
-  padding: var(--rio-s1) var(--rio-s2);
+  padding: var(--rio-space-4) var(--rio-space-8);
   color: var(--rio-text);
   cursor: pointer;
 }

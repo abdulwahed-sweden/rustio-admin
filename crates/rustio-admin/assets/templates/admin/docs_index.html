@@ -6,18 +6,18 @@
  # gives the shop its amber accent and falls back to the framework accent. #}
 {% block extra_head %}
 <style>
-  .pgx-head { margin-bottom: var(--rio-s6); }
-  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-hi); margin-top: var(--rio-s1); }
-  .pgx-lead { margin-top: var(--rio-s2); max-width: 70ch; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
+  .pgx-head { margin-bottom: var(--rio-space-32); }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-weight-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-hi); margin-top: var(--rio-space-4); }
+  .pgx-lead { margin-top: var(--rio-space-8); max-width: 70ch; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
   .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-sunken); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
 
-  .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--rio-s4); }
-  .docs-card { display: flex; align-items: center; gap: var(--rio-s4); padding: var(--rio-s5); background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
+  .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--rio-space-16); }
+  .docs-card { display: flex; align-items: center; gap: var(--rio-space-16); padding: var(--rio-space-24); background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-md); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
   .docs-card:hover { border-color: var(--rio-rust); transform: translateY(-2px); box-shadow: var(--rio-shadow-lg); }
   .docs-card__glyph { width: 46px; height: 46px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-gold-tint, var(--rio-rust-tint)); color: var(--rio-gold, var(--rio-rust)); }
   .docs-card__glyph .rio-icon { width: 22px; height: 22px; }
   .docs-card__body { min-width: 0; display: flex; flex-direction: column; }
-  .docs-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-hi); transition: color .14s ease; }
+  .docs-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-weight-bold); color: var(--rio-text-hi); transition: color .14s ease; }
   .docs-card:hover .docs-card__title { color: var(--rio-rust); }
   .docs-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-mute); }
   .docs-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-faint); transition: transform .14s ease, color .14s ease; }

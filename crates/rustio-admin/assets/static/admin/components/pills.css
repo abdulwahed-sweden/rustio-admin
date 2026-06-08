@@ -13,7 +13,7 @@
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
   font-size: var(--rio-fs-xs);                  /* 13px */
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   letter-spacing: 0.02em;
   line-height: var(--rio-lh-ui);
 }

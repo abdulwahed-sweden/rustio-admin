@@ -8,16 +8,16 @@
 
 .rio-tabs {
   display: flex;
-  gap: var(--rio-s1);
+  gap: var(--rio-space-4);
   border-bottom: 1px solid var(--rio-line);
-  margin-bottom: var(--rio-s4);
+  margin-bottom: var(--rio-space-16);
   flex-wrap: wrap;
 }
 .rio-tab {
-  padding: 0.55rem var(--rio-s4);
+  padding: 0.55rem var(--rio-space-16);
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
 }
@@ -25,5 +25,5 @@
 .rio-tab--active {
   color: var(--rio-rust);
   border-bottom-color: var(--rio-rust);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
 }

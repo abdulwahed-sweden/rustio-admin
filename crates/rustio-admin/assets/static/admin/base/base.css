@@ -8,10 +8,10 @@
  * ============================================================ */
 
 body {
-  font-family: var(--rio-font-sans);
+  font-family: var(--rio-font-body);
   font-size: var(--rio-font-size-base);   /* 16px */
   line-height: var(--rio-lh-body);        /* 1.6 */
-  font-weight: var(--rio-fw-regular);
+  font-weight: var(--rio-weight-regular);
   color: var(--rio-text);
   background: var(--rio-bg);
   -webkit-font-smoothing: antialiased;
@@ -23,5 +23,5 @@ body {
    * Tajawal / Noto Naskh / CJK shaping. */
   font-feature-settings: "kern", "calt";
   font-variant-ligatures: common-ligatures;
-  letter-spacing: var(--rio-tracking-body);
+  letter-spacing: var(--rio-tracking-tight);
 }

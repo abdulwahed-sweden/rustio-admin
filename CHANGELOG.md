@@ -101,9 +101,19 @@ leaves the alpha track.
   `--rio-border`→`--rio-line`, `--rio-surface-2`→`--rio-sunken`, …), and
   the colour alias bridge was removed (581 references across 33 files).
   `AdminTheme::accent/text_muted/border` now patch `--rio-rust` /
-  `--rio-text-mute` / `--rio-line`; new `--rio-rust-rgb`. Spacing / radius
-  / shadow / type aliases remain until Phase 1b. Value-preserving — no
-  visual change beyond the serif headings.
+  `--rio-text-mute` / `--rio-line`; new `--rio-rust-rgb`. Value-preserving
+  — no visual change beyond the serif headings.
+- **Design System Phase 1b — scale-token rewrite (bridge fully removed).**
+  The remaining call sites were migrated to the DS vocabulary across the
+  admin CSS + templates (~580 refs): spacing `--rio-s1..s7`→`--rio-space-*`,
+  `--rio-radius`→`--rio-radius-md`, `--rio-shadow{,-2,-xs}`→`--rio-shadow-md`/`-sm`,
+  `--rio-font-sans`→`--rio-font-body`, `--rio-fw-*`→`--rio-weight-*`
+  (+ new `--rio-weight-heavy`), and the old tracking aliases→`--rio-tracking-*`.
+  **All compatibility alias bridges are now deleted.** Deliberately kept as
+  canonical (not migrated): the `--rio-fs-*` size scale and `--rio-lh-*`
+  line-heights stay at the framework's comfortable 16px-floor values rather
+  than the DS's 14px product base — operator software is read for long
+  shifts. Value-preserving; no visual change.
 - **The framework is no longer light-only.** `DESIGN_DOCTRINE.md` §5 and
   CLAUDE.md now document two themes (light default + dim-slate dark);
   `tokens/colors.css` is now the hand-authored DS default rather than a

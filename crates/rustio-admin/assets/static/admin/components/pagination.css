@@ -9,9 +9,9 @@
 .rio-pagination {
   display: flex;
   align-items: center;
-  gap: var(--rio-s2);
-  margin-top: var(--rio-s5);
-  padding-top: var(--rio-s3);
+  gap: var(--rio-space-8);
+  margin-top: var(--rio-space-24);
+  padding-top: var(--rio-space-12);
   flex-wrap: wrap;
   font-size: var(--rio-fs-md);
 }
@@ -22,7 +22,7 @@
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   background: var(--rio-surface);
   color: var(--rio-text);
   font-variant-numeric: tabular-nums;
@@ -47,6 +47,6 @@
 .rio-pagination-ellipsis {
   padding: 0 0.35rem;
   color: var(--rio-text-faint);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   user-select: none;
 }

@@ -24,8 +24,8 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: var(--rio-s4);
-  padding: var(--rio-s3) var(--rio-s5);
+  gap: var(--rio-space-16);
+  padding: var(--rio-space-12) var(--rio-space-24);
   border-top: 1px solid var(--rio-line);
   /* v0.15: matches the topbar/sidebar chrome tier so the
    * operator skeleton closes top + sides + bottom in one tone.
@@ -40,7 +40,7 @@
 .rio-footer__col {
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   min-width: 0;
   white-space: nowrap;
 }
@@ -50,7 +50,7 @@
 .rio-footer__col--context { justify-content: flex-end;   }
 
 .rio-footer__brand {
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-mute, var(--rio-text-mute));
   letter-spacing: -0.005em;
 }
@@ -78,13 +78,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
-  padding: 0 var(--rio-s2);
+  padding: 0 var(--rio-space-8);
   height: 1.5em;
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-sunken, transparent);
   font-size: 0.85em;
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--rio-text-mute);
@@ -131,7 +131,7 @@
  * rather than pushing the timestamp off-row. */
 .rio-footer__user {
   color: var(--rio-text-mute);
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   max-width: 28ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -166,8 +166,8 @@
 @media (max-width: 720px) {
   .rio-footer {
     grid-template-columns: 1fr;
-    gap: var(--rio-s2);
-    padding: var(--rio-s3) var(--rio-s4);
+    gap: var(--rio-space-8);
+    padding: var(--rio-space-12) var(--rio-space-16);
     text-align: center;
   }
 

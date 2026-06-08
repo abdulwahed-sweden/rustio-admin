@@ -10,7 +10,7 @@
  *      These scripts occupy non-colliding code-point ranges, so
  *      the browser fetches the file only when the page actually
  *      renders Thai / Devanagari glyphs. They sit in
- *      `--rio-font-sans` so untagged Thai / Devanagari content
+ *      `--rio-font-body` so untagged Thai / Devanagari content
  *      (patron names, free-text fields) renders correctly.
  *
  *   2. Locale-gated via `:lang(ja|ko|zh)` (Han Unification)

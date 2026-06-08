@@ -6,8 +6,6 @@
  * z-index ladder, which are framework-specific and have no DS
  * equivalent — kept verbatim.
  *
- * Phase-0 bridge: the old --rio-s1..s7 step scale maps onto the
- * matching --rio-space-* values.
  * ============================================================ */
 
 :root {
@@ -31,15 +29,6 @@
   /* --- Hit targets --- */
   --rio-hit-compact:     40px; /* compact / admin density */
   --rio-hit-comfortable: 44px; /* comfortable / marketing density */
-
-  /* --- Phase-0 compatibility aliases (old step scale) --- */
-  --rio-s1: var(--rio-space-4);
-  --rio-s2: var(--rio-space-8);
-  --rio-s3: var(--rio-space-12);
-  --rio-s4: var(--rio-space-16);
-  --rio-s5: var(--rio-space-24);
-  --rio-s6: var(--rio-space-32);
-  --rio-s7: var(--rio-space-48);
 
   /* --- Shell-layout reservations (framework-specific, no DS twin) --- */
   --rio-sidebar-w: 264px;          /* fits longer model names */

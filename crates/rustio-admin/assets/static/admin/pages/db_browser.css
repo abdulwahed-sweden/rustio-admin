@@ -8,10 +8,10 @@
  * dashboard.
  * ============================================================ */
 
-.rio-db-summary { margin-bottom: var(--rio-s5); }
+.rio-db-summary { margin-bottom: var(--rio-space-24); }
 .rio-db-stats {
   display: flex;
-  gap: var(--rio-s6);
+  gap: var(--rio-space-32);
   margin: 0;
   padding: 0;
   flex-wrap: wrap;
@@ -23,7 +23,7 @@
 }
 .rio-db-stat dt {
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-mute);
@@ -32,29 +32,29 @@
   margin: 0;
   font-family: var(--rio-font-mono);
   font-size: var(--rio-fs-lg);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-hi);
   font-variant-numeric: tabular-nums;
 }
 
 .rio-db-table {
-  margin-bottom: var(--rio-s5);
+  margin-bottom: var(--rio-space-24);
   /* Scroll-margin so anchor-link jumps from the FK list don't
    * land flush against the sticky topbar. */
-  scroll-margin-top: calc(var(--rio-topbar-h) + var(--rio-s3));
+  scroll-margin-top: calc(var(--rio-topbar-h) + var(--rio-space-12));
 }
 .rio-db-table__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--rio-s2);
-  margin-bottom: var(--rio-s4);
+  gap: var(--rio-space-8);
+  margin-bottom: var(--rio-space-16);
 }
 .rio-db-table__header h2 {
   margin: 0;
   font-size: var(--rio-fs-lg);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
 .rio-db-table__header h2 code {
   background: none;
@@ -70,13 +70,13 @@
 .rio-db-fks {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--rio-s5);
-  margin-top: var(--rio-s4);
+  gap: var(--rio-space-24);
+  margin-top: var(--rio-space-16);
 }
 .rio-db-fks__group h3 {
-  margin: 0 0 var(--rio-s2);
+  margin: 0 0 var(--rio-space-8);
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-mute);
@@ -98,5 +98,5 @@
  * breakpoint — they're wordy and the side-by-side grid stops
  * being legible at narrow widths. */
 @media (max-width: 767.98px) {
-  .rio-db-fks { grid-template-columns: 1fr; gap: var(--rio-s3); }
+  .rio-db-fks { grid-template-columns: 1fr; gap: var(--rio-space-12); }
 }

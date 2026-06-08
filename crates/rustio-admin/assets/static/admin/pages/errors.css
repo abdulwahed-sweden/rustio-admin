@@ -7,18 +7,18 @@
  * topbar.
  * ============================================================ */
 
-.rio-confirm h2 { font-size: 1rem; margin-top: var(--rio-s4); }
-.rio-confirm-section { margin-top: var(--rio-s4); }
+.rio-confirm h2 { font-size: 1rem; margin-top: var(--rio-space-16); }
+.rio-confirm-section { margin-top: var(--rio-space-16); }
 .rio-cascade-list {
   list-style: disc;
-  padding-inline-start: var(--rio-s5);
+  padding-inline-start: var(--rio-space-24);
   color: var(--rio-text-mute);
 }
 
-.rio-error { text-align: center; padding: var(--rio-s7) var(--rio-s4); }
+.rio-error { text-align: center; padding: var(--rio-space-48) var(--rio-space-16); }
 .rio-error-status {
   font-size: 3rem;
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   margin: 0;
   color: var(--rio-text-faint);
   font-variant-numeric: tabular-nums;

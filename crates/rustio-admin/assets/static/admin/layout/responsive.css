@@ -85,7 +85,7 @@
 @media (min-width: 1280px) {
   :root { --rio-sidebar-w: 260px; }
   .rio-main {
-    padding: var(--rio-s6) var(--rio-s7);
+    padding: var(--rio-space-32) var(--rio-space-48);
     max-width: 1280px;
     margin: 0 auto;
     width: 100%;

@@ -15,8 +15,8 @@
  * not a row of cramped inputs jammed against the table. */
 .rio-search-bar {
   display: flex;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s5);
+  gap: var(--rio-space-12);
+  margin-bottom: var(--rio-space-24);
 }
 .rio-search-input-wrap {
   position: relative;
@@ -26,7 +26,7 @@
 }
 .rio-search-icon {
   position: absolute;
-  inset-inline-start: var(--rio-s4);
+  inset-inline-start: var(--rio-space-16);
   top: 50%;
   transform: translateY(-50%);
   width: 18px;
@@ -37,7 +37,7 @@
 .rio-search-input {
   flex: 1;
   min-height: 44px;
-  padding: var(--rio-s2) var(--rio-s4);
+  padding: var(--rio-space-8) var(--rio-space-16);
   border: 1px solid var(--rio-line-strong);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
@@ -50,7 +50,7 @@
 }
 .rio-search-input-wrap .rio-search-input {
   /* Reserve 44px on the leading edge for the icon. */
-  padding-inline-start: calc(var(--rio-s4) + 18px + var(--rio-s2));
+  padding-inline-start: calc(var(--rio-space-16) + 18px + var(--rio-space-8));
 }
 .rio-search-input::placeholder { color: var(--rio-text-faint); }
 .rio-search-input:focus {
@@ -65,29 +65,29 @@
    * reads as a real card rather than a stripe of tiny chips. */
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
-  padding: var(--rio-s5);
-  margin-bottom: var(--rio-s5);
+  border-radius: var(--rio-radius-md);
+  padding: var(--rio-space-24);
+  margin-bottom: var(--rio-space-24);
 }
 .rio-filters-title {
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-faint);
-  margin: 0 0 var(--rio-s2);
+  margin: 0 0 var(--rio-space-8);
 }
-.rio-filter-group { margin-bottom: var(--rio-s3); }
+.rio-filter-group { margin-bottom: var(--rio-space-12); }
 .rio-filter-group summary {
   cursor: pointer;
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   font-size: var(--rio-fs-md);
-  padding: var(--rio-s1) 0;
+  padding: var(--rio-space-4) 0;
   color: var(--rio-text-hi);
 }
 .rio-filter-options {
   list-style: none;
-  margin: var(--rio-s2) 0 0;
+  margin: var(--rio-space-8) 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
@@ -102,7 +102,7 @@
   border: 1px solid var(--rio-line);
   border-radius: 999px;
   font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   line-height: var(--rio-lh-ui);
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -134,8 +134,8 @@
 .rio-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s4);
+  gap: var(--rio-space-12);
+  margin-bottom: var(--rio-space-16);
   flex-wrap: wrap;
 }
 
@@ -176,15 +176,15 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   padding: 0.6rem 0.9rem;
-  margin-bottom: var(--rio-s4);
+  margin-bottom: var(--rio-space-16);
   background: var(--rio-sunken);
   border: 1px dashed var(--rio-line);
-  border-radius: var(--rio-radius);
+  border-radius: var(--rio-radius-md);
   font-size: var(--rio-fs-sm);
 }
 .rio-active-filters-label {
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-faint);
@@ -200,9 +200,9 @@
   border-radius: 999px;
   color: var(--rio-text);
   font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
-.rio-active-pill-key { color: var(--rio-text-faint); font-weight: var(--rio-fw-medium); }
+.rio-active-pill-key { color: var(--rio-text-faint); font-weight: var(--rio-weight-medium); }
 .rio-active-pill-x {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px;
@@ -223,7 +223,7 @@
   border: none;
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   text-decoration: none;
   padding: 0.25rem 0.6rem;
   border-radius: var(--rio-radius-sm);

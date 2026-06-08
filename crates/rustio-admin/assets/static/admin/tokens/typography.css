@@ -13,12 +13,16 @@
  * Arabic/Thai/Devanagari/CJK fall through (per glyph or via :lang()).
  * Those non-Latin stacks are unchanged from before the DS migration.
  *
- * Phase-0 bridge: the DS scale (--rio-text-*, --rio-weight-*,
- * --rio-leading-*) is added as the new source of truth; the old
- * --rio-fs-* / --rio-fw-* / --rio-lh-* tokens keep their CURRENT
- * pixel values so layouts don't reflow this phase. Tracking DOES move
- * to DS values now, because the Latin face changed (Spectral/Hanken
- * are not drawn for Geist's heavy negative tracking).
+ * Two scales coexist by design:
+ *   · DS weights/leading/tracking (--rio-weight-*, --rio-leading-*,
+ *     --rio-tracking-*) are the vocabulary call sites now use.
+ *   · --rio-fs-* sizes and --rio-lh-* line-heights are KEPT at the
+ *     framework's comfortable values (16px floor, per-script leading)
+ *     rather than the DS's 14px product base — operator software is
+ *     read for long shifts. These are real, canonical tokens, not a
+ *     migration bridge.
+ * Tracking follows DS values because the Latin face changed (Spectral/
+ * Hanken are not drawn for Geist's heavy negative tracking).
  *
  * @font-face declarations live in:
  *   - base/typography.css      → Spectral, Hanken Grotesk, JetBrains
@@ -66,9 +70,6 @@
     "Tajawal",
     "Liberation Mono",
     monospace;
-
-  /* Back-compat: --rio-font-sans now resolves to the DS body face. */
-  --rio-font-sans: var(--rio-font-body);
 
   /* --- Non-Latin stacks (unchanged) ---------------------------- */
   --rio-font-arabic:
@@ -122,8 +123,15 @@
   --rio-tracking-mono:    0.005em;
   --rio-tracking-caps:    0.085em;  /* uppercase eyebrows */
 
-  /* ---- Phase-0 size/weight/leading bridge (current values kept) ---- */
-  --rio-font-size-base: 1rem;         /* 16px — body baseline (Phase 1 → 14px) */
+  /* Heaviest weight (no DS twin; Hanken's variable axis reaches 800). */
+  --rio-weight-heavy: 800;
+
+  /* ---- Canonical framework size & line-height scale -------------- *
+   * Kept at the framework's comfortable values rather than the DS's
+   * 14px product base: operator software is read for long shifts, so
+   * the 16px floor and the per-script line-heights stay. These are real
+   * tokens, not a migration bridge. */
+  --rio-font-size-base: 1rem;         /* 16px — body baseline */
   --rio-fs-xs:    0.875rem;            /* 14px */
   --rio-fs-sm:    0.9375rem;           /* 15px */
   --rio-fs-md:    1rem;                /* 16px */
@@ -135,20 +143,8 @@
   --rio-fs-h1:    2rem;                /* 32px */
   --rio-fs-display: 2.25rem;           /* 36px */
 
-  --rio-fw-regular:  var(--rio-weight-regular);
-  --rio-fw-medium:   var(--rio-weight-medium);
-  --rio-fw-semibold: var(--rio-weight-semibold);
-  --rio-fw-bold:     var(--rio-weight-bold);
-  --rio-fw-heavy:    800; /* Hanken variable reaches 800 */
-
-  --rio-lh-tight:  1.2;
-  --rio-lh-ui:     1.6;
-  --rio-lh-body:   1.65;
-  --rio-lh-arabic: 1.95;
-
-  /* ---- Phase-0 tracking aliases (old name -> DS) ---- */
-  --rio-tracking-heading: var(--rio-tracking-display);
-  --rio-tracking-body:    var(--rio-tracking-tight);
-  --rio-tracking-tabular: var(--rio-tracking-normal);
-  --rio-tracking-allcaps: var(--rio-tracking-caps);
+  --rio-lh-tight:  1.2;                /* h1/h2/h3, big display */
+  --rio-lh-ui:     1.6;                /* dense UI: buttons, tags, table */
+  --rio-lh-body:   1.65;               /* English paragraph body */
+  --rio-lh-arabic: 1.95;               /* Arabic paragraph body */
 }

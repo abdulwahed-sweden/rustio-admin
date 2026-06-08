@@ -29,7 +29,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s5);
+  gap: var(--rio-space-24);
 }
 .rio-fieldset {
   /* v0.16 — generous 32px internal padding on cards. Previously
@@ -37,19 +37,19 @@
    * "premium card" feel without inflating the page. */
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6);
+  padding: var(--rio-space-32);
   margin: 0;
   background: var(--rio-surface);
-  box-shadow: var(--rio-shadow);
+  box-shadow: var(--rio-shadow-md);
 }
 .rio-fieldset > legend {
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-faint);
-  padding: 0 var(--rio-s2);
-  margin-inline-start: calc(-1 * var(--rio-s2));
+  padding: 0 var(--rio-space-8);
+  margin-inline-start: calc(-1 * var(--rio-space-8));
 }
 /* Single-column field flow by default. Forms read better as a
  * vertical reading column than a 2-up grid that leaves gaps when a
@@ -58,17 +58,17 @@
 .rio-fieldset-grid {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s5);
+  gap: var(--rio-space-24);
 }
 
 .rio-field {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 .rio-field--full { grid-column: 1 / -1; }
 .rio-field-label {
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   font-size: var(--rio-fs-md);
   color: var(--rio-text-hi);
   display: inline-flex;
@@ -78,7 +78,7 @@
 .rio-required {
   color: var(--rio-danger);
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   margin-inline-start: 0;
 }
 .rio-field-hint {
@@ -89,7 +89,7 @@
 }
 .rio-field-errors {
   list-style: none;
-  margin: var(--rio-s1) 0 0;
+  margin: var(--rio-space-4) 0 0;
   padding: 0;
   color: var(--rio-danger);
   font-size: var(--rio-fs-sm);
@@ -104,7 +104,7 @@
    * rectangle." */
   width: 100%;
   min-height: 44px;
-  padding: 0.625rem var(--rio-s3);              /* 10px / 12px */
+  padding: 0.625rem var(--rio-space-12);              /* 10px / 12px */
   border: 1px solid var(--rio-line-strong);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
@@ -138,12 +138,12 @@
   color: var(--rio-text-faint);
   cursor: not-allowed;
 }
-.rio-textarea { font-family: var(--rio-font-sans); resize: vertical; min-height: 7rem; }
+.rio-textarea { font-family: var(--rio-font-body); resize: vertical; min-height: 7rem; }
 
 .rio-checkbox {
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   cursor: pointer;
 }
 .rio-checkbox input[type="checkbox"] {
@@ -157,7 +157,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 
 /* Form action bar — primary save buttons sit left, secondary
@@ -168,35 +168,35 @@
 .rio-form-actions {
   display: flex;
   align-items: center;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   flex-wrap: wrap;
-  padding-top: var(--rio-s5);
+  padding-top: var(--rio-space-24);
   border-top: 1px solid var(--rio-line);
 }
-.rio-form-actions-spacer { flex: 1; min-width: var(--rio-s4); }
+.rio-form-actions-spacer { flex: 1; min-width: var(--rio-space-16); }
 
 /* Inline-children sections — rendered below the parent edit form
  * when a model declares ModelAdmin::inlines(). v1 is read-only:
  * each row is a click-through to the child's own edit page, with
  * "Add new …" / "View all …" affordances in the footer. */
 .rio-inline-section {
-  margin-top: var(--rio-s5);
+  margin-top: var(--rio-space-24);
 }
 .rio-inline-section__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s3);
+  gap: var(--rio-space-12);
+  margin-bottom: var(--rio-space-12);
 }
 .rio-inline-section__header h2 {
   margin: 0;
   font-size: var(--rio-fs-lg);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
-.rio-inline-table { margin-bottom: var(--rio-s3); }
+.rio-inline-table { margin-bottom: var(--rio-space-12); }
 .rio-inline-section__actions {
   display: flex;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   flex-wrap: wrap;
 }

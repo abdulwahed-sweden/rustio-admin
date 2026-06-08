@@ -16,7 +16,7 @@
   line-height: var(--rio-lh-body);        /* 1.6 */
   max-width: 68ch;
 }
-.rio-prose p { margin: 0 0 var(--rio-s4); }
+.rio-prose p { margin: 0 0 var(--rio-space-16); }
 .rio-prose:lang(ar) p { line-height: var(--rio-lh-arabic); }
 
 /* Force a specific size on muted / hint text — never below 13px. */

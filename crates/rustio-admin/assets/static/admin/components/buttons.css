@@ -16,20 +16,20 @@
    * being chunky. */
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);                          /* 8px icon → label */
+  gap: var(--rio-space-8);                          /* 8px icon → label */
   min-height: 44px;
-  padding: var(--rio-s2) var(--rio-s4);        /* 8px / 16px */
+  padding: var(--rio-space-8) var(--rio-space-16);        /* 8px / 16px */
   background: var(--rio-surface);
   color: var(--rio-text);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);                 /* 16px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   letter-spacing: 0.005em;
   line-height: var(--rio-lh-ui);               /* 1.6 */
   cursor: pointer;
   text-decoration: none;
-  box-shadow: var(--rio-shadow-xs);
+  box-shadow: var(--rio-shadow-sm);
   transition: background-color 0.12s, border-color 0.12s, color 0.12s,
               box-shadow 0.12s, transform 0.06s;
 }
@@ -46,7 +46,7 @@
 .rio-button:focus-visible {
   outline: none;
   border-color: var(--rio-rust);
-  box-shadow: var(--rio-shadow-xs),
+  box-shadow: var(--rio-shadow-sm),
               0 0 0 4px var(--rio-rust-tint-2);
 }
 .rio-button:active { transform: translateY(1px); }

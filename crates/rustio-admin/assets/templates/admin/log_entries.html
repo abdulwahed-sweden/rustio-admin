@@ -5,27 +5,27 @@
  # field diffs. Scoped under `.lx`; amber via the accent2 fallback. #}
 {% block extra_head %}
 <style>
-  .pgx-head { margin-bottom: var(--rio-s5); }
-  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-hi); margin-top: var(--rio-s1); }
-  .pgx-lead { margin-top: var(--rio-s2); max-width: 80ch; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
+  .pgx-head { margin-bottom: var(--rio-space-24); }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-weight-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-hi); margin-top: var(--rio-space-4); }
+  .pgx-lead { margin-top: var(--rio-space-8); max-width: 80ch; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
 
-  .lx-card { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
-  .lx-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-line); }
-  .lx-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-hi); }
-  .lx-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-mute); }
+  .lx-card { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-md); overflow: hidden; }
+  .lx-card__head { display: flex; align-items: center; gap: var(--rio-space-12); padding: var(--rio-space-16) var(--rio-space-24); border-bottom: 1px solid var(--rio-line); }
+  .lx-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-weight-bold); color: var(--rio-text-hi); }
+  .lx-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-weight-semibold); color: var(--rio-text-mute); }
 
   .lx-table { width: 100%; border-collapse: collapse; font-size: var(--rio-fs-base); }
-  .lx-table thead th { text-align: left; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); letter-spacing: 0.05em; text-transform: uppercase; color: var(--rio-text-mute); background: var(--rio-sunken); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-line); }
-  .lx-table tbody td { padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-line); vertical-align: middle; }
+  .lx-table thead th { text-align: left; font-size: var(--rio-fs-xs); font-weight: var(--rio-weight-semibold); letter-spacing: 0.05em; text-transform: uppercase; color: var(--rio-text-mute); background: var(--rio-sunken); padding: var(--rio-space-12) var(--rio-space-24); border-bottom: 1px solid var(--rio-line); }
+  .lx-table tbody td { padding: var(--rio-space-16) var(--rio-space-24); border-bottom: 1px solid var(--rio-line); vertical-align: middle; }
   .lx-table tbody tr:hover td { background: var(--rio-sunken); }
   .lx-table .lx-when { color: var(--rio-text-mute); white-space: nowrap; }
   .lx-table .lx-ip { font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-faint); }
   .lx-table a { color: var(--rio-rust); }
 
   .lx-date { background: var(--rio-raised); }
-  .lx-date th { padding: 0.4rem var(--rio-s5) !important; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); letter-spacing: 0.04em; text-transform: uppercase; color: var(--rio-text-faint); }
+  .lx-date th { padding: 0.4rem var(--rio-space-24) !important; font-size: var(--rio-fs-xs); font-weight: var(--rio-weight-bold); letter-spacing: 0.04em; text-transform: uppercase; color: var(--rio-text-faint); }
 
-  .lx-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); padding: 0.2rem 0.6rem; border-radius: 999px; text-transform: capitalize; white-space: nowrap; }
+  .lx-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--rio-fs-xs); font-weight: var(--rio-weight-bold); padding: 0.2rem 0.6rem; border-radius: 999px; text-transform: capitalize; white-space: nowrap; }
   .lx-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .lx-badge--success { background: var(--rio-success-tint); color: var(--rio-success); }
   .lx-badge--danger  { background: var(--rio-danger-tint); color: var(--rio-danger); }
@@ -33,10 +33,10 @@
   .lx-badge--info    { background: var(--rio-gold-tint, var(--rio-rust-tint)); color: var(--rio-gold, var(--rio-rust)); }
   .lx-badge--neutral { background: var(--rio-sunken); color: var(--rio-text-mute); }
 
-  .lx-by { display: inline-flex; align-items: center; gap: var(--rio-s2); }
-  .lx-avatar { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-weight: var(--rio-fw-bold); font-size: var(--rio-fs-xs); }
+  .lx-by { display: inline-flex; align-items: center; gap: var(--rio-space-8); }
+  .lx-avatar { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-weight: var(--rio-weight-bold); font-size: var(--rio-fs-xs); }
 
-  .lx-diff { margin: var(--rio-s2) 0 0; display: grid; gap: 2px; }
+  .lx-diff { margin: var(--rio-space-8) 0 0; display: grid; gap: 2px; }
   .lx-diff__row { display: flex; align-items: baseline; gap: 0.5rem; font-size: var(--rio-fs-xs); }
   .lx-diff__label { color: var(--rio-text-faint); min-width: 90px; }
   .lx-diff__old { color: var(--rio-danger); text-decoration: line-through; }
@@ -53,7 +53,7 @@
 </header>
 
 {% if user_filter_label %}
-<section class="rio-active-filters" aria-label="Active history filters" style="margin-bottom: var(--rio-s4)">
+<section class="rio-active-filters" aria-label="Active history filters" style="margin-bottom: var(--rio-space-16)">
   <span class="rio-active-filters-label">Filtered</span>
   <span class="rio-active-pill">
     <span class="rio-active-pill-key">By:</span>

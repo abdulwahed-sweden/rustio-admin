@@ -15,14 +15,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.55rem var(--rio-s3) 0.55rem var(--rio-s4);
+  padding: 0.55rem var(--rio-space-12) 0.55rem var(--rio-space-16);
   background: var(--rio-surface);
   color: var(--rio-text);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font: inherit;
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   line-height: var(--rio-lh-ui);
   cursor: pointer;
   white-space: nowrap;
@@ -53,7 +53,7 @@
   background: var(--rio-rust);
   color: #fff;
   font-size: 11px;
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   border-radius: 9px;
   font-variant-numeric: tabular-nums;
 }
@@ -69,26 +69,26 @@
   top: calc(100% + 6px);
   inset-inline-end: 0;
   min-width: 320px;
-  max-width: min(420px, calc(100vw - var(--rio-s5)));
+  max-width: min(420px, calc(100vw - var(--rio-space-24)));
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
+  border-radius: var(--rio-radius-md);
   box-shadow: var(--rio-shadow-lg);
-  padding: var(--rio-s4);
+  padding: var(--rio-space-16);
   z-index: var(--rio-z-dropdown);
 }
 .rio-dropdown.is-open .rio-dropdown-panel { display: block; }
 
-.rio-dropdown-section { margin-bottom: var(--rio-s4); }
-.rio-dropdown-section:last-of-type { margin-bottom: var(--rio-s3); }
+.rio-dropdown-section { margin-bottom: var(--rio-space-16); }
+.rio-dropdown-section:last-of-type { margin-bottom: var(--rio-space-12); }
 .rio-dropdown-label {
   display: block;
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
+  font-weight: var(--rio-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--rio-text-faint);
-  margin-bottom: var(--rio-s2);
+  margin-bottom: var(--rio-space-8);
 }
 .rio-dropdown-options {
   display: flex;
@@ -109,7 +109,7 @@
   border: 1px solid var(--rio-line);
   border-radius: 14px;
   font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   line-height: var(--rio-lh-ui);
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -138,12 +138,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--rio-s3);
+  gap: var(--rio-space-12);
   padding: 0.5rem 0.75rem;
   border-radius: var(--rio-radius-sm);
   color: var(--rio-text);
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   line-height: var(--rio-lh-ui);
   white-space: nowrap;
   transition: background 0.1s, color 0.1s;
@@ -157,7 +157,7 @@
 .rio-dropdown-item.is-active:hover {
   background: rgb(var(--rio-rust-rgb) / 0.10);
   color: var(--rio-rust);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
 }
 /* Active row trails a subtle bullet — the cleanest "current selection"
  * marker that doesn't fight the accent text colour. */
@@ -178,7 +178,7 @@
  * no trailing affordance). */
 .rio-dropdown-item--file {
   justify-content: flex-start;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   cursor: pointer;
   /* Reset the form's default margin so the row aligns with
    * sibling .rio-dropdown-item entries above it. */
@@ -197,9 +197,9 @@
 .rio-dropdown-footer {
   display: flex;
   justify-content: flex-end;
-  gap: var(--rio-s2);
-  padding-top: var(--rio-s3);
-  margin-top: var(--rio-s2);
+  gap: var(--rio-space-8);
+  padding-top: var(--rio-space-12);
+  margin-top: var(--rio-space-8);
   border-top: 1px solid var(--rio-line);
 }
 .rio-dropdown-footer .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
@@ -211,7 +211,7 @@
 .rio-date-range {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 .rio-date-range-field {
   display: flex;
@@ -220,7 +220,7 @@
 }
 .rio-date-range-label-text {
   font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -228,8 +228,8 @@
 .rio-date-range-input { padding: 0.35rem 0.5rem; font-size: var(--rio-fs-sm); }
 .rio-date-range-actions {
   display: flex;
-  gap: var(--rio-s2);
-  padding-top: var(--rio-s1);
+  gap: var(--rio-space-8);
+  padding-top: var(--rio-space-4);
 }
 .rio-date-range-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
 
@@ -240,7 +240,7 @@
 .rio-multi-select {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 .rio-multi-select-options {
   list-style: none;
@@ -263,8 +263,8 @@
 .rio-multi-select-option:hover { background: var(--rio-raised); }
 .rio-multi-select-actions {
   display: flex;
-  gap: var(--rio-s2);
-  padding-top: var(--rio-s1);
+  gap: var(--rio-space-8);
+  padding-top: var(--rio-space-4);
 }
 .rio-multi-select-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
 
@@ -276,7 +276,7 @@
 .rio-fk-autocomplete {
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 .rio-fk-autocomplete-wrap {
   position: relative;
@@ -297,7 +297,7 @@
   background: var(--rio-overlay, var(--rio-surface));
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
-  box-shadow: var(--rio-shadow-2, 0 4px 16px rgb(0 0 0 / 0.12));
+  box-shadow: var(--rio-shadow-md, 0 4px 16px rgb(0 0 0 / 0.12));
   max-height: 240px;
   overflow-y: auto;
   /* One step above the dropdown panel — these results render
@@ -320,7 +320,7 @@
 }
 .rio-fk-autocomplete-actions {
   display: flex;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 .rio-fk-autocomplete-actions .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
 
@@ -372,7 +372,7 @@
 .rio-saved-list__delete-btn:hover { color: var(--rio-danger); background: var(--rio-sunken); }
 .rio-saved-form {
   display: flex;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   align-items: stretch;
 }
 .rio-saved-form__name {
@@ -443,9 +443,9 @@
   min-width: 168px;
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
+  border-radius: var(--rio-radius-md);
   box-shadow: var(--rio-shadow-lg);
-  padding: var(--rio-s1);
+  padding: var(--rio-space-4);
   z-index: var(--rio-z-dropdown);
 }
 .rio-row-actions[open] .rio-row-actions__menu { display: block; }
@@ -462,12 +462,12 @@
 .rio-row-actions__item {
   display: flex;
   align-items: center;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
   padding: 0.5rem 0.65rem;
   border-radius: var(--rio-radius-sm);
   color: var(--rio-text);
   font-size: var(--rio-fs-md);
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   line-height: var(--rio-lh-ui);
   white-space: nowrap;
   transition: background 0.1s, color 0.1s;

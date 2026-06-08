@@ -9,16 +9,16 @@
 
 .rio-login {
   max-width: 440px;
-  margin: var(--rio-s7) auto;
+  margin: var(--rio-space-48) auto;
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6) var(--rio-s5);
+  padding: var(--rio-space-32) var(--rio-space-24);
   box-shadow: var(--rio-shadow-lg);
 }
 .rio-login-title {
   text-align: center;
-  margin: 0 0 var(--rio-s4) 0;
+  margin: 0 0 var(--rio-space-16) 0;
   color: var(--rio-text-hi);
 }
 /* Calm intro paragraph under the title — gives the form context
@@ -28,18 +28,18 @@
   color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);
   line-height: 1.6;
-  margin: 0 auto var(--rio-s5) auto;
+  margin: 0 auto var(--rio-space-24) auto;
   max-width: 36ch;
 }
 .rio-login-footer {
-  margin: var(--rio-s5) 0 0 0;
+  margin: var(--rio-space-24) 0 0 0;
   text-align: center;
   font-size: var(--rio-fs-sm);
 }
 .rio-form--login .rio-button {
   width: 100%;
   justify-content: center;
-  padding: 0.7rem var(--rio-s4);
+  padding: 0.7rem var(--rio-space-16);
 }
 
 /* ============================================================
@@ -52,16 +52,16 @@
  * ============================================================ */
 
 .rio-login-aside {
-  margin: var(--rio-s5) 0 0 0;
-  padding: var(--rio-s4) var(--rio-s4);
+  margin: var(--rio-space-24) 0 0 0;
+  padding: var(--rio-space-16) var(--rio-space-16);
   background: var(--rio-sunken);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
+  border-radius: var(--rio-radius-md);
 }
 .rio-login-aside__title {
-  margin: 0 0 var(--rio-s3) 0;
+  margin: 0 0 var(--rio-space-12) 0;
   font-size: 11px;
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--rio-text-mute);
@@ -76,8 +76,8 @@
 }
 .rio-login-aside__list li {
   position: relative;
-  padding-inline-start: var(--rio-s4);
-  margin: 0 0 var(--rio-s2) 0;
+  padding-inline-start: var(--rio-space-16);
+  margin: 0 0 var(--rio-space-8) 0;
 }
 .rio-login-aside__list li:last-child {
   margin-bottom: 0;

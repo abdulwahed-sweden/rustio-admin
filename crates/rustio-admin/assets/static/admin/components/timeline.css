@@ -12,10 +12,10 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s2);
+  gap: var(--rio-space-8);
 }
 .rio-timeline-item {
-  padding: var(--rio-s3) var(--rio-s4);
+  padding: var(--rio-space-12) var(--rio-space-16);
   /* Coloured accent on the inline-start edge — mirrors to the right
    * side in RTL, which is what an accent indicator should do. The
    * radius longhand keeps the rounded corners on the end side so
@@ -39,7 +39,7 @@
  * cells (label, from, arrow, to) side-by-side on wide rows and
  * wraps gracefully on narrow ones. */
 .rio-history-diff {
-  margin: var(--rio-s2) 0 0;
+  margin: var(--rio-space-8) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -53,7 +53,7 @@
   align-items: baseline;
 }
 .rio-history-diff__label {
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-mute);
   margin: 0;
 }
@@ -67,5 +67,5 @@
 }
 .rio-history-diff__new {
   color: var(--rio-success, var(--rio-text-hi));
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
 }

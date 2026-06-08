@@ -11,11 +11,11 @@
   /* v0.15: chrome tier (Principle 10). Sidebar matches topbar
    * so the operator skeleton reads as one continuous frame
    * holding the content area. v0.16: internal padding generous
-   * (`--rio-s5` vertical / `--rio-s4` horizontal) so sidebar items
+   * (`--rio-space-24` vertical / `--rio-space-16` horizontal) so sidebar items
    * have breathing room without losing the rail's visual weight. */
   background: var(--rio-surface-chrome);
   border-inline-end: 1px solid var(--rio-line);
-  padding: var(--rio-s5) var(--rio-s4);
+  padding: var(--rio-space-24) var(--rio-space-16);
 }
 .rio-sidebar-list {
   list-style: none;
@@ -23,19 +23,19 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--rio-s1);                          /* 4px between items */
+  gap: var(--rio-space-4);                          /* 4px between items */
 }
 .rio-sidebar-section {
   /* v0.16: 12px (was 11px) uppercase label — readable at chrome
    * distance, matches the table-header treatment so the
    * "uppercase label" pattern reads the same everywhere. */
   font-size: 0.75rem;                          /* 12px */
-  font-weight: var(--rio-fw-semibold);
+  font-weight: var(--rio-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--rio-tracking-allcaps);
+  letter-spacing: var(--rio-tracking-caps);
   color: var(--rio-text-faint);
-  margin: var(--rio-s5) 0 var(--rio-s2);
-  padding: 0 var(--rio-s3);
+  margin: var(--rio-space-24) 0 var(--rio-space-8);
+  padding: 0 var(--rio-space-12);
 }
 .rio-sidebar-section:first-child { margin-top: 0; }
 .rio-sidebar-link {
@@ -44,12 +44,12 @@
    * comfortable 40px without inflating the rail. */
   display: flex;
   align-items: center;
-  gap: var(--rio-s3);                          /* 12px icon → label */
-  padding: var(--rio-s3) var(--rio-s4);        /* 12px / 16px */
+  gap: var(--rio-space-12);                          /* 12px icon → label */
+  padding: var(--rio-space-12) var(--rio-space-16);        /* 12px / 16px */
   border-radius: var(--rio-radius-sm);
   color: var(--rio-text);
   font-size: var(--rio-fs-md);                 /* 16px */
-  font-weight: var(--rio-fw-medium);
+  font-weight: var(--rio-weight-medium);
   line-height: var(--rio-lh-ui);               /* 1.6 */
   transition: background 0.12s, color 0.12s, box-shadow 0.12s;
 }
