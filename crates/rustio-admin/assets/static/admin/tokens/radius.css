@@ -1,20 +1,15 @@
 /* ============================================================
- * rustio-admin / tokens / radius  —  RustIO Design System
+ * rustio-admin / tokens / radius
  *
- * sm = inputs / chips / row checkboxes; md = the default for cards /
- * popovers; lg = page-level fieldset / login card; xl = hero panels;
- * pill = fully-rounded chips & toggles.
+ *   === Tokens — radius ===
  *
- * Phase-0 bridge: the old default --rio-radius (10px) maps to --rio-radius-md.
+ * Three corners. `sm` for inputs / chips / row checkboxes; the
+ * default for cards / popovers; `lg` for the page-level fieldset
+ * and login card.
  * ============================================================ */
 
 :root {
-  --rio-radius-sm:   6px;
-  --rio-radius-md:   9px;
-  --rio-radius-lg:   12px;
-  --rio-radius-xl:   16px;
-  --rio-radius-pill: 999px;
-
-  /* --- Phase-0 compatibility alias --- */
-  --rio-radius: var(--rio-radius-md);
+  --rio-radius:    10px;
+  --rio-radius-sm:  6px;
+  --rio-radius-lg: 12px;   /* v0.16: was 14px — one tier tighter for SaaS cards */
 }

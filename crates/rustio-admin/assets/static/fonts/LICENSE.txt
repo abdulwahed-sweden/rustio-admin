@@ -54,24 +54,6 @@ CJK (locale-gated via :lang(ja|ko|zh))
                                 each face by `:lang()` to prevent visual
                                 shape collision in mixed-script content.
 
-RustIO Design System identity faces (Latin: display / body / mono)
-------------------------------------------------------------------
-  Spectral-{400,500,600,700}-latin.woff2
-                                Copyright 2017 The Spectral Project Authors
-                                (Production Type) — display serif.
-                                Source: https://github.com/productiontype/Spectral
-  HankenGrotesk-Variable-latin.woff2
-  HankenGrotesk-Variable-latinext.woff2
-                                Copyright 2021 The Hanken Grotesk Project Authors
-                                (Alfredo Marco Pradil) — body/UI.
-                                Source: https://github.com/programort_/hanken-grotesk
-                                Variable wght axis: 400..800
-  JetBrainsMono-Variable-latin.woff2
-  JetBrainsMono-Variable-latinext.woff2
-                                Copyright 2020 The JetBrains Mono Project Authors
-                                Source: https://github.com/JetBrains/JetBrainsMono
-                                Variable wght axis: 400..700
-
 Per the OFL-1.1, these fonts are bundled into the rustio-admin binary
 and re-distributed unmodified. The full OFL-1.1 text must accompany
 any redistribution; download a verbatim copy from the URL above or
