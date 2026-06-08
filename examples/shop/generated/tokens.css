@@ -12,43 +12,46 @@
 
 /* ---- rustio-design overrides (these win — loaded last) ---- */
 :root {
-  --rio-accent: #1e3a5f;
-  --rio-accent-hover: #15293f;
-  --rio-accent-rgb: 30 58 95;
-  --rio-accent-soft: #e3e9f0;
-  --rio-accent-border: #c4cfdd;
-  --rio-brand-light: #1e3a5f;
-  --rio-brand-dark: #1e3a5f;
-  --rio-brand-adaptive: #1e3a5f;
-  --rio-brand-surface: #1e3a5f;
-  --rio-brand-accent: #1e3a5f;
-  --rio-brand-secondary: #34557d;
-  --rio-brand-hover: #15293f;
-  --rio-brand-active: #15293f;
-  --rio-brand-tint: #e3e9f0;
-  --rio-brand-text: #1e3a5f;
-  --rio-surface-chrome: #1b2a4e;
-  --rio-bg: #eef2fa;
+  --rio-accent: #0E6B5B;
+  --rio-accent-hover: #0B5849;
+  --rio-accent-rgb: 14 107 91;
+  --rio-accent-soft: #e8f0ee;
+  --rio-accent-border: #bcd8d1;
+  --rio-brand-light: #0E6B5B;
+  --rio-brand-dark: #0E6B5B;
+  --rio-brand-adaptive: #0E6B5B;
+  --rio-brand-surface: #0E6B5B;
+  --rio-brand-accent: #0E6B5B;
+  --rio-brand-secondary: #0B5849;
+  --rio-brand-hover: #0B5849;
+  --rio-brand-active: #084A3D;
+  --rio-brand-tint: #e8f0ee;
+  --rio-brand-text: #0E6B5B;
+  --rio-surface-chrome: #ffffff;
+  --rio-bg: #faf9f6;
   --rio-surface: #ffffff;
-  --rio-surface-2: #f1f4f8;
-  --rio-surface-3: #f9fbfd;
-  --rio-text-strong: #15233b;
-  --rio-text: #1c2540;
-  --rio-text-muted: #51607a;
-  --rio-text-subtle: #6b7894;
-  --rio-border: #dde4ea;
-  --rio-border-soft: #eef2f5;
-  --rio-border-strong: #c4cfdd;
-  --rio-success: #5aa524;
-  --rio-warning: #c2820a;
-  --rio-danger: #e23b4d;
-  --rio-success-bg: #e2f1d6;
-  --rio-warning-bg: #fef7e4;
-  --rio-danger-bg: #fddcdf;
-  --rio-info-bg: #e3fafd;
-  --rio-radius: 7px;
-  --rio-radius-sm: 5px;
-  --rio-radius-lg: 9px;
+  --rio-surface-2: #f4f2ee;
+  --rio-surface-3: #eeebe4;
+  --rio-surface-elevated: #ffffff;
+  --rio-text-strong: #1c1a16;
+  --rio-text: #46423b;
+  --rio-text-muted: #6c675e;
+  --rio-text-subtle: #928c81;
+  --rio-border: #e7e3db;
+  --rio-border-soft: #efede7;
+  --rio-border-strong: #d6d1c7;
+  --rio-success: #3f7d54;
+  --rio-warning: #946417;
+  --rio-danger: #ae382c;
+  --rio-success-bg: #eef4ef;
+  --rio-warning-bg: #f6f0e6;
+  --rio-danger-bg: #f6e9e7;
+  --rio-info-bg: #e8f0ee;
+  --rio-radius: 9px;
+  --rio-radius-sm: 6px;
+  --rio-radius-lg: 12px;
+  --rio-font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --rio-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --rio-fs-xs: 0.875rem;
   --rio-fs-sm: 1rem;
   --rio-fs-md: 1.0625rem;
@@ -62,68 +65,65 @@
 }
 
 /* ---- custom_css escape hatch (validated) ---- */
-/* Secondary accent — warm amber/gold (the classic navy companion). */
-:root {
-  --rio-accent2:      #e0912b;
-  --rio-accent2-ink:  #b06d0e;
-  --rio-accent2-soft: #fbeed9;
-  --rio-accent2-rgb:  224 145 43;
-}
-
-/* Dark navy chrome (sidebar + footer): light text, accent lifted to a
-   light steel-blue so the active item reads on navy. */
+/* Light warm-stone sidebar + footer (replaces the old dark-navy remap). */
 .rio-sidebar,
 .rio-footer {
-  --rio-text-strong: #f5f8fc;
-  --rio-text:        #ccd6e6;
-  --rio-text-muted:  #93a1bd;
-  --rio-text-subtle: #74819e;
-  --rio-surface-2:   #243454;
-  --rio-surface-3:   #2c3c5e;
-  --rio-border-soft:   #243454;
-  --rio-border:        #2e3f60;
-  --rio-border-strong: #3a4d73;
-  --rio-accent:        #9db8d8;
-  --rio-accent-hover:  #b9cde6;
-  --rio-accent-rgb:    157 184 216;
-  --rio-accent-soft:   #2a3f63;
-  --rio-accent-border: #3a5680;
+  --rio-text-strong: #1c1a16;
+  --rio-text:        #46423b;
+  --rio-text-muted:  #6c675e;
+  --rio-text-subtle: #928c81;
+  --rio-surface-2:   #f4f2ee;   /* hover */
+  --rio-surface-3:   #e8f0ee;   /* active — patina tint */
+  --rio-border-soft:   #efede7;
+  --rio-border:        #e7e3db;
+  --rio-border-strong: #d6d1c7;
+  --rio-accent:        #0e6b5b;
+  --rio-accent-hover:  #0b5849;
+  --rio-accent-rgb:    14 107 91;
+  --rio-accent-soft:   #e8f0ee;
+  --rio-accent-border: #bcd8d1;
 }
 
-/* rio dark-navy top frame. */
-.rio-topbar { background: #1e3a5f; border-bottom-color: #15293f; }
-.rio-topbar-brand { color: #ffffff; }
+/* Light topbar (was navy). Dark warm-stone text/controls on a paper surface. */
+.rio-topbar { background: var(--rio-surface); border-bottom-color: var(--rio-border); }
+.rio-topbar-brand { color: #1c1a16; }
 .rio-topbar-identity,
-.rio-topbar-link { color: rgba(255, 255, 255, 0.72); }
-.rio-topbar-link:hover { color: #ffffff; }
+.rio-topbar-link { color: #6c675e; }
+.rio-topbar-link:hover { color: #1c1a16; }
 .rio-topbar-account__toggle,
 .rio-topbar-account__toggle:hover,
 .rio-dropdown.is-open .rio-topbar-account__toggle {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #1c1a16;
+  background: #f4f2ee;
+  border: 1px solid #e7e3db;
 }
-.rio-topbar-account__toggle:hover,
-.rio-dropdown.is-open .rio-topbar-account__toggle { background: rgba(255, 255, 255, 0.16); }
-.rio-topbar-account__email { color: rgba(255, 255, 255, 0.90); }
+.rio-topbar-account__email { color: #46423b; }
 .rio-topbar-bell__badge { background: var(--rio-danger); }
-.rio-sidebar-toggle { color: #ffffff; border-color: rgba(255, 255, 255, 0.25); }
+.rio-sidebar-toggle { color: #46423b; border-color: #e7e3db; }
 .rio-search-trigger {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.75);
+  background: #f4f2ee;
+  border-color: #e7e3db;
+  color: #6c675e;
 }
-.rio-search-trigger:hover { background: rgba(255, 255, 255, 0.16); }
+.rio-search-trigger:hover { background: #eeebe4; }
 .rio-search-trigger__label,
-.rio-search-trigger__icon { color: rgba(255, 255, 255, 0.78); }
-.rio-search-trigger__kbd {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: rgba(255, 255, 255, 0.82);
+.rio-search-trigger__icon { color: #6c675e; }
+.rio-search-trigger__kbd { background: #ffffff; border-color: #e7e3db; color: #46423b; }
+
+/* One accent only ("no second hue, ever"): fold the old amber accent2 into the
+   Patina family so dashboard/list usages stay on-brand. */
+:root {
+  --rio-accent2:      #0e6b5b;
+  --rio-accent2-ink:  #0b5849;
+  --rio-accent2-soft: #e8f0ee;
+  --rio-accent2-rgb:  14 107 91;
 }
 
-/* Status colour-coding for orders & payments (R-009 / D-009). Cell-level on the
-   framework's text-cell title attribute; true pills need a template (deferred). */
+/* Western lining + tabular figures globally (numbers align in tables). */
+:root { font-variant-numeric: tabular-nums lining-nums; }
+
+/* Status colour-coding for orders & payments (D-009), on the system's
+   desaturated success/warn/danger. Cell-level via the text-cell title attr. */
 td.rio-td--text[title="paid"],
 td.rio-td--text[title="completed"] { color: var(--rio-success); font-weight: 600; }
 td.rio-td--text[title="shipped"]   { color: var(--rio-accent);  font-weight: 600; }

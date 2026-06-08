@@ -11,6 +11,46 @@ updated: 2026-06-07
 > `rustio.design.toml` traces to an entry here. ADR-style; newest on top.
 > Drive new entries with `/design-reason`.
 
+## R-010 · Adopt the RustIO Patina design system (light) → D-010
+
+- **Date:** 2026-06-08
+- **Status:** accepted (reviewed)
+- **Serves:** a Claude Design handoff bundle (`rustio-design-system`) whose admin
+  UI kit is literally "Shop admin · Products." Adopting it gives shop the official
+  RustIO visual language.
+- **Context:** the bundle defines **one accent only — RustIO Patina `#0E6B5B`**
+  (teal-green verdigris), **warm-stone** neutrals, a **light** warm-paper chrome
+  (sidebar `background: var(--rio-surface)`, hairline border), radius 6/9/12, and
+  Spectral/Hanken/JetBrains type. This replaces shop's navy+amber identity.
+- **Options considered:**
+  1. Keep navy+amber (status quo) — but the official system is Patina; the kit is
+     shop.
+  2. Adopt Patina **fully incl. dark mode + webfonts** — blocked: rustio-admin is
+     light-only and forbids external fetch (no Google-Fonts `@import`).
+  3. **Adopt Patina via the safe seam, light-only, system-font fallback** — chosen.
+- **Decision:** map the Patina/warm-stone palette onto rustio-admin's runtime
+  tokens (`[colors]`), radius → 6/9/12 (`[radius]`), adopt the **type families**
+  (Hanken Grotesk / JetBrains Mono) via `[typography]`, and flip the chrome to
+  **light warm-stone** via `[custom_css]` (re-asserting dark warm-stone text in the
+  sidebar/topbar scope, since the framework's default chrome assumes dark).
+- **Supersedes:** **D-001** (Deep Navy primary), **D-002** (dark navy chrome →
+  now light warm-stone), **D-003** (amber `accent2` → folded into the one Patina
+  accent: "no second hue, ever"), **D-005** (radius 7/5/9 → 6/9/12).
+- **Retained:** **D-008** (nav grouping), **D-009** (status colour-coding — now
+  recoloured to the system's desaturated success/warn/danger), and **D-004**
+  (≥16px type sizes kept for accessibility; only the *families* change — the
+  system's 14px product base is noted but not adopted, a deliberate a11y deviation).
+- **Rejected because:** keeping navy ignores the official system; full adoption
+  (dark mode, webfonts) breaks framework doctrine.
+- **Spec impact:** `[colors]` (full repalette), `[radius]`, `[typography]`
+  (families), `[custom_css]` (light chrome + accent2-fold + tabular numerals).
+  **No new model semantics.**
+- **Known limitations (recorded):** the Spectral/Hanken/JetBrains **webfonts are
+  not loaded** (doctrine forbids external fetch); families fall back to system
+  fonts until self-hosted faces are added to the framework (later). **Dark mode**
+  is out (framework is light-only). The full kit (⌘K palette, dense-table chrome,
+  dark toggle) remains Tier 2/3.
+
 ## R-009 · Status colour-coding for orders & payments → D-009
 
 - **Date:** 2026-06-08
