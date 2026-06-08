@@ -121,3 +121,13 @@
   border-color: rgba(255, 255, 255, 0.22);
   color: rgba(255, 255, 255, 0.82);
 }
+
+/* Status colour-coding for orders & payments (R-009 / D-009). Cell-level on the
+   framework's text-cell title attribute; true pills need a template (deferred). */
+td.rio-td--text[title="paid"],
+td.rio-td--text[title="completed"] { color: var(--rio-success); font-weight: 600; }
+td.rio-td--text[title="shipped"]   { color: var(--rio-accent);  font-weight: 600; }
+td.rio-td--text[title="pending"]   { color: var(--rio-warning); font-weight: 600; }
+td.rio-td--text[title="failed"]    { color: var(--rio-danger);  font-weight: 600; }
+td.rio-td--text[title="cancelled"],
+td.rio-td--text[title="refunded"]  { color: var(--rio-text-muted); }

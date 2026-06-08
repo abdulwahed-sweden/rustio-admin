@@ -20,3 +20,4 @@ updated: 2026-06-07
 | D-006 | 2026-06-07 | Keep `text-subtle` #6b7894 (4.43:1) with caveat     | accepted | R-006     |
 | D-007 | 2026-06-07 | Migrate theme into the rustio-design declarative stack | accepted | R-007  |
 | D-008 | 2026-06-07 | Group sidebar by domain; show primary entities only (bury junction models + Address) | accepted | R-008 |
+| D-009 | 2026-06-08 | Status colour-coding for orders & payments (cell-level, safe seam) | accepted | R-009 |
