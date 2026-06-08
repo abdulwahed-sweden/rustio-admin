@@ -65,6 +65,39 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added
+- **RustIO Design System — Phase 0 (foundation).** The admin begins a
+  phased re-skin to a new visual identity: **RustIO Cobalt** accent
+  (`--rio-rust*` / `--rio-rust-solid*`), warm-stone neutrals, and a
+  **dark theme** alongside the default light one. Theme tokens carry a
+  `:root` light block, a `@media (prefers-color-scheme: dark)` block,
+  and explicit `[data-theme="light"|"dark"]` blocks (explicit wins).
+  Three self-hosted OFL Latin faces are bundled: **Spectral** (display
+  serif), **Hanken Grotesk** (body), **JetBrains Mono** (mono). New
+  token file `tokens/motion.css`. A compatibility alias bridge maps the
+  pre-DS token names (`--rio-accent`, `--rio-s4`, `--rio-fs-sm`,
+  `--rio-text-strong`, …) onto the new tokens so existing CSS/templates
+  keep resolving and flip with the theme. Full plan:
+  `docs/design/DESIGN_DS_MIGRATION.md`.
+- New `--rio-*` tokens: surfaces `--rio-bg/-surface/-raised/-overlay/-sunken`,
+  lines `--rio-line/-line-strong`, text `--rio-text-hi/-text/-text-mute/-text-faint/-text-onrust`,
+  accent `--rio-rust{,-hover,-active,-tint,-tint-2,-ring}` +
+  `--rio-rust-solid{,-hover,-active}` + `--rio-on-solid`, `--rio-gold{,-tint}`,
+  status `--rio-success/-warn/-danger{,-tint}`, syntax `--rio-syntax-*`,
+  spacing `--rio-space-0..96` + `--rio-hit-compact/-comfortable`,
+  radius `--rio-radius-sm/-md/-lg/-xl/-pill`,
+  elevation `--rio-shadow-sm/-md/-lg/-xl` + `--rio-highlight-top`,
+  type `--rio-text-12..64` + `--rio-text-display`, `--rio-weight-*`,
+  `--rio-leading-*`, `--rio-tracking-{display,tight,normal,wide,mono,caps}`,
+  fonts `--rio-font-display/-body`, motion `--rio-dur-*` / `--rio-ease-*`.
+
+### Changed
+- **The framework is no longer light-only.** `DESIGN_DOCTRINE.md` §5 and
+  CLAUDE.md now document two themes (light default + dim-slate dark);
+  `tokens/colors.css` is now the hand-authored DS default rather than a
+  rio-theme artifact (the engine remains the runtime override generator
+  via `RUSTIO_TOKENS_CSS`).
+
 
 ## [0.28.0] — 2026-06-08
 

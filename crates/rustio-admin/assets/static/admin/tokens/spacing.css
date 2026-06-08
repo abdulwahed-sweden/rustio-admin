@@ -1,40 +1,52 @@
 /* ============================================================
- * rustio-admin / tokens / spacing
+ * rustio-admin / tokens / spacing  —  RustIO Design System
  *
- *   === Tokens — spacing ===
+ * 4px base grid (--rio-space-*). Plus shell-layout reservations
+ * (--rio-sidebar-w / --rio-topbar-h / --rio-content-max) and the
+ * z-index ladder, which are framework-specific and have no DS
+ * equivalent — kept verbatim.
  *
- * Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. Plus two
- * shell-layout reservations (--rio-sidebar-w / --rio-topbar-h)
- * that some component rules need to compute against.
+ * Phase-0 bridge: the old --rio-s1..s7 step scale maps onto the
+ * matching --rio-space-* values.
  * ============================================================ */
 
 :root {
-  --rio-s1: 0.25rem;
-  --rio-s2: 0.5rem;
-  --rio-s3: 0.75rem;
-  --rio-s4: 1rem;
-  --rio-s5: 1.5rem;
-  --rio-s6: 2rem;
-  --rio-s7: 3rem;
+  /* --- DS 4px grid --- */
+  --rio-space-0:   0;
+  --rio-space-2:   0.125rem; /* 2 */
+  --rio-space-4:   0.25rem;  /* 4 */
+  --rio-space-6:   0.375rem; /* 6 */
+  --rio-space-8:   0.5rem;   /* 8 */
+  --rio-space-12:  0.75rem;  /* 12 */
+  --rio-space-16:  1rem;     /* 16 */
+  --rio-space-20:  1.25rem;  /* 20 */
+  --rio-space-24:  1.5rem;   /* 24 */
+  --rio-space-32:  2rem;     /* 32 */
+  --rio-space-40:  2.5rem;   /* 40 */
+  --rio-space-48:  3rem;     /* 48 */
+  --rio-space-64:  4rem;     /* 64 */
+  --rio-space-80:  5rem;     /* 80 */
+  --rio-space-96:  6rem;     /* 96 */
 
-  --rio-sidebar-w: 264px;          /* v0.16: was 240px — fits longer model names */
-  --rio-topbar-h:  72px;           /* v0.15: was 64px — Principle 10 weight */
+  /* --- Hit targets --- */
+  --rio-hit-compact:     40px; /* compact / admin density */
+  --rio-hit-comfortable: 44px; /* comfortable / marketing density */
 
-  /* Content area — caps reading width on ultra-wide monitors.
-   * Without a cap, tables stretch to infinity and lose scannability.
-   * 1440px lets a 4-column dashboard sit comfortably with 32px page
-   * padding either side. */
-  --rio-content-max: 1440px;
+  /* --- Phase-0 compatibility aliases (old step scale) --- */
+  --rio-s1: var(--rio-space-4);
+  --rio-s2: var(--rio-space-8);
+  --rio-s3: var(--rio-space-12);
+  --rio-s4: var(--rio-space-16);
+  --rio-s5: var(--rio-space-24);
+  --rio-s6: var(--rio-space-32);
+  --rio-s7: var(--rio-space-48);
 
-  /* v0.18.6 — z-index scale. One ordered ladder for every
-   * positioned surface in the admin so chrome stays predictable
-   * across pages. Pre-token state: topbar 10, sidebar 20
-   * (unscoped inherit at desktop), dropdown 40, palette 100 —
-   * sidebar > topbar was the root cause of the "sidebar
-   * overlaps topbar on scroll" bug (responsive.css's desktop
-   * media query omitted z-index, so the mobile rule's 20
-   * leaked through). The ladder below puts the topbar firmly
-   * above the sidebar at every breakpoint. */
+  /* --- Shell-layout reservations (framework-specific, no DS twin) --- */
+  --rio-sidebar-w: 264px;          /* fits longer model names */
+  --rio-topbar-h:  72px;
+  --rio-content-max: 1440px;       /* caps reading width on ultra-wide */
+
+  /* --- z-index ladder: topbar above sidebar at every breakpoint --- */
   --rio-z-sidebar:   100;
   --rio-z-topbar:    200;
   --rio-z-dropdown:  300;

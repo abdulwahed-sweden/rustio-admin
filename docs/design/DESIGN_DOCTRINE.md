@@ -28,8 +28,11 @@ Five variable groups, one source of truth per group:
 
 Three rules:
 
-1. **One canonical value per token in `:root`.** The framework is
-   light-only — there are no dark or alternate-mode overrides anywhere.
+1. **One canonical value per token, defined per theme.** Light is the
+   `:root` default; the dark variant redefines the same token names in a
+   `@media (prefers-color-scheme: dark)` block and explicit
+   `[data-theme]` blocks (see §5). A component never branches on theme —
+   it resolves `var(--rio-*)` and the right value cascades in.
 2. **No hard-coded colours, spacing, or font sizes outside `tokens/`.**
    Every component resolves through `var(--rio-*)`. Projects override the
    framework by patching `:root` from their own theme file; if a component
@@ -168,25 +171,37 @@ rules need to compute against them:
 
 ---
 
-## 5. Light-only stance
+## 5. Light-first, two themes (RustIO Design System)
 
-The framework ships a **single, light palette**. No dark variant, no
-`prefers-color-scheme` media block, no theme toggle, no
-`data-rio-theme` attribute. The single `:root` block in
-`tokens/colors.css` is the only colour definition the framework owns.
+The framework ships **two themes**: a **warm-stone light palette as the
+default**, and a **dim-slate dark** variant. Both are owned by the
+framework — no fork required for dark. Each themed token file
+(`tokens/colors.css`, `tokens/shadows.css`) declares, in this order:
 
-Why light-only:
+1. `:root` — the light values (the default).
+2. `@media (prefers-color-scheme: dark)` — auto-follow the OS.
+3. `[data-theme="light"]` / `[data-theme="dark"]` — explicit choice,
+   placed **after** the media block so it wins by source order. An
+   explicit `[data-theme]` therefore always overrides the OS.
 
-- **One palette to audit.** WCAG contrast pairs are checked once.
-  A dark variant doubled the surface area where token drift could
-  introduce a regression invisible to half the userbase.
-- **Operator software, not consumer.** Admin sessions are short and
-  bright-office by default; the cost of maintaining a parallel scale
-  was higher than the value it returned.
-- **Projects that need dark can override `:root`.** The token surface
-  is the same; a project stylesheet patching `--rio-bg`,
-  `--rio-surface*`, `--rio-text*`, `--rio-border*` can re-skin to a
-  dark palette without forking the framework.
+Why two themes now (it used to be light-only):
+
+- **One accent, audited in both.** RustIO Cobalt (`--rio-rust*`) lifts
+  to a brighter tint in dark so it keeps WCAG contrast on slate; the
+  filled-button pair (`--rio-rust-solid*` + white `--rio-on-solid`)
+  is fixed across themes so button text never flips.
+- **Depth without heavy shadow in dark.** Elevation in dark comes from
+  the surface step plus a faint 1px top highlight
+  (`--rio-highlight-top`), not black drop-shadows.
+- **Projects still override freely.** A project stylesheet (or a
+  rio-theme `tokens.css` applied via `RUSTIO_TOKENS_CSS`) patching the
+  same token surface re-skins either theme without forking.
+
+> Migration note: the design-system rollout is phased
+> (`DESIGN_DS_MIGRATION.md`). Until Phase 1 rewrites every call site to
+> the new `--rio-*` vocabulary, the token files also carry a
+> compatibility alias bridge (`--rio-accent` → `--rio-rust`, etc.) so
+> pre-DS CSS keeps resolving and flips with the theme for free.
 
 The accent lifts from `#0F8C7E` to `#3FAA9D` **inside the deep-slate
 chrome surfaces only** (topbar / sidebar / footer — see
