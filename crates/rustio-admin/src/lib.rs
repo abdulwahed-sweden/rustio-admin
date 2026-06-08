@@ -57,6 +57,30 @@ pub use crate::templates::{embedded_template_names, embedded_template_source};
 // public:
 pub use rustio_admin_macros::RustioAdmin;
 
+// public: re-exported runtime dependencies.
+//
+// A downstream model crate depends on `rustio-admin` alone: the
+// `RustioAdmin` derive emits paths through these re-exports
+// (`::rustio_admin::chrono::…`, `::rustio_admin::rust_decimal::…`,
+// `::rustio_admin::uuid::…`), and a model's own field types resolve via
+// the bare type aliases below (`use rustio_admin::{Decimal, DateTime,
+// Utc, Uuid};`). This is what lets a scaffolded `Cargo.toml` drop its
+// direct `chrono` / `uuid` / `rust_decimal` / `sqlx` dependencies — the
+// framework already owns those versions, so re-exporting them keeps the
+// whole tree on one resolved copy and removes a class of version-skew
+// bugs. The crates are re-exported as modules (for the macro's
+// fully-qualified paths and for advanced handlers, e.g.
+// `rustio_admin::sqlx::query`); the type aliases are the ergonomic
+// surface model files actually name.
+pub use chrono;
+pub use rust_decimal;
+pub use sqlx;
+pub use uuid;
+// public: the field types a model declares, without a direct dep.
+pub use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+pub use rust_decimal::Decimal;
+pub use uuid::Uuid;
+
 // `RustioAdmin` emits `::rustio_admin::*` paths in its expansion. That
 // resolves cleanly for downstream consumers, but inside this crate's
 // own compilation unit `rustio_admin` isn't a known extern. Aliasing

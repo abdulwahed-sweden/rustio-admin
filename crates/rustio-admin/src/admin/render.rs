@@ -4695,3 +4695,38 @@ mod tests {
         assert_eq!(r[0].field, "title");
     }
 }
+
+/// Drift guard for the duplicated acronym list. `rustio-admin-macros`
+/// keeps its own byte-for-byte copy of [`HUMANISE_ACRONYMS`] because a
+/// proc-macro crate cannot depend on this crate (see the doc comment on
+/// the const). This test reads the macro crate's source and asserts the
+/// two lists never drift — the one "keep these in sync by hand" hazard
+/// that previously had no machine check.
+#[cfg(test)]
+mod acronym_lockstep_tests {
+    use super::HUMANISE_ACRONYMS;
+
+    #[test]
+    fn macro_crate_mirror_is_identical() {
+        let macro_src = include_str!("../../../rustio-admin-macros/src/lib.rs");
+        let marker = "const HUMANISE_ACRONYMS: &[&str] = &[";
+        let start = macro_src
+            .find(marker)
+            .expect("HUMANISE_ACRONYMS const not found in rustio-admin-macros");
+        let body = &macro_src[start + marker.len()..];
+        let body = &body[..body.find("];").expect("unterminated HUMANISE_ACRONYMS")];
+
+        let macro_list: Vec<&str> = body
+            .split(',')
+            .filter(|tok| !tok.trim().is_empty())
+            .map(|tok| tok.trim().trim_matches('"'))
+            .collect();
+
+        assert_eq!(
+            macro_list,
+            HUMANISE_ACRONYMS.to_vec(),
+            "rustio_admin_macros::HUMANISE_ACRONYMS has drifted from \
+             admin::render::HUMANISE_ACRONYMS — update both lists together"
+        );
+    }
+}

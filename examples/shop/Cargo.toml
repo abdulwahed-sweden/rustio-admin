@@ -9,12 +9,13 @@ publish = false
 # the current source (HEAD) — the complement to examples/clinic, which pins
 # the published crate. A real downstream project would instead write
 # `rustio-admin = "0.27"`.
+# Model files depend on `rustio-admin` ALONE — field types (`Decimal`,
+# `DateTime`, `Uuid`, …) and the derive macro's generated code resolve
+# through the framework's re-exports, so `chrono` / `uuid` /
+# `rust_decimal` / `sqlx` are no longer declared here. What remains is
+# this binary's own runtime: the async runtime, .env loading, and logs.
 rustio-admin = { path = "../../crates/rustio-admin" }
 tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
-chrono       = { version = "0.4", features = ["serde"] }
-uuid         = { version = "1", features = ["v4", "serde"] }
-rust_decimal = "1"
-sqlx         = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres"] }
 dotenvy      = "0.15"
 env_logger   = "0.11"
 log          = "0.4"

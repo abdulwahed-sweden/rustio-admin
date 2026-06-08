@@ -119,7 +119,9 @@ async fn main() -> Result<()> {
 /// totals. Every value falls back to a dash if the query fails, so the
 /// page always renders even if the database hiccups.
 async fn render_home(db: &Db) -> String {
-    use sqlx::Row;
+    // `sqlx` is re-exported by the framework, so this example doesn't
+    // declare a direct `sqlx` dependency.
+    use rustio_admin::sqlx::{self, Row};
 
     let mut db_name = "—".to_string();
     let mut pg_major = "—".to_string();
