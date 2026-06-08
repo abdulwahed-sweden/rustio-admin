@@ -31,17 +31,17 @@
   transform: translateY(-50%);
   width: 18px;
   height: 18px;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   pointer-events: none;
 }
 .rio-search-input {
   flex: 1;
   min-height: 44px;
   padding: var(--rio-s2) var(--rio-s4);
-  border: 1px solid var(--rio-border-strong);
+  border: 1px solid var(--rio-line-strong);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
   font: inherit;
   font-size: var(--rio-fs-md);                 /* 16px */
   line-height: var(--rio-lh-ui);
@@ -52,19 +52,19 @@
   /* Reserve 44px on the leading edge for the icon. */
   padding-inline-start: calc(var(--rio-s4) + 18px + var(--rio-s2));
 }
-.rio-search-input::placeholder { color: var(--rio-text-subtle); }
+.rio-search-input::placeholder { color: var(--rio-text-faint); }
 .rio-search-input:focus {
   outline: none;
-  border-color: var(--rio-accent);
+  border-color: var(--rio-rust);
   box-shadow: var(--rio-shadow-inset),
-              0 0 0 4px var(--rio-accent-border);
+              0 0 0 4px var(--rio-rust-tint-2);
 }
 
 .rio-filters {
   /* v0.16 — 24px internal padding, lighter border. Filter panel
    * reads as a real card rather than a stripe of tiny chips. */
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border-soft);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius);
   padding: var(--rio-s5);
   margin-bottom: var(--rio-s5);
@@ -74,7 +74,7 @@
   font-weight: var(--rio-fw-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   margin: 0 0 var(--rio-s2);
 }
 .rio-filter-group { margin-bottom: var(--rio-s3); }
@@ -83,7 +83,7 @@
   font-weight: var(--rio-fw-semibold);
   font-size: var(--rio-fs-md);
   padding: var(--rio-s1) 0;
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
 }
 .rio-filter-options {
   list-style: none;
@@ -97,9 +97,9 @@
   display: inline-flex;
   align-items: center;
   padding: 0.3rem 0.75rem;
-  background: var(--rio-surface-2);
+  background: var(--rio-sunken);
   color: var(--rio-text);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: 999px;
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
@@ -108,15 +108,15 @@
 }
 .rio-filter-chip:hover {
   text-decoration: none;
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
 }
 .rio-filter-chip--active,
 .rio-filter-chip--active:hover {
-  background: rgb(var(--rio-accent-rgb) / 0.10);
-  color: var(--rio-accent);
-  border-color: rgb(var(--rio-accent-rgb) / 0.30);
+  background: rgb(var(--rio-rust-rgb) / 0.10);
+  color: var(--rio-rust);
+  border-color: rgb(var(--rio-rust-rgb) / 0.30);
 }
 
 /* ----- Toolbar ---------------------------------------------------- *
@@ -177,8 +177,8 @@
   gap: 0.4rem;
   padding: 0.6rem 0.9rem;
   margin-bottom: var(--rio-s4);
-  background: var(--rio-surface-2);
-  border: 1px dashed var(--rio-border);
+  background: var(--rio-sunken);
+  border: 1px dashed var(--rio-line);
   border-radius: var(--rio-radius);
   font-size: var(--rio-fs-sm);
 }
@@ -187,7 +187,7 @@
   font-weight: var(--rio-fw-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   margin-inline-end: 0.2rem;
 }
 .rio-active-pill {
@@ -196,32 +196,32 @@
   gap: 0.35rem;
   padding: 0.2rem 0.25rem 0.2rem 0.65rem;
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: 999px;
   color: var(--rio-text);
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
 }
-.rio-active-pill-key { color: var(--rio-text-subtle); font-weight: var(--rio-fw-medium); }
+.rio-active-pill-key { color: var(--rio-text-faint); font-weight: var(--rio-fw-medium); }
 .rio-active-pill-x {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px;
   border-radius: 50%;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   font-size: 14px;
   line-height: 1;
   transition: background 0.1s, color 0.1s;
 }
 .rio-active-pill-x:hover {
-  background: var(--rio-surface-3);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  color: var(--rio-text-hi);
   text-decoration: none;
 }
 .rio-active-filters-clear {
   margin-inline-start: auto;
   background: transparent;
   border: none;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
   text-decoration: none;
@@ -229,6 +229,6 @@
   border-radius: var(--rio-radius-sm);
 }
 .rio-active-filters-clear:hover {
-  color: var(--rio-accent);
+  color: var(--rio-rust);
   text-decoration: none;
 }

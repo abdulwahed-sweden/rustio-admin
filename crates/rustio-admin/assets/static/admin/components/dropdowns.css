@@ -18,7 +18,7 @@
   padding: 0.55rem var(--rio-s3) 0.55rem var(--rio-s4);
   background: var(--rio-surface);
   color: var(--rio-text);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font: inherit;
   font-size: var(--rio-fs-md);
@@ -29,9 +29,9 @@
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .rio-dropdown-toggle:hover {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
 }
 .rio-dropdown-toggle .rio-icon { width: 16px; height: 16px; opacity: 0.85; }
 .rio-dropdown-toggle .rio-chev {
@@ -40,9 +40,9 @@
   transition: transform 0.18s;
 }
 .rio-dropdown.is-open .rio-dropdown-toggle {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
 }
 .rio-dropdown.is-open .rio-dropdown-toggle .rio-chev { transform: rotate(180deg); }
 
@@ -50,7 +50,7 @@
 .rio-dropdown-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 6px;
-  background: var(--rio-accent);
+  background: var(--rio-rust);
   color: #fff;
   font-size: 11px;
   font-weight: var(--rio-fw-bold);
@@ -71,7 +71,7 @@
   min-width: 320px;
   max-width: min(420px, calc(100vw - var(--rio-s5)));
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius);
   box-shadow: var(--rio-shadow-lg);
   padding: var(--rio-s4);
@@ -87,7 +87,7 @@
   font-weight: var(--rio-fw-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   margin-bottom: var(--rio-s2);
 }
 .rio-dropdown-options {
@@ -104,9 +104,9 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.3rem 0.7rem;
-  background: var(--rio-surface-2);
+  background: var(--rio-sunken);
   color: var(--rio-text);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: 14px;
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
@@ -115,15 +115,15 @@
 }
 .rio-dropdown-chip:hover {
   text-decoration: none;
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
 }
 .rio-dropdown-chip.is-active,
 .rio-dropdown-chip.is-active:hover {
-  background: rgb(var(--rio-accent-rgb) / 0.10);
-  color: var(--rio-accent);
-  border-color: rgb(var(--rio-accent-rgb) / 0.30);
+  background: rgb(var(--rio-rust-rgb) / 0.10);
+  color: var(--rio-rust);
+  border-color: rgb(var(--rio-rust-rgb) / 0.30);
 }
 
 /* Vertical menu — full-width clickable rows. Used by the toolbar's
@@ -150,13 +150,13 @@
 }
 .rio-dropdown-item:hover {
   text-decoration: none;
-  background: var(--rio-surface-3);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  color: var(--rio-text-hi);
 }
 .rio-dropdown-item.is-active,
 .rio-dropdown-item.is-active:hover {
-  background: rgb(var(--rio-accent-rgb) / 0.10);
-  color: var(--rio-accent);
+  background: rgb(var(--rio-rust-rgb) / 0.10);
+  color: var(--rio-rust);
   font-weight: var(--rio-fw-semibold);
 }
 /* Active row trails a subtle bullet — the cleanest "current selection"
@@ -165,7 +165,7 @@
   content: "";
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--rio-accent);
+  background: var(--rio-rust);
   flex-shrink: 0;
 }
 
@@ -185,7 +185,7 @@
   margin: 0;
 }
 .rio-dropdown-item--file:focus-visible {
-  outline: 2px solid var(--rio-accent);
+  outline: 2px solid var(--rio-rust);
   outline-offset: -2px;
 }
 /* The inline import form wrapping the label shouldn't add its
@@ -200,7 +200,7 @@
   gap: var(--rio-s2);
   padding-top: var(--rio-s3);
   margin-top: var(--rio-s2);
-  border-top: 1px solid var(--rio-border-soft);
+  border-top: 1px solid var(--rio-line);
 }
 .rio-dropdown-footer .rio-button { padding: 0.4rem 0.85rem; font-size: var(--rio-fs-sm); }
 
@@ -221,7 +221,7 @@
 .rio-date-range-label-text {
   font-size: var(--rio-fs-xs);
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -260,7 +260,7 @@
   cursor: pointer;
   transition: background 0.1s;
 }
-.rio-multi-select-option:hover { background: var(--rio-surface-3); }
+.rio-multi-select-option:hover { background: var(--rio-raised); }
 .rio-multi-select-actions {
   display: flex;
   gap: var(--rio-s2);
@@ -294,8 +294,8 @@
   list-style: none;
   margin: 0;
   padding: 0.2rem;
-  background: var(--rio-surface-elevated, var(--rio-surface));
-  border: 1px solid var(--rio-border);
+  background: var(--rio-overlay, var(--rio-surface));
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   box-shadow: var(--rio-shadow-2, 0 4px 16px rgb(0 0 0 / 0.12));
   max-height: 240px;
@@ -311,11 +311,11 @@
   font-size: var(--rio-fs-sm);
   cursor: pointer;
 }
-.rio-fk-autocomplete-result:hover { background: var(--rio-surface-3); }
+.rio-fk-autocomplete-result:hover { background: var(--rio-raised); }
 .rio-fk-autocomplete-empty {
   padding: 0.35rem 0.5rem;
   font-size: var(--rio-fs-sm);
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   font-style: italic;
 }
 .rio-fk-autocomplete-actions {
@@ -344,10 +344,10 @@
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-sm);
 }
-.rio-saved-list__row:hover { background: var(--rio-surface-3); }
+.rio-saved-list__row:hover { background: var(--rio-raised); }
 .rio-saved-list__row.is-active {
-  background: rgb(var(--rio-accent-rgb) / 0.10);
-  color: var(--rio-accent);
+  background: rgb(var(--rio-rust-rgb) / 0.10);
+  color: var(--rio-rust);
 }
 .rio-saved-list__apply {
   flex: 1;
@@ -357,19 +357,19 @@
   white-space: nowrap;
   color: inherit;
 }
-.rio-saved-list__apply:hover { text-decoration: none; color: var(--rio-text-strong); }
+.rio-saved-list__apply:hover { text-decoration: none; color: var(--rio-text-hi); }
 .rio-saved-list__delete { margin: 0; display: inline-flex; }
 .rio-saved-list__delete-btn {
   background: none;
   border: none;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   cursor: pointer;
   font-size: 1.1em;
   line-height: 1;
   padding: 0 0.3rem;
   border-radius: var(--rio-radius-sm);
 }
-.rio-saved-list__delete-btn:hover { color: var(--rio-danger); background: var(--rio-surface-2); }
+.rio-saved-list__delete-btn:hover { color: var(--rio-danger); background: var(--rio-sunken); }
 .rio-saved-form {
   display: flex;
   gap: var(--rio-s2);
@@ -409,24 +409,24 @@
   height: 32px;
   border: 1px solid transparent;
   border-radius: var(--rio-radius-sm);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   cursor: pointer;
   list-style: none;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .rio-row-actions__toggle::-webkit-details-marker { display: none; }
 .rio-row-actions__toggle:hover {
-  background: var(--rio-surface-2);
-  border-color: var(--rio-border);
-  color: var(--rio-text-strong);
+  background: var(--rio-sunken);
+  border-color: var(--rio-line);
+  color: var(--rio-text-hi);
 }
 .rio-row-actions[open] .rio-row-actions__toggle {
-  background: var(--rio-surface-2);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-sunken);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
 }
 .rio-row-actions__toggle:focus-visible {
-  outline: 2px solid var(--rio-accent);
+  outline: 2px solid var(--rio-rust);
   outline-offset: 1px;
 }
 .rio-row-actions__toggle .rio-icon { width: 18px; height: 18px; }
@@ -442,7 +442,7 @@
   inset-inline-end: 0;
   min-width: 168px;
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius);
   box-shadow: var(--rio-shadow-lg);
   padding: var(--rio-s1);
@@ -474,23 +474,23 @@
 }
 .rio-row-actions__item:hover {
   text-decoration: none;
-  background: var(--rio-surface-2);
-  color: var(--rio-text-strong);
+  background: var(--rio-sunken);
+  color: var(--rio-text-hi);
 }
 .rio-row-actions__item:focus-visible {
-  outline: 2px solid var(--rio-accent);
+  outline: 2px solid var(--rio-rust);
   outline-offset: -2px;
 }
 .rio-row-actions__item .rio-icon {
   width: 16px;
   height: 16px;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   flex-shrink: 0;
 }
 /* Destructive action — red label + red icon, red wash on hover. */
 .rio-row-actions__item--danger { color: var(--rio-danger); }
 .rio-row-actions__item--danger .rio-icon { color: var(--rio-danger); }
 .rio-row-actions__item--danger:hover {
-  background: var(--rio-danger-bg, rgb(220 38 38 / 0.08));
+  background: var(--rio-danger-tint, rgb(220 38 38 / 0.08));
   color: var(--rio-danger);
 }

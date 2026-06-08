@@ -42,9 +42,9 @@
   min-width: 300px;
   padding: 0 var(--rio-s3);
   background: var(--rio-bg);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);                 /* 16px */
   font-weight: var(--rio-fw-regular);
   cursor: pointer;
@@ -52,20 +52,20 @@
               box-shadow 0.12s;
 }
 .rio-search-trigger:hover {
-  background: var(--rio-accent-soft);
-  border-color: var(--rio-accent-border);
-  color: var(--rio-accent-hover);
+  background: var(--rio-rust-tint);
+  border-color: var(--rio-rust-tint-2);
+  color: var(--rio-rust-hover);
 }
 .rio-search-trigger:focus-visible {
   outline: none;
-  border-color: var(--rio-accent);
-  box-shadow: 0 0 0 4px var(--rio-accent-border);
+  border-color: var(--rio-rust);
+  box-shadow: 0 0 0 4px var(--rio-rust-tint-2);
 }
 .rio-search-trigger__icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
 }
 .rio-search-trigger__label {
   flex: 1;
@@ -80,9 +80,9 @@
   font-size: 11px;
   font-weight: var(--rio-fw-medium);
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border-soft);
+  border: 1px solid var(--rio-line);
   border-radius: 4px;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   /* Tiny inset highlight + bottom shadow give the chip a "raised
    * key" feel against the recessed field. */
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
@@ -129,7 +129,7 @@
   width: min(720px, 92vw);
   max-height: 70vh;
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border-soft);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
   box-shadow: var(--rio-shadow-lg);
   overflow: hidden;
@@ -141,14 +141,14 @@
   align-items: center;
   gap: var(--rio-s3);
   padding: var(--rio-s4) var(--rio-s5);
-  border-bottom: 1px solid var(--rio-border-soft);
+  border-bottom: 1px solid var(--rio-line);
   flex-shrink: 0;
 }
 .rio-search-palette__icon {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 .rio-search-palette__input {
   flex: 1;
@@ -159,10 +159,10 @@
   font-size: var(--rio-fs-xl);                 /* 20px — search input is the page */
   font-weight: var(--rio-fw-regular);
   line-height: var(--rio-lh-ui);
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
 }
 .rio-search-palette__input::placeholder {
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 
 /* ---- Results list ---------------------------------------------- */
@@ -184,7 +184,7 @@
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 .rio-search-palette__result {
   /* v0.16 — 12/16 padding (was 8/12). Results read like proper
@@ -202,8 +202,8 @@
 }
 .rio-search-palette__result:hover,
 .rio-search-palette__result.is-selected {
-  background: var(--rio-accent-soft);
-  color: var(--rio-accent-hover);
+  background: var(--rio-rust-tint);
+  color: var(--rio-rust-hover);
 }
 .rio-search-palette__result-label {
   flex: 1;
@@ -215,14 +215,14 @@
 .rio-search-palette__result-meta {
   flex-shrink: 0;
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 
 /* ---- Empty / hint states --------------------------------------- */
 
 .rio-search-palette__empty {
   padding: var(--rio-s5) var(--rio-s4);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   text-align: center;
   font-size: var(--rio-fs-sm);
 }
@@ -235,10 +235,10 @@
   justify-content: flex-end;
   gap: var(--rio-s3);
   padding: var(--rio-s2) var(--rio-s4);
-  border-top: 1px solid var(--rio-border-soft);
-  background: var(--rio-surface-2);
+  border-top: 1px solid var(--rio-line);
+  background: var(--rio-sunken);
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   flex-shrink: 0;
 }
 .rio-search-palette__footer-item {
@@ -252,8 +252,8 @@
   padding: 1px 5px;
   font-family: var(--rio-font-mono);
   font-size: 11px;
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: 3px;
   background: var(--rio-surface);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }

@@ -526,7 +526,7 @@ impl AdminTheme {
     }
 
     // public:
-    /// Override `--rio-accent`. Hex form, `#` optional.
+    /// Override `--rio-rust` (the accent). Hex form, `#` optional.
     pub fn accent(mut self, color: impl Into<String>) -> Self {
         self.accent = Some(normalise_hex(color));
         self
@@ -554,14 +554,14 @@ impl AdminTheme {
     }
 
     // public:
-    /// Override `--rio-text-muted` (secondary text, breadcrumb links).
+    /// Override `--rio-text-mute` (secondary text, breadcrumb links).
     pub fn text_muted(mut self, color: impl Into<String>) -> Self {
         self.text_muted = Some(normalise_hex(color));
         self
     }
 
     // public:
-    /// Override `--rio-border` (default divider, card outline).
+    /// Override `--rio-line` (default divider, card outline).
     pub fn border(mut self, color: impl Into<String>) -> Self {
         self.border = Some(normalise_hex(color));
         self

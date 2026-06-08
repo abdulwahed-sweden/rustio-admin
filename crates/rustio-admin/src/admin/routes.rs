@@ -2224,23 +2224,22 @@ mod tests {
         let css = admin_css_payload(None);
         assert_eq!(css.as_ref(), ADMIN_CSS.as_bytes());
         // Sanity: the baked bundle still carries a known token.
-        assert!(ADMIN_CSS.contains("--rio-accent"));
+        assert!(ADMIN_CSS.contains("--rio-rust"));
     }
 
     #[test]
     fn admin_css_payload_appends_override_after_baked_bundle() {
-        let override_css = ":root{--rio-accent:#abcdef}";
+        let override_css = ":root{--rio-rust:#abcdef}";
         let css = admin_css_payload(Some(override_css));
         let text = std::str::from_utf8(css.as_ref()).expect("utf-8");
         // Override is present...
         assert!(text.ends_with(override_css));
         // ...and lands *after* the baked colours layer, so its `:root`
-        // wins the cascade. The baked bundle's first token is the
-        // generated `--rio-brand-light`; the override must come later.
-        let baked = text.find("--rio-brand-light").expect("baked token present");
-        let overridden = text
-            .rfind("--rio-accent:#abcdef")
-            .expect("override present");
+        // wins the cascade. The baked bundle defines the DS accent
+        // `--rio-rust` near the top of colors.css; the override must
+        // come later (last occurrence).
+        let baked = text.find("--rio-rust").expect("baked token present");
+        let overridden = text.rfind("--rio-rust:#abcdef").expect("override present");
         assert!(overridden > baked, "override must follow the baked bundle");
     }
 

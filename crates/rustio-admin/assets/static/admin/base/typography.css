@@ -240,6 +240,26 @@ h4 {
   letter-spacing: 0;
 }
 
+/* ---- RustIO Design System display type ----------------------- *
+ * Spectral (serif) is the display face, used SPARINGLY per
+ * DESIGN_DOCTRINE: page titles, major headings (h1/h2), and stat
+ * values only. Section subheads (h3/h4), labels, and body stay on the
+ * Hanken sans. Spectral reads elegant at 600 with near-zero tracking. */
+h1, h2,
+.rio-list-title, .rio-form-title, .rio-dash-greeting, .rio-auth-title,
+.rio-stat-value {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  letter-spacing: var(--rio-tracking-display);
+}
+/* Arabic titles fall to the Naskh display fallback already in the
+ * stack; reset Latin tracking so joining isn't disrupted. */
+:is(:lang(ar), [lang="ar"], [dir="rtl"]) :is(
+  h1, h2, .rio-list-title, .rio-form-title, .rio-dash-greeting, .rio-auth-title
+) {
+  letter-spacing: 0;
+}
+
 /* Arabic-tagged headings — keep the size scale, drop the negative
  * tracking. Tajawal carries enough weight for display sizes. */
 :lang(ar) h1, :lang(ar) h2, :lang(ar) h3, :lang(ar) h4,
@@ -252,7 +272,7 @@ h1:lang(ar), h2:lang(ar), h3:lang(ar), h4:lang(ar) {
 
 p { margin: 0 0 var(--rio-s4); }
 
-a { color: var(--rio-accent); text-decoration: none; font-weight: var(--rio-fw-medium); }
+a { color: var(--rio-rust); text-decoration: none; font-weight: var(--rio-fw-medium); }
 a:hover { text-decoration: underline; }
 
 code, kbd, samp {
@@ -260,7 +280,7 @@ code, kbd, samp {
   font-size: 0.875em;                     /* relative to context */
   font-variant-ligatures: none;           /* "==" stays as 2 glyphs */
   font-feature-settings: "kern";
-  background: rgba(var(--rio-accent-rgb) / 0.07);
+  background: rgba(var(--rio-rust-rgb) / 0.07);
   padding: 0.05em 0.35em;
   border-radius: var(--rio-radius-sm);
   letter-spacing: 0;
@@ -272,7 +292,7 @@ pre {
   font-variant-ligatures: none;
   font-feature-settings: "kern";
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius);
   padding: var(--rio-s3) var(--rio-s4);
   overflow-x: auto;
@@ -296,7 +316,7 @@ pre code {
  * background sits behind whichever foreground the row-cell
  * already chose. */
 mark {
-  background: rgb(var(--rio-accent-rgb) / 0.18);
+  background: rgb(var(--rio-rust-rgb) / 0.18);
   color: inherit;
   padding: 0 0.1em;
   border-radius: 2px;

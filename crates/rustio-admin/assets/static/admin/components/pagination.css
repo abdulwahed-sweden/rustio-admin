@@ -19,7 +19,7 @@
 .rio-pagination-link,
 .rio-pagination-num {
   padding: 0.4rem 0.85rem;
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);
   font-weight: var(--rio-fw-semibold);
@@ -31,22 +31,22 @@
 .rio-pagination-link:hover,
 .rio-pagination-num:hover {
   text-decoration: none;
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
 }
 /* Current page — accent fill, no hover swap. */
 .rio-pagination-num.is-active,
 .rio-pagination-num.is-active:hover {
-  background: var(--rio-accent);
-  border-color: var(--rio-accent);
+  background: var(--rio-rust);
+  border-color: var(--rio-rust);
   color: #fff;
   cursor: default;
 }
 /* `…` between far pages — ornamental, not clickable. */
 .rio-pagination-ellipsis {
   padding: 0 0.35rem;
-  color: var(--rio-text-subtle);
+  color: var(--rio-text-faint);
   font-weight: var(--rio-fw-bold);
   user-select: none;
 }

@@ -110,7 +110,7 @@ The framework is **light-only**: no dark variant, no `prefers-color-scheme` bloc
 
 Two project-side override paths, both layered *after* the baked bundle so they win the cascade without `!important`:
 
-- **`AdminTheme`** (`_theme.html`) — a small inline `<style>` patch over six tokens (`--rio-accent`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-muted`, `--rio-border`). Emits nothing when no field is set. One `Admin::accent_color("…")` call away.
+- **`AdminTheme`** (`_theme.html`) — a small inline `<style>` patch over six tokens (`--rio-rust`, `--rio-bg`, `--rio-surface`, `--rio-text`, `--rio-text-mute`, `--rio-line`). Emits nothing when no field is set. One `Admin::accent_color("…")` call away.
 - **`RUSTIO_TOKENS_CSS=<path>`** — appends a whole generated `rio-theme` `tokens.css` to `/static/admin.css` at runtime (read once at router build; degrades to the baked bundle if unreadable). See `design/DESIGN_THEME.md` §12.
 
 Three responsive breakpoints (mobile-first): `< 768px` single column with off-canvas sidebar; `≥ 768px` two-column with a sticky sidebar; `≥ 1280px` wider chrome with content capped so wide monitors don't sprawl rows.

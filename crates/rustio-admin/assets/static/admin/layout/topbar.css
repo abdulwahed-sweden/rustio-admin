@@ -21,7 +21,7 @@
    * between chrome and content; the deep-slate weight in the layout
    * comes from the sidebar, not the topbar. */
   background: var(--rio-surface);
-  border-bottom: 1px solid var(--rio-border-soft);
+  border-bottom: 1px solid var(--rio-line);
   position: sticky;
   top: 0;
   /* Topbar always wins over the sticky sidebar. Before v0.18.6 this
@@ -32,7 +32,7 @@
 .rio-topbar-brand {
   font-weight: var(--rio-fw-bold);
   font-size: var(--rio-fs-lg);                 /* 18px */
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
   letter-spacing: var(--rio-tracking-heading);
 }
 .rio-topbar-brand:hover { text-decoration: none; }
@@ -44,12 +44,12 @@
   flex-wrap: wrap;
 }
 .rio-topbar-identity {
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);                 /* 16px */
   font-weight: var(--rio-fw-regular);
 }
 .rio-topbar-link {
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);                 /* 16px */
   font-weight: var(--rio-fw-medium);
 }
@@ -67,7 +67,7 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--rio-accent, #b22222);
+  background: var(--rio-rust, #b22222);
   color: #fff;
   font-size: 11px;
   font-weight: var(--rio-fw-bold);
@@ -94,8 +94,8 @@
 .rio-topbar-account__avatar {
   width: 26px; height: 26px;
   border-radius: 50%;
-  background: var(--rio-brand-tint, var(--rio-accent-soft));
-  color: var(--rio-brand-text, var(--rio-accent));
+  background: var(--rio-rust-tint, var(--rio-rust-tint));
+  color: var(--rio-rust, var(--rio-rust));
   font-weight: var(--rio-fw-bold);
   font-size: var(--rio-fs-sm);
   display: inline-flex;
@@ -133,7 +133,7 @@
 .rio-sidebar-toggle {
   display: none;
   background: none;
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   padding: var(--rio-s1) var(--rio-s2);
   color: var(--rio-text);
