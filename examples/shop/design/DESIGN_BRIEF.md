@@ -38,9 +38,10 @@ updated: 2026-06-07
 
 - **Density:** balanced — comfortable for hours, not sparse.
 - **Tone:** premium / editorial, not corporate-generic.
-- **Colour story:** deep navy carries authority and trust; a warm amber adds
-  measured delight (icons, secondary links) without ever competing with the navy
-  primary actions.
+- **Colour story (D-010 — RustIO Patina):** one accent only — Patina `#0E6B5B`,
+  the calm teal-green verdigris copper forms as it oxidizes — on warm-stone
+  neutrals and light warm-paper chrome. No second hue. (Superseded the earlier
+  deep-navy + amber story.)
 - **Typographic voice:** readable first — primary UI text ≥ 16px, 14px reserved
   strictly for genuine metadata.
 - **References / anti-references:** premium operational SaaS; *anti*: neon accents,
