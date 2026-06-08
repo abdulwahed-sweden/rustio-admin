@@ -11,6 +11,14 @@ updated: 2026-06-07
 > Token churn lives in git; this is the human-readable arc tying changes to the
 > decisions (`D-NNN`) that drove them.
 
+## 2026-06-08 — Status colour-coding (D-009)
+
+Coloured the order/payment status values via cell-level `custom_css`
+(`td.rio-td--text[title="…"]`) — the same safe seam proven on the clinic:
+paid/completed → success, shipped → navy accent, pending → warning, failed →
+danger, cancelled/refunded → muted. No new model semantics; true pills remain
+deferred. Browser-verified on the orders list.
+
 ## 2026-06-07 — Decide the navigation structure (D-008)
 
 Reasoned through the sidebar (R-008): the admin still renders a flat 9-model list,

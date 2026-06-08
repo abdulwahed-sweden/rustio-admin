@@ -11,6 +11,30 @@ updated: 2026-06-07
 > `rustio.design.toml` traces to an entry here. ADR-style; newest on top.
 > Drive new entries with `/design-reason`.
 
+## R-009 · Status colour-coding for orders & payments → D-009
+
+- **Date:** 2026-06-08
+- **Status:** accepted
+- **Serves:** the operator's need to read order/payment state at a glance — the
+  same safe-seam pattern proven on the clinic (clinic D-05).
+- **Context:** order status (`cancelled/paid/pending/shipped`) and payment status
+  (`completed/failed/pending/refunded`) render as plain text in the lists; nothing
+  signals state visually.
+- **Options considered:**
+  1. Plain text (status quo) — nothing to scan.
+  2. Cell-level colour-coding via `custom_css` on the existing markup — safe seam.
+  3. True pills — needs a per-model list template (wrapping element).
+- **Decision:** option 2 — colour the known status values via
+  `td.rio-td--text[title="…"]` (the framework mirrors a text cell's value into its
+  `title`). Semantic mapping within the existing shop tokens:
+  paid/completed → success · shipped → accent (navy) · pending → warning ·
+  failed → danger · cancelled/refunded → muted.
+- **Rationale:** highest-value, lowest-risk; fits the same safe seam as clinic; no
+  new model semantics; drift-detected; reversible.
+- **Rejected because:** plain text gives no signal; true pills need template work
+  (deferred, as on the clinic).
+- **Spec impact:** appended to `[custom_css]`. **No** new model semantics.
+
 ## R-008 · Group the sidebar by domain; bury junction models
 
 - **Date:** 2026-06-07
