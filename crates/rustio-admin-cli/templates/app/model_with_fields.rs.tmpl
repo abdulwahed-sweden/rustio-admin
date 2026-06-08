@@ -2,31 +2,16 @@
 
 {{imports}}
 
+// `#[derive(RustioAdmin)]` generates the admin metadata AND the
+// `impl Model` ORM glue (COLUMNS, row decoder, insert binder) from these
+// fields — there is no hand-written code to keep in sync with the
+// struct. `#[rustio(table = "…")]` pins the SQL table to the one this
+// app's migration creates. Run `cargo expand` to see what is generated.
 #[derive(RustioAdmin)]
+#[rustio(table = "{{table}}")]
 pub struct {{Singular}} {
     pub id: i64,
 {{struct_fields}}
-}
-
-impl Model for {{Singular}} {
-    const TABLE: &'static str = "{{table}}";
-    const COLUMNS: &'static [&'static str] = &[{{columns_literal}}];
-    const INSERT_COLUMNS: &'static [&'static str] = &[{{insert_columns_literal}}];
-
-    fn id(&self) -> i64 {
-        self.id
-    }
-
-    fn from_row(row: Row<'_>) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get_i64("id")?,
-{{from_row_assignments}}
-        })
-    }
-
-    fn insert_values(&self) -> Vec<Value> {
-        vec![{{insert_values_expr}}]
-    }
 }
 
 // The `ModelAdmin` impl below customises the admin list / form

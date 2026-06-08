@@ -5,10 +5,13 @@
 //!
 //! Rename, extend, or delete this freely — it is your project's code.
 
-use chrono::{DateTime, Utc};
-use rustio_admin::{Error, Model, ModelAdmin, Row, RustioAdmin, Value};
+use rustio_admin::{DateTime, ModelAdmin, RustioAdmin, Utc};
 
+// `#[derive(RustioAdmin)]` generates both the admin metadata and the
+// `impl Model` ORM glue from these fields; `#[rustio(table = "…")]`
+// pins the SQL table name.
 #[derive(RustioAdmin)]
+#[rustio(table = "appointments")]
 pub struct Appointment {
     pub id: i64,
     pub patient_id: i64,
@@ -18,50 +21,6 @@ pub struct Appointment {
     /// CHECK constraint in the migration; filterable in the list page.
     pub status: String,
     pub created_at: DateTime<Utc>,
-}
-
-impl Model for Appointment {
-    const TABLE: &'static str = "appointments";
-    const COLUMNS: &'static [&'static str] = &[
-        "id",
-        "patient_id",
-        "scheduled_for",
-        "reason",
-        "status",
-        "created_at",
-    ];
-    const INSERT_COLUMNS: &'static [&'static str] = &[
-        "patient_id",
-        "scheduled_for",
-        "reason",
-        "status",
-        "created_at",
-    ];
-
-    fn id(&self) -> i64 {
-        self.id
-    }
-
-    fn from_row(row: Row<'_>) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get_i64("id")?,
-            patient_id: row.get_i64("patient_id")?,
-            scheduled_for: row.get_datetime("scheduled_for")?,
-            reason: row.get_string("reason")?,
-            status: row.get_string("status")?,
-            created_at: row.get_datetime("created_at")?,
-        })
-    }
-
-    fn insert_values(&self) -> Vec<Value> {
-        vec![
-            self.patient_id.into(),
-            self.scheduled_for.into(),
-            self.reason.clone().into(),
-            self.status.clone().into(),
-            self.created_at.into(),
-        ]
-    }
 }
 
 impl ModelAdmin for Appointment {

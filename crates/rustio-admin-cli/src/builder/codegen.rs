@@ -165,81 +165,20 @@ fn emit_model_rs(draft: &Draft, model: &Model) -> GeneratedFile {
     let mut body = String::new();
     body.push_str(&doctrine_header(HeaderStyle::Rust, &hash));
     body.push('\n');
-    body.push_str("use chrono::{DateTime, Utc};\n");
-    body.push_str("use rustio_admin::{Model, ModelAdmin, Result, Row, RustioAdmin, Value};\n");
+    body.push_str("use rustio_admin::{DateTime, ModelAdmin, RustioAdmin, Utc};\n");
     body.push('\n');
+    // `#[derive(RustioAdmin)]` generates the `impl Model` ORM glue (table,
+    // columns, row decoder, insert binder) from these fields, so this
+    // generated file carries no hand-written ORM code. `#[rustio(table =
+    // "…")]` pins the SQL table to the one the initial migration creates.
     body.push_str("#[derive(Debug, Clone, RustioAdmin)]\n");
+    body.push_str(&format!("#[rustio(table = \"{}\")]\n", model.table));
     body.push_str(&format!("pub struct {} {{\n", model.name));
     body.push_str("    pub id: i64,\n");
     for f in &model.fields {
         body.push_str(&format!("    pub {}: {},\n", f.name, rust_type(f)));
     }
     body.push_str("    pub created_at: DateTime<Utc>,\n");
-    body.push_str("}\n\n");
-
-    // Column lists (in declaration order: id, fields..., created_at).
-    let cols: Vec<String> = std::iter::once("id".to_string())
-        .chain(model.fields.iter().map(|f| f.name.clone()))
-        .chain(std::iter::once("created_at".to_string()))
-        .collect();
-    let insert_cols: Vec<String> = model
-        .fields
-        .iter()
-        .map(|f| f.name.clone())
-        .chain(std::iter::once("created_at".to_string()))
-        .collect();
-    let cols_lit = cols
-        .iter()
-        .map(|c| format!("\"{c}\""))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let insert_cols_lit = insert_cols
-        .iter()
-        .map(|c| format!("\"{c}\""))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    body.push_str(&format!("impl Model for {} {{\n", model.name));
-    body.push_str(&format!(
-        "    const TABLE: &'static str = \"{}\";\n",
-        model.table
-    ));
-    body.push_str(&format!(
-        "    const COLUMNS: &'static [&'static str] = &[{cols_lit}];\n"
-    ));
-    body.push_str(&format!(
-        "    const INSERT_COLUMNS: &'static [&'static str] = &[{insert_cols_lit}];\n\n"
-    ));
-    body.push_str("    fn id(&self) -> i64 {\n");
-    body.push_str("        self.id\n");
-    body.push_str("    }\n\n");
-
-    body.push_str("    fn from_row(row: Row<'_>) -> Result<Self> {\n");
-    body.push_str("        Ok(Self {\n");
-    body.push_str("            id: row.get_i64(\"id\")?,\n");
-    for f in &model.fields {
-        body.push_str(&format!(
-            "            {}: row.{}(\"{}\")?,\n",
-            f.name,
-            row_accessor(f),
-            f.name
-        ));
-    }
-    body.push_str("            created_at: row.get_datetime(\"created_at\")?,\n");
-    body.push_str("        })\n");
-    body.push_str("    }\n\n");
-
-    body.push_str("    fn insert_values(&self) -> Vec<Value> {\n");
-    body.push_str("        vec![\n");
-    for f in &model.fields {
-        body.push_str(&format!(
-            "            Value::from({}),\n",
-            insert_expr(&f.name, f)
-        ));
-    }
-    body.push_str("            Value::from(self.created_at),\n");
-    body.push_str("        ]\n");
-    body.push_str("    }\n");
     body.push_str("}\n\n");
 
     body.push_str(&format!("impl ModelAdmin for {} {{}}\n", model.name));
@@ -311,24 +250,6 @@ fn rust_type(field: &Field) -> &'static str {
         "boolean" => "bool",
         "timestamp" => "DateTime<Utc>",
         _ => unreachable!("FIELD_TYPES is closed; unknown type would have been refused upstream"),
-    }
-}
-
-fn row_accessor(field: &Field) -> &'static str {
-    match field.r#type.as_str() {
-        "text" => "get_string",
-        "integer" => "get_i64",
-        "boolean" => "get_bool",
-        "timestamp" => "get_datetime",
-        _ => unreachable!(),
-    }
-}
-
-fn insert_expr(field_name: &str, field: &Field) -> String {
-    match field.r#type.as_str() {
-        "text" => format!("self.{field_name}.clone()"),
-        "integer" | "boolean" | "timestamp" => format!("self.{field_name}"),
-        _ => unreachable!(),
     }
 }
 
@@ -447,10 +368,14 @@ mod tests {
             .expect("patient.rs in generated set");
         assert!(model_file.content.contains("pub struct Patient"));
         assert!(model_file.content.contains("pub full_name: String"));
+        // The ORM glue is derived now; the table is pinned via the
+        // struct attribute and the field appears as a plain struct field.
         assert!(model_file
             .content
-            .contains("TABLE: &'static str = \"patients\""));
-        assert!(model_file.content.contains("get_string(\"full_name\")"));
+            .contains("#[rustio(table = \"patients\")]"));
+        assert!(model_file
+            .content
+            .contains("#[derive(Debug, Clone, RustioAdmin)]"));
         assert!(model_file.content.contains("impl ModelAdmin for Patient"));
     }
 

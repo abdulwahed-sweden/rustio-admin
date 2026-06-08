@@ -317,10 +317,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-traits",
  "serde",
- "wasm-bindgen",
  "windows-link",
 ]
 
@@ -1801,15 +1799,11 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 name = "shop"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "dotenvy",
  "env_logger",
  "log",
- "rust_decimal",
  "rustio-admin",
- "sqlx",
  "tokio",
- "uuid",
 ]
 
 [[package]]

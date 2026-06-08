@@ -64,6 +64,33 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **`#[derive(RustioAdmin)]` now generates `impl Model` too.** The derive
+  already walked every field to build `AdminModel`; it now emits the
+  `orm::Model` impl (`TABLE`, `COLUMNS`, `INSERT_COLUMNS`, `id`,
+  `from_row`, `insert_values`) from the same walk. Models are declared
+  once — the hand-written ORM glue that had to be kept in sync with the
+  struct by hand is gone. Two struct-level escape hatches cover what the
+  field walk can't infer: `#[rustio(table = "…")]` when the SQL table
+  name differs from the auto slug (e.g. `Address` → `addresses`), and
+  `#[rustio(extra_columns = ["…"])]` for generated/virtual columns that
+  aren't struct fields (e.g. a Postgres `tsvector`). Existing hand-written
+  `impl Model` blocks must be removed (they now collide with the derive).
+- **Runtime dependencies are re-exported from `rustio_admin`.** `chrono`,
+  `rust_decimal`, `uuid`, and `sqlx` (plus the `Decimal` / `DateTime` /
+  `Utc` / `NaiveDate` / `NaiveTime` / `Uuid` type aliases) are now
+  re-exported. The derive's generated code routes through these paths, so
+  a model crate can depend on `rustio-admin` alone; the scaffold's
+  `Cargo.toml` drops its direct `chrono` / `uuid` / `rust_decimal` /
+  `sqlx` dependencies. One resolved copy of each, no version skew.
+
+### Internal
+- Two drift-guard tests with no machine check before: one asserts the
+  `admin.css` `@import` manifest matches the `ADMIN_CSS`
+  `concat!(include_str!(…))` bundle in `routes.rs`; one asserts
+  `rustio_admin_macros::HUMANISE_ACRONYMS` is byte-identical to
+  `admin::render::HUMANISE_ACRONYMS`.
+
 
 ## [0.27.6] — 2026-06-05
 

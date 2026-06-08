@@ -1,54 +1,24 @@
 //! Demo `Post` model. Rename or delete when you no longer need it.
 //!
 //! - `#[derive(RustioAdmin)]` produces the `AdminModel` impl that
-//!   drives every list / form / cell rendering.
-//! - The hand-written `impl Model` is the contract with the Postgres
-//!   schema (table name, columns, row decoder, insert binder).
+//!   drives every list / form / cell rendering, AND the `impl Model`
+//!   ORM contract (table, columns, row decoder, insert binder) — both
+//!   from the struct fields, so there is nothing to keep in sync by
+//!   hand. `#[rustio(table = "…")]` pins the SQL table name.
 //! - `impl ModelAdmin for Post { … }` opts into Django-style
 //!   customisation. Override only the methods you care about; the
 //!   rest inherit framework defaults.
 
-use chrono::{DateTime, Utc};
-use rustio_admin::{Error, Model, ModelAdmin, Row, RustioAdmin, Value};
+use rustio_admin::{DateTime, ModelAdmin, RustioAdmin, Utc};
 
 #[derive(RustioAdmin)]
+#[rustio(table = "posts")]
 pub struct Post {
     pub id: i64,
     pub title: String,
     pub body: String,
     pub published: bool,
     pub created_at: DateTime<Utc>,
-}
-
-impl Model for Post {
-    const TABLE: &'static str = "posts";
-    const COLUMNS: &'static [&'static str] =
-        &["id", "title", "body", "published", "created_at"];
-    const INSERT_COLUMNS: &'static [&'static str] =
-        &["title", "body", "published", "created_at"];
-
-    fn id(&self) -> i64 {
-        self.id
-    }
-
-    fn from_row(row: Row<'_>) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get_i64("id")?,
-            title: row.get_string("title")?,
-            body: row.get_string("body")?,
-            published: row.get_bool("published")?,
-            created_at: row.get_datetime("created_at")?,
-        })
-    }
-
-    fn insert_values(&self) -> Vec<Value> {
-        vec![
-            self.title.clone().into(),
-            self.body.clone().into(),
-            self.published.into(),
-            self.created_at.into(),
-        ]
-    }
 }
 
 impl ModelAdmin for Post {

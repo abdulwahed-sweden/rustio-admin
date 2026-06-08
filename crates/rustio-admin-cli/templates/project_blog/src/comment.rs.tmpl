@@ -3,10 +3,13 @@
 //! cross-model list links, and the framework's audit-on-mutation
 //! pipeline for two related tables.
 
-use chrono::{DateTime, Utc};
-use rustio_admin::{Error, Model, ModelAdmin, Row, RustioAdmin, Value};
+use rustio_admin::{DateTime, ModelAdmin, RustioAdmin, Utc};
 
+// `#[derive(RustioAdmin)]` generates both the admin metadata and the
+// `impl Model` ORM glue from these fields; `#[rustio(table = "…")]`
+// pins the SQL table name.
 #[derive(RustioAdmin)]
+#[rustio(table = "comments")]
 pub struct Comment {
     pub id: i64,
     pub post_id: i64,
@@ -14,50 +17,6 @@ pub struct Comment {
     pub body: String,
     pub approved: bool,
     pub created_at: DateTime<Utc>,
-}
-
-impl Model for Comment {
-    const TABLE: &'static str = "comments";
-    const COLUMNS: &'static [&'static str] = &[
-        "id",
-        "post_id",
-        "author_name",
-        "body",
-        "approved",
-        "created_at",
-    ];
-    const INSERT_COLUMNS: &'static [&'static str] = &[
-        "post_id",
-        "author_name",
-        "body",
-        "approved",
-        "created_at",
-    ];
-
-    fn id(&self) -> i64 {
-        self.id
-    }
-
-    fn from_row(row: Row<'_>) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get_i64("id")?,
-            post_id: row.get_i64("post_id")?,
-            author_name: row.get_string("author_name")?,
-            body: row.get_string("body")?,
-            approved: row.get_bool("approved")?,
-            created_at: row.get_datetime("created_at")?,
-        })
-    }
-
-    fn insert_values(&self) -> Vec<Value> {
-        vec![
-            self.post_id.into(),
-            self.author_name.clone().into(),
-            self.body.clone().into(),
-            self.approved.into(),
-            self.created_at.into(),
-        ]
-    }
 }
 
 impl ModelAdmin for Comment {
