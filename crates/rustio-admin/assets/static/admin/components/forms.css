@@ -35,7 +35,7 @@
   /* v0.16 — generous 32px internal padding on cards. Previously
    * 24/24 felt pinched; the new 32/32 pad gives form sections the
    * "premium card" feel without inflating the page. */
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius-lg);
   padding: var(--rio-s6);
   margin: 0;
@@ -47,7 +47,7 @@
   font-weight: var(--rio-fw-bold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   padding: 0 var(--rio-s2);
   margin-inline-start: calc(-1 * var(--rio-s2));
 }
@@ -70,7 +70,7 @@
 .rio-field-label {
   font-weight: var(--rio-fw-semibold);
   font-size: var(--rio-fs-md);
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -84,7 +84,7 @@
 .rio-field-hint {
   margin: 0;
   font-size: var(--rio-fs-sm);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   line-height: var(--rio-lh-ui);
 }
 .rio-field-errors {
@@ -105,10 +105,10 @@
   width: 100%;
   min-height: 44px;
   padding: 0.625rem var(--rio-s3);              /* 10px / 12px */
-  border: 1px solid var(--rio-line-strong);
+  border: 1px solid var(--rio-border-strong);
   border-radius: var(--rio-radius-sm);
   background: var(--rio-surface);
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
   box-shadow: var(--rio-shadow-inset);
   font: inherit;
   font-size: var(--rio-fs-md);                  /* 16px */
@@ -116,26 +116,26 @@
   transition: border-color 0.12s, box-shadow 0.12s, background-color 0.12s;
 }
 .rio-input::placeholder,
-.rio-textarea::placeholder { color: var(--rio-text-faint); }
+.rio-textarea::placeholder { color: var(--rio-text-subtle); }
 .rio-input:hover,
 .rio-textarea:hover,
-.rio-select:hover { border-color: var(--rio-text-mute); }
+.rio-select:hover { border-color: var(--rio-text-muted); }
 .rio-input:focus,
 .rio-textarea:focus,
 .rio-select:focus {
   outline: none;
-  border-color: var(--rio-rust);
-  /* v0.16 — focus ring uses the new --rio-rust-tint-2 token (teal-200)
+  border-color: var(--rio-accent);
+  /* v0.16 — focus ring uses the new --rio-accent-border token (teal-200)
    * as a 4px halo. Reads as "this is the focused field" from across the
    * page without flash. Inset stays so the field keeps its depth. */
   box-shadow: var(--rio-shadow-inset),
-              0 0 0 4px var(--rio-rust-tint-2);
+              0 0 0 4px var(--rio-accent-border);
 }
 .rio-input:disabled,
 .rio-textarea:disabled,
 .rio-select:disabled {
-  background: var(--rio-sunken);
-  color: var(--rio-text-faint);
+  background: var(--rio-surface-2);
+  color: var(--rio-text-subtle);
   cursor: not-allowed;
 }
 .rio-textarea { font-family: var(--rio-font-sans); resize: vertical; min-height: 7rem; }
@@ -149,7 +149,7 @@
 .rio-checkbox input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
-  accent-color: var(--rio-rust);
+  accent-color: var(--rio-accent);
 }
 .rio-checkbox-list {
   list-style: none;
@@ -171,7 +171,7 @@
   gap: var(--rio-s2);
   flex-wrap: wrap;
   padding-top: var(--rio-s5);
-  border-top: 1px solid var(--rio-line);
+  border-top: 1px solid var(--rio-border-soft);
 }
 .rio-form-actions-spacer { flex: 1; min-width: var(--rio-s4); }
 

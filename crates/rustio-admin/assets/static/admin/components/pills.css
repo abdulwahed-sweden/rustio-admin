@@ -17,7 +17,7 @@
   letter-spacing: 0.02em;
   line-height: var(--rio-lh-ui);
 }
-.rio-pill--badge-success { background: var(--rio-success-tint); color: var(--rio-success); }
-.rio-pill--badge-neutral { background: var(--rio-raised); color: var(--rio-text-mute); }
-.rio-pill--badge-danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
-.rio-pill--badge-warning { background: var(--rio-warn-tint); color: var(--rio-warn); }
+.rio-pill--badge-success { background: var(--rio-success-bg); color: var(--rio-success); }
+.rio-pill--badge-neutral { background: var(--rio-surface-3); color: var(--rio-text-muted); }
+.rio-pill--badge-danger  { background: var(--rio-danger-bg);  color: var(--rio-danger); }
+.rio-pill--badge-warning { background: var(--rio-warning-bg); color: var(--rio-warning); }

@@ -7,40 +7,40 @@
 <style>
   .pgx-head { margin-bottom: var(--rio-s5); }
   .pgx-head__row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--rio-s4); flex-wrap: wrap; }
-  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-hi); margin-top: var(--rio-s1); }
-  .pgx-lead { margin-top: var(--rio-s2); max-width: 80ch; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
-  .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-sunken); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
+  .pgx-lead { margin-top: var(--rio-s2); max-width: 80ch; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
+  .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-surface-2); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
   .pgx-actions { display: flex; gap: var(--rio-s2); flex-wrap: wrap; }
 
   .api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--rio-s5); }
-  .api-card { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
-  .api-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-line); }
-  .api-card__glyph { width: 38px; height: 38px; flex: none; border-radius: var(--rio-radius-sm); display: grid; place-items: center; background: var(--rio-gold-tint, var(--rio-rust-tint)); color: var(--rio-gold, var(--rio-rust)); }
+  .api-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
+  .api-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
+  .api-card__glyph { width: 38px; height: 38px; flex: none; border-radius: var(--rio-radius-sm); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
   .api-card__glyph .rio-icon { width: 18px; height: 18px; }
-  .api-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-hi); }
+  .api-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
   .api-card__title a { color: inherit; }
-  .api-card__title a:hover { color: var(--rio-rust); }
-  .api-card__sub { font-weight: var(--rio-fw-regular); color: var(--rio-text-faint); font-size: var(--rio-fs-sm); }
-  .api-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-mute); }
+  .api-card__title a:hover { color: var(--rio-accent); }
+  .api-card__sub { font-weight: var(--rio-fw-regular); color: var(--rio-text-subtle); font-size: var(--rio-fs-sm); }
+  .api-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-muted); }
 
   .api-endpoints { display: flex; flex-direction: column; }
-  .api-ep { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-line); }
+  .api-ep { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
   .api-verb { flex: none; min-width: 52px; text-align: center; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); letter-spacing: 0.03em; padding: 0.18rem 0.5rem; border-radius: var(--rio-radius-sm); }
-  .api-verb--get { background: var(--rio-success-tint); color: var(--rio-success); }
-  .api-verb--post { background: var(--rio-gold-tint, var(--rio-rust-tint)); color: var(--rio-gold, var(--rio-rust)); }
-  .api-verb--del { background: var(--rio-danger-tint); color: var(--rio-danger); }
+  .api-verb--get { background: var(--rio-success-bg); color: var(--rio-success); }
+  .api-verb--post { background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
+  .api-verb--del { background: var(--rio-danger-bg); color: var(--rio-danger); }
   .api-path { font-family: var(--rio-font-mono); font-size: var(--rio-fs-sm); color: var(--rio-text); overflow-x: auto; }
-  .api-ep__action { margin-left: auto; flex: none; font-size: var(--rio-fs-xs); color: var(--rio-text-faint); }
+  .api-ep__action { margin-left: auto; flex: none; font-size: var(--rio-fs-xs); color: var(--rio-text-subtle); }
 
   .api-fields { padding: var(--rio-s4) var(--rio-s5) var(--rio-s5); }
-  .api-fields__label { font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-faint); margin-bottom: var(--rio-s3); }
+  .api-fields__label { font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-subtle); margin-bottom: var(--rio-s3); }
   .api-ftable { width: 100%; border-collapse: collapse; font-size: var(--rio-fs-sm); }
-  .api-ftable td { padding: 0.45rem 0; border-bottom: 1px solid var(--rio-line); }
+  .api-ftable td { padding: 0.45rem 0; border-bottom: 1px solid var(--rio-border-soft); }
   .api-ftable tr:last-child td { border-bottom: 0; }
   .api-ftable .api-fname { font-family: var(--rio-font-mono); color: var(--rio-text); }
-  .api-ftable .api-ftype { color: var(--rio-text-mute); }
-  .api-ftable .api-fnull { text-align: right; color: var(--rio-text-faint); font-size: var(--rio-fs-xs); }
-  .api-fnull--yes { color: var(--rio-warn); font-weight: var(--rio-fw-semibold); }
+  .api-ftable .api-ftype { color: var(--rio-text-muted); }
+  .api-ftable .api-fnull { text-align: right; color: var(--rio-text-subtle); font-size: var(--rio-fs-xs); }
+  .api-fnull--yes { color: var(--rio-warning); font-weight: var(--rio-fw-semibold); }
 
   @media (max-width: 720px) { .api-grid { grid-template-columns: 1fr; } }
 </style>

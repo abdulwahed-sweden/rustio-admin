@@ -21,10 +21,10 @@
   font-weight: var(--rio-fw-bold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   padding: 8px 10px;
-  border-bottom: 2px solid var(--rio-line);
-  background: var(--rio-sunken);
+  border-bottom: 2px solid var(--rio-border);
+  background: var(--rio-surface-2);
 }
 .rio-perm-matrix th.rio-perm-matrix__model {
   text-align: start;
@@ -32,18 +32,18 @@
 .rio-perm-matrix tbody th {
   text-align: start;
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
   padding: 10px 12px;
   background: var(--rio-surface);
 }
 .rio-perm-matrix tbody td {
   padding: 10px 12px;
   text-align: center;
-  border-bottom: 1px solid var(--rio-line);
+  border-bottom: 1px solid var(--rio-border-soft);
 }
 .rio-perm-matrix tbody tr:hover td,
 .rio-perm-matrix tbody tr:hover th {
-  background: var(--rio-sunken);
+  background: var(--rio-surface-2);
 }
 .rio-perm-matrix tbody tr:last-child td,
 .rio-perm-matrix tbody tr:last-child th {
@@ -72,7 +72,7 @@
   border: 0;
 }
 .rio-perm-na {
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   font-family: var(--rio-font-mono);
 }
 .rio-perm-row-all {
@@ -82,26 +82,26 @@
   letter-spacing: 0.04em;
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border);
   background: var(--rio-surface);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   cursor: pointer;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 .rio-perm-row-all:hover {
-  background: var(--rio-rust);
+  background: var(--rio-accent);
   color: #fff;
-  border-color: var(--rio-rust);
+  border-color: var(--rio-accent);
 }
 .rio-perm-extras {
   margin-top: var(--rio-s3);
   padding: var(--rio-s2) 0 0;
-  border-top: 1px dashed var(--rio-line);
+  border-top: 1px dashed var(--rio-border);
 }
 .rio-perm-extras summary {
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   cursor: pointer;
   padding: 4px 0;
 }

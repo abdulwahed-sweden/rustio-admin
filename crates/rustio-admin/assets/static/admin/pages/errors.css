@@ -12,7 +12,7 @@
 .rio-cascade-list {
   list-style: disc;
   padding-inline-start: var(--rio-s5);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 
 .rio-error { text-align: center; padding: var(--rio-s7) var(--rio-s4); }
@@ -20,7 +20,7 @@
   font-size: 3rem;
   font-weight: var(--rio-fw-bold);
   margin: 0;
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   font-variant-numeric: tabular-nums;
   letter-spacing: var(--rio-tracking-display);
 }

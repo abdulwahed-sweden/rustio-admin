@@ -2,26 +2,26 @@
 
 {# Redesigned framework-docs index: a responsive grid of doc cards with a
  # glyph, title, and source path — replacing the flat list. Scoped under
- # `.pgx` with framework tokens; `var(--rio-gold, var(--rio-rust))`
+ # `.pgx` with framework tokens; `var(--rio-accent2, var(--rio-accent))`
  # gives the shop its amber accent and falls back to the framework accent. #}
 {% block extra_head %}
 <style>
   .pgx-head { margin-bottom: var(--rio-s6); }
-  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-hi); margin-top: var(--rio-s1); }
-  .pgx-lead { margin-top: var(--rio-s2); max-width: 70ch; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
-  .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-sunken); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
+  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
+  .pgx-lead { margin-top: var(--rio-s2); max-width: 70ch; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
+  .pgx-lead code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-surface-2); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
 
   .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--rio-s4); }
-  .docs-card { display: flex; align-items: center; gap: var(--rio-s4); padding: var(--rio-s5); background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
-  .docs-card:hover { border-color: var(--rio-rust); transform: translateY(-2px); box-shadow: var(--rio-shadow-lg); }
-  .docs-card__glyph { width: 46px; height: 46px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-gold-tint, var(--rio-rust-tint)); color: var(--rio-gold, var(--rio-rust)); }
+  .docs-card { display: flex; align-items: center; gap: var(--rio-s4); padding: var(--rio-s5); background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
+  .docs-card:hover { border-color: var(--rio-accent); transform: translateY(-2px); box-shadow: var(--rio-shadow-lg); }
+  .docs-card__glyph { width: 46px; height: 46px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
   .docs-card__glyph .rio-icon { width: 22px; height: 22px; }
   .docs-card__body { min-width: 0; display: flex; flex-direction: column; }
-  .docs-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-hi); transition: color .14s ease; }
-  .docs-card:hover .docs-card__title { color: var(--rio-rust); }
-  .docs-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-mute); }
-  .docs-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-faint); transition: transform .14s ease, color .14s ease; }
-  .docs-card:hover .docs-card__arrow { transform: translateX(3px); color: var(--rio-rust); }
+  .docs-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); transition: color .14s ease; }
+  .docs-card:hover .docs-card__title { color: var(--rio-accent); }
+  .docs-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-muted); }
+  .docs-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-subtle); transition: transform .14s ease, color .14s ease; }
+  .docs-card:hover .docs-card__arrow { transform: translateX(3px); color: var(--rio-accent); }
 </style>
 {% endblock %}
 

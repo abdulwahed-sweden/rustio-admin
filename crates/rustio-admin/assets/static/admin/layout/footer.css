@@ -26,12 +26,12 @@
   align-items: center;
   gap: var(--rio-s4);
   padding: var(--rio-s3) var(--rio-s5);
-  border-top: 1px solid var(--rio-line);
+  border-top: 1px solid var(--rio-border);
   /* v0.15: matches the topbar/sidebar chrome tier so the
    * operator skeleton closes top + sides + bottom in one tone.
    * (Principle 10.) */
   background: var(--rio-surface-chrome);
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   font-size: var(--rio-fs-xs);
   font-feature-settings: "tnum" 1, "kern" 1;
   line-height: var(--rio-lh-ui);
@@ -51,18 +51,18 @@
 
 .rio-footer__brand {
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-mute, var(--rio-text-mute));
+  color: var(--rio-text-secondary, var(--rio-text-muted));
   letter-spacing: -0.005em;
 }
 
 .rio-footer__version,
 .rio-footer__time {
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   font-variant-numeric: tabular-nums;
 }
 
 .rio-footer__sep {
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   opacity: 0.45;
   user-select: none;
 }
@@ -80,14 +80,14 @@
   gap: 0.4em;
   padding: 0 var(--rio-s2);
   height: 1.5em;
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
-  background: var(--rio-sunken, transparent);
+  background: var(--rio-surface-2, transparent);
   font-size: 0.85em;
   font-weight: var(--rio-fw-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 
 .rio-footer__env::before {
@@ -96,7 +96,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--rio-text-faint);
+  background: var(--rio-text-subtle);
   flex-shrink: 0;
 }
 
@@ -112,7 +112,7 @@
  * the muted grey on hover so the operator sees clearly where the
  * cursor will go. */
 .rio-footer__link {
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   text-decoration: none;
   border-bottom: 1px solid transparent;
   padding-bottom: 1px;
@@ -121,8 +121,8 @@
 
 .rio-footer__link:hover,
 .rio-footer__link:focus-visible {
-  color: var(--rio-rust);
-  border-bottom-color: var(--rio-rust);
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
   outline: none;
 }
 
@@ -130,7 +130,7 @@
  * Capped width — long admin emails truncate with an ellipsis
  * rather than pushing the timestamp off-row. */
 .rio-footer__user {
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   font-weight: var(--rio-fw-medium);
   max-width: 28ch;
   overflow: hidden;
@@ -146,7 +146,7 @@
  * chrome — never competes with the project's identity. Off by
  * default; enabled per SiteBranding.show_powered_by. */
 .rio-footer__powered {
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   font-size: 11px;
   text-decoration: none;
   opacity: 0.7;

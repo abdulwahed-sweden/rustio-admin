@@ -44,7 +44,7 @@
   z-index: var(--rio-z-sidebar);
   width: 80vw;
   max-width: 320px;
-  border-inline-end: 1px solid var(--rio-line);
+  border-inline-end: 1px solid var(--rio-border);
   box-shadow: var(--rio-shadow-lg);
   overflow-y: auto;
 }

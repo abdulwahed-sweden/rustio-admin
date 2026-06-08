@@ -21,7 +21,7 @@
   padding: var(--rio-s2) var(--rio-s4);        /* 8px / 16px */
   background: var(--rio-surface);
   color: var(--rio-text);
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border);
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);                 /* 16px */
   font-weight: var(--rio-fw-semibold);
@@ -38,16 +38,16 @@
    * instead of surface-3. Gives every button a clean accent touch
    * on interaction — the "accent everywhere" thread that fixes the
    * old monochromatic feel. */
-  background: var(--rio-rust-tint);
-  border-color: var(--rio-rust-tint-2);
-  color: var(--rio-rust-hover);
+  background: var(--rio-accent-soft);
+  border-color: var(--rio-accent-border);
+  color: var(--rio-accent-hover);
   text-decoration: none;
 }
 .rio-button:focus-visible {
   outline: none;
-  border-color: var(--rio-rust);
+  border-color: var(--rio-accent);
   box-shadow: var(--rio-shadow-xs),
-              0 0 0 4px var(--rio-rust-tint-2);
+              0 0 0 4px var(--rio-accent-border);
 }
 .rio-button:active { transform: translateY(1px); }
 .rio-button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -59,30 +59,30 @@
  * deliberate engineering. (Principle 11 — gravity, not flash.) */
 .rio-button--primary {
   color: #fff;
-  background-color: var(--rio-rust);
+  background-color: var(--rio-accent);
   background-image: linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--rio-rust) 92%, white) 0%,
-    var(--rio-rust) 100%
+    color-mix(in srgb, var(--rio-accent) 92%, white) 0%,
+    var(--rio-accent) 100%
   );
-  border-color: color-mix(in srgb, var(--rio-rust) 80%, black);
-  box-shadow: 0 1px 2px rgb(var(--rio-rust-rgb) / 0.30),
+  border-color: color-mix(in srgb, var(--rio-accent) 80%, black);
+  box-shadow: 0 1px 2px rgb(var(--rio-accent-rgb) / 0.30),
               inset 0 1px 0 rgb(255 255 255 / 0.14);
 }
 .rio-button--primary:hover {
   background-image: linear-gradient(
     to bottom,
-    var(--rio-rust) 0%,
-    var(--rio-rust-hover) 100%
+    var(--rio-accent) 0%,
+    var(--rio-accent-hover) 100%
   );
-  border-color: var(--rio-rust-hover);
+  border-color: var(--rio-accent-hover);
   color: #fff;
 }
 .rio-button--primary:focus-visible {
-  border-color: color-mix(in srgb, var(--rio-rust) 80%, black);
-  box-shadow: 0 1px 2px rgb(var(--rio-rust-rgb) / 0.30),
+  border-color: color-mix(in srgb, var(--rio-accent) 80%, black);
+  box-shadow: 0 1px 2px rgb(var(--rio-accent-rgb) / 0.30),
               inset 0 1px 0 rgb(255 255 255 / 0.14),
-              0 0 0 3px rgb(var(--rio-rust-rgb) / 0.30);
+              0 0 0 3px rgb(var(--rio-accent-rgb) / 0.30);
 }
 .rio-button--danger {
   background: var(--rio-danger);
@@ -93,12 +93,12 @@
 .rio-button--ghost {
   background: transparent;
   border-color: transparent;
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   box-shadow: none;
 }
 .rio-button--ghost:hover {
-  color: var(--rio-text-hi);
-  background: var(--rio-raised);
+  color: var(--rio-text-strong);
+  background: var(--rio-surface-3);
   border-color: transparent;
 }
 .rio-button--danger-ghost {
@@ -108,7 +108,7 @@
   box-shadow: none;
 }
 .rio-button--danger-ghost:hover {
-  background: var(--rio-danger-tint);
+  background: var(--rio-danger-bg);
   border-color: transparent;
 }
 
