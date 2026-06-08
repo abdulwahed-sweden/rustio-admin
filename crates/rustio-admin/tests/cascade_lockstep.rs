@@ -41,6 +41,11 @@ fn rust_includes() -> Vec<String> {
         .filter(|l| l.contains("include_str!("))
         .filter_map(between_quotes)
         .filter_map(|p| p.strip_prefix(PREFIX).map(String::from))
+        // `admin.css` is the @import manifest itself, never a baked
+        // fragment. It appears in `routes.rs` only because the in-module
+        // drift guard reads it via `include_str!`; exclude it so this
+        // test counts true bundle fragments, matching `baked_fragments`.
+        .filter(|p| p != "admin.css")
         .collect()
 }
 
