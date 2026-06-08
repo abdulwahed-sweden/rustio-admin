@@ -16,13 +16,12 @@
  * explicit [data-theme] blocks so an explicit theme always wins by
  * source order.
  *
- * Phase-0 migration note: the alias block at the end of :root defines
- * the pre-DS token names (--rio-accent, --rio-surface-2,
- * --rio-text-strong, …) as var() aliases onto the new tokens, so the
- * not-yet-rewritten admin CSS + templates keep resolving — and flip
- * with the theme for free, because they reference tokens that are
- * themselves redefined in the dark blocks. Phase 1 rewrites the call
- * sites to the new names and deletes this bridge.
+ * Migration note (Phase 1a): the colour call sites have been rewritten
+ * to the DS names, so the colour alias bridge is GONE — only the two
+ * framework-specific tokens below have no DS twin (--rio-rust-rgb for
+ * custom-alpha rgb(), --rio-surface-chrome for the dark chrome). The
+ * spacing / radius / shadow / type alias bridges still live in their
+ * own token files until Phase 1b finishes the rename.
  * ============================================================ */
 
 /* --- Default = Light (warm stone) --- */
@@ -84,42 +83,14 @@
   --rio-syntax-comment:#99A1B2;
   --rio-syntax-punc:   #677083;
 
-  /* ---- Phase-0 compatibility aliases (old name -> new token) ---- */
-  --rio-accent:           var(--rio-rust);
-  --rio-accent-hover:     var(--rio-rust-hover);
-  --rio-accent-soft:      var(--rio-rust-tint);
-  --rio-accent-border:    var(--rio-rust-tint-2);
-  --rio-accent-rgb:       35 71 206;
-  --rio-accent2:          var(--rio-gold);
-  --rio-accent2-soft:     var(--rio-gold-tint);
-  --rio-accent2-ink:      var(--rio-gold);
-  --rio-surface-2:        var(--rio-sunken);
-  --rio-surface-3:        var(--rio-raised);
-  --rio-surface-elevated: var(--rio-overlay);
-  --rio-surface-chrome:   #232834;   /* dark chrome kept fixed (sidebar/topbar) */
-  --rio-text-strong:      var(--rio-text-hi);
-  --rio-text-muted:       var(--rio-text-mute);
-  --rio-text-subtle:      var(--rio-text-faint);
-  --rio-text-secondary:   var(--rio-text-mute);
-  --rio-muted:            var(--rio-text-mute);
-  --rio-border:           var(--rio-line);
-  --rio-border-soft:      var(--rio-line);
-  --rio-border-strong:    var(--rio-line-strong);
-  --rio-danger-bg:        var(--rio-danger-tint);
-  --rio-success-bg:       var(--rio-success-tint);
-  --rio-warning:          var(--rio-warn);
-  --rio-warning-bg:       var(--rio-warn-tint);
-  --rio-info-bg:          var(--rio-rust-tint);
-  --rio-brand-accent:     var(--rio-rust);
-  --rio-brand-light:      var(--rio-rust);
-  --rio-brand-dark:       var(--rio-rust);
-  --rio-brand-adaptive:   var(--rio-rust);
-  --rio-brand-surface:    var(--rio-rust);
-  --rio-brand-secondary:  var(--rio-rust-hover);
-  --rio-brand-hover:      var(--rio-rust-hover);
-  --rio-brand-active:     var(--rio-rust-active);
-  --rio-brand-tint:       var(--rio-rust-tint);
-  --rio-brand-text:       var(--rio-rust);
+  /* RustIO Cobalt as an RGB triple, for rgb()/rgba() with a custom
+     alpha (e.g. search-highlight `<mark>`, inline-code background). */
+  --rio-rust-rgb: 35 71 206;
+
+  /* Dark chrome surface (sidebar / topbar / footer) — kept FIXED across
+     both themes; no DS twin. The chrome is intentionally dark even in
+     light mode (it frames the warm-stone canvas). */
+  --rio-surface-chrome: #232834;
 }
 
 /* --- Auto dark: follow the OS when no explicit theme is set.
@@ -166,8 +137,8 @@
     --rio-syntax-comment:#828C9E;
     --rio-syntax-punc:   #A8B1C0;
 
-    /* dark-only alias override (the rest flip via var() refs) */
-    --rio-accent-rgb:    110 140 255;
+    /* dark-only rgb override (cobalt lifts in dark) */
+    --rio-rust-rgb:    110 140 255;
   }
 }
 
@@ -212,7 +183,7 @@
   --rio-syntax-fn:     #2C2922;
   --rio-syntax-comment:#99A1B2;
   --rio-syntax-punc:   #677083;
-  --rio-accent-rgb:    35 71 206;
+  --rio-rust-rgb:    35 71 206;
 }
 
 /* --- Explicit dark --- */
@@ -256,5 +227,5 @@
   --rio-syntax-fn:     #D9DEE9;
   --rio-syntax-comment:#828C9E;
   --rio-syntax-punc:   #A8B1C0;
-  --rio-accent-rgb:    110 140 255;
+  --rio-rust-rgb:    110 140 255;
 }

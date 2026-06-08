@@ -92,6 +92,18 @@ leaves the alpha track.
   fonts `--rio-font-display/-body`, motion `--rio-dur-*` / `--rio-ease-*`.
 
 ### Changed
+- **Design System Phase 1a — display type + colour-token rewrite.** The
+  **Spectral** serif now renders display surfaces (page titles, `h1`/`h2`,
+  stat values) — used sparingly per doctrine; section subheads and body
+  stay on Hanken. All colour call sites across the admin CSS + templates
+  were rewritten from the pre-DS names to the DS vocabulary
+  (`--rio-accent`→`--rio-rust`, `--rio-text-strong`→`--rio-text-hi`,
+  `--rio-border`→`--rio-line`, `--rio-surface-2`→`--rio-sunken`, …), and
+  the colour alias bridge was removed (581 references across 33 files).
+  `AdminTheme::accent/text_muted/border` now patch `--rio-rust` /
+  `--rio-text-mute` / `--rio-line`; new `--rio-rust-rgb`. Spacing / radius
+  / shadow / type aliases remain until Phase 1b. Value-preserving — no
+  visual change beyond the serif headings.
 - **The framework is no longer light-only.** `DESIGN_DOCTRINE.md` §5 and
   CLAUDE.md now document two themes (light default + dim-slate dark);
   `tokens/colors.css` is now the hand-authored DS default rather than a

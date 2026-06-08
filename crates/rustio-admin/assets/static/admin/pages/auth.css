@@ -11,7 +11,7 @@
   max-width: 440px;
   margin: var(--rio-s7) auto;
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
   padding: var(--rio-s6) var(--rio-s5);
   box-shadow: var(--rio-shadow-lg);
@@ -19,13 +19,13 @@
 .rio-login-title {
   text-align: center;
   margin: 0 0 var(--rio-s4) 0;
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
 }
 /* Calm intro paragraph under the title — gives the form context
  * without competing with it. Wraps for ~50ch comfortable reading. */
 .rio-login-intro {
   text-align: center;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);
   line-height: 1.6;
   margin: 0 auto var(--rio-s5) auto;
@@ -54,8 +54,8 @@
 .rio-login-aside {
   margin: var(--rio-s5) 0 0 0;
   padding: var(--rio-s4) var(--rio-s4);
-  background: var(--rio-surface-2);
-  border: 1px solid var(--rio-border-soft);
+  background: var(--rio-sunken);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius);
 }
 .rio-login-aside__title {
@@ -64,7 +64,7 @@
   font-weight: var(--rio-fw-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 .rio-login-aside__list {
   margin: 0;
@@ -90,6 +90,6 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--rio-accent);
+  background: var(--rio-rust);
   opacity: 0.65;
 }

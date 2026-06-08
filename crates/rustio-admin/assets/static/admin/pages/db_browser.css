@@ -26,14 +26,14 @@
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 .rio-db-stat dd {
   margin: 0;
   font-family: var(--rio-font-mono);
   font-size: var(--rio-fs-lg);
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
   font-variant-numeric: tabular-nums;
 }
 
@@ -60,7 +60,7 @@
   background: none;
   padding: 0;
   font-size: inherit;
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
 }
 
 .rio-db-columns code {
@@ -79,7 +79,7 @@
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
 }
 .rio-db-fk-list {
   list-style: none;

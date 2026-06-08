@@ -9,21 +9,21 @@
 .rio-tabs {
   display: flex;
   gap: var(--rio-s1);
-  border-bottom: 1px solid var(--rio-border);
+  border-bottom: 1px solid var(--rio-line);
   margin-bottom: var(--rio-s4);
   flex-wrap: wrap;
 }
 .rio-tab {
   padding: 0.55rem var(--rio-s4);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-md);
   font-weight: var(--rio-fw-semibold);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
 }
-.rio-tab:hover { color: var(--rio-text-strong); text-decoration: none; }
+.rio-tab:hover { color: var(--rio-text-hi); text-decoration: none; }
 .rio-tab--active {
-  color: var(--rio-accent);
-  border-bottom-color: var(--rio-accent);
+  color: var(--rio-rust);
+  border-bottom-color: var(--rio-rust);
   font-weight: var(--rio-fw-bold);
 }

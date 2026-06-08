@@ -75,12 +75,12 @@
   line-height: var(--rio-lh-tight);
   letter-spacing: var(--rio-tracking-display);
   margin: var(--rio-s1) 0 var(--rio-s1);
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
 }
 .rio-list-page .rlp-subtitle {
   font-size: var(--rio-fs-md);              /* 16px — readable but quiet */
   line-height: 1.5;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   margin: 0;
   max-width: 60ch;                          /* keep subtitle prose-width */
 }
@@ -101,7 +101,7 @@
  * The row sits inside a softly-tinted accent-soft panel. That tint
  * gives "Find" its own surface without a heading or icon — operators
  * read the group at a glance as one zone, distinct from the
- * transparent Arrange row below. The fill uses `--rio-accent-soft`
+ * transparent Arrange row below. The fill uses `--rio-rust-tint`
  * so a project that retunes the brand via Admin::theme(...) gets
  * the panel re-tinted automatically; nothing in this rule is a
  * hardcoded hex. */
@@ -111,8 +111,8 @@
   gap: var(--rio-s2);
   flex-wrap: wrap;
   padding: var(--rio-s3);
-  background: var(--rio-accent-soft);
-  border: 1px solid var(--rio-accent-border);
+  background: var(--rio-rust-tint);
+  border: 1px solid var(--rio-rust-tint-2);
   border-radius: var(--rio-radius);
 }
 .rio-list-page .rlp-find .rio-search-bar {
@@ -136,14 +136,14 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--rio-radius-sm);
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
   text-decoration: none;
   transition: background 0.12s, color 0.12s;
 }
 .rio-list-page .rlp-reset:hover {
-  background: var(--rio-surface-2);
+  background: var(--rio-sunken);
   color: var(--rio-danger);
   text-decoration: none;
 }
@@ -180,8 +180,8 @@
   height: 40px;
   padding: 0 var(--rio-s3);
   background: var(--rio-surface);
-  color: var(--rio-text-muted);
-  border: 1px solid var(--rio-border);
+  color: var(--rio-text-mute);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
@@ -190,9 +190,9 @@
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .rio-list-page .rlp-sort-dir:hover {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
   text-decoration: none;
 }
 .rio-list-page .rlp-sort-dir .rio-icon { width: 14px; height: 14px; opacity: 0.7; }
@@ -207,7 +207,7 @@
   padding: 0 var(--rio-s3);
   background: var(--rio-surface);
   color: var(--rio-text);
-  border: 1px solid var(--rio-border);
+  border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
@@ -216,9 +216,9 @@
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .rio-list-page .rlp-data-link:hover {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
+  background: var(--rio-raised);
+  border-color: var(--rio-line-strong);
+  color: var(--rio-text-hi);
   text-decoration: none;
 }
 .rio-list-page .rlp-data-link .rio-icon { width: 15px; height: 15px; opacity: 0.85; }
@@ -257,23 +257,23 @@
  * dark-surface values automatically). Hover and active-sort copy
  * stays readable without a separate set of selectors. */
 .rio-list-page .rio-table thead {
-  --rio-text-strong: #F8FAFC;   /* slate-50 */
+  --rio-text-hi: #F8FAFC;   /* slate-50 */
   --rio-text:        #E2E8F0;   /* slate-200 */
-  --rio-text-muted:  #94A3B8;   /* slate-400 */
-  --rio-text-subtle: #64748B;   /* slate-500 */
-  --rio-border:      #334155;   /* slate-700 — bottom rule blends into chrome */
+  --rio-text-mute:  #94A3B8;   /* slate-400 */
+  --rio-text-faint: #64748B;   /* slate-500 */
+  --rio-line:      #334155;   /* slate-700 — bottom rule blends into chrome */
   /* Lifted accent: the active-sort link sits at #0D9488 (teal-600)
    * on the slate-900 chrome at only ~4.3:1. Promoting it to teal-400
    * inside this scope brings the active-column highlight to ~9.6:1,
    * the same lift the sidebar uses for its active rail. */
-  --rio-accent:      #2DD4BF;   /* teal-400 */
+  --rio-rust:      #2DD4BF;   /* teal-400 */
 }
 .rio-list-page .rio-table th {
   background: var(--rio-surface-chrome);     /* slate-900 — matches sidebar */
   color: var(--rio-text);
   font-size: 13px;                           /* quiet label tier */
   letter-spacing: var(--rio-tracking-allcaps);
-  border-bottom-color: var(--rio-border);
+  border-bottom-color: var(--rio-line);
 }
 
 /* ----- Empty state ----------------------------------------------
@@ -302,8 +302,8 @@
   width: 64px;
   height: 64px;
   border-radius: 999px;
-  background: var(--rio-accent-soft);
-  color: var(--rio-accent);
+  background: var(--rio-rust-tint);
+  color: var(--rio-rust);
   margin-bottom: var(--rio-s4);
 }
 .rio-list-page .rlp-empty-icon .rio-icon {
@@ -313,13 +313,13 @@
 .rio-list-page .rlp-empty-title {
   font-size: var(--rio-fs-h2);              /* 24px */
   font-weight: var(--rio-fw-bold);
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
   margin: 0 0 var(--rio-s2);
   line-height: var(--rio-lh-tight);
 }
 .rio-list-page .rlp-empty-body {
   font-size: var(--rio-fs-md);              /* 16px — readable */
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   margin: 0 0 var(--rio-s5);
   max-width: 44ch;
 }
@@ -337,7 +337,7 @@
   flex-wrap: wrap;
   margin-top: var(--rio-s4);
   padding: var(--rio-s2) 0;
-  color: var(--rio-text-muted);
+  color: var(--rio-text-mute);
   font-size: var(--rio-fs-sm);
 }
 .rio-list-page .rlp-row-count {
@@ -345,7 +345,7 @@
   font-variant-numeric: tabular-nums;
 }
 .rio-list-page .rlp-row-count strong {
-  color: var(--rio-text-strong);
+  color: var(--rio-text-hi);
   font-weight: var(--rio-fw-semibold);
 }
 .rio-list-page .rlp-bottom-bar .rio-pagination {
