@@ -1,0 +1,26 @@
+/* ============================================================
+ * rustio-admin / tokens / motion  —  RustIO Design System
+ *
+ * Calm and engineered. One orchestrated reveal max, never a spinner.
+ * Durations collapse to 0 under prefers-reduced-motion.
+ * ============================================================ */
+
+:root {
+  --rio-dur-fast:  120ms;
+  --rio-dur-base:  180ms;
+  --rio-dur-slow:  260ms;
+  --rio-dur-sweep: 1600ms;
+
+  --rio-ease:       cubic-bezier(0.2, 0.7, 0.2, 1);
+  --rio-ease-in:    cubic-bezier(0.4, 0, 1, 1);
+  --rio-ease-out:   cubic-bezier(0, 0, 0.2, 1);
+  --rio-ease-sweep: cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --rio-dur-fast: 0ms;
+    --rio-dur-base: 0ms;
+    --rio-dur-slow: 0ms;
+  }
+}
