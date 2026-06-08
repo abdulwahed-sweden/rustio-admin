@@ -14,50 +14,6 @@ pub struct Appointment {
     pub created_at: DateTime<Utc>,
 }
 
-impl Model for Appointment {
-    const TABLE: &'static str = "appointments";
-    const COLUMNS: &'static [&'static str] = &[
-        "id",
-        "patient_id",
-        "scheduled_at",
-        "reason",
-        "status",
-        "created_at",
-    ];
-    const INSERT_COLUMNS: &'static [&'static str] = &[
-        "patient_id",
-        "scheduled_at",
-        "reason",
-        "status",
-        "created_at",
-    ];
-
-    fn id(&self) -> i64 {
-        self.id
-    }
-
-    fn from_row(row: Row<'_>) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get_i64("id")?,
-            patient_id: row.get_i64("patient_id")?,
-            scheduled_at: row.get_datetime("scheduled_at")?,
-            reason: row.get_string("reason")?,
-            status: row.get_string("status")?,
-            created_at: row.get_datetime("created_at")?,
-        })
-    }
-
-    fn insert_values(&self) -> Vec<Value> {
-        vec![
-            self.patient_id.into(),
-            self.scheduled_at.into(),
-            self.reason.clone().into(),
-            self.status.clone().into(),
-            self.created_at.into(),
-        ]
-    }
-}
-
 impl ModelAdmin for Appointment {
     fn list_display() -> &'static [&'static str] {
         &["id", "patient_id", "scheduled_at", "reason", "status"]

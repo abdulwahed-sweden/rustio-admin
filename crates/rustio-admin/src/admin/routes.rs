@@ -2509,3 +2509,52 @@ mod tests {
         }
     }
 }
+
+/// Drift guard for the CSS bundle. The `@import` manifest in
+/// `assets/static/admin/admin.css` and the `concat!(include_str!(…))`
+/// block in [`ADMIN_CSS`] are two hand-maintained lists that MUST stay
+/// in lock-step (see the doctrine note on `ADMIN_CSS`). Adding,
+/// removing, or reordering a fragment in one but not the other silently
+/// changes the served bundle; this test turns that drift into a failure.
+#[cfg(test)]
+mod css_lockstep_tests {
+    /// Fragments declared in `admin.css`, in `@import url("…")` order.
+    fn manifest_imports() -> Vec<&'static str> {
+        let manifest = include_str!("../../assets/static/admin/admin.css");
+        manifest
+            .match_indices("@import url(\"")
+            .map(|(i, m)| {
+                let rest = &manifest[i + m.len()..];
+                &rest[..rest.find("\")").expect("unterminated @import url(...)")]
+            })
+            .collect()
+    }
+
+    /// Fragments baked by `ADMIN_CSS`, in `include_str!` order. The
+    /// manifest itself (`admin.css`) is the source list, never a baked
+    /// fragment, so it is excluded. The search needle is assembled with
+    /// `concat!` so this test's own source does not match itself when it
+    /// reads `routes.rs` back as text.
+    fn baked_fragments() -> Vec<&'static str> {
+        let routes_src = include_str!("routes.rs");
+        let needle = concat!("include_str!(\"", "../../assets/static/admin/");
+        routes_src
+            .match_indices(needle)
+            .map(|(i, m)| {
+                let rest = &routes_src[i + m.len()..];
+                &rest[..rest.find("\")").expect("unterminated include_str!(...)")]
+            })
+            .filter(|f| *f != "admin.css")
+            .collect()
+    }
+
+    #[test]
+    fn import_manifest_matches_concat_bundle() {
+        assert_eq!(
+            manifest_imports(),
+            baked_fragments(),
+            "admin.css @import manifest and ADMIN_CSS concat! bundle have drifted; \
+             update BOTH lists in lock-step (see the note on ADMIN_CSS in routes.rs)"
+        );
+    }
+}

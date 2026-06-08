@@ -1,41 +1,16 @@
 //! Product model and admin configuration.
 
-use rust_decimal::Decimal;
-use rustio_admin::{Error, Inline, Model, ModelAdmin, Row, RustioAdmin, Value};
+use rustio_admin::{Decimal, Inline, ModelAdmin, RustioAdmin};
 
+// `#[derive(RustioAdmin)]` now also generates `impl Model` (TABLE,
+// COLUMNS, INSERT_COLUMNS, from_row, insert_values) from these fields —
+// there is no hand-written ORM glue to keep in sync with the struct.
 #[derive(RustioAdmin)]
 pub struct Product {
     pub id: i64,
     pub name: String,
     pub price: Decimal,
     pub in_stock: bool,
-}
-
-impl Model for Product {
-    const TABLE: &'static str = "products";
-    const COLUMNS: &'static [&'static str] = &["id", "name", "price", "in_stock"];
-    const INSERT_COLUMNS: &'static [&'static str] = &["name", "price", "in_stock"];
-
-    fn id(&self) -> i64 {
-        self.id
-    }
-
-    fn from_row(row: Row<'_>) -> Result<Self, Error> {
-        Ok(Self {
-            id: row.get_i64("id")?,
-            name: row.get_string("name")?,
-            price: row.get_decimal("price")?,
-            in_stock: row.get_bool("in_stock")?,
-        })
-    }
-
-    fn insert_values(&self) -> Vec<Value> {
-        vec![
-            self.name.clone().into(),
-            self.price.into(),
-            self.in_stock.into(),
-        ]
-    }
 }
 
 // Admin list-page configuration. Each method overrides a default.

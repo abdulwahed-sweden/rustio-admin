@@ -442,11 +442,14 @@ pub(crate) fn render(fields: &[Field]) -> Render {
     // needs, and search eligibility of each kind.
     let specs: Vec<FieldSpec> = fields.iter().map(|f| f.kind.spec(&f.name)).collect();
 
-    // The core import is always present. Any extra `use` line a
-    // field's spec requires (e.g. chrono for `timestamp`) is inserted
-    // *before* it, first-seen order preserved and de-duplicated.
-    let mut import_lines: Vec<&'static str> =
-        vec!["use rustio_admin::{Error, Model, ModelAdmin, Row, RustioAdmin, Value};"];
+    // The core import is always present. `#[derive(RustioAdmin)]` now
+    // generates `impl Model` too, so the model file no longer names
+    // `Model` / `Row` / `Value` / `Error` directly. Any field-type
+    // import a spec requires (e.g. `Decimal`, `DateTime`) is inserted
+    // *before* this line, first-seen order preserved and de-duplicated —
+    // and it comes from the framework's re-exports, so the generated
+    // project needs no direct `chrono` / `uuid` / `rust_decimal` dep.
+    let mut import_lines: Vec<&'static str> = vec!["use rustio_admin::{ModelAdmin, RustioAdmin};"];
     let mut extra_imports: Vec<&'static str> = Vec::new();
     for spec in &specs {
         if let Some(imp) = spec.needs_import {
@@ -641,7 +644,7 @@ impl FieldKind {
                 row_getter: "get_decimal",
                 insert_needs_clone: false,
                 is_text_search: false,
-                needs_import: Some("use rust_decimal::Decimal;"),
+                needs_import: Some("use rustio_admin::Decimal;"),
                 field_attr: None,
             },
             FieldKind::Bool => FieldSpec {
@@ -659,7 +662,7 @@ impl FieldKind {
                 row_getter: "get_datetime",
                 insert_needs_clone: false,
                 is_text_search: false,
-                needs_import: Some("use chrono::{DateTime, Utc};"),
+                needs_import: Some("use rustio_admin::{DateTime, Utc};"),
                 field_attr: None,
             },
             FieldKind::Date => FieldSpec {
@@ -668,7 +671,7 @@ impl FieldKind {
                 row_getter: "get_date",
                 insert_needs_clone: false,
                 is_text_search: false,
-                needs_import: Some("use chrono::NaiveDate;"),
+                needs_import: Some("use rustio_admin::NaiveDate;"),
                 field_attr: None,
             },
             FieldKind::Time => FieldSpec {
@@ -677,7 +680,7 @@ impl FieldKind {
                 row_getter: "get_time",
                 insert_needs_clone: false,
                 is_text_search: false,
-                needs_import: Some("use chrono::NaiveTime;"),
+                needs_import: Some("use rustio_admin::NaiveTime;"),
                 field_attr: None,
             },
             FieldKind::Uuid => FieldSpec {
@@ -686,7 +689,7 @@ impl FieldKind {
                 row_getter: "get_uuid",
                 insert_needs_clone: false,
                 is_text_search: false,
-                needs_import: Some("use uuid::Uuid;"),
+                needs_import: Some("use rustio_admin::Uuid;"),
                 field_attr: None,
             },
             FieldKind::Json => FieldSpec {
@@ -1019,9 +1022,9 @@ mod tests {
     #[test]
     fn render_imports_include_chrono_only_when_timestamp_present() {
         let r = render(&fs(&["name:str"]));
-        assert!(!r.imports.contains("chrono"));
+        assert!(!r.imports.contains("DateTime"));
         let r = render(&fs(&["at:timestamp"]));
-        assert!(r.imports.contains("use chrono::{DateTime, Utc};"));
+        assert!(r.imports.contains("use rustio_admin::{DateTime, Utc};"));
     }
 
     #[test]
@@ -1115,11 +1118,11 @@ mod tests {
         assert!(r
             .from_row_assignments
             .contains("start_time: row.get_time(\"start_time\")?,"));
-        // date / time pull in only the chrono types they use — never
-        // the `DateTime, Utc` pair (that would be an unused import and
-        // fail the consumer's `-D warnings` build).
-        assert!(r.imports.contains("use chrono::NaiveDate;"));
-        assert!(r.imports.contains("use chrono::NaiveTime;"));
+        // date / time pull in only the (re-exported) types they use —
+        // never the `DateTime, Utc` pair (that would be an unused import
+        // and fail the consumer's `-D warnings` build).
+        assert!(r.imports.contains("use rustio_admin::NaiveDate;"));
+        assert!(r.imports.contains("use rustio_admin::NaiveTime;"));
         assert!(!r.imports.contains("DateTime"));
         // All three are `Copy` → `.into()` with no `.clone()`.
         assert!(r.insert_values_expr.contains("self.price.into()"));
@@ -1146,10 +1149,10 @@ mod tests {
         assert!(r
             .from_row_assignments
             .contains("public_id: row.get_uuid(\"public_id\")?,"));
-        // Each pulls in only its own type crate.
-        assert!(r.imports.contains("use rust_decimal::Decimal;"));
-        assert!(r.imports.contains("use uuid::Uuid;"));
-        assert!(!r.imports.contains("chrono"));
+        // Each pulls in only its own type, via the framework re-exports.
+        assert!(r.imports.contains("use rustio_admin::Decimal;"));
+        assert!(r.imports.contains("use rustio_admin::Uuid;"));
+        assert!(!r.imports.contains("DateTime"));
         // Both are `Copy` → `.into()` with no `.clone()`.
         assert!(r.insert_values_expr.contains("self.price.into()"));
         assert!(r.insert_values_expr.contains("self.public_id.into()"));

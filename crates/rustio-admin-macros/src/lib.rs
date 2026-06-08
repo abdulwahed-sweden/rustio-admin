@@ -1,9 +1,22 @@
 //! Procedural macros for `rustio-admin`.
 //!
 //! `#[derive(RustioAdmin)]`. Given a user-written struct, the derive
-//! emits `impl AdminModel for TheStruct` with `ADMIN_NAME`,
-//! `DISPLAY_NAME`, `SINGULAR_NAME`, `FIELDS`, and the row/form/update
-//! helpers.
+//! emits two impls from the fields it already parses:
+//!
+//!   * `impl AdminModel` — `ADMIN_NAME`, `DISPLAY_NAME`,
+//!     `SINGULAR_NAME`, `FIELDS`, and the row/form/update helpers.
+//!   * `impl ::rustio_admin::orm::Model` — `TABLE`, `COLUMNS`,
+//!     `INSERT_COLUMNS`, `id`, `from_row`, `insert_values`. This used to
+//!     be hand-written in every model file (and had to be kept in sync
+//!     with the struct by hand); the derive now generates it from the
+//!     same field walk, so the struct is the single source of truth.
+//!
+//! Struct-level escape hatches for the rare cases the field walk can't
+//! infer: `#[rustio(table = "…")]` when the SQL table name differs from
+//! the auto slug (e.g. `Address` → `addresses`), and
+//! `#[rustio(extra_columns = ["…"])]` for generated/virtual columns
+//! that are not struct fields (e.g. a Postgres `tsvector`) but must be
+//! SELECT-safe and full-text-search eligible.
 //!
 //! The macro deliberately stays dumb: all runtime behaviour lives in
 //! `rustio_admin`. Keeping the macro small makes it easier to debug —
@@ -51,6 +64,14 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
     let mut from_form_parses = Vec::new();
     let mut from_form_fields = Vec::new();
     let mut update_tuples = Vec::new();
+
+    // `impl Model` (orm) accumulation. `COLUMNS` / `from_row` cover
+    // every struct field; `INSERT_COLUMNS` / `insert_values` skip the
+    // auto `id` (it is DB-assigned via `RETURNING id`).
+    let mut model_columns: Vec<String> = Vec::new();
+    let mut model_insert_columns: Vec<String> = Vec::new();
+    let mut from_row_inits = Vec::new();
+    let mut insert_value_exprs = Vec::new();
 
     for f in fields {
         let fname = f.ident.as_ref().unwrap();
@@ -129,6 +150,18 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             _ => kind,
         };
         let editable = fname_str != "id" && kind != FieldKind::DateTimeAuto;
+
+        // `impl Model` rows. Every field is a SELECT column and a
+        // `from_row` getter; every field but `id` is an INSERT column
+        // and an `insert_values` entry (auto timestamps included — they
+        // are written, just not editable in the form).
+        model_columns.push(fname_str.clone());
+        let row_getter = format_ident!("{}", kind.row_getter());
+        from_row_inits.push(quote! { #fname: row.#row_getter(#fname_str)? });
+        if fname_str != "id" {
+            model_insert_columns.push(fname_str.clone());
+            insert_value_exprs.push(quote! { self.#fname.clone().into() });
+        }
 
         let type_variant = kind.field_type_ident();
         let relation = parse_relation_attr(&f.attrs, &fname_str)?;
@@ -395,18 +428,18 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             }
             FieldKind::Decimal => {
                 from_form_parses.push(quote! {
-                    let #fname: ::rust_decimal::Decimal =
+                    let #fname: ::rustio_admin::rust_decimal::Decimal =
                         match form.get(#fname_str).map(str::trim) {
                             Some(raw) if !raw.is_empty() => match raw.parse() {
                                 Ok(v) => v,
                                 Err(_) => {
                                     errors.push(#number_msg.to_string());
-                                    ::rust_decimal::Decimal::ZERO
+                                    ::rustio_admin::rust_decimal::Decimal::ZERO
                                 }
                             },
                             _ => {
                                 errors.push(#required_msg.to_string());
-                                ::rust_decimal::Decimal::ZERO
+                                ::rustio_admin::rust_decimal::Decimal::ZERO
                             }
                         };
                 });
@@ -440,12 +473,12 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 from_form_parses.push(quote! {
                     let #fname = match form.get(#fname_str) {
                         Some(raw) if !raw.is_empty() => {
-                            match ::chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M") {
-                                Ok(dt) => ::chrono::DateTime::<::chrono::Utc>::from_naive_utc_and_offset(dt, ::chrono::Utc),
-                                Err(_) => { errors.push(#date_invalid_msg.to_string()); ::chrono::Utc::now() }
+                            match ::rustio_admin::chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M") {
+                                Ok(dt) => ::rustio_admin::chrono::DateTime::<::rustio_admin::chrono::Utc>::from_naive_utc_and_offset(dt, ::rustio_admin::chrono::Utc),
+                                Err(_) => { errors.push(#date_invalid_msg.to_string()); ::rustio_admin::chrono::Utc::now() }
                             }
                         }
-                        _ => { errors.push(#required_msg.to_string()); ::chrono::Utc::now() }
+                        _ => { errors.push(#required_msg.to_string()); ::rustio_admin::chrono::Utc::now() }
                     };
                 });
                 from_form_fields.push(quote! { #fname });
@@ -454,17 +487,17 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 from_form_parses.push(quote! {
                     let #fname = match form.get(#fname_str) {
                         Some(raw) if !raw.is_empty() => {
-                            match ::chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d") {
+                            match ::rustio_admin::chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d") {
                                 Ok(d) => d,
                                 Err(_) => {
                                     errors.push(#date_invalid_msg.to_string());
-                                    ::chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+                                    ::rustio_admin::chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
                                 }
                             }
                         }
                         _ => {
                             errors.push(#required_msg.to_string());
-                            ::chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+                            ::rustio_admin::chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
                         }
                     };
                 });
@@ -474,17 +507,17 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 from_form_parses.push(quote! {
                     let #fname = match form.get(#fname_str) {
                         Some(raw) if !raw.is_empty() => {
-                            match ::chrono::NaiveTime::parse_from_str(raw, "%H:%M") {
+                            match ::rustio_admin::chrono::NaiveTime::parse_from_str(raw, "%H:%M") {
                                 Ok(t) => t,
                                 Err(_) => {
                                     errors.push(#time_invalid_msg.to_string());
-                                    ::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                                    ::rustio_admin::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
                                 }
                             }
                         }
                         _ => {
                             errors.push(#required_msg.to_string());
-                            ::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                            ::rustio_admin::chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
                         }
                     };
                 });
@@ -493,16 +526,16 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             FieldKind::Uuid => {
                 from_form_parses.push(quote! {
                     let #fname = match form.get(#fname_str).map(str::trim) {
-                        Some(raw) if !raw.is_empty() => match ::uuid::Uuid::parse_str(raw) {
+                        Some(raw) if !raw.is_empty() => match ::rustio_admin::uuid::Uuid::parse_str(raw) {
                             Ok(u) => u,
                             Err(_) => {
                                 errors.push(#uuid_invalid_msg.to_string());
-                                ::uuid::Uuid::nil()
+                                ::rustio_admin::uuid::Uuid::nil()
                             }
                         },
                         _ => {
                             errors.push(#required_msg.to_string());
-                            ::uuid::Uuid::nil()
+                            ::rustio_admin::uuid::Uuid::nil()
                         }
                     };
                 });
@@ -511,7 +544,7 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             FieldKind::DateTimeAuto => {
                 // created_at-style fields default to now().
                 from_form_parses.push(quote! {
-                    let #fname = ::chrono::Utc::now();
+                    let #fname = ::rustio_admin::chrono::Utc::now();
                 });
                 from_form_fields.push(quote! { #fname });
             }
@@ -520,12 +553,12 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 // garbage → validation error + None (NOT silently
                 // defaulted to `Utc::now()` like the non-optional arm).
                 from_form_parses.push(quote! {
-                    let #fname: ::std::option::Option<::chrono::DateTime<::chrono::Utc>> =
+                    let #fname: ::std::option::Option<::rustio_admin::chrono::DateTime<::rustio_admin::chrono::Utc>> =
                         match form.get(#fname_str).map(str::trim) {
                             None | Some("") => ::std::option::Option::None,
-                            Some(raw) => match ::chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M") {
+                            Some(raw) => match ::rustio_admin::chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M") {
                                 Ok(dt) => ::std::option::Option::Some(
-                                    ::chrono::DateTime::<::chrono::Utc>::from_naive_utc_and_offset(dt, ::chrono::Utc),
+                                    ::rustio_admin::chrono::DateTime::<::rustio_admin::chrono::Utc>::from_naive_utc_and_offset(dt, ::rustio_admin::chrono::Utc),
                                 ),
                                 Err(_) => {
                                     errors.push(#date_invalid_msg.to_string());
@@ -549,6 +582,22 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
             quote! { self.#id.clone().to_string() }
         })
         .unwrap_or_else(|| quote! { format!("#{}", self.id) });
+
+    // SQL table name. Defaults to the admin slug (`Product` → `products`),
+    // which matches the table for every conventionally-pluralised model;
+    // `#[rustio(table = "…")]` overrides the cases the slug can't reach
+    // (e.g. `Address` → slug `address`, table `addresses`).
+    let table_name = match struct_overrides.table {
+        Some(ref t) => t.clone(),
+        None => admin_name.clone(),
+    };
+    // Virtual/generated columns appended to COLUMNS only — see the
+    // crate docs. Never inserted, never read by `from_row`.
+    for extra in &struct_overrides.extra_columns {
+        model_columns.push(extra.clone());
+    }
+    let column_lits = model_columns.iter().map(|s| s.as_str());
+    let insert_column_lits = model_insert_columns.iter().map(|s| s.as_str());
 
     Ok(quote! {
         impl ::rustio_admin::admin::AdminModel for #struct_name {
@@ -587,6 +636,26 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
 
             fn values_to_update(&self) -> ::std::vec::Vec<(&'static str, ::rustio_admin::orm::Value)> {
                 ::std::vec![#(#update_tuples),*]
+            }
+        }
+
+        impl ::rustio_admin::orm::Model for #struct_name {
+            const TABLE: &'static str = #table_name;
+            const COLUMNS: &'static [&'static str] = &[ #(#column_lits),* ];
+            const INSERT_COLUMNS: &'static [&'static str] = &[ #(#insert_column_lits),* ];
+
+            fn id(&self) -> i64 {
+                self.id
+            }
+
+            fn from_row(row: ::rustio_admin::orm::Row<'_>) -> ::rustio_admin::error::Result<Self> {
+                ::std::result::Result::Ok(Self {
+                    #(#from_row_inits),*
+                })
+            }
+
+            fn insert_values(&self) -> ::std::vec::Vec<::rustio_admin::orm::Value> {
+                ::std::vec![ #(#insert_value_exprs),* ]
             }
         }
     })
@@ -675,6 +744,33 @@ impl FieldKind {
             FieldKind::OptionalDateTime => format_ident!("OptionalDateTime"),
             FieldKind::FilePath => format_ident!("FilePath"),
             FieldKind::OptionalFilePath => format_ident!("OptionalFilePath"),
+        }
+    }
+
+    /// The `Row` accessor `Model::from_row` calls for this kind. The
+    /// validated-string variants (Email / Phone / Choice) and the
+    /// file-path variants are plain `TEXT` at rest, so they read back
+    /// through the same `get_string` / `get_optional_string` as a
+    /// String.
+    fn row_getter(&self) -> &'static str {
+        match self {
+            FieldKind::I32 => "get_i32",
+            FieldKind::I64 => "get_i64",
+            FieldKind::F64 => "get_f64",
+            FieldKind::Decimal => "get_decimal",
+            FieldKind::Bool => "get_bool",
+            FieldKind::String
+            | FieldKind::Email
+            | FieldKind::Phone
+            | FieldKind::Choice
+            | FieldKind::FilePath => "get_string",
+            FieldKind::OptionalString | FieldKind::OptionalFilePath => "get_optional_string",
+            FieldKind::DateTime | FieldKind::DateTimeAuto => "get_datetime",
+            FieldKind::OptionalDateTime => "get_optional_datetime",
+            FieldKind::Date => "get_date",
+            FieldKind::Time => "get_time",
+            FieldKind::Uuid => "get_uuid",
+            FieldKind::OptionalI64 => "get_optional_i64",
         }
     }
 }
@@ -788,6 +884,12 @@ fn classify_type(ty: &syn::Type) -> syn::Result<FieldKind> {
 struct StructOverrides {
     admin_name: Option<String>,
     display_name: Option<String>,
+    /// SQL table name override for `Model::TABLE`. Absent → the admin
+    /// slug is used.
+    table: Option<String>,
+    /// Generated/virtual columns appended to `Model::COLUMNS` that are
+    /// not struct fields (e.g. a Postgres `tsvector`).
+    extra_columns: Vec<String>,
 }
 
 fn parse_struct_attr(attrs: &[syn::Attribute]) -> syn::Result<StructOverrides> {
@@ -811,6 +913,29 @@ fn parse_struct_attr(attrs: &[syn::Attribute]) -> syn::Result<StructOverrides> {
                     out.display_name = Some(s.value());
                 }
                 Ok(())
+            } else if m.path.is_ident("table") {
+                let value = m.value()?;
+                let lit: Lit = value.parse()?;
+                if let Lit::Str(s) = lit {
+                    out.table = Some(s.value());
+                }
+                Ok(())
+            } else if m.path.is_ident("extra_columns") {
+                let array: syn::ExprArray = m.value()?.parse()?;
+                for elem in &array.elems {
+                    match elem {
+                        syn::Expr::Lit(syn::ExprLit {
+                            lit: Lit::Str(s), ..
+                        }) => out.extra_columns.push(s.value()),
+                        other => {
+                            return Err(syn::Error::new_spanned(
+                                other,
+                                "#[rustio(extra_columns = [...])] elements must be string literals",
+                            ));
+                        }
+                    }
+                }
+                Ok(())
             } else {
                 // Field-level keys (e.g. `belongs_to`, `display`)
                 // legitimately appear on `#[rustio(...)]` placed on
@@ -819,7 +944,8 @@ fn parse_struct_attr(attrs: &[syn::Attribute]) -> syn::Result<StructOverrides> {
                 // surprising. Reject so a misplaced field attribute
                 // doesn't silently fail.
                 Err(m.error(
-                    "unknown rustio struct attribute; expected `admin_name` or `display_name`",
+                    "unknown rustio struct attribute; expected `admin_name`, \
+                     `display_name`, `table`, or `extra_columns`",
                 ))
             }
         })?;
