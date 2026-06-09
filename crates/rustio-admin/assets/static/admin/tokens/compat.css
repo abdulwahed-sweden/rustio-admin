@@ -1,0 +1,71 @@
+/* ============================================================
+ * rustio-admin / tokens / compat
+ *
+ * Alias layer: a handful of admin pages (api surface, docs, csv-import
+ * result, and a few page headers) carry self-contained inline <style>
+ * blocks that reference the framework's earlier token names. Rather
+ * than hand-rewrite each, this sheet maps every legacy name onto its
+ * live DS token, so those pages render with the current Teal palette,
+ * stone neutrals, and type scale. New code should use the canonical
+ * tokens directly — this exists only so the inline-styled pages stay
+ * correct without a second visual system.
+ * ============================================================ */
+
+:root {
+  /* Spacing */
+  --rio-s1: var(--rio-space-4);
+  --rio-s2: var(--rio-space-8);
+  --rio-s3: var(--rio-space-12);
+  --rio-s4: var(--rio-space-16);
+  --rio-s5: var(--rio-space-20);
+  --rio-s6: var(--rio-space-32);
+
+  /* Font sizes */
+  --rio-fs-display: 28px;
+  --rio-fs-h2: 22px;
+  --rio-fs-lg: 18px;
+  --rio-fs-md: 16px;
+  --rio-fs-base: 15px;
+  --rio-fs-sm: 14px;
+  --rio-fs-xs: 12px;
+
+  /* Font weights + line heights */
+  --rio-fw-bold: 700;
+  --rio-fw-semibold: 600;
+  --rio-fw-regular: 400;
+  --rio-lh-tight: 1.12;
+  --rio-lh-ui: 1.5;
+
+  /* Text roles */
+  --rio-text-strong: var(--rio-text-hi);
+  --rio-text-muted: var(--rio-text-mute);
+  --rio-text-subtle: var(--rio-text-faint);
+
+  /* Surfaces + lines */
+  --rio-surface-2: var(--rio-sunken);
+  --rio-surface-3: var(--rio-raised);
+  --rio-surface-chrome: #11202b;          /* dark code slab (both themes) */
+  --rio-border: var(--rio-line);
+  --rio-border-soft: var(--rio-line);
+  --rio-border-strong: var(--rio-line-strong);
+
+  /* Radius + shadow */
+  --rio-radius: var(--rio-radius-md);
+  --rio-shadow: var(--rio-shadow-sm);
+  --rio-shadow-inset: inset 0 1px 2px rgba(17, 23, 34, 0.04);
+
+  /* Accent (Teal) + secondary (gold) */
+  --rio-accent: var(--rio-rust);
+  --rio-accent-soft: var(--rio-rust-tint);
+  --rio-accent-border: var(--rio-rust-tint-2);
+  --rio-accent-rgb: 15, 140, 123;
+  --rio-accent2: var(--rio-gold);
+  --rio-accent2-soft: var(--rio-gold-tint);
+  --rio-accent2-ink: var(--rio-gold);
+
+  /* Status fills */
+  --rio-warning: var(--rio-warn);
+  --rio-success-bg: var(--rio-success-tint);
+  --rio-danger-bg: var(--rio-danger-tint);
+  --rio-warning-bg: var(--rio-warn-tint);
+}

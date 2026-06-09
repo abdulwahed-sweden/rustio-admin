@@ -30,7 +30,8 @@
   padding: var(--rio-space-32) var(--rio-space-32) var(--rio-space-24);
   margin: 0;
 }
-.rio-fieldset-legend {
+.rio-fieldset-legend,
+.rio-fieldset > legend {
   font-family: var(--rio-font-mono);
   font-weight: var(--rio-weight-semibold);
   font-size: var(--rio-text-12);
@@ -40,6 +41,31 @@
   padding: 0;
   margin-block-end: var(--rio-space-20);
 }
+
+/* Radio option rows (lock_user duration). Stacked, tappable, with the
+ * accent focus ring — same language as .rio-input. */
+.rio-radio {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-space-12);
+  padding: 10px var(--rio-space-12);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface);
+  cursor: pointer;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), background-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-radio + .rio-radio { margin-block-start: var(--rio-space-8); }
+.rio-radio:hover { border-color: var(--rio-text-faint); background: var(--rio-raised); }
+.rio-radio:focus-within { border-color: var(--rio-rust); box-shadow: 0 0 0 3px var(--rio-rust-tint-2); }
+.rio-radio input[type="radio"] { inline-size: 18px; block-size: 18px; accent-color: var(--rio-rust); flex: none; }
+.rio-radio > span { display: inline-flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
+
+/* Inline input — opts out of full-width block sizing for fields that sit
+ * inside a sentence (the freeform "… [n] minutes" row). */
+.rio-input--inline { display: inline-block; inline-size: auto; min-block-size: 36px; padding: 6px var(--rio-space-8); }
+
+.rio-field-error { color: var(--rio-danger); font-size: var(--rio-text-13); margin: var(--rio-space-8) 0 0; }
 
 /* Two-column responsive field grid; full-span fields take the row. */
 .rio-fieldset-grid {

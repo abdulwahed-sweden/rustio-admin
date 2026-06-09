@@ -7,7 +7,7 @@
     {% if unread_count > 0 %}
     <form method="post" action="/admin/notifications/mark_all_read" class="rio-form-inline">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <button type="submit" class="rio-button rio-button--primary">Mark all read</button>
+      <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Mark all read</button>
     </form>
     {% endif %}
   </div>

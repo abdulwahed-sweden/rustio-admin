@@ -65,6 +65,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/tokens/motion.css"),
     "\n",
+    include_str!("../../assets/static/admin/tokens/compat.css"),
+    "\n",
     // ---- base -------------------------------------------------
     include_str!("../../assets/static/admin/base/fonts.css"),
     "\n",

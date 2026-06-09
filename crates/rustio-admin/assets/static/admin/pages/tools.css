@@ -32,6 +32,14 @@
 .rio-pill--info,    .lx-badge--info     { background: var(--rio-rust-tint);     color: var(--rio-rust); }
 .rio-pill--neutral, .lx-badge--neutral  { background: var(--rio-sunken);        color: var(--rio-text-mute); }
 .rio-pill--badge-warning { background: var(--rio-warn-tint); color: var(--rio-warn); }
+.rio-pill--badge-success { background: var(--rio-success-tint); color: var(--rio-success); }
+.rio-pill--badge-danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
+.rio-pill--badge-neutral { background: var(--rio-sunken);       color: var(--rio-text-mute); }
+
+/* ---- Health page ---- */
+.rio-health__summary { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-16); }
+.rio-health__row--error td { background: var(--rio-danger-tint); }
+.rio-health__row--warn td { background: var(--rio-warn-tint); }
 
 /* ---- Avatar + "by" ---- */
 .rio-avatar { inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--rio-radius-md); background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-family: var(--rio-font-mono); font-weight: 700; font-size: var(--rio-text-12); }
