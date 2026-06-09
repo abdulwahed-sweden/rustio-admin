@@ -65,6 +65,26 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **Admin design overhaul — the "RustIO Console" at an operator-comfort
+  scale.** Every admin surface (dashboard, lists, forms, confirms,
+  errors, login + recovery/MFA, users & groups + permission grid, account
+  / sessions, audit log, db browser, feature flags, API surface, docs,
+  health, notifications) is rebuilt on one language: a dark **labeled**
+  command rail, a teal accent (`--rio-rust*` switched from cobalt to
+  RustIO Teal), and self-hosted Spectral / Hanken Grotesk / JetBrains Mono
+  type. The type scale was rescaled to the px it renders — body is 16px,
+  sidebar nav 17px, form labels 16px semibold, inputs 16px on a 46px
+  control, tables 16px, page titles 42–48px — with generous form spacing
+  (40px cards, 32px field gaps) and a wider 1100px form column. The
+  **account menu lives in the top-right header** (sessions / change
+  password / two-factor / sign out); the rail is navigation only. Theme
+  (light default + dim-slate dark) and rail-collapse toggles are wired and
+  persisted. New `tokens/compat.css` maps the legacy token names still used
+  by the inline-styled tool pages onto the live DS tokens. **No backend
+  change** — CSS, templates, JS, and two `admin_css_payload` test updates
+  only; no schema, route, auth, permission, or migration impact.
+
 
 ## [0.28.0] — 2026-06-08
 
