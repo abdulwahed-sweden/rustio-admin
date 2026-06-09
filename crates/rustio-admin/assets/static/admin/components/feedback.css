@@ -1,0 +1,93 @@
+/* ============================================================
+   RustIO — Feedback
+   Alert/Callout · Toast · Tooltip · Dialog · Skeleton
+   Neutral grays + a single accent — never a rainbow.
+   ============================================================ */
+
+/* Inline alert / callout */
+.rio-alert {
+  display: flex;
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md);
+  background: var(--rio-surface);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text);
+}
+.rio-alert-icon { flex: none; inline-size: 18px; block-size: 18px; margin-block-start: 1px; }
+.rio-alert-title { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); margin-block-end: 2px; }
+.rio-alert--info    { border-inline-start: 2px solid var(--rio-text-faint); }
+.rio-alert--info .rio-alert-icon { color: var(--rio-text-mute); }
+.rio-alert--success { border-inline-start: 2px solid var(--rio-success); background: var(--rio-success-tint); }
+.rio-alert--success .rio-alert-icon { color: var(--rio-success); }
+.rio-alert--warn    { border-inline-start: 2px solid var(--rio-warn); background: var(--rio-warn-tint); }
+.rio-alert--warn .rio-alert-icon { color: var(--rio-warn); }
+.rio-alert--error   { border-inline-start: 2px solid var(--rio-danger); background: var(--rio-danger-tint); }
+.rio-alert--error .rio-alert-icon { color: var(--rio-danger); }
+
+/* Toast */
+.rio-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  background: var(--rio-overlay);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md);
+  box-shadow: var(--rio-shadow-lg), var(--rio-highlight-top);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text-hi);
+  min-inline-size: 280px;
+  max-inline-size: 420px;
+}
+.rio-toast-dot { flex: none; }
+.rio-toast-msg { flex: 1; }
+.rio-toast-close { flex: none; }
+
+/* Tooltip */
+.rio-tooltip {
+  display: inline-block;
+  padding: 5px 9px;
+  background: var(--rio-text-hi);
+  color: var(--rio-bg);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-medium);
+  border-radius: var(--rio-radius-sm);
+  box-shadow: var(--rio-shadow-md);
+  white-space: nowrap;
+}
+
+/* Dialog / modal */
+.rio-dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(26, 26, 25, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--rio-space-24);
+  z-index: 50;
+}
+.rio-dialog {
+  inline-size: 100%;
+  max-inline-size: 480px;
+  background: var(--rio-overlay);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-xl), var(--rio-highlight-top);
+  overflow: hidden;
+}
+.rio-dialog-head { padding: var(--rio-space-20) var(--rio-space-24) var(--rio-space-8); }
+.rio-dialog-title { font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-20); color: var(--rio-text-hi); letter-spacing: -0.02em; }
+.rio-dialog-desc { font-size: var(--rio-text-14); color: var(--rio-text-mute); margin-block-start: 4px; }
+.rio-dialog-body { padding: var(--rio-space-8) var(--rio-space-24) var(--rio-space-16); }
+.rio-dialog-foot { display: flex; justify-content: flex-end; gap: var(--rio-space-8); padding: var(--rio-space-16) var(--rio-space-24); border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); }
+
+/* Skeleton */
+.rio-skeleton {
+  display: block;
+  background: linear-gradient(90deg, var(--rio-sunken) 25%, var(--rio-raised) 50%, var(--rio-sunken) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--rio-radius-sm);
+  animation: rio-shimmer 1.4s var(--rio-ease) infinite;
+}
+@keyframes rio-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .rio-skeleton { animation: none; } }

@@ -1,27 +1,142 @@
 /* ============================================================
- * rustio-admin / base / base
- *
- * Body baseline — font family, size, line-height, color, bg.
- * Sets the global typographic defaults that every other rule
- * inherits or overrides. Heading + paragraph + code rules live
- * in base/typography.css.
- * ============================================================ */
+   RustIO — Base layer
+   Element defaults + a few primitive utilities built on tokens.
+   Logical properties throughout for RTL parity.
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
-  font-family: var(--rio-font-sans);
-  font-size: var(--rio-font-size-base);   /* 16px */
-  line-height: var(--rio-lh-body);        /* 1.6 */
-  font-weight: var(--rio-fw-regular);
+  margin: 0;
+  background-color: var(--rio-bg);
+  /* Faint engineered dot-grid — barely visible, evokes RustIO's precision. */
+  background-image: radial-gradient(var(--rio-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
   color: var(--rio-text);
-  background: var(--rio-bg);
+  font-family: var(--rio-font-body);
+  font-size: var(--rio-text-14);
+  line-height: var(--rio-leading-body);
+  font-weight: var(--rio-weight-regular);
+  letter-spacing: var(--rio-tracking-tight); /* Hanken Grotesk — crisp, refined */
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Safe global features — kerning + contextual alternates apply
-   * cleanly to every script. Stylistic alternates (Geist's ss01/ss03/
-   * cv11) are opted-in via .rio-latin so they never interfere with
-   * Tajawal / Noto Naskh / CJK shaping. */
-  font-feature-settings: "kern", "calt";
-  font-variant-ligatures: common-ligatures;
-  letter-spacing: var(--rio-tracking-body);
+  /* Numerals are ALWAYS Western, lining + tabular. */
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* App-canvas utility — carries the same faint dot-grid as <body> so full-height
+   app shells (which paint their own background) keep the texture. */
+.rio-canvas {
+  background-color: var(--rio-bg);
+  background-image: radial-gradient(var(--rio-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Headings default to the display family (Spectral). */
+h1, h2, h3, h4 {
+  font-family: var(--rio-font-display);
+  color: var(--rio-text-hi);
+  letter-spacing: var(--rio-tracking-display);
+  line-height: var(--rio-leading-display);
+  font-weight: var(--rio-weight-display);
+  margin: 0;
+  text-wrap: balance; /* tidy, even headline line-breaks */
+}
+
+/* Long-form paragraphs break more gracefully. */
+p { text-wrap: pretty; }
+
+/* ============================================================
+   RTL parity (layout only)
+   Layout mirrors via logical properties everywhere. Keep numbers, code,
+   and Latin tokens Western/LTR even inside an RTL context.
+   ============================================================ */
+/* When a developer writes Arabic (or any joined/RTL script), reset Latin
+   tracking — letter-spacing breaks Arabic letter-joining — and give headings a
+   touch more line-height so the taller Naskh/Tajawal glyphs breathe. The brand
+   Latin faces are untouched; this only applies to Arabic-tagged content. */
+:lang(ar), [lang="ar"], [dir="rtl"] {
+  letter-spacing: 0;
+}
+:is(:lang(ar), [lang="ar"], [dir="rtl"]) :is(h1, h2, h3, h4) {
+  letter-spacing: 0;
+  line-height: var(--rio-leading-tight);
+}
+/* Mono eyebrows carry wide caps tracking + uppercase — meaningless for Arabic;
+   neutralise both so Arabic labels read naturally. */
+:is(:lang(ar), [lang="ar"], [dir="rtl"]) :is(.rio-eyebrow, .rio-nav-section, .rio-table th, .rio-statstrip-label) {
+  letter-spacing: 0;
+  text-transform: none;
+}
+[dir="rtl"] :is(code, pre, kbd, samp, .rio-cell-mono, .rio-stat-value) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--rio-font-mono);
+}
+
+a {
+  color: var(--rio-rust);
+  text-decoration: none;
+}
+a:hover { color: var(--rio-rust-hover); }
+
+/* --- Focus: always-visible copper ring, offset --- */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--rio-rust);
+  outline-offset: 2px;
+  border-radius: var(--rio-radius-sm);
+}
+
+::selection {
+  background: var(--rio-rust-tint-2);
+  color: var(--rio-text-hi);
+}
+
+/* --- The ◉ mark: calm processing sweep (never a spinner) --- */
+@keyframes rio-ring-sweep {
+  0%   { stroke-dashoffset: var(--rio-ring-circ, 100); opacity: 0.35; }
+  50%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.35; }
+}
+
+.rio-mark--processing .rio-mark-ring {
+  stroke-dasharray: var(--rio-ring-circ, 100);
+  animation: rio-ring-sweep var(--rio-dur-sweep) var(--rio-ease-sweep) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rio-mark--processing .rio-mark-ring { animation: none; }
+}
+
+/* --- Orchestrated page-load reveal (staggered) --- */
+@keyframes rio-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rio-reveal {
+    animation: rio-reveal var(--rio-dur-slow) var(--rio-ease) both;
+  }
+}
+
+/* --- Mono eyebrow / label utility --- */
+.rio-eyebrow {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mute);
 }

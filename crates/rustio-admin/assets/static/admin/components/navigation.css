@@ -1,0 +1,213 @@
+/* ============================================================
+   RustIO — Navigation
+   Sidebar · Topbar · Breadcrumbs · Tabs · Pagination · Command palette
+   ============================================================ */
+
+/* Tabs */
+.rio-tabs { display: flex; gap: 2px; border-block-end: 1px solid var(--rio-line); }
+.rio-tab {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  padding: 10px 14px;
+  font-family: var(--rio-font-body);
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-medium);
+  color: var(--rio-text-mute);
+  border-block-end: 2px solid transparent;
+  margin-block-end: -1px;
+  transition: color var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-tab:hover { color: var(--rio-text-hi); }
+.rio-tab[aria-selected="true"] { color: var(--rio-text-hi); border-block-end-color: var(--rio-rust); }
+.rio-tab:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: -2px; border-radius: var(--rio-radius-sm); }
+
+/* Breadcrumbs */
+.rio-crumbs { display: flex; align-items: center; gap: 6px; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-crumbs a { color: var(--rio-text-mute); }
+.rio-crumbs a:hover { color: var(--rio-text-hi); }
+.rio-crumbs .rio-crumb-sep { color: var(--rio-text-faint); }
+.rio-crumbs .rio-crumb-current { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }
+
+/* Pagination */
+.rio-pagination { display: flex; align-items: center; gap: 4px; }
+.rio-page {
+  min-inline-size: 32px; block-size: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding-inline: 8px;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-13);
+  color: var(--rio-text-mute);
+  background: transparent; border: 1px solid transparent; border-radius: var(--rio-radius-sm);
+  cursor: pointer;
+}
+.rio-page:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-page[aria-current="page"] { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
+.rio-page:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Sidebar */
+.rio-sidebar {
+  inline-size: 256px;
+  flex: none;
+  background: var(--rio-surface);
+  border-inline-end: 1px solid var(--rio-line);
+  display: flex; flex-direction: column;
+}
+.rio-sidebar--collapsed { inline-size: 60px; }
+.rio-nav { display: flex; flex-direction: column; gap: 2px; padding: var(--rio-space-8); }
+.rio-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.rio-nav-group + .rio-nav-group { margin-block-start: var(--rio-space-6); }
+.rio-nav-section { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); letter-spacing: .06em; text-transform: uppercase; color: var(--rio-text-faint); padding: var(--rio-space-12) var(--rio-space-12) var(--rio-space-6); }
+.rio-nav-item {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  padding: 8px 12px;
+  min-block-size: 40px;
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-semibold);
+  color: var(--rio-text-mute);
+  border-radius: var(--rio-radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  transition: background var(--rio-dur-fast) var(--rio-ease), color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-nav-item:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-nav-item[aria-current="page"] { background: var(--rio-rust-tint); color: var(--rio-rust); }
+/* Active rail — the one place copper marks position. */
+.rio-nav-item[aria-current="page"]::before {
+  content: ""; position: absolute; inset-inline-start: -8px; inset-block: 9px;
+  inline-size: 3px; border-radius: 999px; background: var(--rio-rust);
+}
+.rio-nav-item svg { inline-size: 18px; block-size: 18px; flex: none; }
+.rio-nav-count {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-medium);
+  color: var(--rio-text-faint); font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-nav-item[aria-current="page"] .rio-nav-count { color: var(--rio-rust); }
+.rio-sidebar-foot { padding: var(--rio-space-8); border-block-start: 1px solid var(--rio-line); }
+
+/* Topbar */
+.rio-topbar {
+  block-size: 56px;
+  display: flex; align-items: center; gap: var(--rio-space-16);
+  padding-inline: var(--rio-space-20);
+  background: var(--rio-surface);
+  border-block-end: 1px solid var(--rio-line);
+  position: sticky; inset-block-start: 0; z-index: 10;
+}
+/* Brand zone in the topbar — aligns with the 256px sidebar column. */
+.rio-brand {
+  display: flex; align-items: center; gap: var(--rio-space-8);
+  inline-size: 224px; flex: none;
+}
+.rio-brand-word {
+  font-family: var(--rio-font-display); font-weight: var(--rio-weight-bold);
+  font-size: var(--rio-text-20); letter-spacing: -0.012em; color: var(--rio-text-hi);
+}
+
+/* App footer bar */
+.rio-appfoot {
+  block-size: 44px; flex: none;
+  display: flex; align-items: center; gap: var(--rio-space-16);
+  padding-inline: var(--rio-space-20);
+  background: var(--rio-surface);
+  border-block-start: 1px solid var(--rio-line);
+  font-size: var(--rio-text-13); color: var(--rio-text-mute);
+}
+.rio-appfoot-links { display: flex; align-items: center; gap: var(--rio-space-16); }
+.rio-appfoot-links a { color: var(--rio-text-mute); text-decoration: none; }
+.rio-appfoot-links a:hover { color: var(--rio-text-hi); }
+.rio-appfoot-meta { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
+
+/* DEVELOPMENT pill */
+.rio-devpill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
+  letter-spacing: .04em; text-transform: uppercase;
+  color: var(--rio-gold); padding: 2px 8px;
+  background: var(--rio-gold-tint); border-radius: var(--rio-radius-pill);
+}
+.rio-devpill::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 999px; background: var(--rio-gold); }
+
+/* Dropdown menu (filters, account) */
+.rio-menu {
+  position: absolute; z-index: 40;
+  min-inline-size: 200px; padding: var(--rio-space-6);
+  background: var(--rio-overlay);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-lg), var(--rio-highlight-top);
+}
+.rio-menu-item {
+  display: flex; align-items: center; gap: var(--rio-space-8);
+  inline-size: 100%; text-align: start;
+  padding: 8px 10px; border: 0; background: none; cursor: pointer;
+  font-family: var(--rio-font-body); font-size: var(--rio-text-14);
+  color: var(--rio-text); border-radius: var(--rio-radius-sm);
+}
+.rio-menu-item:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-menu-item[aria-checked="true"] { color: var(--rio-rust); }
+.rio-menu-item[aria-checked="true"] .rio-menu-check { color: var(--rio-rust); }
+.rio-menu-check { margin-inline-start: auto; }
+.rio-menu-sep { block-size: 1px; background: var(--rio-line); margin: var(--rio-space-6) 0; }
+.rio-menu-label { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); letter-spacing: .05em; text-transform: uppercase; color: var(--rio-text-faint); padding: var(--rio-space-6) 10px var(--rio-space-4); }
+
+/* Command palette */
+.rio-cmdk-overlay {
+  position: fixed; inset: 0;
+  background: rgba(26, 26, 25, 0.45);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-block-start: 14vh;
+  z-index: 60;
+}
+.rio-cmdk {
+  inline-size: 100%; max-inline-size: 560px;
+  background: var(--rio-overlay);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-xl), var(--rio-highlight-top);
+  overflow: hidden;
+}
+.rio-cmdk-input-row { display: flex; align-items: center; gap: var(--rio-space-12); padding: var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+.rio-cmdk-input { flex: 1; border: 0; background: none; outline: none; font-family: var(--rio-font-body); font-size: var(--rio-text-17); color: var(--rio-text-hi); }
+.rio-cmdk-input::placeholder { color: var(--rio-text-faint); }
+.rio-cmdk-list { max-block-size: 320px; overflow: auto; padding: var(--rio-space-8); }
+.rio-cmdk-group { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); letter-spacing: .05em; text-transform: uppercase; color: var(--rio-text-faint); padding: var(--rio-space-8) var(--rio-space-12) var(--rio-space-4); }
+.rio-cmdk-item {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  padding: 9px 12px;
+  border-radius: var(--rio-radius-md);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text);
+  cursor: pointer;
+}
+.rio-cmdk-item svg { inline-size: 16px; block-size: 16px; color: var(--rio-text-mute); flex: none; }
+.rio-cmdk-item[aria-selected="true"] { background: var(--rio-rust-tint); color: var(--rio-text-hi); }
+.rio-cmdk-item[aria-selected="true"] svg { color: var(--rio-rust); }
+.rio-cmdk-item .rio-cmdk-hint { margin-inline-start: auto; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
+.rio-kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-inline-size: 18px; padding: 1px 5px;
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  color: var(--rio-text-mute);
+  background: var(--rio-sunken);
+  border: 1px solid var(--rio-line);
+  border-radius: 5px;
+}
+
+/* Account button (topbar) */
+.rio-account {
+  display: flex; align-items: center; gap: var(--rio-space-8);
+  block-size: 36px; padding-inline: 8px 10px;
+  background: none; border: 1px solid transparent; border-radius: var(--rio-radius-md);
+  cursor: pointer; color: var(--rio-text);
+  transition: background var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-account:hover { background: var(--rio-raised); border-color: var(--rio-line); }
+.rio-account[aria-expanded="true"] { background: var(--rio-raised); border-color: var(--rio-line); }
+.rio-account-email { font-size: var(--rio-text-14); font-weight: var(--rio-weight-medium); color: var(--rio-text); }
+.rio-account svg { color: var(--rio-text-faint); }
+
+/* Command-palette empty state */
+.rio-cmdk-empty { padding: var(--rio-space-24); text-align: center; color: var(--rio-text-faint); font-size: var(--rio-text-14); }
+
+/* "Next" pagination button with a label */
+.rio-page--next { inline-size: auto; gap: 5px; padding-inline: 12px; font-family: var(--rio-font-body); font-weight: var(--rio-weight-medium); }

@@ -63,68 +63,33 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/tokens/typography.css"),
     "\n",
+    include_str!("../../assets/static/admin/tokens/motion.css"),
+    "\n",
     // ---- base -------------------------------------------------
-    include_str!("../../assets/static/admin/base/reset.css"),
+    include_str!("../../assets/static/admin/base/fonts.css"),
     "\n",
     include_str!("../../assets/static/admin/base/base.css"),
     "\n",
-    include_str!("../../assets/static/admin/base/typography.css"),
-    "\n",
     include_str!("../../assets/static/admin/base/typography-i18n.css"),
     "\n",
-    include_str!("../../assets/static/admin/base/utilities.css"),
-    "\n",
-    // ---- layout -----------------------------------------------
-    include_str!("../../assets/static/admin/layout/shell.css"),
-    "\n",
-    include_str!("../../assets/static/admin/layout/topbar.css"),
-    "\n",
-    include_str!("../../assets/static/admin/layout/sidebar.css"),
-    "\n",
-    include_str!("../../assets/static/admin/layout/footer.css"),
-    "\n",
     // ---- components -------------------------------------------
-    include_str!("../../assets/static/admin/components/cards.css"),
-    "\n",
     include_str!("../../assets/static/admin/components/buttons.css"),
     "\n",
     include_str!("../../assets/static/admin/components/forms.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/tables.css"),
+    include_str!("../../assets/static/admin/components/data.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/filters.css"),
+    include_str!("../../assets/static/admin/components/feedback.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/dropdowns.css"),
+    include_str!("../../assets/static/admin/components/navigation.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/search_palette.css"),
+    include_str!("../../assets/static/admin/components/code.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/pagination.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/pills.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/flashes.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/timeline.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/tabs.css"),
+    // ---- layout (RustIO Console) ------------------------------
+    include_str!("../../assets/static/admin/layout/console.css"),
     "\n",
     // ---- pages ------------------------------------------------
-    include_str!("../../assets/static/admin/pages/auth.css"),
-    "\n",
     include_str!("../../assets/static/admin/pages/dashboard.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/db_browser.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/permissions.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/sessions.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/errors.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/list.css"),
-    "\n",
-    // ---- responsive — mobile-first overrides, last so they win.
-    include_str!("../../assets/static/admin/layout/responsive.css"),
     "\n",
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
@@ -201,6 +166,26 @@ const FONT_NOTO_DEVA: &[u8] =
 const FONT_NOTO_JP: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansJP-Regular.woff2");
 const FONT_NOTO_KR: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansKR-Regular.woff2");
 const FONT_NOTO_SC: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansSC-Regular.woff2");
+// RustIO Design System identity faces (Latin). Display: Spectral
+// (static 400/500/600/700). Body: Hanken Grotesk (variable wght
+// 400..800, latin + latin-ext). Mono: JetBrains Mono (variable wght
+// 400..700, latin + latin-ext). @font-face in base/fonts.css.
+const FONT_SPECTRAL_400: &[u8] =
+    include_bytes!("../../assets/static/fonts/Spectral-400-latin.woff2");
+const FONT_SPECTRAL_500: &[u8] =
+    include_bytes!("../../assets/static/fonts/Spectral-500-latin.woff2");
+const FONT_SPECTRAL_600: &[u8] =
+    include_bytes!("../../assets/static/fonts/Spectral-600-latin.woff2");
+const FONT_SPECTRAL_700: &[u8] =
+    include_bytes!("../../assets/static/fonts/Spectral-700-latin.woff2");
+const FONT_HANKEN_LATIN: &[u8] =
+    include_bytes!("../../assets/static/fonts/HankenGrotesk-Variable-latin.woff2");
+const FONT_HANKEN_LATIN_EXT: &[u8] =
+    include_bytes!("../../assets/static/fonts/HankenGrotesk-Variable-latinext.woff2");
+const FONT_JETBRAINS_LATIN: &[u8] =
+    include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latin.woff2");
+const FONT_JETBRAINS_LATIN_EXT: &[u8] =
+    include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latinext.woff2");
 
 use super::handlers::{self, AdminCtx};
 use super::render;
@@ -814,6 +799,39 @@ pub fn register_admin_routes(
     let router = router.get(
         "/static/fonts/NotoSansSC-Regular.woff2",
         |_req| async move { Ok(font_response(FONT_NOTO_SC)) },
+    );
+    // RustIO Design System identity faces (Latin).
+    let router = router.get(
+        "/static/fonts/Spectral-400-latin.woff2",
+        |_req| async move { Ok(font_response(FONT_SPECTRAL_400)) },
+    );
+    let router = router.get(
+        "/static/fonts/Spectral-500-latin.woff2",
+        |_req| async move { Ok(font_response(FONT_SPECTRAL_500)) },
+    );
+    let router = router.get(
+        "/static/fonts/Spectral-600-latin.woff2",
+        |_req| async move { Ok(font_response(FONT_SPECTRAL_600)) },
+    );
+    let router = router.get(
+        "/static/fonts/Spectral-700-latin.woff2",
+        |_req| async move { Ok(font_response(FONT_SPECTRAL_700)) },
+    );
+    let router = router.get(
+        "/static/fonts/HankenGrotesk-Variable-latin.woff2",
+        |_req| async move { Ok(font_response(FONT_HANKEN_LATIN)) },
+    );
+    let router = router.get(
+        "/static/fonts/HankenGrotesk-Variable-latinext.woff2",
+        |_req| async move { Ok(font_response(FONT_HANKEN_LATIN_EXT)) },
+    );
+    let router = router.get(
+        "/static/fonts/JetBrainsMono-Variable-latin.woff2",
+        |_req| async move { Ok(font_response(FONT_JETBRAINS_LATIN)) },
+    );
+    let router = router.get(
+        "/static/fonts/JetBrainsMono-Variable-latinext.woff2",
+        |_req| async move { Ok(font_response(FONT_JETBRAINS_LATIN_EXT)) },
     );
 
     // Public: liveness / readiness probe. No auth — load

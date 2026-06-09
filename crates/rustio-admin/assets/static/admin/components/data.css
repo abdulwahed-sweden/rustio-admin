@@ -1,0 +1,195 @@
+/* ============================================================
+   RustIO — Data display
+   Badge · Tag · StatusDot · Avatar · StatCard · Card · KeyValue · DataTable
+   ============================================================ */
+
+/* Card */
+.rio-card {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+}
+.rio-card--pad { padding: var(--rio-space-20); }
+
+/* Badge — small status label */
+.rio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-medium);
+  line-height: 1.5;
+  border-radius: var(--rio-radius-sm);
+  border: 1px solid transparent;
+}
+.rio-badge--neutral { background: var(--rio-sunken); color: var(--rio-text-mute); border-color: var(--rio-line); }
+.rio-badge--copper  { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
+.rio-badge--success { background: var(--rio-success-tint); color: var(--rio-success); }
+.rio-badge--warn    { background: var(--rio-warn-tint); color: var(--rio-warn); }
+.rio-badge--danger  { background: var(--rio-danger-tint); color: var(--rio-danger); }
+
+/* Tag — removable chip */
+.rio-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: var(--rio-text-13);
+  color: var(--rio-text);
+  background: var(--rio-raised);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-sm);
+}
+.rio-tag-x {
+  display: inline-flex; cursor: pointer; color: var(--rio-text-faint);
+  border: 0; background: none; padding: 0; line-height: 0;
+}
+.rio-tag-x:hover { color: var(--rio-text-hi); }
+
+/* Status dot */
+.rio-dot { display: inline-block; inline-size: 8px; block-size: 8px; border-radius: 999px; flex: none; }
+.rio-dot--live { background: var(--rio-success); }
+.rio-dot--idle { background: var(--rio-text-faint); }
+.rio-dot--warn { background: var(--rio-warn); }
+.rio-dot--down { background: var(--rio-danger); }
+.rio-dot--copper { background: var(--rio-rust); }
+
+/* Avatar */
+.rio-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  inline-size: 32px; block-size: 32px;
+  border-radius: 999px;
+  background: var(--rio-rust-tint);
+  color: var(--rio-rust);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-semibold);
+  overflow: hidden;
+  flex: none;
+}
+.rio-avatar img { inline-size: 100%; block-size: 100%; object-fit: cover; }
+.rio-avatar--sm { inline-size: 24px; block-size: 24px; }
+.rio-avatar--lg { inline-size: 44px; block-size: 44px; font-size: var(--rio-text-15); }
+
+/* Stat card */
+.rio-stat { display: flex; flex-direction: column; gap: 6px; padding: var(--rio-space-16) var(--rio-space-20); }
+.rio-stat-label { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); letter-spacing: .04em; text-transform: uppercase; color: var(--rio-text-faint); font-weight: var(--rio-weight-semibold); }
+.rio-stat-value { font-family: var(--rio-font-display); font-size: var(--rio-text-30); font-weight: var(--rio-weight-bold); color: var(--rio-text-hi); letter-spacing: -0.01em; line-height: 1; font-variant-numeric: lining-nums tabular-nums; }
+.rio-stat-delta { font-size: var(--rio-text-12); color: var(--rio-text-mute); display: inline-flex; align-items: center; gap: 4px; }
+.rio-stat-delta--up { color: var(--rio-success); }
+.rio-stat-delta--down { color: var(--rio-danger); }
+
+/* Key-value list */
+.rio-kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; font-size: var(--rio-text-14); }
+.rio-kv dt { color: var(--rio-text-mute); }
+.rio-kv dd { margin: 0; color: var(--rio-text-hi); }
+
+/* Data table */
+.rio-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
+.rio-table th {
+  text-align: start;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-semibold);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--rio-text-mute);
+  padding: 10px 16px;
+  border-block-end: 1px solid var(--rio-line-strong);
+  background: var(--rio-surface);
+  position: sticky;
+  inset-block-start: 0;
+  white-space: nowrap;
+}
+.rio-table th[aria-sort] { cursor: pointer; user-select: none; }
+.rio-table th[aria-sort]:hover { color: var(--rio-text-hi); }
+.rio-table th .rio-sort-ind { color: var(--rio-rust); margin-inline-start: 4px; }
+.rio-table td {
+  padding: 11px 16px;
+  border-block-end: 1px solid var(--rio-line);
+  color: var(--rio-text);
+  vertical-align: middle;
+}
+.rio-table tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); }
+.rio-table tbody tr:hover { background: var(--rio-raised); }
+.rio-table tbody tr[aria-selected="true"] { background: var(--rio-rust-tint); }
+.rio-table--zebra tbody tr:nth-child(even) { background: var(--rio-bg); }
+.rio-table--zebra tbody tr:hover { background: var(--rio-raised); }
+.rio-table--compact th { padding: 7px 14px; }
+.rio-table--compact td { padding: 7px 14px; }
+.rio-table .rio-cell-strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }
+.rio-table .rio-cell-mono { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); font-variant-numeric: lining-nums tabular-nums; }
+.rio-table .rio-cell-price { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }
+/* Product name link + category sub-label */
+.rio-cell-link { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; }
+.rio-cell-link:hover { color: var(--rio-rust); }
+.rio-cell-sub { font-size: var(--rio-text-12); color: var(--rio-text-faint); margin-block-start: 1px; }
+
+/* Table footer (count + pagination) */
+.rio-tablefoot {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--rio-space-16);
+  padding: 12px 16px; border-block-start: 1px solid var(--rio-line);
+}
+
+/* Bulk-action bar (appears when rows are selected) */
+.rio-bulkbar {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  padding: 10px 16px; border-block-end: 1px solid var(--rio-line);
+  background: var(--rio-rust-tint);
+}
+.rio-bulkbar-count { font-size: var(--rio-text-13); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); }
+
+/* Filters bar */
+.rio-filters { display: flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
+/* Emphasize each filter control's frame so the toolbar reads as defined,
+   tappable chips. Scoped to the filters bar — global ghost buttons unchanged. */
+.rio-filters .rio-btn--ghost {
+  border-color: var(--rio-line-strong);
+  background: var(--rio-surface);
+  box-shadow: var(--rio-shadow-sm);
+}
+.rio-filters .rio-btn--ghost:hover {
+  border-color: var(--rio-rust);
+  color: var(--rio-rust);
+  background: var(--rio-rust-tint);
+}
+.rio-filters .rio-btn--ghost[aria-expanded="true"] {
+  border-color: var(--rio-rust);
+  color: var(--rio-rust);
+  background: var(--rio-rust-tint);
+}
+
+/* Slim metric strip — refined inline stats with hairline separators */
+.rio-statstrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  background: var(--rio-surface);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+}
+.rio-statstrip-item {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 18px;
+  min-block-size: 64px;
+  border-inline-start: 1px solid var(--rio-line);
+}
+.rio-statstrip-item:first-child { border-inline-start: 0; }
+.rio-statstrip-value {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-24);
+  font-weight: var(--rio-weight-medium); color: var(--rio-text-hi);
+  letter-spacing: -0.01em; line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-statstrip-label {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  letter-spacing: .045em; text-transform: uppercase;
+  color: var(--rio-text-faint); font-weight: var(--rio-weight-semibold);
+}
+
+/* Empty state */
+.rio-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: var(--rio-space-48); text-align: center; color: var(--rio-text-mute); }
+.rio-empty-title { font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-17); color: var(--rio-text-hi); }

@@ -1,31 +1,64 @@
 /* ============================================================
- * rustio-admin / tokens / shadows
- *
- *   === Tokens — shadows ===
- *
- * Shadows remain deliberately quiet — premium tooling prefers
- * borders + surface contrast over drop shadow. v0.15.0 bumps the
- * default-shadow alpha so a card actually rises off the canvas at
- * arm's length (the prior 0.05 was invisible on the new deeper
- * `--rio-bg`). The shadow scale also gains a `--rio-shadow-inset`
- * variant used by inputs and pressed states.
- *
- * The two-layer construction (one tight near-shadow, one wider
- * far-shadow) follows the Stripe / Linear convention — crispness
- * up close, lift from a distance.
- * ============================================================ */
+   RustIO — Elevation tokens
+   Light: soft, low-spread shadows.
+   Dark: depth comes from surface-step + a faint top highlight,
+         NOT heavy dark shadows.
 
+   Same scope ordering as colors.css: auto-dark @media before the
+   explicit [data-theme] blocks so explicit themes win by source order.
+   ============================================================ */
+
+/* --- Default = Light --- */
 :root {
-  /* v0.16 — slightly lighter alpha. With the new white-card-on-
-   * lighter-canvas relationship, heavy shadow over-states card
-   * lift. The two-layer construction stays (Stripe / Linear / Vercel
-   * convention — tight near-shadow for crispness, soft far-shadow
-   * for lift). */
-  --rio-shadow-xs:    0 1px 2px  rgba(15, 23, 42, 0.04),
-                      0 0 0 1px  rgba(15, 23, 42, 0.04);
-  --rio-shadow:       0 4px 12px rgba(15, 23, 42, 0.06),
-                      0 1px 3px  rgba(15, 23, 42, 0.04);
-  --rio-shadow-lg:    0 12px 32px rgba(15, 23, 42, 0.10),
-                      0 4px 8px  rgba(15, 23, 42, 0.06);
-  --rio-shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  --rio-shadow-sm:  0 1px 2px rgba(20, 30, 54, 0.06),
+                    0 1px 1px rgba(20, 30, 54, 0.04);
+  --rio-shadow-md:  0 2px 4px rgba(20, 30, 54, 0.05),
+                    0 6px 16px -8px rgba(20, 30, 54, 0.12);
+  --rio-shadow-lg:  0 8px 24px -12px rgba(20, 30, 54, 0.18),
+                    0 2px 6px -2px rgba(20, 30, 54, 0.08);
+  --rio-shadow-xl:  0 24px 48px -20px rgba(20, 30, 54, 0.24),
+                    0 6px 16px -8px rgba(20, 30, 54, 0.12);
+  /* top highlight is a no-op on light surfaces */
+  --rio-highlight-top: 0 0 0 0 transparent; /* @kind shadow */
+}
+
+/* --- Auto dark: lean on surface contrast + a faint 1px top highlight. --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rio-shadow-sm:  0 1px 0 rgba(255, 255, 255, 0.03),
+                      0 1px 2px rgba(0, 0, 0, 0.20);
+    --rio-shadow-md:  0 1px 0 rgba(255, 255, 255, 0.03),
+                      0 4px 12px -6px rgba(0, 0, 0, 0.40);
+    --rio-shadow-lg:  0 1px 0 rgba(255, 255, 255, 0.04),
+                      0 12px 28px -14px rgba(0, 0, 0, 0.50);
+    --rio-shadow-xl:  0 1px 0 rgba(255, 255, 255, 0.05),
+                      0 28px 56px -24px rgba(0, 0, 0, 0.60);
+    --rio-highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.04); /* @kind shadow */
+  }
+}
+
+/* --- Explicit light (wins over auto-dark by source order) --- */
+[data-theme="light"] {
+  --rio-shadow-sm:  0 1px 2px rgba(20, 30, 54, 0.06),
+                    0 1px 1px rgba(20, 30, 54, 0.04);
+  --rio-shadow-md:  0 2px 4px rgba(20, 30, 54, 0.05),
+                    0 6px 16px -8px rgba(20, 30, 54, 0.12);
+  --rio-shadow-lg:  0 8px 24px -12px rgba(20, 30, 54, 0.18),
+                    0 2px 6px -2px rgba(20, 30, 54, 0.08);
+  --rio-shadow-xl:  0 24px 48px -20px rgba(20, 30, 54, 0.24),
+                    0 6px 16px -8px rgba(20, 30, 54, 0.12);
+  --rio-highlight-top: 0 0 0 0 transparent; /* @kind shadow */
+}
+
+/* --- Explicit dark --- */
+[data-theme="dark"] {
+  --rio-shadow-sm:  0 1px 0 rgba(255, 255, 255, 0.03),
+                    0 1px 2px rgba(0, 0, 0, 0.20);
+  --rio-shadow-md:  0 1px 0 rgba(255, 255, 255, 0.03),
+                    0 4px 12px -6px rgba(0, 0, 0, 0.40);
+  --rio-shadow-lg:  0 1px 0 rgba(255, 255, 255, 0.04),
+                    0 12px 28px -14px rgba(0, 0, 0, 0.50);
+  --rio-shadow-xl:  0 1px 0 rgba(255, 255, 255, 0.05),
+                    0 28px 56px -24px rgba(0, 0, 0, 0.60);
+  --rio-highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.04); /* @kind shadow */
 }

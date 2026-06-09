@@ -1,185 +1,73 @@
 /* ============================================================
- * rustio-admin / tokens / typography
- *
- *   === Tokens — typography ===
- *
- * Multilingual family stacks + a consistent size scale.
- *
- *   Latin UI         → Geist (primary), Inter (fallback), Plex Sans
- *   Latin extended   → Inter covers Latin-ext / Cyrillic / Greek /
- *                      Vietnamese under one variable file
- *   Arabic           → Noto Naskh Arabic (primary, humanist body),
- *                      Tajawal (geometric accent / fallback)
- *   Mono             → Geist Mono
- *   Thai             → Noto Sans Thai      (auto-loaded by unicode-range)
- *   Devanagari       → Noto Sans Devanagari (auto-loaded by unicode-range)
- *   Japanese         → Noto Sans JP        (selected by `:lang(ja)`)
- *   Korean           → Noto Sans KR        (selected by `:lang(ko)`)
- *   Simpl. Chinese   → Noto Sans SC        (selected by `:lang(zh)`)
- *
- * Han Unification: Japanese Kanji / Simplified Chinese Hanzi /
- * Traditional Hanzi share U+4E00-9FFF. Mixing them in a single
- * global fallback chain would render Chinese content with Japanese
- * shapes (or vice versa). Avoid this by leaving CJK out of
- * `--rio-font-sans` and selecting via `:lang()` in
- * base/typography-i18n.css.
- *
- * The size scale `--rio-fs-xs … --rio-fs-display` is the canonical
- * ladder; component styles resolve through it. Adding a new size
- * belongs in CHANGELOG.md.
- *
- * @font-face declarations live in:
- *   - base/typography.css      → Geist, Geist Mono, Tajawal, Naskh, Inter
- *   - base/typography-i18n.css → Thai, Devanagari, Noto Sans JP/KR/SC
- * ============================================================ */
+   RustIO — Typography tokens
+   A refined, elegant, English-first pairing:
+   · Display — Spectral (500–700) — an elegant low-contrast serif.
+               Page titles, hero, wordmark, stat values. Used sparingly.
+   · Body/UI — Hanken Grotesk (400–600) — clean, modern, very legible.
+   · Mono    — JetBrains Mono (400–700) — code, CLI, IDs, prices, labels.
+
+   Three roles, no overlap. Numerals are always Western (0–9); lining +
+   tabular figures are enforced in base.css.
+   ============================================================ */
 
 :root {
-  /* Latin UI — Geist leads (the framework's identity), Inter is the
-   * real second-tier fallback with full Latin-ext / Cyrillic / Greek
-   * / Vietnamese coverage under one variable file. Thai +
-   * Devanagari sit further down the chain so any Thai / Devanagari
-   * character on a Latin-themed page renders correctly without a
-   * `lang` tag; their `unicode-range` filters in
-   * base/typography-i18n.css keep the download conditional. */
-  --rio-font-sans:
-    "Geist",
-    "Inter",
-    "Noto Sans Thai",
-    "Noto Sans Devanagari",
-    "IBM Plex Sans",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
+  /* --- Families ---
+     Arabic/other-script fallbacks are appended so a single stack handles any
+     language a developer types: Latin uses the brand face, Arabic falls
+     through (per glyph) to a harmonious Naskh/Tajawal face. */
+  --rio-font-display: "Spectral", "Noto Naskh Arabic", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --rio-font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, "Tajawal", monospace;
+  --rio-font-body:    "Hanken Grotesk", "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  /* Arabic UI — compact admin surfaces (buttons, navbars, sidebar
-   * labels, table cells, badges, form labels). Noto Naskh Arabic
-   * is the default reading face across the framework — humanist,
-   * generous x-height, calm for long reading. Tajawal is retained
-   * for selective geometric display use (promote it with the
-   * `.rio-arabic-display` utility class). */
-  --rio-font-arabic:
-    "Noto Naskh Arabic",
-    "Tajawal",
-    system-ui,
-    sans-serif;
+  /* --- Type scale (px) ---
+     12 · 13 · 14 · 15 · 17 · 20 · 24 · 30 · 38 · 48 · 64 · display-clamp */
+  /* Small & medium kept honest and legible; the large end is dialed down
+     ~10–12% for a calmer, more refined hierarchy. */
+  --rio-text-12: 0.75rem;     /* 12 */
+  --rio-text-13: 0.8125rem;   /* 13 */
+  --rio-text-14: 0.875rem;    /* 14 — product base */
+  --rio-text-15: 0.9375rem;   /* 15 */
+  --rio-text-17: 1.0625rem;   /* 17 — marketing body */
+  --rio-text-20: 1.1875rem;   /* ~19 — lead */
+  --rio-text-24: 1.4375rem;   /* ~23 — card title */
+  --rio-text-30: 1.6875rem;   /* ~27 — h3 / stat value */
+  --rio-text-38: 2.0625rem;   /* ~33 — h2 */
+  --rio-text-48: 2.625rem;    /* ~42 — h1 */
+  --rio-text-64: 3.375rem;    /* ~54 — display */
+  --rio-text-display: clamp(2.5rem, 5vw, 4.25rem); /* hero — smaller, refined */
 
-  /* Arabic body — long-form copy, descriptions, settings/help pages.
-   * Same priority as the UI token; line-height + size adjustments
-   * applied via base/typography.css's `:lang(ar)` rules. */
-  --rio-font-arabic-body:
-    "Noto Naskh Arabic",
-    "Tajawal",
-    serif;
+  /* --- Weights --- */
+  --rio-weight-regular:  400;
+  --rio-weight-medium:   500;
+  --rio-weight-semibold: 600;
+  --rio-weight-bold:     700;
+  --rio-weight-display:  600; /* Spectral headings read elegant at 600 */
 
-  /* Code — Geist Mono, then JetBrains/Plex Mono, then platform mono. */
-  --rio-font-mono:
-    "Geist Mono",
-    "JetBrains Mono",
-    "IBM Plex Mono",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Consolas,
-    "Liberation Mono",
-    monospace;
+  /* --- Line heights — generous for comfortable reading --- */
+  --rio-leading-display: 1.1;  /* serif display / headlines */
+  --rio-leading-tight:   1.22; /* sub-heads */
+  --rio-leading-snug:    1.45; /* leads */
+  --rio-leading-body:    1.62; /* body copy */
+  --rio-leading-relaxed: 1.72; /* long-form */
 
-  /* --- Locale-gated CJK stacks ---------------------------------- *
-   * Applied only when an element carries `lang="ja|ko|zh|zh-CN|
-   * zh-Hans"`, via base/typography-i18n.css. System fallbacks
-   * (Hiragino, Yu Gothic, PingFang, Malgun, Apple SD Gothic Neo)
-   * keep CJK content readable on the OS layer while Noto downloads
-   * or on networks where the woff2 fetch fails. */
-  --rio-font-japanese:
-    "Noto Sans JP",
-    "Hiragino Kaku Gothic ProN",
-    "Yu Gothic UI",
-    "Meiryo",
-    sans-serif;
+  /* --- Letter spacing ---
+     Spectral (serif) needs ~0; Hanken reads refined with a hair of negative. */
+  --rio-tracking-display: -0.006em; /* Spectral headlines */
+  --rio-tracking-tight:   -0.008em; /* Hanken UI / body — crisp */
+  --rio-tracking-normal:  0em;
+  --rio-tracking-wide:    0.01em;
+  --rio-tracking-mono:    0.005em;  /* mono labels */
+  --rio-tracking-caps:    0.085em;  /* uppercase eyebrows */
 
-  --rio-font-korean:
-    "Noto Sans KR",
-    "Apple SD Gothic Neo",
-    "Malgun Gothic",
-    sans-serif;
-
-  --rio-font-chinese:
-    "Noto Sans SC",
-    "PingFang SC",
-    "Microsoft YaHei",
-    sans-serif;
-
-  /* Thai + Devanagari are also available as standalone tokens for
-   * components that want to pin the family explicitly; everyday
-   * pages get them automatically via --rio-font-sans + the
-   * unicode-range gate on their @font-face. */
-  --rio-font-thai:
-    "Noto Sans Thai",
-    "Sukhumvit Set",
-    "Leelawadee UI",
-    sans-serif;
-
-  --rio-font-devanagari:
-    "Noto Sans Devanagari",
-    "Hindi Sangam MN",
-    "Nirmala UI",
-    sans-serif;
-
-  /* Size scale — rem-based, 16px html root.
-   * v0.16.0 — 16px is now the floor for any non-micro text. Sidebar,
-   * buttons, table cells all sit at 16px so an eight-hour clinical
-   * shift never strains the reader. The 14px (`--rio-fs-sm`) and
-   * 13–14px (`--rio-fs-xs`) tiers are reserved for genuinely
-   * secondary text: table headers (which scan, not read), kbd
-   * shortcuts, footer chips. The heading ladder tightens one notch
-   * (20 / 24 / 32) so h1 dominates without the ladder going wobbly. */
-  --rio-font-size-base: 1rem;         /* 16px — body baseline */
-  --rio-fs-xs:    0.875rem;           /* 14px — kbd, footer, tiny meta */
-  --rio-fs-sm:    0.9375rem;          /* 15px — table headers (uppercase) */
-  --rio-fs-md:    1rem;               /* 16px — sidebar, nav, button label */
-  --rio-fs-base:  1rem;               /* 16px — body, table cell */
-  --rio-fs-lg:    1.125rem;           /* 18px — main prose body, lead text */
-  --rio-fs-xl:    1.25rem;            /* 20px — section h3 / card title */
-  --rio-fs-h3:    1.25rem;            /* 20px — section heading */
-  --rio-fs-h2:    1.5rem;             /* 24px — major heading */
-  --rio-fs-h1:    2rem;               /* 32px — page title */
-  --rio-fs-display: 2.25rem;          /* 36px — login title */
-
-  /* Line heights — tuned per script. Arabic needs more leading because
-   * Naskh letterforms hang above and below the baseline.
-   * v0.16.0 — UI line-height lifted from 1.5 to 1.6 so buttons / table
-   * cells / nav items all sit on the same 1.6 floor as body text.
-   * Display sizes get 1.2 because they look loose at 1.25 at 32–36px. */
-  --rio-lh-tight:  1.2;               /* h1/h2/h3, big display */
-  --rio-lh-ui:     1.6;               /* dense UI: buttons, tags, table */
-  --rio-lh-body:   1.65;              /* English paragraph body */
-  --rio-lh-arabic: 1.95;              /* Arabic paragraph body */
-
-  /* Weights — opt-in via tokens so the design system can tune
-   * regular/medium/semibold/bold without touching every site.
-   * Principle 11 (v0.15): display sizes declare gravity through
-   * weight 700–800 *and* tracking. Body and table cells stay at
-   * 400 for legibility through a long shift. */
-  --rio-fw-regular:  400;
-  --rio-fw-medium:   500;
-  --rio-fw-semibold: 600;
-  --rio-fw-bold:     700;
-  --rio-fw-heavy:    800;
-
-  /* Tracking (Latin only — Arabic resets to 0 in base/typography.css).
-   * Geist is drawn for negative tracking on display sizes. The
-   * display + heading values were tightened in v0.15 so large
-   * type reads deliberate, not merely large. `allcaps` is the
-   * uppercase-label tracking used by table headers, kbd, and
-   * sidebar section labels. */
-  --rio-tracking-display: -0.035em;
-  --rio-tracking-heading: -0.018em;
-  --rio-tracking-body:    -0.003em;
-  --rio-tracking-tabular: 0;
-  --rio-tracking-mono:    0;
-  --rio-tracking-allcaps: 0.06em;
+  /* --- Multi-script stacks (framework addition; @font-face in
+     base/fonts.css + base/typography-i18n.css). Latin renders in the
+     brand face above; these are the per-script fallbacks the framework
+     supports beyond the DS's Latin+Arabic. --- */
+  --rio-font-arabic:      "Noto Naskh Arabic", "Tajawal", system-ui, sans-serif;
+  --rio-font-arabic-body: "Noto Naskh Arabic", "Tajawal", serif;
+  --rio-font-japanese:    "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+  --rio-font-korean:      "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --rio-font-chinese:     "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --rio-font-thai:        "Noto Sans Thai", "Sukhumvit Set", "Leelawadee UI", sans-serif;
+  --rio-font-devanagari:  "Noto Sans Devanagari", "Hindi Sangam MN", "Nirmala UI", sans-serif;
 }

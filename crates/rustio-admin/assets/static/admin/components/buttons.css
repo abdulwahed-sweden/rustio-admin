@@ -1,136 +1,130 @@
 /* ============================================================
- * rustio-admin / components / buttons
- *
- * Five variants: default neutral, --primary (accent fill), --danger
- * (red fill), --ghost (transparent), --danger-ghost (transparent
- * red). Plus a --sm modifier for inline row actions.
- *
- * Buttons feel calm and tactile, not glossy. We change colour and
- * surface on hover (instead of dimming with opacity) — that reads
- * as deliberate UI feedback rather than a flashy SaaS hover.
- * ============================================================ */
+   RustIO — Buttons
+   Variants: primary · secondary · ghost · subtle · danger
+   Sizes: sm · md · lg   States: hover · active · focus · disabled · loading
+   ============================================================ */
 
-.rio-button {
-  /* v0.16 — 44px touch-target height (10/16 padding + 16px text at
-   * 1.6 line-height), 16px label. Buttons feel substantial without
-   * being chunky. */
+.rio-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);                          /* 8px icon → label */
-  min-height: 44px;
-  padding: var(--rio-s2) var(--rio-s4);        /* 8px / 16px */
-  background: var(--rio-surface);
-  color: var(--rio-text);
-  border: 1px solid var(--rio-border);
-  border-radius: var(--rio-radius-sm);
-  font-size: var(--rio-fs-md);                 /* 16px */
-  font-weight: var(--rio-fw-semibold);
-  letter-spacing: 0.005em;
-  line-height: var(--rio-lh-ui);               /* 1.6 */
+  justify-content: center;
+  gap: var(--rio-space-8);
+  block-size: 36px;
+  padding-inline: 14px;
+  font-family: var(--rio-font-body);
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-semibold);
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--rio-radius-md);
   cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
   text-decoration: none;
-  box-shadow: var(--rio-shadow-xs);
-  transition: background-color 0.12s, border-color 0.12s, color 0.12s,
-              box-shadow 0.12s, transform 0.06s;
+  transition: background var(--rio-dur-fast) var(--rio-ease),
+              border-color var(--rio-dur-fast) var(--rio-ease),
+              color var(--rio-dur-fast) var(--rio-ease),
+              box-shadow var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-button:hover {
-  /* v0.16 — neutral button hover lifts to accent-soft (teal-50)
-   * instead of surface-3. Gives every button a clean accent touch
-   * on interaction — the "accent everywhere" thread that fixes the
-   * old monochromatic feel. */
-  background: var(--rio-accent-soft);
-  border-color: var(--rio-accent-border);
-  color: var(--rio-accent-hover);
-  text-decoration: none;
+.rio-btn:focus-visible {
+  outline: 2px solid var(--rio-rust);
+  outline-offset: 2px;
 }
-.rio-button:focus-visible {
-  outline: none;
-  border-color: var(--rio-accent);
-  box-shadow: var(--rio-shadow-xs),
-              0 0 0 4px var(--rio-accent-border);
-}
-.rio-button:active { transform: translateY(1px); }
-.rio-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Primary action — Stripe / Linear style: a subtle vertical
- * gradient (≈ 8 % delta) for weight, an inset top highlight for
- * the "lifted button" affordance, accent-coloured drop shadow.
- * The gradient is invisible at a glance but the eye reads it as
- * deliberate engineering. (Principle 11 — gravity, not flash.) */
-.rio-button--primary {
-  color: #fff;
-  background-color: var(--rio-accent);
-  background-image: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--rio-accent) 92%, white) 0%,
-    var(--rio-accent) 100%
-  );
-  border-color: color-mix(in srgb, var(--rio-accent) 80%, black);
-  box-shadow: 0 1px 2px rgb(var(--rio-accent-rgb) / 0.30),
-              inset 0 1px 0 rgb(255 255 255 / 0.14);
+/* Sizes */
+.rio-btn--sm { block-size: 30px; padding-inline: 10px; font-size: var(--rio-text-13); }
+.rio-btn--md { block-size: 36px; padding-inline: 14px; font-size: var(--rio-text-14); }
+.rio-btn--lg { block-size: 44px; padding-inline: 20px; font-size: var(--rio-text-15); }
+
+/* Primary — copper (solid fill, white text in BOTH themes) */
+.rio-btn--primary {
+  background: var(--rio-rust-solid);
+  color: var(--rio-on-solid);
 }
-.rio-button--primary:hover {
-  background-image: linear-gradient(
-    to bottom,
-    var(--rio-accent) 0%,
-    var(--rio-accent-hover) 100%
-  );
-  border-color: var(--rio-accent-hover);
-  color: #fff;
+.rio-btn--primary:hover { background: var(--rio-rust-solid-hover); }
+.rio-btn--primary:active { background: var(--rio-rust-solid-active); }
+
+/* Secondary — bordered neutral */
+.rio-btn--secondary {
+  background: var(--rio-surface);
+  color: var(--rio-text-hi);
+  border-color: var(--rio-line-strong);
+  box-shadow: var(--rio-shadow-sm);
 }
-.rio-button--primary:focus-visible {
-  border-color: color-mix(in srgb, var(--rio-accent) 80%, black);
-  box-shadow: 0 1px 2px rgb(var(--rio-accent-rgb) / 0.30),
-              inset 0 1px 0 rgb(255 255 255 / 0.14),
-              0 0 0 3px rgb(var(--rio-accent-rgb) / 0.30);
+.rio-btn--secondary:hover { background: var(--rio-raised); border-color: var(--rio-text-faint); }
+.rio-btn--secondary:active { background: var(--rio-sunken); }
+
+/* Ghost — transparent */
+.rio-btn--ghost {
+  background: transparent;
+  color: var(--rio-text-hi);
+  border-color: var(--rio-line);
 }
-.rio-button--danger {
+.rio-btn--ghost:hover { background: var(--rio-raised); }
+.rio-btn--ghost:active { background: var(--rio-sunken); }
+
+/* Subtle — text-only with hover wash */
+.rio-btn--subtle {
+  background: transparent;
+  color: var(--rio-text);
+}
+.rio-btn--subtle:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-btn--subtle:active { background: var(--rio-sunken); }
+
+/* Danger */
+.rio-btn--danger {
   background: var(--rio-danger);
   color: #fff;
-  border-color: var(--rio-danger);
 }
-.rio-button--danger:hover { color: #fff; }
-.rio-button--ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--rio-text-muted);
+.rio-btn--danger:hover { filter: brightness(0.94); }
+.rio-btn--danger:active { filter: brightness(0.88); }
+
+/* Disabled */
+.rio-btn:disabled,
+.rio-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
   box-shadow: none;
 }
-.rio-button--ghost:hover {
-  color: var(--rio-text-strong);
-  background: var(--rio-surface-3);
-  border-color: transparent;
+
+/* Loading — show the ◉ ring sweep, dim the label */
+.rio-btn[data-loading="true"] { position: relative; color: transparent !important; pointer-events: none; }
+.rio-btn[data-loading="true"] .rio-btn-label { visibility: hidden; }
+.rio-btn-spinner {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 1em;
+  block-size: 1em;
+  transform: translate(-50%, -50%);
 }
-.rio-button--danger-ghost {
+
+/* Icon-only button */
+.rio-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--rio-radius-md);
   background: transparent;
-  border-color: transparent;
-  color: var(--rio-danger);
-  box-shadow: none;
+  color: var(--rio-text-mute);
+  cursor: pointer;
+  transition: background var(--rio-dur-fast) var(--rio-ease), color var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-button--danger-ghost:hover {
-  background: var(--rio-danger-bg);
-  border-color: transparent;
-}
-
-/* Compact button for inline row actions (Edit / Delete in table
- * rows, etc.). Matches the proportions of a body-text affordance
- * rather than a primary CTA. */
-.rio-button--sm {
-  padding: 0.3rem 0.55rem;
-  font-size: var(--rio-fs-sm);
-  gap: 0.3rem;
-}
-.rio-button--sm .rio-icon { width: 14px; height: 14px; }
-
-/* RTL icon directionality. The icons renderer
- * (`admin::icons::render_inline`) appends
- * `rio-icon--directional` to glyphs whose shape carries a
- * left/right direction — currently `arrow-left` and `log-out`.
- * Under `[dir="rtl"]` these flip horizontally so a "Back" arrow
- * points the way the user reads from. Vertical chevrons
- * (`chevron-down`) and symbol icons (`home`, `users`, `database`)
- * are NOT marked directional and stay unchanged in either
- * direction — mirroring them would produce wrong-handed glyphs. */
-[dir="rtl"] .rio-icon--directional {
-  transform: scaleX(-1);
+.rio-iconbtn:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-iconbtn:active { background: var(--rio-sunken); }
+.rio-iconbtn:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-iconbtn--sm { inline-size: 30px; block-size: 30px; }
+.rio-iconbtn--lg { inline-size: 44px; block-size: 44px; }
+.rio-iconbtn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+/* Notification dot */
+.rio-iconbtn--dot { position: relative; }
+.rio-iconbtn--dot::after {
+  content: ""; position: absolute; inset-block-start: 7px; inset-inline-end: 7px;
+  inline-size: 7px; block-size: 7px; border-radius: 999px;
+  background: var(--rio-rust); border: 2px solid var(--rio-surface);
 }
