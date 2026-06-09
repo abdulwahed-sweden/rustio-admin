@@ -27,7 +27,7 @@
    * 32px padding). Comfortable to scan, easy to click. */
   padding: var(--rio-s4) var(--rio-s5);
   text-align: start;
-  border-bottom: 1px solid var(--rio-line);
+  border-bottom: 1px solid var(--rio-border-soft);
   vertical-align: middle;
 }
 .rio-table th {
@@ -37,11 +37,11 @@
    * content. */
   font-weight: var(--rio-fw-semibold);
   font-size: var(--rio-fs-xs);                  /* 14px — quiet label */
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
-  background: var(--rio-sunken);
-  border-bottom: 1px solid var(--rio-line);
+  background: var(--rio-surface-2);
+  border-bottom: 1px solid var(--rio-border);
   white-space: nowrap;
   /* Header rows can be shorter than body rows — operators don't
    * need a 56px header. 12px vertical padding gets header to ~40px. */
@@ -58,7 +58,7 @@
 .rio-table tbody td:first-child:not(.rio-td--checkbox),
 .rio-table tbody .rio-td--checkbox + td {
   font-weight: var(--rio-fw-medium);
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
 }
 
 .rio-th--number, .rio-td--number {
@@ -73,12 +73,12 @@
 .rio-fk-link {
   color: inherit;
   text-decoration: none;
-  border-bottom: 1px dashed var(--rio-line);
+  border-bottom: 1px dashed var(--rio-border);
 }
 .rio-fk-link:hover,
 .rio-fk-link:focus {
-  color: var(--rio-rust);
-  border-bottom-color: var(--rio-rust);
+  color: var(--rio-accent);
+  border-bottom-color: var(--rio-accent);
   outline: none;
 }
 
@@ -89,7 +89,7 @@
   font-family: var(--rio-font-mono);
   font-size: var(--rio-fs-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 
 /* Text cells (string fields) clip to a single line with a hard
@@ -117,7 +117,7 @@
   -webkit-appearance: none;
   width: 17px;
   height: 17px;
-  border: 1.5px solid var(--rio-line-strong);
+  border: 1.5px solid var(--rio-border-strong);
   border-radius: 4px;
   cursor: pointer;
   background: var(--rio-surface);
@@ -128,12 +128,12 @@
   transition: background 0.1s, border-color 0.1s;
 }
 .rio-row-checkbox:hover,
-.rio-row-checkbox-all:hover { border-color: var(--rio-text-mute); }
+.rio-row-checkbox-all:hover { border-color: var(--rio-text-muted); }
 .rio-row-checkbox:checked,
 .rio-row-checkbox-all:checked,
 .rio-row-checkbox-all:indeterminate {
-  background: var(--rio-rust);
-  border-color: var(--rio-rust);
+  background: var(--rio-accent);
+  border-color: var(--rio-accent);
 }
 .rio-row-checkbox:checked::after,
 .rio-row-checkbox-all:checked::after {
@@ -151,9 +151,9 @@
  * glance during a bulk operation. */
 .rio-table tbody tr.is-selected,
 .rio-table tbody tr.is-selected:nth-child(even) {
-  background: rgb(var(--rio-rust-rgb) / 0.06);
+  background: rgb(var(--rio-accent-rgb) / 0.06);
 }
-.rio-table tbody tr.is-selected:hover { background: rgb(var(--rio-rust-rgb) / 0.10); }
+.rio-table tbody tr.is-selected:hover { background: rgb(var(--rio-accent-rgb) / 0.10); }
 
 /* ----- Bulk action bar -------------------------------------------------
  * Sticky strip that appears above the table when ≥1 row is checked.
@@ -166,7 +166,7 @@
   gap: var(--rio-s3);
   padding: 0.7rem var(--rio-s4);
   margin-bottom: var(--rio-s3);
-  background: var(--rio-text-hi);
+  background: var(--rio-text-strong);
   color: var(--rio-surface);
   border-radius: var(--rio-radius);
   font-size: var(--rio-fs-md);
@@ -212,8 +212,8 @@
 
 /* Zebra: surface-2 (quiet neutral). Hover lifts to accent-soft so
  * the eye reads it as "actionable row" not just "different colour." */
-.rio-table--striped tbody tr:nth-child(even) { background: var(--rio-sunken); }
-.rio-table tbody tr:hover { background: var(--rio-rust-tint); }
+.rio-table--striped tbody tr:nth-child(even) { background: var(--rio-surface-2); }
+.rio-table tbody tr:hover { background: var(--rio-accent-soft); }
 
 /* Sortable headers — wrap the label in a link; arrow surfaces in the
  * active direction. Header looks identical to a non-sortable cell
@@ -226,9 +226,9 @@
   gap: 0.3rem;
   white-space: nowrap;
 }
-.rio-th-sort:hover { color: var(--rio-text-hi); text-decoration: none; }
+.rio-th-sort:hover { color: var(--rio-text-strong); text-decoration: none; }
 .rio-th--sort-asc .rio-th-sort,
-.rio-th--sort-desc .rio-th-sort { color: var(--rio-rust); }
+.rio-th--sort-desc .rio-th-sort { color: var(--rio-accent); }
 
 .rio-list { padding: 0; overflow: hidden; }
 .rio-list .rio-table { margin: 0; }
@@ -278,12 +278,12 @@
   gap: var(--rio-s2) var(--rio-s5);
   margin: 0;
 }
-.rio-dl dt { font-weight: 600; color: var(--rio-text-mute); }
+.rio-dl dt { font-weight: 600; color: var(--rio-text-muted); }
 .rio-dl dd { margin: 0; }
 
 .rio-api-model {
   padding: var(--rio-s4) 0;
-  border-bottom: 1px solid var(--rio-line);
+  border-bottom: 1px solid var(--rio-border-soft);
 }
 .rio-api-model:last-child { border-bottom: 0; }
 .rio-api-model__head {
@@ -311,7 +311,7 @@
   flex-direction: column;
   gap: var(--rio-s1);
   font-size: var(--rio-fs-sm);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 .rio-playground__field--wide { grid-column: 1 / -1; }
 .rio-playground__field textarea {
@@ -337,13 +337,13 @@
   display: flex;
   flex-direction: column;
   padding: var(--rio-s3) var(--rio-s4);
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
   margin-bottom: var(--rio-s2);
   text-decoration: none;
   color: var(--rio-text);
 }
-.rio-doc-list__link:hover { background: var(--rio-sunken); }
+.rio-doc-list__link:hover { background: var(--rio-surface-2); }
 
 .rio-doc {
   max-width: 880px;
@@ -351,14 +351,14 @@
 }
 .rio-doc h1, .rio-doc h2, .rio-doc h3 { margin-top: var(--rio-s5); }
 .rio-doc pre {
-  background: var(--rio-sunken);
+  background: var(--rio-surface-2);
   padding: var(--rio-s3);
   border-radius: var(--rio-radius);
   overflow-x: auto;
   font-size: var(--rio-fs-sm);
 }
 .rio-doc code {
-  background: var(--rio-sunken);
+  background: var(--rio-surface-2);
   padding: 0 4px;
   border-radius: 3px;
   font-size: 0.9em;
@@ -366,7 +366,7 @@
 .rio-doc pre code { background: transparent; padding: 0; }
 .rio-doc table { width: 100%; border-collapse: collapse; margin: var(--rio-s3) 0; }
 .rio-doc th, .rio-doc td {
-  border-bottom: 1px solid var(--rio-line);
+  border-bottom: 1px solid var(--rio-border-soft);
   padding: var(--rio-s2) var(--rio-s3);
   text-align: start;
 }
@@ -385,8 +385,8 @@
   margin-bottom: var(--rio-s2);
 }
 .rio-playground__body {
-  background: var(--rio-sunken);
-  border: 1px solid var(--rio-line);
+  background: var(--rio-surface-2);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
   padding: var(--rio-s3);
   margin: 0;

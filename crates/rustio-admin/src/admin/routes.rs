@@ -63,8 +63,6 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/tokens/typography.css"),
     "\n",
-    include_str!("../../assets/static/admin/tokens/motion.css"),
-    "\n",
     // ---- base -------------------------------------------------
     include_str!("../../assets/static/admin/base/reset.css"),
     "\n",
@@ -203,26 +201,6 @@ const FONT_NOTO_DEVA: &[u8] =
 const FONT_NOTO_JP: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansJP-Regular.woff2");
 const FONT_NOTO_KR: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansKR-Regular.woff2");
 const FONT_NOTO_SC: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansSC-Regular.woff2");
-// RustIO Design System identity faces (Latin). Display: Spectral
-// (static 400/500/600/700). Body: Hanken Grotesk (variable wght
-// 400..800, latin + latin-ext). Mono: JetBrains Mono (variable wght
-// 400..700, latin + latin-ext). @font-face in base/typography.css.
-const FONT_SPECTRAL_400: &[u8] =
-    include_bytes!("../../assets/static/fonts/Spectral-400-latin.woff2");
-const FONT_SPECTRAL_500: &[u8] =
-    include_bytes!("../../assets/static/fonts/Spectral-500-latin.woff2");
-const FONT_SPECTRAL_600: &[u8] =
-    include_bytes!("../../assets/static/fonts/Spectral-600-latin.woff2");
-const FONT_SPECTRAL_700: &[u8] =
-    include_bytes!("../../assets/static/fonts/Spectral-700-latin.woff2");
-const FONT_HANKEN_LATIN: &[u8] =
-    include_bytes!("../../assets/static/fonts/HankenGrotesk-Variable-latin.woff2");
-const FONT_HANKEN_LATIN_EXT: &[u8] =
-    include_bytes!("../../assets/static/fonts/HankenGrotesk-Variable-latinext.woff2");
-const FONT_JETBRAINS_LATIN: &[u8] =
-    include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latin.woff2");
-const FONT_JETBRAINS_LATIN_EXT: &[u8] =
-    include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latinext.woff2");
 
 use super::handlers::{self, AdminCtx};
 use super::render;
@@ -836,39 +814,6 @@ pub fn register_admin_routes(
     let router = router.get(
         "/static/fonts/NotoSansSC-Regular.woff2",
         |_req| async move { Ok(font_response(FONT_NOTO_SC)) },
-    );
-    // RustIO Design System identity faces (Latin).
-    let router = router.get(
-        "/static/fonts/Spectral-400-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_SPECTRAL_400)) },
-    );
-    let router = router.get(
-        "/static/fonts/Spectral-500-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_SPECTRAL_500)) },
-    );
-    let router = router.get(
-        "/static/fonts/Spectral-600-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_SPECTRAL_600)) },
-    );
-    let router = router.get(
-        "/static/fonts/Spectral-700-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_SPECTRAL_700)) },
-    );
-    let router = router.get(
-        "/static/fonts/HankenGrotesk-Variable-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_HANKEN_LATIN)) },
-    );
-    let router = router.get(
-        "/static/fonts/HankenGrotesk-Variable-latinext.woff2",
-        |_req| async move { Ok(font_response(FONT_HANKEN_LATIN_EXT)) },
-    );
-    let router = router.get(
-        "/static/fonts/JetBrainsMono-Variable-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_JETBRAINS_LATIN)) },
-    );
-    let router = router.get(
-        "/static/fonts/JetBrainsMono-Variable-latinext.woff2",
-        |_req| async move { Ok(font_response(FONT_JETBRAINS_LATIN_EXT)) },
     );
 
     // Public: liveness / readiness probe. No auth — load
@@ -2224,22 +2169,23 @@ mod tests {
         let css = admin_css_payload(None);
         assert_eq!(css.as_ref(), ADMIN_CSS.as_bytes());
         // Sanity: the baked bundle still carries a known token.
-        assert!(ADMIN_CSS.contains("--rio-rust"));
+        assert!(ADMIN_CSS.contains("--rio-accent"));
     }
 
     #[test]
     fn admin_css_payload_appends_override_after_baked_bundle() {
-        let override_css = ":root{--rio-rust:#abcdef}";
+        let override_css = ":root{--rio-accent:#abcdef}";
         let css = admin_css_payload(Some(override_css));
         let text = std::str::from_utf8(css.as_ref()).expect("utf-8");
         // Override is present...
         assert!(text.ends_with(override_css));
         // ...and lands *after* the baked colours layer, so its `:root`
-        // wins the cascade. The baked bundle defines the DS accent
-        // `--rio-rust` near the top of colors.css; the override must
-        // come later (last occurrence).
-        let baked = text.find("--rio-rust").expect("baked token present");
-        let overridden = text.rfind("--rio-rust:#abcdef").expect("override present");
+        // wins the cascade. The baked bundle's first token is the
+        // generated `--rio-brand-light`; the override must come later.
+        let baked = text.find("--rio-brand-light").expect("baked token present");
+        let overridden = text
+            .rfind("--rio-accent:#abcdef")
+            .expect("override present");
         assert!(overridden > baked, "override must follow the baked bundle");
     }
 

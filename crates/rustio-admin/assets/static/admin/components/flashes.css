@@ -15,23 +15,23 @@
   border: 1px solid transparent;
 }
 .rio-flash--success {
-  background: var(--rio-success-tint);
+  background: var(--rio-success-bg);
   color: var(--rio-success);
   border-color: rgb(21 128 61 / 0.18);
 }
 .rio-flash--error {
-  background: var(--rio-danger-tint);
+  background: var(--rio-danger-bg);
   color: var(--rio-danger);
   border-color: rgb(185 28 28 / 0.18);
 }
 .rio-flash--warning {
-  background: var(--rio-warn-tint);
-  color: var(--rio-warn);
+  background: var(--rio-warning-bg);
+  color: var(--rio-warning);
   border-color: rgb(180 83 9 / 0.18);
 }
 .rio-flash--info {
-  background: var(--rio-rust-tint);
-  color: var(--rio-rust);
-  border-color: rgb(var(--rio-rust-rgb) / 0.18);
+  background: var(--rio-info-bg);
+  color: var(--rio-accent);
+  border-color: rgb(var(--rio-accent-rgb) / 0.18);
 }
 .rio-flash ul { margin: var(--rio-s2) 0 0; padding-inline-start: var(--rio-s5); }

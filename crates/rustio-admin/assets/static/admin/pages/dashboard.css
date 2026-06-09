@@ -50,9 +50,9 @@
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
   border-radius: 999px;
-  background: var(--rio-sunken);
-  color: var(--rio-text-mute);
-  border: 1px solid var(--rio-line);
+  background: var(--rio-surface-2);
+  color: var(--rio-text-muted);
+  border: 1px solid var(--rio-border-soft);
 }
 .rio-env-chip::before {
   content: "";
@@ -62,28 +62,28 @@
   background: currentColor;
 }
 .rio-env-chip--prod {
-  background: var(--rio-success-tint);
+  background: var(--rio-success-bg);
   color: var(--rio-success);
   border-color: transparent;
 }
 .rio-env-chip--dev {
-  background: var(--rio-warn-tint);
-  color: var(--rio-warn);
+  background: var(--rio-warning-bg);
+  color: var(--rio-warning);
   border-color: transparent;
 }
 .rio-env-chip--ver {
   font-family: var(--rio-font-mono);
   text-transform: none;
   letter-spacing: 0;
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
 }
 .rio-env-chip--ver::before { display: none; }
 
 /* ---- Stats strip ---------------------------------------------- */
 
 /* v0.19 — Unified stat tile. Pre-0.19 cycled four pastel
- * background fills (`--rio-rust-tint` / `--rio-success-tint` /
- * `--rio-warn-tint` / `--rio-rust`-tint) for visual variety,
+ * background fills (`--rio-info-bg` / `--rio-success-bg` /
+ * `--rio-warning-bg` / `--rio-accent`-tint) for visual variety,
  * but the result read as "festive" rather than "professional".
  * The new tile is one consistent white surface with a 3-px
  * top accent bar — Stripe Dashboard / Linear / Vercel
@@ -104,7 +104,7 @@
   position: relative;
   padding: var(--rio-s5);
   border-radius: var(--rio-radius);
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   background: var(--rio-surface);
   box-shadow: var(--rio-shadow-xs);
   overflow: hidden;
@@ -117,15 +117,15 @@
   inset-inline-end: 0;
   top: 0;
   height: 3px;
-  background: var(--rio-line);
+  background: var(--rio-border);
   /* Default rail: a quiet neutral line so all tiles share the same
    * top edge silhouette. Variants below repaint it with semantic
    * colors — used as accent dots, not whole-tile floods. */
 }
-.rio-stat--info::before    { background: var(--rio-rust); }
+.rio-stat--info::before    { background: var(--rio-accent); }
 .rio-stat--success::before { background: var(--rio-success); }
-.rio-stat--warning::before { background: var(--rio-warn); }
-.rio-stat--accent::before  { background: var(--rio-rust); }
+.rio-stat--warning::before { background: var(--rio-warning); }
+.rio-stat--accent::before  { background: var(--rio-accent); }
 .rio-stat--danger::before  { background: var(--rio-danger); }
 
 .rio-stat__label {
@@ -134,7 +134,7 @@
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 .rio-stat__value {
   margin: 0 0 var(--rio-s2);
@@ -143,7 +143,7 @@
   font-size: 2.25rem;
   font-weight: var(--rio-fw-bold);
   line-height: 1.05;
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.015em;
 }
@@ -155,7 +155,7 @@
 .rio-stat__meta {
   margin: 0;
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
 }
 
 /* v0.19 — `.rio-dashboard-section-{head,label,count,link}`
@@ -165,7 +165,7 @@
  * `.rio-section__link` selector below. */
 .rio-section__link {
   font-size: var(--rio-fs-sm);
-  color: var(--rio-rust);
+  color: var(--rio-accent);
   text-decoration: none;
   font-weight: var(--rio-fw-medium);
   white-space: nowrap;
@@ -188,7 +188,7 @@
   gap: var(--rio-s2);
   padding: var(--rio-s4) var(--rio-s5);
   background: var(--rio-surface);
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
   transition: transform 0.14s, box-shadow 0.14s, border-color 0.14s;
   overflow: hidden;
@@ -203,11 +203,11 @@
   inset-inline-start: 0;
   inset-inline-end: 0;
   height: 3px;
-  background: var(--rio-rust);
+  background: var(--rio-accent);
 }
 .rio-model-tile:hover {
   transform: translateY(-2px);
-  border-color: var(--rio-line);
+  border-color: var(--rio-border);
   box-shadow: var(--rio-shadow);
 }
 
@@ -218,9 +218,9 @@
  * real signal at full saturation; the body tint is the lightest
  * possible companion. */
 .rio-model-tile:nth-child(4n+1) {
-  background: color-mix(in srgb, var(--rio-rust) 2%, var(--rio-surface));
+  background: color-mix(in srgb, var(--rio-accent) 2%, var(--rio-surface));
 }
-.rio-model-tile:nth-child(4n+1)::before { background: var(--rio-rust); }
+.rio-model-tile:nth-child(4n+1)::before { background: var(--rio-accent); }
 
 .rio-model-tile:nth-child(4n+2) {
   background: color-mix(in srgb, var(--rio-success) 2%, var(--rio-surface));
@@ -228,9 +228,9 @@
 .rio-model-tile:nth-child(4n+2)::before { background: var(--rio-success); }
 
 .rio-model-tile:nth-child(4n+3) {
-  background: color-mix(in srgb, var(--rio-warn) 2%, var(--rio-surface));
+  background: color-mix(in srgb, var(--rio-warning) 2%, var(--rio-surface));
 }
-.rio-model-tile:nth-child(4n+3)::before { background: var(--rio-warn); }
+.rio-model-tile:nth-child(4n+3)::before { background: var(--rio-warning); }
 
 .rio-model-tile:nth-child(4n+4) {
   background: color-mix(in srgb, var(--rio-danger) 2%, var(--rio-surface));
@@ -245,9 +245,9 @@
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   background: rgb(255 255 255 / 0.6);
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: 999px;
   align-self: flex-start;
 }
@@ -257,10 +257,10 @@
   margin: 0;
   font-size: var(--rio-fs-md);
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
   letter-spacing: var(--rio-tracking-heading);
 }
-.rio-model-tile__title-link:hover .rio-model-tile__title { color: var(--rio-rust); }
+.rio-model-tile__title-link:hover .rio-model-tile__title { color: var(--rio-accent); }
 
 .rio-model-tile__stat {
   display: flex;
@@ -272,19 +272,19 @@
   font-size: 1.85rem;
   font-weight: var(--rio-fw-bold);
   line-height: 1;
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 .rio-model-tile__stat-suffix {
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-regular);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 .rio-model-tile__stat-secondary {
   margin: var(--rio-s1) 0 0;
   font-size: var(--rio-fs-sm);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
 }
 .rio-model-tile__stat-secondary .rio-model-tile__stat-num {
   font-size: var(--rio-fs-base);
@@ -300,13 +300,13 @@
   overflow: visible;
 }
 .rio-model-tile__sparkline-bar {
-  fill: var(--rio-rust);
+  fill: var(--rio-accent);
   opacity: 0.7;
 }
 .rio-model-tile__meta {
   margin: 0;
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
 }
 .rio-model-tile__actions {
   display: flex;
@@ -333,13 +333,13 @@
 .rio-sparkline {
   margin: 0 0 var(--rio-s4);
   padding: var(--rio-s4) var(--rio-s5);
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
   background: var(--rio-surface);
 }
 .rio-sparkline__caption {
   font-size: var(--rio-fs-sm);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   margin: 0 0 var(--rio-s3);
 }
 .rio-sparkline__svg {
@@ -353,15 +353,15 @@
  * the cascade unchanged so any third-party templates that still
  * render them keep working; the framework's index.html no longer
  * emits either element. */
-.rio-sparkline__bar { fill: var(--rio-rust); opacity: 0.85; }
-.rio-sparkline__track { fill: var(--rio-line); opacity: 0.55; }
+.rio-sparkline__bar { fill: var(--rio-accent); opacity: 0.85; }
+.rio-sparkline__track { fill: var(--rio-border); opacity: 0.55; }
 
 /* Area-chart elements — baseline rule + gradient-filled polygon
  * under the data line, the line itself, and a dot at every
  * measurement. Matches the analytics-tool convention (Vercel /
  * Linear / Stripe Dashboard / Grafana). */
 .rio-sparkline__baseline {
-  stroke: var(--rio-line);
+  stroke: var(--rio-border);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -372,11 +372,11 @@
    * sized by its container) but it means the *vertical* gradient
    * still resolves correctly. */
 }
-.rio-sparkline__grad-stop-top { stop-color: var(--rio-rust); stop-opacity: 0.28; }
-.rio-sparkline__grad-stop-bot { stop-color: var(--rio-rust); stop-opacity: 0; }
+.rio-sparkline__grad-stop-top { stop-color: var(--rio-accent); stop-opacity: 0.28; }
+.rio-sparkline__grad-stop-bot { stop-color: var(--rio-accent); stop-opacity: 0; }
 .rio-sparkline__line {
   fill: none;
-  stroke: var(--rio-rust);
+  stroke: var(--rio-accent);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -387,12 +387,12 @@
 }
 .rio-sparkline__dot {
   fill: var(--rio-surface);
-  stroke: var(--rio-rust);
+  stroke: var(--rio-accent);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 .rio-sparkline__tick {
-  fill: var(--rio-text-mute);
+  fill: var(--rio-text-muted);
   font-size: 10px;
   font-family: var(--rio-font-sans, system-ui);
 }
@@ -401,7 +401,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
   background: var(--rio-surface);
   overflow: hidden;
@@ -412,17 +412,17 @@
   align-items: center;
   gap: var(--rio-s3);
   padding: var(--rio-s3) var(--rio-s5);
-  border-bottom: 1px solid var(--rio-line);
+  border-bottom: 1px solid var(--rio-border-soft);
   font-size: var(--rio-fs-sm);
   color: var(--rio-text);
 }
 .rio-activity-feed__item:last-child { border-bottom: 0; }
-.rio-activity-feed__item:nth-child(even) { background: var(--rio-sunken); }
+.rio-activity-feed__item:nth-child(even) { background: var(--rio-surface-2); }
 
-.rio-activity-feed__target { font-weight: var(--rio-fw-medium); color: var(--rio-text-hi); }
-.rio-activity-feed__target a { color: var(--rio-text-hi); text-decoration: none; }
-.rio-activity-feed__target a:hover { color: var(--rio-rust); }
-.rio-activity-feed__sep { color: var(--rio-text-faint); margin: 0 var(--rio-s1); }
+.rio-activity-feed__target { font-weight: var(--rio-fw-medium); color: var(--rio-text-strong); }
+.rio-activity-feed__target a { color: var(--rio-text-strong); text-decoration: none; }
+.rio-activity-feed__target a:hover { color: var(--rio-accent); }
+.rio-activity-feed__sep { color: var(--rio-text-subtle); margin: 0 var(--rio-s1); }
 .rio-activity-feed__summary {
   flex: 1;
   min-width: 0;
@@ -434,7 +434,7 @@
 .rio-activity-feed__meta {
   margin-inline-start: auto;
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -444,7 +444,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--rio-line);
+  border: 1px solid var(--rio-border-soft);
   border-radius: var(--rio-radius);
   background: var(--rio-surface);
   overflow: hidden;
@@ -454,29 +454,29 @@
   align-items: flex-start;
   gap: var(--rio-s3);
   padding: var(--rio-s3) var(--rio-s4);
-  border-bottom: 1px solid var(--rio-line);
+  border-bottom: 1px solid var(--rio-border-soft);
   text-decoration: none;
   color: var(--rio-text);
   transition: background-color 0.12s;
 }
 .rio-tool-list li:last-child .rio-tool-link { border-bottom: 0; }
-.rio-tool-link:hover { background: var(--rio-sunken); }
+.rio-tool-link:hover { background: var(--rio-surface-2); }
 
 .rio-tool-link__icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  color: var(--rio-rust);
+  color: var(--rio-accent);
   margin-top: 2px;
 }
 .rio-tool-link__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rio-tool-link__text strong {
   font-size: var(--rio-fs-sm);
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-hi);
+  color: var(--rio-text-strong);
 }
 .rio-tool-link__text span {
   font-size: var(--rio-fs-xs);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   line-height: 1.4;
 }

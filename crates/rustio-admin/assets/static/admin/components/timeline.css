@@ -21,17 +21,17 @@
    * radius longhand keeps the rounded corners on the end side so
    * the bar reads as a tab attached to the item, regardless of
    * writing direction. */
-  border-inline-start: 3px solid var(--rio-line);
-  background: var(--rio-sunken);
+  border-inline-start: 3px solid var(--rio-border);
+  background: var(--rio-surface-2);
   border-start-end-radius: var(--rio-radius-sm);
   border-end-end-radius: var(--rio-radius-sm);
   font-size: var(--rio-fs-md);
 }
 .rio-timeline-item--success { border-inline-start-color: var(--rio-success); }
-.rio-timeline-item--info    { border-inline-start-color: var(--rio-rust); }
-.rio-timeline-item--warning { border-inline-start-color: var(--rio-warn); }
+.rio-timeline-item--info    { border-inline-start-color: var(--rio-accent); }
+.rio-timeline-item--warning { border-inline-start-color: var(--rio-warning); }
 .rio-timeline-item--error   { border-inline-start-color: var(--rio-danger); }
-.rio-timeline-item--muted   { border-inline-start-color: var(--rio-line); }
+.rio-timeline-item--muted   { border-inline-start-color: var(--rio-border); }
 
 /* Per-update field diff. Rendered inline under the summary cell
  * on the object-history page: one row per changed column, with a
@@ -54,18 +54,18 @@
 }
 .rio-history-diff__label {
   font-weight: var(--rio-fw-semibold);
-  color: var(--rio-text-mute);
+  color: var(--rio-text-muted);
   margin: 0;
 }
 .rio-history-diff__value { margin: 0; min-width: 0; }
-.rio-history-diff__arrow { color: var(--rio-text-faint); margin: 0; }
+.rio-history-diff__arrow { color: var(--rio-text-subtle); margin: 0; }
 .rio-history-diff__old {
   color: var(--rio-danger);
   text-decoration: line-through;
-  text-decoration-color: rgb(var(--rio-rust-rgb) / 0.4);
+  text-decoration-color: rgb(var(--rio-accent-rgb) / 0.4);
   text-decoration-thickness: 1px;
 }
 .rio-history-diff__new {
-  color: var(--rio-success, var(--rio-text-hi));
+  color: var(--rio-success, var(--rio-text-strong));
   font-weight: var(--rio-fw-medium);
 }

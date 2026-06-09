@@ -14,7 +14,7 @@
    * (`--rio-s5` vertical / `--rio-s4` horizontal) so sidebar items
    * have breathing room without losing the rail's visual weight. */
   background: var(--rio-surface-chrome);
-  border-inline-end: 1px solid var(--rio-line);
+  border-inline-end: 1px solid var(--rio-border);
   padding: var(--rio-s5) var(--rio-s4);
 }
 .rio-sidebar-list {
@@ -33,7 +33,7 @@
   font-weight: var(--rio-fw-semibold);
   text-transform: uppercase;
   letter-spacing: var(--rio-tracking-allcaps);
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   margin: var(--rio-s5) 0 var(--rio-s2);
   padding: 0 var(--rio-s3);
 }
@@ -57,24 +57,24 @@
   /* On the chrome surface, hover lifts to surface-2 (the table
    * header tone) — visible but quieter than surface-3 which
    * stayed the row-selection colour. */
-  background: var(--rio-sunken);
-  color: var(--rio-text-hi);
+  background: var(--rio-surface-2);
+  color: var(--rio-text-strong);
   text-decoration: none;
 }
 .rio-sidebar-link.is-active {
   /* Active link: accent-tinted wash + an explicit 3px stripe.
    * The stripe is the directional cue ("you are here ↓"); the
    * wash gives the row weight against the new chrome surface. */
-  background: rgb(var(--rio-rust-rgb) / 0.12);
-  color: var(--rio-rust);
-  box-shadow: inset 3px 0 0 var(--rio-rust);
+  background: rgb(var(--rio-accent-rgb) / 0.12);
+  color: var(--rio-accent);
+  box-shadow: inset 3px 0 0 var(--rio-accent);
 }
 .rio-sidebar-link .rio-icon {
   width: 18px;
   height: 18px;
-  color: var(--rio-text-faint);
+  color: var(--rio-text-subtle);
   flex-shrink: 0;
   transition: color 0.12s;
 }
-.rio-sidebar-link:hover .rio-icon { color: var(--rio-text-hi); }
-.rio-sidebar-link.is-active .rio-icon { color: var(--rio-rust); }
+.rio-sidebar-link:hover .rio-icon { color: var(--rio-text-strong); }
+.rio-sidebar-link.is-active .rio-icon { color: var(--rio-accent); }
