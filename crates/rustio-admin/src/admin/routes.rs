@@ -91,6 +91,8 @@ const ADMIN_CSS: &str = concat!(
     // ---- pages ------------------------------------------------
     include_str!("../../assets/static/admin/pages/dashboard.css"),
     "\n",
+    include_str!("../../assets/static/admin/pages/list.css"),
+    "\n",
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
 );

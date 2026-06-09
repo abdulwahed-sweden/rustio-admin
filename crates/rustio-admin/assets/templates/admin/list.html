@@ -1,44 +1,10 @@
 {% extends "admin/_base.html" %}
 
-{# ----------------------------------------------------------------
- # rustio-admin / admin / list.html
- #
- # The default model list page. Operators land here when they pick
- # a model from the sidebar; they spend most of their day on this
- # one screen, so the layout is deliberately calm and operational
- # rather than dense or dashboard-y.
- #
- # Page structure (all wrapped in `.rio-list-page` so pages/list.css
- # can scope its width and density overrides):
- #
- #   1. Header   — breadcrumbs, title, subtitle, primary Add button.
- #   2. Toolbar  — split into two zones with distinct intent:
- #                   Row 1 "Find":    search input · promoted filter
- #                                    chips · "More filters" overflow
- #                                    · Reset
- #                   Row 2 "Arrange": Sort (one row per field) ·
- #                                    direction toggle · Rows-per-page
- #                                    · Saved view · spacer · Export
- #                                    · Import
- #   3. Active filter pills strip (only when filters are set).
- #   4. Bulk-action bar (revealed by admin.js when rows checked).
- #   5. Table OR empty-state card.
- #   6. Bottom bar — "Showing X of Y" + pagination.
- #
- # Why two toolbar rows: the pre-0.21 layout collapsed Sort, Rows,
- # Export, and Import into one "View ▾" mega-dropdown. Operators
- # had to scan a 17-row menu (8 fields × 2 directions + Default +
- # 4 per-page + Export + Import) to find any operation. Splitting
- # Find (locate data) from Arrange (display data) restores the
- # mental model the toolbar should communicate at a glance.
- # ---------------------------------------------------------------- #}
+{# RustIO Console — model list. Masthead + command bar + data board,
+ # matching ui_kits/admin. Keeps the framework's real columns, search,
+ # filters, sort, saved views, bulk actions, and pagination + their
+ # admin.js hooks (data-rio-dropdown / data-rio-bulk / row actions). #}
 
-{# Filter-kind → icon mapping. The icon column gives every promoted
- # filter chip a visual anchor without having to teach operators a
- # new colour code. Picks are constrained by the embedded icon set
- # (see src/admin/icons.rs) — `clock` for time spans, `database` for
- # FK relations, `menu` for multi-select checkbox stacks, `flag`
- # for everything else (the catch-all). #}
 {% macro filter_icon(kind) -%}
 {%- if kind == "date_range" -%}{{ icon("clock", class="rio-icon") }}
 {%- elif kind == "fk_autocomplete" -%}{{ icon("database", class="rio-icon") }}
@@ -47,11 +13,6 @@
 {%- endif -%}
 {%- endmacro %}
 
-{# Boolean-ish "is this filter contributing to the current view?"
- # check. Drives the active styling on the promoted chip plus the
- # active count badge on "More filters". Each filter kind tracks
- # selection in a different field, so this macro centralises the
- # branching. #}
 {% macro filter_active(group) -%}
 {%- if group.kind == "date_range" and group.has_active_range -%}1
 {%- elif group.kind == "multi_select" and group.multi_selected -%}1
@@ -60,34 +21,21 @@
 {%- endif -%}
 {%- endmacro %}
 
-{# Body of a single filter group — same forms the framework has
- # always rendered, lifted into a macro so each group can drop into
- # either the inline promoted-chip dropdown OR the "More filters"
- # overflow dropdown without duplicating ~50 lines of form markup.
- # The hidden inputs propagate every neighbouring piece of list
- # state (query, sort, per_page, other filters) across an Apply
- # submit so applying a filter never silently drops a sort. #}
 {% macro filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) %}
 {% if group.kind == "fk_autocomplete" %}
-<form method="get" action="/admin/{{ admin_name }}" class="rio-fk-autocomplete"
-      data-rio-fk-autocomplete
-      data-rio-fk-lookup-url="{{ group.fk_lookup_url }}"
-      data-rio-fk-field-name="{{ group.field }}">
+<form method="get" action="/admin/{{ admin_name }}" class="rio-fk-autocomplete" data-rio-fk-autocomplete data-rio-fk-lookup-url="{{ group.fk_lookup_url }}" data-rio-fk-field-name="{{ group.field }}">
   {% for pair in group.hidden_pairs %}<input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">{% endfor %}
   {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
   {% if active_sort_field %}<input type="hidden" name="sort" value="{{ active_sort_field }}"><input type="hidden" name="dir" value="{{ active_sort_dir }}">{% endif %}
   {% if active_per_page_override %}<input type="hidden" name="per_page" value="{{ active_per_page_override }}">{% endif %}
   <input type="hidden" name="{{ group.field }}" value="{{ group.fk_selected_id }}" data-rio-fk-id>
   <div class="rio-fk-autocomplete-wrap">
-    <input type="search" class="rio-input rio-fk-autocomplete-input"
-           value="{{ group.fk_selected_label or group.fk_selected_id }}"
-           placeholder="Search {{ group.fk_target_label }}…"
-           autocomplete="off" data-rio-fk-search>
+    <input type="search" class="rio-input rio-fk-autocomplete-input" value="{{ group.fk_selected_label or group.fk_selected_id }}" placeholder="Search {{ group.fk_target_label }}…" autocomplete="off" data-rio-fk-search>
     <ul class="rio-fk-autocomplete-results" data-rio-fk-results hidden></ul>
   </div>
   <div class="rio-fk-autocomplete-actions">
-    <button type="submit" class="rio-button rio-button--primary">Apply</button>
-    {% if group.fk_selected_id %}<a href="{{ group.all_link }}" class="rio-button">Clear</a>{% endif %}
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--sm">Apply</button>
+    {% if group.fk_selected_id %}<a href="{{ group.all_link }}" class="rio-btn rio-btn--secondary rio-btn--sm">Clear</a>{% endif %}
   </div>
 </form>
 {% elif group.kind == "multi_select" %}
@@ -102,8 +50,8 @@
     {% endfor %}
   </ul>
   <div class="rio-multi-select-actions">
-    <button type="submit" class="rio-button rio-button--primary">Apply</button>
-    {% if group.multi_selected %}<a href="{{ group.all_link }}" class="rio-button">Clear</a>{% endif %}
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--sm">Apply</button>
+    {% if group.multi_selected %}<a href="{{ group.all_link }}" class="rio-btn rio-btn--secondary rio-btn--sm">Clear</a>{% endif %}
   </div>
 </form>
 {% elif group.kind == "date_range" %}
@@ -112,20 +60,18 @@
   {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
   {% if active_sort_field %}<input type="hidden" name="sort" value="{{ active_sort_field }}"><input type="hidden" name="dir" value="{{ active_sort_dir }}">{% endif %}
   {% if active_per_page_override %}<input type="hidden" name="per_page" value="{{ active_per_page_override }}">{% endif %}
-  <label class="rio-date-range-field"><span class="rio-date-range-label-text">From</span>
-    <input type="date" name="{{ group.date_from_name }}" value="{{ group.date_from_value }}" class="rio-input rio-date-range-input"></label>
-  <label class="rio-date-range-field"><span class="rio-date-range-label-text">To</span>
-    <input type="date" name="{{ group.date_to_name }}" value="{{ group.date_to_value }}" class="rio-input rio-date-range-input"></label>
+  <label class="rio-date-range-field"><span class="rio-date-range-label-text">From</span><input type="date" name="{{ group.date_from_name }}" value="{{ group.date_from_value }}" class="rio-input rio-date-range-input"></label>
+  <label class="rio-date-range-field"><span class="rio-date-range-label-text">To</span><input type="date" name="{{ group.date_to_name }}" value="{{ group.date_to_value }}" class="rio-input rio-date-range-input"></label>
   <div class="rio-date-range-actions">
-    <button type="submit" class="rio-button rio-button--primary">Apply</button>
-    {% if group.has_active_range %}<a href="{{ group.all_link }}" class="rio-button">Clear</a>{% endif %}
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--sm">Apply</button>
+    {% if group.has_active_range %}<a href="{{ group.all_link }}" class="rio-btn rio-btn--secondary rio-btn--sm">Clear</a>{% endif %}
   </div>
 </form>
 {% else %}
-<div class="rio-dropdown-options">
-  <a href="{{ group.all_link }}" class="rio-dropdown-chip{% if not group.current %} is-active{% endif %}">All</a>
+<div class="rio-chip-row">
+  <a href="{{ group.all_link }}" class="rio-chip{% if not group.current %} is-active{% endif %}">All</a>
   {% for opt in group.options %}
-  <a href="{{ opt.link }}" class="rio-dropdown-chip{% if opt.selected %} is-active{% endif %}">{{ opt.label }}</a>
+  <a href="{{ opt.link }}" class="rio-chip{% if opt.selected %} is-active{% endif %}">{{ opt.label }}</a>
   {% endfor %}
 </div>
 {% endif %}
@@ -133,319 +79,124 @@
 
 
 {% block content %}
-<div class="rio-list-page">
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">{{ display_name }}</span></nav>
 
-{# =================== 1. Header =================== #}
-<header class="rlp-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ display_name }}</span></nav>
-  <div class="rlp-header-row">
-    <div class="rlp-header-titles">
-      <h1 class="rlp-title">{{ display_name }}</h1>
-      <p class="rlp-subtitle">Manage and review all {{ display_name|lower }}.</p>
-    </div>
-    {% if not read_only %}
-    <a class="rio-button rio-button--primary" href="/admin/{{ admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add {{ singular_name }}</a>
-    {% endif %}
+<div class="rio-masthead-top">
+  <div>
+    <h1>{{ display_name }}</h1>
+    <p class="rio-masthead-desc">Every {{ singular_name|lower }} rustio generated for {{ app_name }} — searchable, sortable, production-ready.</p>
   </div>
-</header>
-
-{# =================== 2. Toolbar =================== #}
-<div class="rlp-toolbar">
-
-  {# ---------- Row 1: FIND ----------
-   # Search dominates (flex: 1, ≥360px), then up to two promoted
-   # filter chips, then a "More filters" overflow dropdown for the
-   # rest, then a Reset link when the view has state to reset. #}
-  <div class="rlp-find">
-    <form method="get" action="/admin/{{ admin_name }}" class="rio-search-bar" role="search">
-      <span class="rio-search-input-wrap">
-        {{ icon("search", class="rio-search-icon") }}
-        <input type="search" name="q" value="{{ search_query }}" placeholder="Search {{ display_name|lower }}…" class="rio-search-input" aria-label="Search">
-      </span>
-      {% for pair in active_filter_pairs %}<input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">{% endfor %}
-      {% if active_sort_field %}<input type="hidden" name="sort" value="{{ active_sort_field }}"><input type="hidden" name="dir" value="{{ active_sort_dir }}">{% endif %}
-      {% if active_per_page_override %}<input type="hidden" name="per_page" value="{{ active_per_page_override }}">{% endif %}
-      {# Hidden submit keeps the form keyboard-submittable for
-       # no-JS clients; visible search button is intentionally
-       # omitted — the magnifier in the input is the affordance,
-       # and a dedicated button was the single biggest source of
-       # toolbar crowding pre-redesign. #}
-      <button type="submit" class="rio-visually-hidden" tabindex="-1">Search</button>
-    </form>
-
-    {# Promote up to 2 configured filters as standalone chip
-     # dropdowns; the rest collapse into "More filters". This is
-     # the "visible primary filters / hidden secondary filters"
-     # split that turns a busy toolbar into a scannable one.
-     # `list_filter()` order determines which two get promoted. #}
-    {% if filters %}
-      {% for group in filters %}
-      {% if loop.index <= 2 %}
-      <div class="rio-dropdown" data-rio-dropdown>
-        <button type="button" class="rio-dropdown-toggle{% if filter_active(group) %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false">
-          {{ filter_icon(group.kind) }}
-          {{ group.label }}
-          {{ icon("chevron-down", class="rio-chev") }}
-        </button>
-        <div class="rio-dropdown-panel" role="dialog" aria-label="{{ group.label }}">
-          <div class="rio-dropdown-section">
-            {{ filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) }}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-      {% endfor %}
-
-      {% if filters|length > 2 %}
-      <div class="rio-dropdown" data-rio-dropdown>
-        <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-          {{ icon("filter", class="rio-icon") }}
-          More filters
-          {% if active_filter_count > 0 %}
-          <span class="rio-dropdown-badge" aria-label="{{ active_filter_count }} active filter">{{ active_filter_count }}</span>
-          {% endif %}
-          {{ icon("chevron-down", class="rio-chev") }}
-        </button>
-        <div class="rio-dropdown-panel" role="dialog" aria-label="More filters">
-          {% for group in filters %}
-          {% if loop.index > 2 %}
-          <div class="rio-dropdown-section">
-            <span class="rio-dropdown-label">{{ group.label }}</span>
-            {{ filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) }}
-          </div>
-          {% endif %}
-          {% endfor %}
-          {% if active_filter_count > 0 %}
-          <div class="rio-dropdown-footer">
-            <a href="{{ clear_all_filters_link }}" class="rio-button">Clear all</a>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}
-    {% endif %}
-
-    {# Reset surfaces ONLY when there's state to reset (search OR
-     # ≥1 active filter). Clears search + every filter while keeping
-     # the active sort and per-page choice — those belong to the
-     # "Arrange" zone, not the "Find" zone. #}
-    {% if search_query or active_filter_count > 0 %}
-    <a class="rlp-reset" href="{{ clear_all_filters_link }}" title="Clear search and filters">
-      {{ icon("rotate-ccw", class="rio-icon") }} Reset
-    </a>
-    {% endif %}
-  </div>
-
-  {# ---------- Row 2: ARRANGE & DATA ----------
-   # Sort + direction toggle + Rows + Saved view sit on the leading
-   # edge; Export + Import sit on the trailing edge, separated by a
-   # flex spacer. Every control carries icon + label so the row
-   # reads at a glance. #}
-  <div class="rlp-arrange">
-
-    {# Sort — one menu row per sortable field (NOT field × direction).
-     # The previous menu duplicated each field with "(asc)" / "(desc)"
-     # suffixes, ballooning to 17 rows for an 8-column model. The
-     # field-once layout cuts that by half while keeping direction
-     # selection one click away through the toggle to its right. #}
-    {% if sort_fields %}
-    <div class="rio-dropdown" data-rio-dropdown>
-      <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-        {{ icon("sliders", class="rio-icon") }}
-        Sort: {{ current_sort_field_label }}
-        {{ icon("chevron-down", class="rio-chev") }}
-      </button>
-      <div class="rio-dropdown-panel" role="dialog" aria-label="Sort">
-        <div class="rio-dropdown-section">
-          <span class="rio-dropdown-label">Sort by</span>
-          <div class="rio-dropdown-menu">
-            <a href="{{ default_sort_link }}" class="rio-dropdown-item{% if not active_sort_field %} is-active{% endif %}">Default order</a>
-            {% for sf in sort_fields %}
-            {# Clicking a field row activates ascending sort. The
-             # direction toggle handles flipping to descending — a
-             # cleaner mental model than picking "field (asc)" vs
-             # "field (desc)" from a long list. #}
-            <a href="{{ sf.asc_link }}" class="rio-dropdown-item{% if sf.is_active %} is-active{% endif %}">{{ sf.label }}</a>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {# Direction toggle — surfaces only when a sort is active. The
-     # text label reads the *current* direction in field-aware copy
-     # ("newest first" for datetime descending; "A → Z" for text
-     # ascending). Clicking it navigates to the opposite direction,
-     # so the label always describes the state the operator is
-     # leaving, not arriving at — Stripe / Linear pattern. #}
-    {% if active_sort_field %}
-    <a class="rlp-sort-dir" href="{{ sort_dir_toggle_link }}"
-       title="Switch direction"
-       aria-label="Toggle sort direction">
-      {{ icon("arrow-up-down", class="rio-icon") }}
-      {{ current_sort_dir_label }}
-    </a>
-    {% endif %}
-    {% endif %}
-
-    {% if per_page_options %}
-    <div class="rio-dropdown" data-rio-dropdown>
-      <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-        {{ icon("table", class="rio-icon") }}
-        Rows: {{ current_per_page_label }}
-        {{ icon("chevron-down", class="rio-chev") }}
-      </button>
-      <div class="rio-dropdown-panel" role="dialog" aria-label="Rows per page">
-        <div class="rio-dropdown-section">
-          <span class="rio-dropdown-label">Rows per page</span>
-          <div class="rio-dropdown-options">
-            {% for opt in per_page_options %}
-            <a href="{{ opt.link }}" class="rio-dropdown-chip{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {# Saved views — per-operator bookmarks. Always renders the
-     # toggle so the "Save current view" form is reachable; the
-     # apply list only renders when ≥1 saved view exists. #}
-    <div class="rio-dropdown" data-rio-dropdown>
-      <button type="button" class="rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
-        {{ icon("bookmark", class="rio-icon") }}
-        Saved view
-        {% if saved_filters %}
-        <span class="rio-dropdown-badge" aria-label="{{ saved_filters|length }} saved view">{{ saved_filters|length }}</span>
-        {% endif %}
-        {{ icon("chevron-down", class="rio-chev") }}
-      </button>
-      <div class="rio-dropdown-panel" role="dialog" aria-label="Saved views">
-        {% if saved_filters %}
-        <div class="rio-dropdown-section">
-          <span class="rio-dropdown-label">Apply</span>
-          <ul class="rio-saved-list">
-            {% for sf in saved_filters %}
-            <li class="rio-saved-list__row{% if sf.is_current %} is-active{% endif %}">
-              <a class="rio-saved-list__apply" href="{{ sf.apply_url }}">{{ sf.name }}</a>
-              <form method="post" action="{{ sf.delete_url }}" class="rio-saved-list__delete" aria-label="Delete saved view {{ sf.name }}">
-                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-                <button type="submit" class="rio-saved-list__delete-btn" title="Delete this saved view">×</button>
-              </form>
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-        <div class="rio-dropdown-section">
-          <span class="rio-dropdown-label">Save current view</span>
-          <form method="post" action="/admin/{{ admin_name }}/saved_filters" class="rio-saved-form">
-            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-            <input type="hidden" name="_query" value="{{ current_query_string }}">
-            <input type="text" name="_name" class="rio-input rio-saved-form__name" placeholder="Name this view" maxlength="120" required>
-            <button type="submit" class="rio-button rio-button--primary rio-button--sm">Save</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="rlp-arrange-spacer"></div>
-
-    {# Export + Import live on the trailing edge as quiet ghost
-     # buttons — secondary in weight so they never compete with the
-     # primary Add CTA in the header. Both keep the same URLs / CSRF
-     # / file-picker mechanism as the pre-redesign "View ▾" dropdown. #}
-    <a class="rlp-data-link" href="{{ csv_export_url }}" download>
-      {{ icon("download", class="rio-icon") }} Export
-    </a>
+  <div class="rio-masthead-cta">
+    <a class="rio-btn rio-btn--secondary rio-btn--md" href="{{ csv_export_url }}" download>{{ icon("download") }} Export</a>
     {% if not read_only %}
-    <form method="post" action="/admin/{{ admin_name }}/import.csv"
-          enctype="multipart/form-data" class="rlp-import-form">
-      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <label class="rlp-data-link" tabindex="0">
-        {{ icon("upload", class="rio-icon") }} Import
-        <input type="file" name="file" accept=".csv,text/csv" onchange="this.form.submit()" style="display:none">
-      </label>
-    </form>
+    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/{{ admin_name }}/new">{{ icon("plus") }} Add {{ singular_name }}</a>
     {% endif %}
   </div>
 </div>
 
-{# =================== 3. Active filter pills =================== #}
+{# ---- Command bar ---- #}
+<div class="rio-cmdbar">
+  <form method="get" action="/admin/{{ admin_name }}" class="rio-search rio-search--lg rio-search--hero{% if search_query %} rio-search--filled{% endif %}" role="search">
+    <span class="rio-search-icon">{{ icon("search") }}</span>
+    <input class="rio-input" type="search" name="q" value="{{ search_query }}" placeholder="Search {{ display_name|lower }}…" aria-label="Search">
+    {% for pair in active_filter_pairs %}<input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">{% endfor %}
+    {% if active_sort_field %}<input type="hidden" name="sort" value="{{ active_sort_field }}"><input type="hidden" name="dir" value="{{ active_sort_dir }}">{% endif %}
+    {% if active_per_page_override %}<input type="hidden" name="per_page" value="{{ active_per_page_override }}">{% endif %}
+    <button type="submit" class="rio-search-go" tabindex="-1">Search</button>
+  </form>
+
+  {% if filters %}
+    {% for group in filters %}{% if loop.index <= 2 %}
+    <div class="rio-dropdown" data-rio-dropdown>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle{% if filter_active(group) %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false">{{ filter_icon(group.kind) }} {{ group.label }} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="{{ group.label }}"><div class="rio-dropdown-section">{{ filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) }}</div></div>
+    </div>
+    {% endif %}{% endfor %}
+    {% if filters|length > 2 %}
+    <div class="rio-dropdown" data-rio-dropdown>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("filter") }} More filters{% if active_filter_count > 0 %} <span class="rio-dropdown-badge">{{ active_filter_count }}</span>{% endif %} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="More filters">
+        {% for group in filters %}{% if loop.index > 2 %}<div class="rio-dropdown-section"><span class="rio-dropdown-label">{{ group.label }}</span>{{ filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) }}</div>{% endif %}{% endfor %}
+        {% if active_filter_count > 0 %}<div class="rio-dropdown-footer"><a href="{{ clear_all_filters_link }}" class="rio-btn rio-btn--secondary rio-btn--sm">Clear all</a></div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+
+  {% if sort_fields %}
+  <div class="rio-dropdown" data-rio-dropdown>
+    <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("sliders") }} Sort: {{ current_sort_field_label }} {{ icon("chevron-down", class="rio-chev") }}</button>
+    <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Sort">
+      <div class="rio-dropdown-section"><span class="rio-dropdown-label">Sort by</span>
+        <div class="rio-dropdown-menu">
+          <a href="{{ default_sort_link }}" class="rio-menu-item{% if not active_sort_field %} is-active{% endif %}">Default order</a>
+          {% for sf in sort_fields %}<a href="{{ sf.asc_link }}" class="rio-menu-item{% if sf.is_active %} is-active{% endif %}">{{ sf.label }}</a>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if active_sort_field %}<a class="rio-btn rio-btn--secondary rio-btn--lg" href="{{ sort_dir_toggle_link }}" title="Switch direction">{{ icon("arrow-up-down") }} {{ current_sort_dir_label }}</a>{% endif %}
+  {% endif %}
+
+  {% if per_page_options %}
+  <div class="rio-dropdown" data-rio-dropdown>
+    <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("table") }} {{ current_per_page_label }} / page {{ icon("chevron-down", class="rio-chev") }}</button>
+    <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Rows per page"><div class="rio-dropdown-section"><div class="rio-chip-row">{% for opt in per_page_options %}<a href="{{ opt.link }}" class="rio-chip{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>{% endfor %}</div></div></div>
+  </div>
+  {% endif %}
+
+  {% if search_query or active_filter_count > 0 %}<a class="rio-btn rio-btn--subtle rio-btn--lg" href="{{ clear_all_filters_link }}">{{ icon("rotate-ccw") }} Reset</a>{% endif %}
+</div>
+
 {% if active_filter_pills %}
 <div class="rio-active-filters" role="region" aria-label="Active filters">
   <span class="rio-active-filters-label">Active</span>
-  {% for pill in active_filter_pills %}
-  <span class="rio-active-pill">
-    <span class="rio-active-pill-key">{{ pill.label }}:</span>
-    {{ pill.value_label }}
-    <a href="{{ pill.remove_link }}" class="rio-active-pill-x" aria-label="Remove {{ pill.label }} filter">×</a>
-  </span>
-  {% endfor %}
+  {% for pill in active_filter_pills %}<span class="rio-active-pill"><span class="rio-active-pill-key">{{ pill.label }}:</span> {{ pill.value_label }} <a href="{{ pill.remove_link }}" class="rio-active-pill-x" aria-label="Remove {{ pill.label }} filter">×</a></span>{% endfor %}
   <a href="{{ clear_all_filters_link }}" class="rio-active-filters-clear">Clear all</a>
 </div>
 {% endif %}
 
-{# =================== 4. Bulk-action form wrapper =================== #}
-{# The bulk-select form wraps the entire table so checked rows submit
- # as a single comma-separated `_ids` field built by admin.js. The
- # form POSTs to `/admin/{name}/bulk_delete`; the server's two-step
- # confirm → commit flow takes over from there. JS toggles
- # `.is-active` on the form when ≥1 row is checked, which reveals the
- # bulk bar. Without JS the bar stays hidden and operators fall back
- # to per-row Delete actions. #}
+{# ---- Board ---- #}
 {% if not read_only %}
 <form method="post" action="/admin/{{ admin_name }}/bulk_delete" class="rio-bulk-form" data-rio-bulk>
 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 <input type="hidden" name="_ids" value="" data-rio-bulk-ids>
-
-<div class="rio-bulk-bar" role="region" aria-live="polite" aria-label="Bulk actions">
-  <span class="rio-bulk-bar-count"><strong data-rio-bulk-count>0</strong> selected</span>
-  <button type="submit" class="rio-button rio-button--danger">{{ icon("trash", class="rio-icon") }} Delete selected</button>
-  {% for btn in bulk_action_buttons %}
-  <button type="submit" formaction="{{ btn.form_action }}" class="rio-button{% if btn.destructive %} rio-button--danger{% endif %}">{{ btn.label }}</button>
-  {% endfor %}
-  <button type="button" class="rio-bulk-bar-clear" data-rio-bulk-clear>Clear selection</button>
+<div class="rio-bulkbar" role="region" aria-live="polite" aria-label="Bulk actions">
+  <span class="rio-bulkbar-count"><strong data-rio-bulk-count>0</strong> selected</span>
+  <button type="button" class="rio-btn rio-btn--ghost rio-btn--sm" data-rio-bulk-clear>Clear</button>
+  <span style="margin-inline-start:auto;display:flex;gap:8px">
+    <button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm" style="color:var(--rio-danger)">{{ icon("trash") }} Delete selected</button>
+    {% for btn in bulk_action_buttons %}<button type="submit" formaction="{{ btn.form_action }}" class="rio-btn rio-btn--secondary rio-btn--sm{% if btn.destructive %} rio-btn--danger{% endif %}">{{ btn.label }}</button>{% endfor %}
+  </span>
 </div>
 {% endif %}
 
-{# =================== 5. Table OR empty state =================== #}
-<section class="rio-card rio-list">
+<div class="rio-board">
   {% if rows %}
-  <table class="rio-table rio-table--striped">
+  <div style="overflow:auto">
+  <table class="rio-dtable">
     <thead>
       <tr>
-        {% if not read_only %}
-        <th class="rio-th rio-th--checkbox">
-          <input type="checkbox" class="rio-row-checkbox-all" data-rio-bulk-all aria-label="Select all rows">
-        </th>
-        {% endif %}
-        {% for f in fields %}
-        <th class="rio-th rio-th--{{ f.kind }}{% if f.sort_active %} rio-th--sort-{{ f.sort_active }}{% endif %}">
-          <a href="{{ f.sort_link }}" class="rio-th-sort">
-            {{ f.label }}{% if f.sort_active == "asc" %} ▲{% elif f.sort_active == "desc" %} ▼{% endif %}
-          </a>
-        </th>
-        {% endfor %}
-        <th class="rio-th rio-th--actions">Actions</th>
+        {% if not read_only %}<th class="col-check"><input type="checkbox" class="rio-row-checkbox-all" data-rio-bulk-all aria-label="Select all"></th>{% endif %}
+        {% for f in fields %}<th class="rio-th--{{ f.kind }}{% if f.sort_active %} is-sort-{{ f.sort_active }}{% endif %}"><a href="{{ f.sort_link }}">{{ f.label }}{% if f.sort_active == "asc" %} ▲{% elif f.sort_active == "desc" %} ▼{% endif %}</a></th>{% endfor %}
+        <th class="col-act">&nbsp;</th>
       </tr>
     </thead>
     <tbody>
       {% for row in rows %}
       <tr>
-        {% if not read_only %}
-        <td class="rio-td rio-td--checkbox">
-          <input type="checkbox" class="rio-row-checkbox" data-rio-bulk-row value="{{ row.id }}" aria-label="Select row {{ row.id }}">
-        </td>
-        {% endif %}
+        {% if not read_only %}<td class="col-check"><input type="checkbox" class="rio-row-checkbox" data-rio-bulk-row value="{{ row.id }}" aria-label="Select row {{ row.id }}"></td>{% endif %}
         {% for f in fields %}
-        <td class="rio-td rio-td--{{ f.kind }}"{% if f.kind == "text" %} title="{{ row[f.name]|default(value='') }}"{% endif %}>
-          {% if f.name == "id" %}
-            <a href="/admin/{{ admin_name }}/{{ row.id }}/edit">{{ row.id }}</a>
+        <td class="rio-td--{{ f.kind }}">
+          {% if loop.first %}
+            <div class="rio-prod">
+              <span class="rio-mono-tile">{{ (row[f.name]|default(value=row.id)|string) | first | upper }}</span>
+              <span class="rio-prod-text"><a class="rio-prod-name" href="/admin/{{ admin_name }}/{{ row.id }}/edit">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value=row.id) }}{% endif %}</a><span class="rio-prod-cat">#{{ row.id }}</span></span>
+            </div>
           {% elif f.kind == "checkbox" %}
-            {% if row[f.name] %}Yes{% else %}No{% endif %}
+            <span class="rio-pill-stock rio-pill-stock--{% if row[f.name] %}in{% else %}out{% endif %}"><span class="rio-dot"></span>{% if row[f.name] %}Yes{% else %}No{% endif %}</span>
           {% elif row.links[f.name] %}
-            <a class="rio-fk-link" href="{{ row.links[f.name] }}">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value='') }}{% endif %}</a>
+            <a class="rio-prod-name" href="{{ row.links[f.name] }}">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value='') }}{% endif %}</a>
           {% elif row.highlights[f.name] %}
             {{ row.highlights[f.name]|safe }}
           {% else %}
@@ -453,90 +204,38 @@
           {% endif %}
         </td>
         {% endfor %}
-        <td class="rio-td rio-td--actions">
-          {% if read_only %}
-          <span class="rio-meta">read-only</span>
-          {% else %}
-          {# Row actions fold into one kebab menu so the actions
-           # column stays a fixed narrow width regardless of how
-           # many actions a model exposes. JS-driven (admin.js ::
-           # initRowActions) and rendered position-fixed so the
-           # list card's `overflow: hidden` can't clip it. Without
-           # JS the <details> fallback still opens Edit / Delete. #}
-          <details class="rio-row-actions" data-rio-row-actions>
-            <summary class="rio-row-actions__toggle" aria-haspopup="menu" aria-label="Actions for row {{ row.id }}">
-              {{ icon("more-horizontal", class="rio-icon") }}
-            </summary>
-            <div class="rio-row-actions__menu" role="menu">
-              <a class="rio-row-actions__item" role="menuitem" href="/admin/{{ admin_name }}/{{ row.id }}/edit">
-                {{ icon("pencil", class="rio-icon") }} Edit
-              </a>
-              <a class="rio-row-actions__item rio-row-actions__item--danger" role="menuitem" href="/admin/{{ admin_name }}/{{ row.id }}/delete">
-                {{ icon("trash", class="rio-icon") }} Delete
-              </a>
-            </div>
-          </details>
+        <td class="col-act">
+          {% if not read_only %}
+          <span class="rio-row-actions">
+            <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row.id }}/edit" aria-label="Edit">{{ icon("pencil") }}</a>
+            <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row.id }}/delete" aria-label="Delete" style="color:var(--rio-danger)">{{ icon("trash") }}</a>
+          </span>
           {% endif %}
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  {# Empty state — icon + heading + sentence + primary CTA, all
-   # centered inside the list card. Copy substitutes the model's
-   # plural / singular display name so the same block reads as
-   # "No appointments yet / Add the first appointment to get
-   # started" for one model and "No invoices yet / Add the first
-   # invoice…" for the next, without any per-project overrides. #}
-  <div class="rlp-empty">
-    <div class="rlp-empty-icon" aria-hidden="true">{{ icon("inbox", class="rio-icon") }}</div>
-    <h2 class="rlp-empty-title">No {{ display_name|lower }} yet</h2>
-    <p class="rlp-empty-body">
-      {% if read_only %}
-      There are no records to display here.
-      {% else %}
-      Add the first {{ singular_name|lower }} to get started.
-      {% endif %}
-    </p>
-    {% if not read_only %}
-    <a class="rio-button rio-button--primary" href="/admin/{{ admin_name }}/new">{{ icon("plus", class="rio-icon") }} Add {{ singular_name }}</a>
+  </div>
+  <div class="rio-board-foot">
+    <span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ rows|length }}</strong> of <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_rows }}</strong> {{ display_name|lower }}</span>
+    {% if total_pages > 1 %}
+    <nav class="rio-pagination" aria-label="Pagination">
+      {% if prev_page_link %}<a class="rio-page" href="{{ prev_page_link }}" aria-label="Previous">{{ icon("arrow-left") }}</a>{% endif %}
+      {% for item in page_items %}{% if item.kind == "ellipsis" %}<span class="rio-page rio-page--ellipsis">…</span>{% elif item.is_active %}<span class="rio-page" aria-current="page">{{ item.number }}</span>{% else %}<a class="rio-page" href="{{ item.link }}">{{ item.number }}</a>{% endif %}{% endfor %}
+      {% if next_page_link %}<a class="rio-page rio-page--next" href="{{ next_page_link }}">Next {{ icon("arrow-right") }}</a>{% endif %}
+    </nav>
     {% endif %}
   </div>
-  {% endif %}
-</section>
-
-{% if not read_only %}
-</form>
-{% endif %}
-
-{# =================== 6. Bottom bar =================== #}
-{# Always renders when there's any row data, even on a single page —
- # operators want to know the total count without having to scroll.
- # Hidden in the empty state because "Showing 0 of 0" is noise. #}
-{% if rows %}
-<div class="rlp-bottom-bar">
-  <span class="rlp-row-count">
-    Showing <strong>{{ rows|length }}</strong> of <strong>{{ total_rows }}</strong> {{ display_name|lower }}
-  </span>
-  {% if total_pages > 1 %}
-  <nav class="rio-pagination" aria-label="Pagination">
-    <span class="rio-meta">Page {{ page }} of {{ total_pages }}</span>
-    {% if prev_page_link %}<a class="rio-pagination-link" href="{{ prev_page_link }}">← Previous</a>{% endif %}
-    {% for item in page_items %}
-      {% if item.kind == "ellipsis" %}
-        <span class="rio-pagination-ellipsis" aria-hidden="true">…</span>
-      {% elif item.is_active %}
-        <span class="rio-pagination-num is-active" aria-current="page">{{ item.number }}</span>
-      {% else %}
-        <a class="rio-pagination-num" href="{{ item.link }}">{{ item.number }}</a>
-      {% endif %}
-    {% endfor %}
-    {% if next_page_link %}<a class="rio-pagination-link" href="{{ next_page_link }}">Next →</a>{% endif %}
-  </nav>
+  {% else %}
+  <div class="rio-empty">
+    {{ icon("inbox") }}
+    <div class="rio-empty-title">No {{ display_name|lower }} yet</div>
+    <div>{% if read_only %}There are no records to display here.{% else %}Add the first {{ singular_name|lower }} to get started.{% endif %}</div>
+    {% if not read_only %}<div style="margin-block-start:14px"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/{{ admin_name }}/new">{{ icon("plus") }} Add {{ singular_name }}</a></div>{% endif %}
+  </div>
   {% endif %}
 </div>
-{% endif %}
 
-</div>{# /.rio-list-page #}
+{% if not read_only %}</form>{% endif %}
 {% endblock %}
