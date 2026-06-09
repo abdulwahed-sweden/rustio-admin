@@ -14,7 +14,7 @@
 </header>
 
 {% if error %}
-<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>
+<div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>
 {% endif %}
 
 <section class="rio-card">
@@ -50,9 +50,9 @@
       >
     </div>
     <div class="rio-form-actions">
-      <a href="/admin" class="rio-button rio-button--ghost">Cancel</a>
+      <a href="/admin" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
       <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-      <button type="submit" class="rio-button rio-button--primary">Verify and enable</button>
+      <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Verify and enable</button>
     </div>
   </form>
 </section>

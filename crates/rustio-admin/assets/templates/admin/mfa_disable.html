@@ -10,11 +10,11 @@
 </header>
 
 {% if error %}
-<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>
+<div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>
 {% endif %}
 
 <section class="rio-confirm rio-confirm--danger">
-  <header class="rio-confirm__header">
+  <header class="rio-confirm__head">
     <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
     <div>
       <h2 class="rio-confirm__title">Are you sure?</h2>
@@ -34,9 +34,9 @@
 
   <form method="post" action="/admin/account/mfa/disable" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <a href="/admin" class="rio-button rio-button--ghost">Cancel</a>
+    <a href="/admin" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <button type="submit" class="rio-button rio-button--danger">
+    <button type="submit" class="rio-btn rio-btn--danger rio-btn--md">
       Disable and sign out everywhere
     </button>
   </form>

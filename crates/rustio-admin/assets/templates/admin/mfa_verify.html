@@ -7,7 +7,7 @@
     Enter the 6-digit code from your authenticator app, or a backup
     code in <code>XXXX-XXXX</code> format.
   </p>
-  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+  {% if error %}<div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>{% endif %}
   <form method="post" action="/admin/mfa/verify" class="rio-form rio-form--login" autocomplete="off">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <div class="rio-form-row">
@@ -36,7 +36,7 @@
         class="rio-input"
       >
     </div>
-    <button type="submit" class="rio-button rio-button--primary">Verify</button>
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Verify</button>
   </form>
   <p class="rio-login-footer">
     <a href="/admin/logout">Sign out</a>
