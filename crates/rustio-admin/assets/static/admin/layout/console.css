@@ -196,13 +196,13 @@
 }
 .rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
 .rio-dtable thead th {
-  text-align: start; font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  text-align: start; font-family: var(--rio-font-mono); font-size: var(--rio-text-13);
   font-weight: var(--rio-weight-semibold); letter-spacing: .05em; text-transform: uppercase;
-  color: var(--rio-text-mute); padding: 13px 18px;
+  color: var(--rio-text-mute); padding: 16px 22px;
   background: var(--rio-raised); border-block-end: 1px solid var(--rio-line-strong);
   position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
 }
-.rio-dtable tbody td { padding: 0 18px; block-size: 62px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
+.rio-dtable tbody td { padding: 0 22px; block-size: 72px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
 .rio-dtable tbody tr:last-child td { border-block-end: 0; }
 .rio-dtable tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); position: relative; }
 .rio-dtable tbody tr:hover { background: var(--rio-raised); }
@@ -219,22 +219,26 @@
 .rio-dtable .col-stock { inline-size: 160px; }
 .rio-dtable .col-act { inline-size: 96px; text-align: end; }
 
-/* product cell: monogram tile + name + category */
-.rio-prod { display: flex; align-items: center; gap: 13px; min-inline-size: 0; inline-size: 100%; }
-.rio-prod-text { display: flex; flex-direction: column; gap: 1px; min-inline-size: 0; flex: 1; }
+/* primary (first) cell — the row's click-through to its edit page. */
+.rio-cell-primary { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; }
+.rio-cell-primary:hover { color: var(--rio-rust); }
+
+/* product cell: monogram tile + name + category (users / groups lists) */
+.rio-prod { display: flex; align-items: center; gap: 15px; min-inline-size: 0; inline-size: 100%; }
+.rio-prod-text { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; flex: 1; }
 .rio-prod-name { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rio-prod-name:hover { color: var(--rio-rust); }
-.rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); display: block; }
+.rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); display: block; }
 .rio-price { font-family: var(--rio-font-mono); font-size: var(--rio-text-15); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
 .rio-mono-tile {
-  inline-size: 38px; block-size: 38px; border-radius: 10px; flex: none;
+  inline-size: 44px; block-size: 44px; border-radius: 12px; flex: none;
   background: var(--rio-sunken); border: 1px solid var(--rio-line);
   display: grid; place-items: center;
-  font-family: var(--rio-font-mono); font-size: 14px; font-weight: 700; color: var(--rio-text-mute);
+  font-family: var(--rio-font-mono); font-size: 16px; font-weight: 700; color: var(--rio-text-mute);
 }
 
 /* status pill */
-.rio-pill-stock { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px; font-size: var(--rio-text-13); font-weight: var(--rio-weight-semibold); border: 1px solid var(--rio-line); white-space: nowrap; }
+.rio-pill-stock { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); border: 1px solid var(--rio-line); white-space: nowrap; }
 .rio-pill-stock .rio-dot { inline-size: 7px; block-size: 7px; border-radius: 999px; }
 .rio-pill-stock--in { color: var(--rio-text); background: var(--rio-surface); }
 .rio-pill-stock--in .rio-dot { background: var(--rio-success); }
