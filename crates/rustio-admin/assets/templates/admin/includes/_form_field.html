@@ -1,8 +1,8 @@
-{# Render one FormField. The caller must pass `field`. #}
+{# Render one FormField (RustIO Console / DS classes). Caller passes `field`. #}
 <div class="rio-field rio-field--{{ field.widget }}{% if field.span == 2 %} rio-field--full{% endif %}">
   {% if field.widget != "checkbox" %}
-  <label class="rio-field-label" for="id_{{ field.name }}">
-    {{ field.label }}{% if field.required %} <span class="rio-required" aria-hidden="true">*</span>{% endif %}
+  <label class="rio-label" for="id_{{ field.name }}">
+    {{ field.label }}{% if field.required %} <span class="rio-req" aria-hidden="true">*</span>{% endif %}
   </label>
   {% endif %}
 
@@ -10,22 +10,25 @@
     <textarea
       id="id_{{ field.name }}"
       name="{{ field.name }}"
-      class="rio-textarea"
+      class="rio-input"
       {% if field.required %}required{% endif %}
       {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
       {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
       {% if field.disabled %}disabled{% endif %}
       {% if field.autofocus %}autofocus{% endif %}
+      {% if field.errors %}aria-invalid="true"{% endif %}
       rows="6">{{ field.value }}</textarea>
   {% elif field.widget == "select" %}
+    <span class="rio-select-wrap">
     <select
       id="id_{{ field.name }}"
       name="{{ field.name }}{% if field.multiple %}[]{% endif %}"
-      class="rio-select"
+      class="rio-input"
       {% if field.multiple %}multiple{% endif %}
       {% if field.required %}required{% endif %}
       {% if field.disabled %}disabled{% endif %}
       {% if field.autofocus %}autofocus{% endif %}
+      {% if field.errors %}aria-invalid="true"{% endif %}
       {% if field.search_url %}data-search-url="{{ field.search_url }}"{% endif %}>
       {% if field.options %}
         {% for opt in field.options %}
@@ -33,32 +36,15 @@
         {% endfor %}
       {% endif %}
     </select>
-    {% if field.has_more %}
-    <p class="rio-field-hint">Showing first 50 results. Keep typing to filter.</p>
-    {% endif %}
+    </span>
+    {% if field.has_more %}<p class="rio-help">Showing first 50 results. Keep typing to filter.</p>{% endif %}
   {% elif field.widget == "checkbox" %}
-    <label class="rio-checkbox" for="id_{{ field.name }}">
-      <input
-        type="checkbox"
-        id="id_{{ field.name }}"
-        name="{{ field.name }}"
-        value="on"
-        {% if field.checked %}checked{% endif %}
-        {% if field.disabled %}disabled{% endif %}>
+    <label class="rio-check" for="id_{{ field.name }}">
+      <input type="checkbox" id="id_{{ field.name }}" name="{{ field.name }}" value="on"{% if field.checked %} checked{% endif %}{% if field.disabled %} disabled{% endif %}>
       <span>{{ field.label }}</span>
     </label>
   {% elif field.widget == "file" %}
-    {# Existing-value preview: when the column already holds a
-     # relative path (edit mode, previous upload), render a link
-     # to the served file alongside the file input. The input
-     # itself is empty by default; the multipart handler keeps
-     # the previous value if the operator submits without picking
-     # a new file. #}
-    {% if field.value %}
-    <p class="rio-field-hint rio-file-current">
-      Current: <a href="/admin/uploads/{{ field.value }}" target="_blank" rel="noopener">{{ field.value }}</a>
-    </p>
-    {% endif %}
+    {% if field.value %}<p class="rio-help rio-file-current">Current: <a href="/admin/uploads/{{ field.value }}" target="_blank" rel="noopener">{{ field.value }}</a></p>{% endif %}
     <input
       id="id_{{ field.name }}"
       name="{{ field.name }}"
@@ -79,12 +65,13 @@
       {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
       {% if field.disabled %}disabled{% endif %}
       {% if field.autofocus %}autofocus{% endif %}
+      {% if field.errors %}aria-invalid="true"{% endif %}
       {% if field.autocomplete %}autocomplete="{{ field.autocomplete }}"{% endif %}>
   {% endif %}
 
-  {% if field.hint %}<p class="rio-field-hint">{{ field.hint }}</p>{% endif %}
+  {% if field.hint %}<p class="rio-help">{{ field.hint }}</p>{% endif %}
   {% if field.errors %}
-    <ul class="rio-field-errors" role="alert">
+    <ul class="rio-error rio-field-errors" role="alert">
       {% for err in field.errors %}<li>{{ err }}</li>{% endfor %}
     </ul>
   {% endif %}

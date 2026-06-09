@@ -1,0 +1,83 @@
+/* ============================================================
+ * rustio-admin / pages / form  —  detail / create / edit (console)
+ *
+ * The form reuses the console masthead + the DS form controls
+ * (components/forms.css: .rio-field / .rio-label / .rio-input /
+ * .rio-help / .rio-error / .rio-select-wrap). This sheet lays out
+ * the fieldset cards, the responsive field grid, and the action bar.
+ * ============================================================ */
+
+.rio-form-shell { max-inline-size: 980px; }
+.rio-form { display: flex; flex-direction: column; gap: var(--rio-space-20); }
+
+/* Each section is a board card (.rio-board supplies surface/border/
+ * radius/shadow); add interior padding + a serif legend. */
+.rio-fieldset {
+  border: 1px solid var(--rio-line);
+  padding: var(--rio-space-24);
+  margin: 0;
+}
+.rio-fieldset-legend {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-20);
+  letter-spacing: var(--rio-tracking-display);
+  color: var(--rio-text-hi);
+  padding: 0;
+  margin-block-end: var(--rio-space-16);
+}
+
+/* Two-column responsive field grid; full-span fields take the row. */
+.rio-fieldset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--rio-space-20);
+}
+.rio-field--full,
+.rio-field--textarea,
+.rio-field--file { grid-column: 1 / -1; }
+@media (max-width: 720px) {
+  .rio-fieldset-grid { grid-template-columns: 1fr; }
+}
+
+/* Checkbox row — label + native control inline. */
+.rio-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-space-8);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text-hi);
+  cursor: pointer;
+}
+.rio-check input[type="checkbox"] { inline-size: 18px; block-size: 18px; accent-color: var(--rio-rust); flex: none; }
+.rio-field--checkbox { justify-content: center; }
+
+.rio-field-errors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.rio-file-current a { color: var(--rio-rust); }
+
+/* Action bar — primary saves on the start, Cancel pushed to the end. */
+.rio-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rio-space-8);
+}
+.rio-form-actions-spacer { flex: 1; }
+
+/* Inline (related children) sections. */
+.rio-inline-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rio-space-16);
+  padding: var(--rio-space-16) var(--rio-space-20);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-inline-section__header h2 {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-20);
+  color: var(--rio-text-hi);
+  margin: 0;
+}
+.rio-inline-section .rio-dtable td { padding-block: 12px; block-size: auto; }
