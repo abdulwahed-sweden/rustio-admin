@@ -105,6 +105,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/pages/account.css"),
     "\n",
+    include_str!("../../assets/static/admin/pages/tools.css"),
+    "\n",
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
 );

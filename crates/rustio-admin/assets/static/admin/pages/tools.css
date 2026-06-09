@@ -1,0 +1,67 @@
+/* ============================================================
+ * rustio-admin / pages / tools  —  history (audit), object history,
+ * db browser. Generic .rio-table, audit badges, field diffs, avatar,
+ * date dividers, and the db-browser schema cards.
+ * ============================================================ */
+
+/* ---- Generic legacy table -> DS look ---- */
+.rio-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
+.rio-table thead th {
+  text-align: start; font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-semibold); letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--rio-text-mute); padding: 12px 16px;
+  background: var(--rio-raised); border-block-end: 1px solid var(--rio-line-strong);
+}
+.rio-table tbody td { padding: 12px 16px; border-block-end: 1px solid var(--rio-line); color: var(--rio-text); vertical-align: middle; }
+.rio-table tbody tr:last-child td { border-block-end: 0; }
+.rio-table tbody tr:hover td { background: var(--rio-raised); }
+.rio-table a { color: var(--rio-rust); text-decoration: none; }
+.rio-table code { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); }
+
+/* ---- Badge pills (audit actions / history) ---- */
+.rio-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
+  padding: 3px 10px; border-radius: var(--rio-radius-pill); text-transform: capitalize; white-space: nowrap;
+  background: var(--rio-sunken); color: var(--rio-text-mute);
+}
+.rio-pill::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.rio-pill--success, .lx-badge--success { background: var(--rio-success-tint); color: var(--rio-success); }
+.rio-pill--danger,  .lx-badge--danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
+.rio-pill--warning, .lx-badge--warning { background: var(--rio-warn-tint);     color: var(--rio-warn); }
+.rio-pill--info,    .lx-badge--info     { background: var(--rio-rust-tint);     color: var(--rio-rust); }
+.rio-pill--neutral, .lx-badge--neutral  { background: var(--rio-sunken);        color: var(--rio-text-mute); }
+.rio-pill--badge-warning { background: var(--rio-warn-tint); color: var(--rio-warn); }
+
+/* ---- Avatar + "by" ---- */
+.rio-avatar { inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--rio-radius-md); background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-family: var(--rio-font-mono); font-weight: 700; font-size: var(--rio-text-12); }
+.rio-by { display: inline-flex; align-items: center; gap: var(--rio-space-8); color: var(--rio-text); text-decoration: none; }
+.rio-by:hover { color: var(--rio-rust); }
+
+/* ---- Date divider rows ---- */
+.rio-history-date-divider th, tr.lx-date th {
+  padding: 8px 16px !important; background: var(--rio-sunken);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--rio-text-faint); text-align: start;
+}
+
+/* ---- Field diffs ---- */
+.rio-history-diff, .lx-diff { margin: var(--rio-space-8) 0 0; display: grid; gap: 2px; }
+.rio-history-diff__row, .lx-diff__row { display: flex; align-items: baseline; gap: 8px; font-size: var(--rio-text-13); }
+.rio-history-diff__label, .lx-diff__label { color: var(--rio-text-faint); min-inline-size: 90px; font-family: var(--rio-font-mono); }
+.rio-history-diff dd, .lx-diff dd { margin: 0; }
+.rio-history-diff__old, .lx-diff__old { color: var(--rio-danger); text-decoration: line-through; }
+.rio-history-diff__arrow, .lx-diff__arrow { color: var(--rio-text-faint); }
+.rio-history-diff__new, .lx-diff__new { color: var(--rio-success); }
+
+/* ---- DB browser ---- */
+.rio-db-stats { display: flex; flex-wrap: wrap; gap: var(--rio-space-48); margin: 0; }
+.rio-db-stat dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-faint); }
+.rio-db-stat dd { margin: 2px 0 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-30); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
+.rio-db-table { padding: 0 !important; overflow: hidden; }
+.rio-db-table__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--rio-space-16); padding: var(--rio-space-16) var(--rio-space-20); border-block-end: 1px solid var(--rio-line); }
+.rio-db-table__header h2 { margin: 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-17); color: var(--rio-text-hi); }
+.rio-db-fks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--rio-space-20); padding: var(--rio-space-20); border-block-start: 1px solid var(--rio-line); }
+.rio-db-fks__group h3 { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-faint); margin: 0 0 var(--rio-space-8); }
+.rio-db-fk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-6); font-size: var(--rio-text-13); }
+.rio-db-fk-list a { color: var(--rio-rust); text-decoration: none; }

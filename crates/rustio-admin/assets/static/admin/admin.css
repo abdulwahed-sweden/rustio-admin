@@ -67,6 +67,7 @@
 @import url("pages/permissions.css");
 @import url("pages/detail.css");
 @import url("pages/account.css");
+@import url("pages/tools.css");
 
 /* ---- Print — drop chrome, keep ink. */
 @import url("print/print.css");
