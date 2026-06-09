@@ -63,6 +63,7 @@
 @import url("pages/list.css");
 @import url("pages/form.css");
 @import url("pages/auth.css");
+@import url("pages/states.css");
 
 /* ---- Print — drop chrome, keep ink. */
 @import url("print/print.css");
