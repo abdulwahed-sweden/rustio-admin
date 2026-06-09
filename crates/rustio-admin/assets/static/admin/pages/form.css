@@ -95,3 +95,27 @@
   margin: 0;
 }
 .rio-inline-section .rio-dtable td { padding-block: 12px; block-size: auto; }
+
+/* Inline create form (feature-flag "register") — label-over-input
+ * fields in a row with the submit button on their baseline. Wraps to a
+ * stack on narrow screens. */
+.rio-form--inline {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--rio-space-16);
+}
+.rio-form--inline .rio-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-space-6);
+  flex: 1 1 200px;
+  min-inline-size: 0;
+}
+.rio-form--inline .rio-form-field > span {
+  font-weight: var(--rio-weight-semibold);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text-hi);
+}
+.rio-form--inline .rio-btn { flex: 0 0 auto; }

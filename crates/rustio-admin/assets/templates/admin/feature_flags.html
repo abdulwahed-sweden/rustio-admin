@@ -29,9 +29,9 @@
           <td><code>{{ f.key }}</code></td>
           <td>
             {% if f.enabled %}
-            <span class="rio-pill rio-pill--badge-success">enabled</span>
+            <span class="rio-pill rio-pill--success">enabled</span>
             {% else %}
-            <span class="rio-pill rio-pill--badge-neutral">disabled</span>
+            <span class="rio-pill rio-pill--neutral">disabled</span>
             {% endif %}
           </td>
           <td>{{ f.description }}</td>
@@ -40,7 +40,7 @@
             <form method="post" action="/admin/feature_flags/{{ f.key }}/toggle" class="rio-form-inline">
               <input type="hidden" name="_csrf" value="{{ csrf_token }}">
               <input type="hidden" name="enabled" value="{% if f.enabled %}0{% else %}1{% endif %}">
-              <button type="submit" class="rio-button rio-button--ghost rio-button--sm">
+              <button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm">
                 {% if f.enabled %}Disable{% else %}Enable{% endif %}
               </button>
             </form>
@@ -82,7 +82,7 @@
         <span>Description</span>
         <input type="text" name="description" placeholder="What flips when this is on?" class="rio-input">
       </label>
-      <button type="submit" class="rio-button rio-button--primary">Add flag</button>
+      <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Add flag</button>
     </form>
   </div>
 </section>
