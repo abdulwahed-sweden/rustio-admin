@@ -1,0 +1,70 @@
+/* ============================================================
+ * rustio-admin / pages / auth  —  login & unauthenticated shell
+ *
+ * The auth shell (_base.html, no rail): a slim brand top bar, a
+ * centered card, and a quiet footer. Used by login, forgot/reset
+ * password, MFA verify, must-change-password, re-auth.
+ * ============================================================ */
+
+.rio-auth {
+  min-block-size: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rio-auth-top {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-20) var(--rio-space-32);
+}
+.rio-auth-top .rio-brand-word { font-size: var(--rio-text-20); }
+
+.rio-auth-main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--rio-space-24);
+}
+
+.rio-auth-foot {
+  padding: var(--rio-space-20) var(--rio-space-32);
+  text-align: center;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  color: var(--rio-text-faint);
+}
+.rio-auth-foot a { color: var(--rio-text-mute); text-decoration: none; }
+.rio-auth-foot a:hover { color: var(--rio-rust); }
+
+/* The card */
+.rio-auth-card {
+  inline-size: 100%;
+  max-inline-size: 408px;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-lg), var(--rio-highlight-top);
+  padding: var(--rio-space-32);
+}
+.rio-auth-title {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-30);
+  letter-spacing: var(--rio-tracking-display);
+  text-align: center;
+  color: var(--rio-text-hi);
+  margin: 0 0 var(--rio-space-24);
+}
+
+/* Stack fields in the auth card. */
+.rio-auth-card .rio-form { display: flex; flex-direction: column; gap: var(--rio-space-16); }
+.rio-auth-card .rio-btn { inline-size: 100%; justify-content: center; }
+
+.rio-auth-card-foot {
+  margin: var(--rio-space-20) 0 0;
+  text-align: center;
+  font-size: var(--rio-text-14);
+}
+.rio-auth-card-foot a { color: var(--rio-rust); text-decoration: none; }
+.rio-auth-card-foot a:hover { text-decoration: underline; }
