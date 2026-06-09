@@ -50,10 +50,10 @@
 .rio-dropdown-footer { padding: 6px; border-block-start: 1px solid var(--rio-line); }
 .rio-dropdown-badge {
   display: inline-grid; place-items: center;
-  min-inline-size: 18px; block-size: 18px; padding: 0 5px;
+  min-inline-size: 20px; block-size: 20px; padding: 0 6px;
   border-radius: 999px;
   background: var(--rio-rust-tint-2); color: var(--rio-rust);
-  font-family: var(--rio-font-mono); font-size: 11px; font-weight: 600;
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-13); font-weight: 600; /* 14px — contract floor */
 }
 
 /* ---- Filter chips (single-select filter + rows-per-page) ---- */

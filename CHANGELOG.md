@@ -103,6 +103,21 @@ leaves the alpha track.
   `--rio-shadow-card`; `--rio-shadow-inset` retuned to the contract value and
   `--rio-accent-rgb` `15,140,123`→`17,149,136`. The content-area dot-grid texture
   is removed and body `letter-spacing` zeroed (flat `#fafcfb` per the reference).
+- **Visual Contract v2.0 conformance — Phase 2 (typography & fonts).** The content
+  area moves to **Inter** as the single Latin face for both body and titles (the
+  serif display is retired — `--rio-font-display` and `--rio-font-body` now point at
+  the contract's Inter stack; the already-baked, already-licensed `InterVariable.woff2`
+  gains its missing `@font-face`). `--rio-font-mono` switches to the contract's
+  `"SFMono-Regular", Consolas, …` stack. Per-script Arabic fallbacks (Naskh / Tajawal)
+  are preserved. Enforced the contract's **14px content-area floor**: the small type
+  token `--rio-text-12` `0.8125rem`→`0.875rem` (lifts table headers, badges, hints,
+  code chrome, stat labels, and the permission-matrix headers to 14px in one move) and
+  the lone literal offender `.rio-dropdown-badge` 11px→14px. Page-title tokens:
+  `--rio-fs-display` `44px`→`2.25rem` (36px), `--rio-fs-xs` `13px`→`0.875rem` (14px);
+  added `--rio-fs-lead` `1.0625rem` (17px). `h1` now inherits weight **800** /
+  line-height **1.15** from the base layer rather than per-page overrides. The frozen
+  top bar / sidebar / footer use literal sizes and are untouched. Spectral / Hanken
+  faces remain baked for now (separate cleanup commit later).
 
 
 ## [0.28.0] — 2026-06-08

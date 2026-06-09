@@ -9,7 +9,21 @@
  * Arabic fallback used by the per-stack font lists in
  * tokens/typography.css. Thai / Devanagari / CJK @font-face live in
  * base/typography-i18n.css, lang-gated.
+ *
+ * Visual Contract v2.0: Inter is the single Latin face for both body and
+ * display (titles lose the serif). The InterVariable.woff2 was already baked
+ * (FONT_INTER in src/admin/routes.rs) and licensed (LICENSE.txt) — only this
+ * @font-face was missing. Spectral / Hanken faces are kept for now and removed
+ * in a separate cleanup commit once every phase has landed.
  * ============================================================ */
+
+/* Inter — body + display (variable wght 100..900) */
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/InterVariable.woff2") format("woff2-variations"),
+       url("/static/fonts/InterVariable.woff2") format("woff2");
+  font-weight: 100 900; font-style: normal; font-display: swap;
+}
 
 /* Spectral — display serif (static 400/500/600/700) */
 @font-face { font-family: "Spectral"; src: url("/static/fonts/Spectral-400-latin.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }

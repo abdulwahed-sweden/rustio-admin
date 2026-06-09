@@ -12,19 +12,22 @@
 
 :root {
   /* --- Families ---
-     Arabic/other-script fallbacks are appended so a single stack handles any
-     language a developer types: Latin uses the brand face, Arabic falls
-     through (per glyph) to a harmonious Naskh/Tajawal face. */
-  --rio-font-display: "Spectral", "Noto Naskh Arabic", "Iowan Old Style", Georgia, "Times New Roman", serif;
-  --rio-font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, "Tajawal", monospace;
-  --rio-font-body:    "Hanken Grotesk", "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+     Visual Contract v2.0: Inter is the single Latin face for both body and
+     display (titles are sans, no serif). The contract's Inter / SFMono stacks
+     are used verbatim; the framework's per-script Arabic fallbacks (Naskh for
+     display, Tajawal for body/mono) are preserved so a single stack still
+     handles any language a developer types — Latin uses Inter, Arabic falls
+     through per glyph (the @font-face unicode-ranges keep them off Latin). */
+  --rio-font-display: "Inter", "Noto Naskh Arabic", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rio-font-mono:    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Tajawal", monospace;
+  --rio-font-body:    "Inter", "Tajawal", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* --- Type scale (px) ---
      12 · 13 · 14 · 15 · 17 · 20 · 24 · 30 · 38 · 48 · 64 · display-clamp */
   /* Operator-comfort scale: body sits at 16px, the reading sizes lift to
      match, and the large end opens back up. Judged by appearance, not the
      token name — every value here is the px it actually renders. */
-  --rio-text-12: 0.8125rem;   /* 13 — eyebrows / captions */
+  --rio-text-12: 0.875rem;    /* 14 — contract 14px floor (was 13; no content text < 14px) */
   --rio-text-13: 0.875rem;    /* 14 — fine print */
   --rio-text-14: 1rem;        /* 16 — product base (body, inputs, tables) */
   --rio-text-15: 1rem;        /* 16 */

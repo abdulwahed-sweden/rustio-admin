@@ -39,7 +39,7 @@ body {
   background-color: var(--rio-bg);
 }
 
-/* Headings default to the display family (Spectral). */
+/* Headings default to the display family (now Inter — the contract has no serif). */
 h1, h2, h3, h4 {
   font-family: var(--rio-font-display);
   color: var(--rio-text-hi);
@@ -48,6 +48,13 @@ h1, h2, h3, h4 {
   font-weight: var(--rio-weight-display);
   margin: 0;
   text-wrap: balance; /* tidy, even headline line-breaks */
+}
+
+/* Page title — contract §2.1: weight 800, line-height 1.15. Inherited from the
+   base layer so pages don't each re-declare title weight. */
+h1 {
+  font-weight: 800;
+  line-height: 1.15;
 }
 
 /* Long-form paragraphs break more gracefully. */
