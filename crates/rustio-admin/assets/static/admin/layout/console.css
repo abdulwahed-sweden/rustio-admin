@@ -55,7 +55,7 @@
   inline-size: 3px; border-radius: 999px; background: #6E8CFF;
 }
 /* Open mode: full-width rows with labels */
-.rio-rail-label { display: none; font-family: var(--rio-font-body); font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); white-space: nowrap; }
+.rio-rail-label { display: none; font-family: var(--rio-font-body); font-size: var(--rio-text-17); font-weight: var(--rio-weight-semibold); white-space: nowrap; }
 .rio-rail--open .rio-rail-btn { inline-size: 100%; block-size: 42px; border-radius: 10px; grid-template-columns: 21px 1fr; justify-items: start; align-items: center; gap: 13px; padding-inline: 12px; }
 .rio-rail--open .rio-rail-btn .rio-rail-label { display: block; }
 .rio-rail--open .rio-rail-btn::after { display: none; }
@@ -116,9 +116,41 @@
 .rio-ws-search .rio-kbd { margin-inline-start: auto; }
 .rio-ws-actions { display: flex; align-items: center; gap: 8px; }
 
+/* ---- Header account menu (the account center lives here, not the rail) ---- */
+.rio-usermenu { margin-inline-start: 4px; }
+.rio-usermenu-btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  block-size: 40px; padding: 0 10px 0 6px;
+  border: 1px solid var(--rio-line); border-radius: 999px;
+  background: var(--rio-surface); color: var(--rio-text); cursor: pointer; font: inherit;
+  transition: background-color var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-usermenu-btn:hover { background: var(--rio-raised); border-color: var(--rio-line-strong); }
+.rio-usermenu-avatar {
+  inline-size: 30px; block-size: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  background: var(--rio-rust-tint); color: var(--rio-rust);
+  font-family: var(--rio-font-mono); font-weight: 700; font-size: 14px;
+}
+.rio-usermenu-name { font-size: var(--rio-text-14); font-weight: 600; color: var(--rio-text-hi); max-inline-size: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rio-usermenu-btn svg { color: var(--rio-text-mute); flex: none; }
+@media (max-width: 980px) { .rio-usermenu-name { display: none; } }
+
+.rio-usermenu .rio-usermenu-panel { inset-inline-end: 0; inset-inline-start: auto; min-inline-size: 268px; padding: 8px; }
+.rio-usermenu-head { padding: 8px 12px 10px; }
+.rio-usermenu-head-name { display: block; font-weight: 600; color: var(--rio-text-hi); font-size: var(--rio-text-14); }
+.rio-usermenu-head-role { display: block; font-family: var(--rio-font-mono); font-size: 12px; color: var(--rio-text-mute); text-transform: uppercase; letter-spacing: .04em; margin-block-start: 3px; }
+.rio-usermenu-sep { block-size: 1px; background: var(--rio-line); margin: 6px 4px; }
+.rio-usermenu-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; color: var(--rio-text); text-decoration: none; font-size: var(--rio-text-14); }
+.rio-usermenu-item:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-usermenu-item svg { inline-size: 18px; block-size: 18px; flex: none; color: var(--rio-text-mute); }
+.rio-usermenu-item--danger { color: var(--rio-danger); }
+.rio-usermenu-item--danger svg { color: var(--rio-danger); }
+.rio-usermenu-item--danger:hover { background: var(--rio-danger-tint); color: var(--rio-danger); }
+
 /* Scroll body */
 .rio-ws-body { flex: 1; overflow: auto; display: flex; flex-direction: column; }
-.rio-ws-inner { flex: 1; padding: 26px 30px 30px; display: flex; flex-direction: column; gap: 22px; max-inline-size: 1280px; inline-size: 100%; margin: 0 auto; }
+.rio-ws-inner { flex: 1; padding: 32px 44px 40px; display: flex; flex-direction: column; gap: 28px; max-inline-size: 1320px; inline-size: 100%; margin: 0 auto; }
 
 /* ---- Editorial masthead + ledger ---- */
 .rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; }

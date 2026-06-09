@@ -4,24 +4,24 @@
    Label / help / error states · visible copper focus rings
    ============================================================ */
 
-.rio-field { display: flex; flex-direction: column; gap: var(--rio-space-6); }
+.rio-field { display: flex; flex-direction: column; gap: var(--rio-space-12); }
 .rio-label {
   font-family: var(--rio-font-body);
-  font-size: var(--rio-text-13);
-  font-weight: var(--rio-weight-medium);
+  font-size: 1rem;                 /* 16px */
+  font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-hi);
 }
 .rio-label .rio-req { color: var(--rio-rust); margin-inline-start: 2px; }
-.rio-help { font-size: var(--rio-text-12); color: var(--rio-text-mute); }
-.rio-error { font-size: var(--rio-text-12); color: var(--rio-danger); }
+.rio-help { font-size: var(--rio-text-13); color: var(--rio-text-mute); margin-block-start: 2px; }
+.rio-error { font-size: var(--rio-text-13); color: var(--rio-danger); }
 
 /* Text input / textarea / select share .rio-input */
 .rio-input {
   inline-size: 100%;
-  min-block-size: 36px;
-  padding: 8px 12px;
+  min-block-size: 46px;            /* comfortable touch target */
+  padding: 11px 14px;
   font-family: var(--rio-font-body);
-  font-size: var(--rio-text-14);
+  font-size: 1rem;                 /* 16px */
   color: var(--rio-text-hi);
   background: var(--rio-surface);
   border: 1px solid var(--rio-line-strong);

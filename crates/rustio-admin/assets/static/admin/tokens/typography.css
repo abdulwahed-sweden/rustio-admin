@@ -21,19 +21,20 @@
 
   /* --- Type scale (px) ---
      12 · 13 · 14 · 15 · 17 · 20 · 24 · 30 · 38 · 48 · 64 · display-clamp */
-  /* Small & medium kept honest and legible; the large end is dialed down
-     ~10–12% for a calmer, more refined hierarchy. */
-  --rio-text-12: 0.75rem;     /* 12 */
-  --rio-text-13: 0.8125rem;   /* 13 */
-  --rio-text-14: 0.875rem;    /* 14 — product base */
-  --rio-text-15: 0.9375rem;   /* 15 */
-  --rio-text-17: 1.0625rem;   /* 17 — marketing body */
-  --rio-text-20: 1.1875rem;   /* ~19 — lead */
-  --rio-text-24: 1.4375rem;   /* ~23 — card title */
-  --rio-text-30: 1.6875rem;   /* ~27 — h3 / stat value */
-  --rio-text-38: 2.0625rem;   /* ~33 — h2 */
-  --rio-text-48: 2.625rem;    /* ~42 — h1 */
-  --rio-text-64: 3.375rem;    /* ~54 — display */
+  /* Operator-comfort scale: body sits at 16px, the reading sizes lift to
+     match, and the large end opens back up. Judged by appearance, not the
+     token name — every value here is the px it actually renders. */
+  --rio-text-12: 0.8125rem;   /* 13 — eyebrows / captions */
+  --rio-text-13: 0.875rem;    /* 14 — fine print */
+  --rio-text-14: 1rem;        /* 16 — product base (body, inputs, tables) */
+  --rio-text-15: 1rem;        /* 16 */
+  --rio-text-17: 1.09375rem;  /* 17.5 — sidebar nav */
+  --rio-text-20: 1.375rem;    /* 22 — lead / section title */
+  --rio-text-24: 1.625rem;    /* 26 — card title */
+  --rio-text-30: 1.9375rem;   /* 31 — h3 / stat value */
+  --rio-text-38: 2.375rem;    /* 38 — h2 */
+  --rio-text-48: 3rem;        /* 48 — h1 / page title */
+  --rio-text-64: 3.75rem;     /* 60 — display */
   --rio-text-display: clamp(2.5rem, 5vw, 4.25rem); /* hero — smaller, refined */
 
   /* --- Weights --- */

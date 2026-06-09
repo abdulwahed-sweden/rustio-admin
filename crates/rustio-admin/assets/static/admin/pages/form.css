@@ -7,27 +7,28 @@
  * the fieldset cards, the responsive field grid, and the action bar.
  * ============================================================ */
 
-.rio-form-shell { max-inline-size: 880px; }
-.rio-form { display: flex; flex-direction: column; gap: var(--rio-space-20); }
+.rio-form-shell { max-inline-size: 1100px; }
+.rio-form { display: flex; flex-direction: column; gap: var(--rio-space-32); }
 
-/* Form-page titles read as bold sans (matches the reference), not the
- * editorial serif used on the dashboard masthead. */
+/* Form-page titles read as bold sans (matches the reference), at a
+ * comfortable business-app scale. */
 .rio-form-shell .rio-masthead-top h1,
 .rio-page-header h1 {
   font-family: var(--rio-font-body);
   font-weight: 800;
-  font-size: 28px;
-  line-height: 1.15;
-  letter-spacing: -0.012em;
+  font-size: 42px;
+  line-height: 1.12;
+  letter-spacing: -0.018em;
   color: var(--rio-text-hi);
-  margin: 0 0 var(--rio-space-4);
+  margin: 0 0 var(--rio-space-8);
 }
 
 /* Each section is a board card (.rio-board supplies surface/border/
- * radius/shadow); add interior padding + a small uppercase eyebrow. */
+ * radius/shadow); generous interior padding + a small uppercase
+ * eyebrow. Cards never feel pinched. */
 .rio-fieldset {
   border: 1px solid var(--rio-line);
-  padding: var(--rio-space-32) var(--rio-space-32) var(--rio-space-24);
+  padding: var(--rio-space-40) var(--rio-space-40) var(--rio-space-32);
   margin: 0;
 }
 .rio-fieldset-legend,
@@ -71,7 +72,8 @@
 .rio-fieldset-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--rio-space-20);
+  column-gap: var(--rio-space-32);
+  row-gap: var(--rio-space-32);
 }
 .rio-field--full,
 .rio-field--textarea,
@@ -95,12 +97,14 @@
 .rio-field-errors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .rio-file-current a { color: var(--rio-rust); }
 
-/* Action bar — primary saves on the start, Cancel pushed to the end. */
+/* Action bar — primary saves on the start, Cancel pushed to the end.
+ * Sits clear of the last card with room to breathe. */
 .rio-form-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--rio-space-8);
+  gap: var(--rio-space-12);
+  padding-block-start: var(--rio-space-8);
 }
 .rio-form-actions-spacer { flex: 1; }
 

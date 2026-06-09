@@ -20,14 +20,14 @@
   --rio-s5: var(--rio-space-20);
   --rio-s6: var(--rio-space-32);
 
-  /* Font sizes */
-  --rio-fs-display: 28px;
-  --rio-fs-h2: 22px;
-  --rio-fs-lg: 18px;
+  /* Font sizes — operator-comfort scale (px it renders) */
+  --rio-fs-display: 44px;
+  --rio-fs-h2: 26px;
+  --rio-fs-lg: 19px;
   --rio-fs-md: 16px;
-  --rio-fs-base: 15px;
-  --rio-fs-sm: 14px;
-  --rio-fs-xs: 12px;
+  --rio-fs-base: 16px;
+  --rio-fs-sm: 15px;
+  --rio-fs-xs: 13px;
 
   /* Font weights + line heights */
   --rio-fw-bold: 700;
