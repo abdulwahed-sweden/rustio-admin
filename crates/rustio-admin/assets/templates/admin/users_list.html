@@ -1,63 +1,49 @@
 {% extends "admin/_base.html" %}
 {% from "admin/_row_actions.html" import row_actions %}
 {% block content %}
-{# v0.19 — unified page header pattern (cards.css). The previous
- # variation across users / groups / history / notifications pages
- # was the single biggest source of "feels random" cross-page
- # inconsistency. #}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>Users</span></nav>
-  <div class="rio-page-actions">
-    <h1>Users</h1>
-    <a class="rio-button rio-button--primary" href="/admin/users/new">{{ icon("plus", class="rio-icon") }} Add user</a>
-  </div>
-  <p class="rio-page-header__lead">Operator accounts — role, last sign-in, MFA enrolment.</p>
-</header>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Users</span></nav>
 
-<section class="rio-section" aria-label="Users">
-  <header class="rio-section__header">
-    <div class="rio-section__heading">
-      <span class="rio-section__label">All users</span>
-      <h2 class="rio-section__title">{{ users|length }} account{% if users|length != 1 %}s{% endif %}</h2>
-    </div>
-  </header>
-  <div class="rio-card rio-card--quiet rio-list">
-    {% if users %}
-    <table class="rio-table rio-table--striped">
-      <thead>
-        <tr>
-          <th class="rio-th">ID</th>
-          <th class="rio-th">Email</th>
-          <th class="rio-th">Role</th>
-          <th class="rio-th">Active</th>
-          <th class="rio-th">Created</th>
-          <th class="rio-th rio-th--actions">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-        <tr>
-          <td class="rio-td rio-td--number"><a href="/admin/users/{{ u.id }}">{{ u.id }}</a></td>
-          <td class="rio-td rio-td--text" title="{{ u.email }}"><a href="/admin/users/{{ u.id }}">{{ u.email }}</a></td>
-          <td class="rio-td">{{ u.role }}</td>
-          <td class="rio-td">{% if u.is_active %}Yes{% else %}No{% endif %}</td>
-          <td class="rio-td rio-td--datetime">{{ u.created_at }}</td>
-          <td class="rio-td rio-td--actions">{{ row_actions("users", u.id) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div class="rio-empty-state">
-      <div class="rio-empty-state__icon">{{ icon("users", class="rio-icon") }}</div>
-      <h3 class="rio-empty-state__title">No users yet</h3>
-      <p class="rio-empty-state__lead">
-        Add an account to grant access to the admin panel — role
-        controls what they can see and change.
-      </p>
-      <a class="rio-button rio-button--primary" href="/admin/users/new">{{ icon("plus", class="rio-icon") }} Add user</a>
-    </div>
-    {% endif %}
+<div class="rio-masthead-top">
+  <div>
+    <h1>Users</h1>
+    <p class="rio-masthead-desc">Operator accounts — role, last sign-in, and MFA enrolment.</p>
   </div>
-</section>
+  <div class="rio-masthead-cta">
+    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a>
+  </div>
+</div>
+
+<div class="rio-board">
+  {% if users %}
+  <div style="overflow:auto">
+  <table class="rio-dtable">
+    <thead><tr><th>User</th><th>Role</th><th>Active</th><th>Created</th><th class="col-act">&nbsp;</th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>
+          <div class="rio-prod">
+            <span class="rio-mono-tile">{{ u.email | first | upper }}</span>
+            <span class="rio-prod-text"><a class="rio-prod-name" href="/admin/users/{{ u.id }}">{{ u.email }}</a><span class="rio-prod-cat">#{{ u.id }}</span></span>
+          </div>
+        </td>
+        <td>{{ u.role }}</td>
+        <td><span class="rio-pill-stock rio-pill-stock--{% if u.is_active %}in{% else %}out{% endif %}"><span class="rio-dot"></span>{% if u.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+        <td style="font-family:var(--rio-font-mono);font-size:var(--rio-text-13);color:var(--rio-text-mute)">{{ u.created_at }}</td>
+        <td class="col-act">{{ row_actions("users", u.id) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="rio-board-foot"><span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ users|length }}</strong> account{% if users|length != 1 %}s{% endif %}</span></div>
+  {% else %}
+  <div class="rio-empty">
+    {{ icon("users") }}
+    <div class="rio-empty-title">No users yet</div>
+    <div>Add an account to grant admin access — role controls what they can see and change.</div>
+    <div style="margin-block-start:14px"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a></div>
+  </div>
+  {% endif %}
+</div>
 {% endblock %}

@@ -1,0 +1,52 @@
+/* ============================================================
+ * rustio-admin / pages / permissions  —  group perm grid +
+ * checkbox lists (user group memberships, group permissions).
+ * ============================================================ */
+
+/* ---- Checkbox lists (memberships / extra perms) ---- */
+.rio-checkbox-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-8); }
+.rio-checkbox { display: flex; align-items: flex-start; gap: var(--rio-space-8); font-size: var(--rio-text-14); color: var(--rio-text-hi); cursor: pointer; }
+.rio-checkbox input[type="checkbox"] { margin-block-start: 2px; inline-size: 18px; block-size: 18px; accent-color: var(--rio-rust); flex: none; }
+.rio-checkbox code { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text); }
+.rio-meta { color: var(--rio-text-mute); font-size: var(--rio-text-13); }
+.rio-meta a { color: var(--rio-rust); }
+
+/* ---- Permission matrix ---- */
+.rio-perm-matrix {
+  inline-size: 100%;
+  border-collapse: separate; border-spacing: 0;
+  font-size: var(--rio-text-13);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  overflow: hidden;
+}
+.rio-perm-matrix th, .rio-perm-matrix td {
+  padding: 9px 10px;
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-perm-matrix tbody tr:last-child th,
+.rio-perm-matrix tbody tr:last-child td { border-block-end: 0; }
+.rio-perm-matrix thead th {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--rio-text-mute); text-align: center;
+  background: var(--rio-raised);
+  border-block-end: 1px solid var(--rio-line-strong);
+}
+.rio-perm-matrix__model { text-align: start !important; color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); white-space: nowrap; }
+.rio-perm-matrix tbody tr:hover { background: var(--rio-raised); }
+.rio-perm-matrix__cell { text-align: center; }
+.rio-perm-cell { display: inline-grid; place-items: center; cursor: pointer; }
+.rio-perm-cell input[type="checkbox"] { inline-size: 18px; block-size: 18px; accent-color: var(--rio-rust); }
+.rio-perm-cell__sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rio-perm-na { color: var(--rio-text-faint); }
+.rio-perm-row-all {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  padding: 3px 9px; border: 1px solid var(--rio-line); border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface); color: var(--rio-text-mute); cursor: pointer;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-perm-row-all:hover { border-color: var(--rio-rust); color: var(--rio-rust); }
+
+.rio-perm-extras { margin-block-start: var(--rio-space-16); }
+.rio-perm-extras summary { cursor: pointer; font-size: var(--rio-text-14); font-weight: var(--rio-weight-medium); color: var(--rio-rust); margin-block-end: var(--rio-space-12); }

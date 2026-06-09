@@ -1,38 +1,24 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Add group</span></nav>
+<div class="rio-masthead-top"><div><h1>Add group</h1><p class="rio-masthead-desc">Name the group, then attach permissions on the edit screen.</p></div></div>
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>Add group</span>
-  </nav>
-  <h1>Add group</h1>
-  <p class="rio-page-header__lead">Name the group, then attach permissions on the edit screen.</p>
-</header>
-
-{% if errors %}
-<div class="rio-flash rio-flash--error" role="alert">
-  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
-</div>
-{% endif %}
+{% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
 
 <form method="post" action="/admin/groups/new" class="rio-form">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for section in sections %}
-  <fieldset class="rio-fieldset">
-    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
-    <div class="rio-fieldset-grid">
-      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
-    </div>
+  <fieldset class="rio-fieldset rio-board">
+    {% if section.title %}<legend class="rio-fieldset-legend">{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">{% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}</div>
   </fieldset>
   {% endfor %}
-
   <div class="rio-form-actions">
-    <button type="submit" class="rio-button rio-button--primary">Create group</button>
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Create group</button>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/groups" class="rio-button rio-button--ghost">Cancel</a>
+    <a href="/admin/groups" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
   </div>
 </form>
-
 </div>
 {% endblock %}

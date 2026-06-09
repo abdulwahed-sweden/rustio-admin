@@ -99,6 +99,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/pages/states.css"),
     "\n",
+    include_str!("../../assets/static/admin/pages/permissions.css"),
+    "\n",
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
 );
