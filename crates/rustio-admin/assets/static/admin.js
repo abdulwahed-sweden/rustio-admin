@@ -620,8 +620,13 @@
     const rail = document.getElementById("rail");
     const railBtn = document.getElementById("railToggle");
     if (rail && railBtn) {
+      // Labeled by default (matches the reference); collapse to the
+      // icon-only rail only when the operator has chosen it before.
       try {
-        if (localStorage.getItem("rio-rail-open") === "1") {
+        if (localStorage.getItem("rio-rail-open") === "0") {
+          rail.classList.remove("rio-rail--open");
+          railBtn.setAttribute("aria-expanded", "false");
+        } else {
           rail.classList.add("rio-rail--open");
           railBtn.setAttribute("aria-expanded", "true");
         }

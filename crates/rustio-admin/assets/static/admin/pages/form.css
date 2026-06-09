@@ -7,24 +7,38 @@
  * the fieldset cards, the responsive field grid, and the action bar.
  * ============================================================ */
 
-.rio-form-shell { max-inline-size: 980px; }
+.rio-form-shell { max-inline-size: 880px; }
 .rio-form { display: flex; flex-direction: column; gap: var(--rio-space-20); }
 
+/* Form-page titles read as bold sans (matches the reference), not the
+ * editorial serif used on the dashboard masthead. */
+.rio-form-shell .rio-masthead-top h1,
+.rio-page-header h1 {
+  font-family: var(--rio-font-body);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  color: var(--rio-text-hi);
+  margin: 0 0 var(--rio-space-4);
+}
+
 /* Each section is a board card (.rio-board supplies surface/border/
- * radius/shadow); add interior padding + a serif legend. */
+ * radius/shadow); add interior padding + a small uppercase eyebrow. */
 .rio-fieldset {
   border: 1px solid var(--rio-line);
-  padding: var(--rio-space-24);
+  padding: var(--rio-space-32) var(--rio-space-32) var(--rio-space-24);
   margin: 0;
 }
 .rio-fieldset-legend {
-  font-family: var(--rio-font-display);
-  font-weight: var(--rio-weight-display);
-  font-size: var(--rio-text-20);
-  letter-spacing: var(--rio-tracking-display);
-  color: var(--rio-text-hi);
+  font-family: var(--rio-font-mono);
+  font-weight: var(--rio-weight-semibold);
+  font-size: var(--rio-text-12);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--rio-text-faint);
   padding: 0;
-  margin-block-end: var(--rio-space-16);
+  margin-block-end: var(--rio-space-20);
 }
 
 /* Two-column responsive field grid; full-span fields take the row. */
