@@ -17,16 +17,15 @@ html {
 
 body {
   margin: 0;
+  /* Contract v2.0: the content area is a flat, barely-warm near-white (#fafcfb).
+     The reference screenshots carry no texture, so the dot-grid is omitted. */
   background-color: var(--rio-bg);
-  /* Faint engineered dot-grid — barely visible, evokes RustIO's precision. */
-  background-image: radial-gradient(var(--rio-dot) 1px, transparent 1px);
-  background-size: 24px 24px;
   color: var(--rio-text);
   font-family: var(--rio-font-body);
   font-size: var(--rio-text-14);
   line-height: var(--rio-leading-body);
   font-weight: var(--rio-weight-regular);
-  letter-spacing: var(--rio-tracking-tight); /* Hanken Grotesk — crisp, refined */
+  letter-spacing: 0; /* contract: flat tracking (the negative track was a Hanken flourish) */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* Numerals are ALWAYS Western, lining + tabular. */
@@ -34,12 +33,10 @@ body {
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
-/* App-canvas utility — carries the same faint dot-grid as <body> so full-height
-   app shells (which paint their own background) keep the texture. */
+/* App-canvas utility — full-height app shells paint their own background; it
+   matches the flat content-area surface (no dot-grid, per contract v2.0). */
 .rio-canvas {
   background-color: var(--rio-bg);
-  background-image: radial-gradient(var(--rio-dot) 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
 /* Headings default to the display family (Spectral). */

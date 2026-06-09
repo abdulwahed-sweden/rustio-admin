@@ -84,6 +84,25 @@ leaves the alpha track.
   by the inline-styled tool pages onto the live DS tokens. **No backend
   change** — CSS, templates, JS, and two `admin_css_payload` test updates
   only; no schema, route, auth, permission, or migration impact.
+- **Visual Contract v2.0 conformance — Phase 1 (tokens).** The content-area
+  palette is re-valued to the contract's measured reference values (light
+  theme only this phase; dark is re-derived in a later phase). Plan of record:
+  `docs/design/REMEDIATION_V2.md`. Changed `--rio-*` tokens (light): `--rio-bg`
+  `#F3F6FD`→`#fafcfb`; `--rio-line` `#DBE0EB`→`#e2e8f0`; `--rio-line-strong`
+  `#C2CAD9`→`#94a3b8`; `--rio-text-hi` `#111722`→`#1e293b`; `--rio-text`
+  `#3B4453`→`#475569`; `--rio-text-mute` `#677083`→`#64748b`; `--rio-text-faint`
+  `#99A1B2`→`#94a3b8`; `--rio-rust`/`--rio-rust-solid` `#0F8C7B`→`#119588`;
+  `--rio-rust-hover`/`-solid-hover` `#0C7567`→`#0e7c72`; `--rio-rust-active`/
+  `-solid-active` `#095E53`→`#0b655c`; `--rio-rust-tint`/`-tint-2`/`-ring`
+  re-hued to `rgba(17,149,136,…)` with the ring opacity `.38`→`.20`; `--rio-danger`
+  `#AE382C`→`#dc2626`; `--rio-danger-tint` re-hued; `--rio-syntax-key`
+  `#0F8C7B`→`#119588`. New tokens: `--rio-surface-tint` `#edf7f8`,
+  `--rio-accent-focus` `#1f8987`, `--rio-danger-hover` `#b91c1c`,
+  `--rio-pill-on-bg`/`-on-text`/`-off-bg`/`-off-text`. New compat aliases:
+  `--rio-accent-hover`, `--rio-accent-ring`, `--rio-border-input`,
+  `--rio-shadow-card`; `--rio-shadow-inset` retuned to the contract value and
+  `--rio-accent-rgb` `15,140,123`→`17,149,136`. The content-area dot-grid texture
+  is removed and body `letter-spacing` zeroed (flat `#fafcfb` per the reference).
 
 
 ## [0.28.0] — 2026-06-08

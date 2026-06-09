@@ -52,16 +52,23 @@
   /* Radius + shadow */
   --rio-radius: var(--rio-radius-md);
   --rio-shadow: var(--rio-shadow-sm);
-  --rio-shadow-inset: inset 0 1px 2px rgba(17, 23, 34, 0.04);
+  --rio-shadow-inset: inset 0 1px 1px rgba(15, 23, 42, 0.03); /* contract value */
+  --rio-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
 
   /* Accent (Teal) + secondary (gold) */
   --rio-accent: var(--rio-rust);
+  --rio-accent-hover: var(--rio-rust-hover);
+  --rio-accent-ring: var(--rio-rust-ring);
   --rio-accent-soft: var(--rio-rust-tint);
   --rio-accent-border: var(--rio-rust-tint-2);
-  --rio-accent-rgb: 15, 140, 123;
+  --rio-accent-rgb: 17, 149, 136;
   --rio-accent2: var(--rio-gold);
   --rio-accent2-soft: var(--rio-gold-tint);
   --rio-accent2-ink: var(--rio-gold);
+
+  /* Borders — contract distinguishes the soft card border from the strong
+     input border; --rio-line / --rio-line-strong already carry those values. */
+  --rio-border-input: var(--rio-line-strong);
 
   /* Status fills */
   --rio-warning: var(--rio-warn);
