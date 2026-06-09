@@ -18,28 +18,31 @@
 /* Text input / textarea / select share .rio-input */
 .rio-input {
   inline-size: 100%;
-  min-block-size: 46px;            /* comfortable touch target */
+  min-block-size: 46px;            /* comfortable touch target (≥ contract 44px) */
   padding: 11px 14px;
   font-family: var(--rio-font-body);
   font-size: 1rem;                 /* 16px */
   color: var(--rio-text-hi);
   background: var(--rio-surface);
   border: 1px solid var(--rio-line-strong);
-  border-radius: var(--rio-radius-md);
+  border-radius: var(--rio-radius-control); /* contract §5: 8px */
+  box-shadow: var(--rio-shadow-inset);       /* reads as "place to type" */
   transition: border-color var(--rio-dur-fast) var(--rio-ease), box-shadow var(--rio-dur-fast) var(--rio-ease);
   appearance: none;
 }
 .rio-input::placeholder { color: var(--rio-text-faint); }
+/* Identifier fields (slug, flag key) render their placeholder in mono (contract §5). */
+.rio-input--mono::placeholder { font-family: var(--rio-font-mono); }
 .rio-input:hover { border-color: var(--rio-text-faint); }
 .rio-input:focus,
 .rio-input:focus-visible {
   outline: none;
-  border-color: var(--rio-rust);
-  box-shadow: 0 0 0 3px var(--rio-rust-ring);
+  border-color: var(--rio-accent-focus);     /* contract §5 focus border */
+  box-shadow: var(--rio-shadow-inset), 0 0 0 4px var(--rio-accent-ring);
 }
 .rio-input:disabled { background: var(--rio-sunken); color: var(--rio-text-faint); cursor: not-allowed; }
 .rio-input[aria-invalid="true"] { border-color: var(--rio-danger); }
-.rio-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--rio-danger-tint); }
+.rio-input[aria-invalid="true"]:focus { box-shadow: var(--rio-shadow-inset), 0 0 0 4px var(--rio-danger-tint); }
 textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; }
 
 /* Select wrapper — chevron via background, mono-free */

@@ -19,7 +19,7 @@
   </header>
   <div class="rio-card rio-card--quiet rio-list">
     {% if flags %}
-    <table class="rio-table rio-table--striped">
+    <table class="rio-table">
       <thead>
         <tr><th>Key</th><th>State</th><th>Description</th><th>Updated</th><th></th></tr>
       </thead>
@@ -76,7 +76,7 @@
         <span>Key</span>
         <input type="text" name="key" required pattern="[a-z0-9_]+"
                placeholder="snake_case_identifier"
-               class="rio-input">
+               class="rio-input rio-input--mono">
       </label>
       <label class="rio-form-field">
         <span>Description</span>

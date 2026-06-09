@@ -118,6 +118,27 @@ leaves the alpha track.
   line-height **1.15** from the base layer rather than per-page overrides. The frozen
   top bar / sidebar / footer use literal sizes and are untouched. Spectral / Hanken
   faces remain baked for now (separate cleanup commit later).
+- **Visual Contract v2.0 conformance — Phase 3 (components).** Inputs, selects,
+  textareas and buttons land on an 8px control radius (new `--rio-radius-control`
+  token); `.rio-input` gains the inset shadow at rest and a **4px** teal focus ring
+  (`--rio-accent-focus` border + `--rio-accent-ring`), and a `.rio-input--mono`
+  utility renders identifier placeholders in mono (applied to the feature-flag key
+  field). Every `.rio-btn` is now **44px / weight 700 / 8px** at the base — `--md`
+  and `--lg` match it, so no per-size opt-in is needed to reach the contract size
+  (`--sm` stays a compact exception). `.rio-btn--danger` is solid `#dc2626` with a
+  `--rio-danger-hover` hover, replacing the brightness-filter hack; new
+  `.rio-action-link` (+ `--danger` / `--muted`) defines the red text-link
+  destructive action (templates wire it in Phase 5). `.rio-table th` → 14px /
+  weight 800 / `--rio-text-mute` in the body font (Inter, so 800 actually renders),
+  cells → `--rio-text-strong` with 16px padding, sticky header kept; zebra/striping
+  is removed (`--zebra` / `--striped` are no-ops, no row shading) and a competing
+  `.rio-table` redefinition in `pages/tools.css` (a gray mono-header "legacy table"
+  that shadowed the §9 table globally) was removed so every table renders the one
+  contract look. Inline `code` /
+  `kbd` become a `--rio-surface-tint` chip (mono, 6px radius) while the block
+  `.rio-code` well is unchanged. Radio rows (`.rio-radio`, §6) become full-width
+  52px rows: strong input border, 10px radius, 16px padding, 20px teal control
+  aligned to the first text line, 12px gap between rows. No new CSS fragments.
 
 
 ## [0.28.0] — 2026-06-08

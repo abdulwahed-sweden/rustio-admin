@@ -91,16 +91,16 @@
 .rio-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
 .rio-table th {
   text-align: start;
-  font-family: var(--rio-font-mono);
-  font-size: var(--rio-text-12);
-  font-weight: var(--rio-weight-semibold);
-  letter-spacing: .04em;
+  font-family: var(--rio-font-body);   /* contract §9: weight 800 needs Inter, not mono */
+  font-size: var(--rio-text-12);        /* 14px (floor) */
+  font-weight: 800;
+  letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--rio-text-mute);
-  padding: 10px 16px;
+  padding: var(--rio-space-16);         /* contract §9: --rio-s4 (16px) */
   border-block-end: 1px solid var(--rio-line-strong);
   background: var(--rio-surface);
-  position: sticky;
+  position: sticky;                     /* kept — serves long tables (contract silent) */
   inset-block-start: 0;
   white-space: nowrap;
 }
@@ -108,16 +108,19 @@
 .rio-table th[aria-sort]:hover { color: var(--rio-text-hi); }
 .rio-table th .rio-sort-ind { color: var(--rio-rust); margin-inline-start: 4px; }
 .rio-table td {
-  padding: 11px 16px;
+  padding: var(--rio-space-16);         /* contract §9: --rio-s4 (16px) */
   border-block-end: 1px solid var(--rio-line);
-  color: var(--rio-text);
+  color: var(--rio-text-hi);            /* contract §9: cells in --rio-text-strong */
   vertical-align: middle;
 }
 .rio-table tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); }
+.rio-table tbody tr:last-child td { border-block-end: 0; } /* no double line against the card */
 .rio-table tbody tr:hover { background: var(--rio-raised); }
 .rio-table tbody tr[aria-selected="true"] { background: var(--rio-rust-tint); }
-.rio-table--zebra tbody tr:nth-child(even) { background: var(--rio-bg); }
-.rio-table--zebra tbody tr:hover { background: var(--rio-raised); }
+/* No zebra (contract §9). Variants kept as no-ops so existing markup that
+   requests striping renders calm, undifferentiated rows. */
+.rio-table--zebra tbody tr:nth-child(even),
+.rio-table--striped tbody tr:nth-child(even) { background: transparent; }
 .rio-table--compact th { padding: 7px 14px; }
 .rio-table--compact td { padding: 7px 14px; }
 .rio-table .rio-cell-strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }

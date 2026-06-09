@@ -3,9 +3,10 @@
    ============================================================ */
 
 :root {
-  --rio-radius-sm:   6px;
-  --rio-radius-md:   9px;
-  --rio-radius-lg:   12px;
-  --rio-radius-xl:   16px;
-  --rio-radius-pill: 999px;
+  --rio-radius-sm:      6px;
+  --rio-radius-control: 8px; /* inputs, selects, textareas, buttons (contract §5/§8) */
+  --rio-radius-md:      9px;
+  --rio-radius-lg:      12px;
+  --rio-radius-xl:      16px;
+  --rio-radius-pill:    999px;
 }

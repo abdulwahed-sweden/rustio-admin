@@ -2,6 +2,19 @@
    RustIO — Code & terminal · IO chat
    ============================================================ */
 
+/* Inline code & kbd chip (contract §10.3) — flag keys in tables, API
+   expressions in lead paragraphs, the ⌘K hint. Block code wells (.rio-code /
+   .rio-term, which wrap a <pre>) opt out via the :not(pre) > code guard. */
+:not(pre) > code,
+kbd {
+  font-family: var(--rio-font-mono);
+  font-size: 0.875em;
+  background: var(--rio-surface-tint);
+  color: var(--rio-text-hi);
+  border-radius: var(--rio-radius-sm); /* 6px */
+  padding: 0.125rem 0.5rem;
+}
+
 /* Code block */
 .rio-code {
   background: var(--rio-sunken);

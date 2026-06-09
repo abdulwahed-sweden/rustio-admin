@@ -9,14 +9,14 @@
   align-items: center;
   justify-content: center;
   gap: var(--rio-space-8);
-  block-size: 36px;
-  padding-inline: 14px;
+  block-size: 44px;                 /* contract §8.1: every button 44px */
+  padding-inline: 20px;
   font-family: var(--rio-font-body);
-  font-size: var(--rio-text-14);
-  font-weight: var(--rio-weight-semibold);
+  font-size: var(--rio-text-14);    /* 16px */
+  font-weight: var(--rio-weight-bold); /* 700 */
   line-height: 1;
   border: 1px solid transparent;
-  border-radius: var(--rio-radius-md);
+  border-radius: var(--rio-radius-control); /* 8px */
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -31,10 +31,11 @@
   outline-offset: 2px;
 }
 
-/* Sizes */
-.rio-btn--sm { block-size: 30px; padding-inline: 10px; font-size: var(--rio-text-13); }
-.rio-btn--md { block-size: 36px; padding-inline: 14px; font-size: var(--rio-text-14); }
-.rio-btn--lg { block-size: 44px; padding-inline: 20px; font-size: var(--rio-text-15); }
+/* Sizes — base IS the contract 44px; --md/--lg match it (no per-size opt-in to
+   reach 44px). --sm stays a deliberate compact exception for dense toolbars. */
+.rio-btn--sm { block-size: 36px; padding-inline: 14px; }
+.rio-btn--md { block-size: 44px; padding-inline: 20px; font-size: var(--rio-text-14); }
+.rio-btn--lg { block-size: 44px; padding-inline: 24px; font-size: var(--rio-text-15); }
 
 /* Primary — copper (solid fill, white text in BOTH themes) */
 .rio-btn--primary {
@@ -71,13 +72,36 @@
 .rio-btn--subtle:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
 .rio-btn--subtle:active { background: var(--rio-sunken); }
 
-/* Danger */
+/* Danger — solid #dc2626 (contract §8.1); explicit hover, no brightness filter */
 .rio-btn--danger {
   background: var(--rio-danger);
   color: #fff;
 }
-.rio-btn--danger:hover { filter: brightness(0.94); }
-.rio-btn--danger:active { filter: brightness(0.88); }
+.rio-btn--danger:hover { background: var(--rio-danger-hover); }
+.rio-btn--danger:active { background: var(--rio-danger-hover); }
+
+/* Text-style actions (contract §8.1): a destructive SECONDARY action is a red
+   text link with an icon — never a solid red button beside Save. Templates wire
+   these up in Phase 5; the styles are defined here. */
+.rio-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-space-8);
+  font-family: var(--rio-font-body);
+  font-size: var(--rio-text-14);   /* 16px */
+  font-weight: var(--rio-weight-bold); /* 700 */
+  color: var(--rio-text-hi);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+.rio-action-link:hover { text-decoration: underline; }
+.rio-action-link:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; border-radius: var(--rio-radius-sm); }
+.rio-action-link svg { inline-size: 1em; block-size: 1em; flex: none; }
+.rio-action-link--danger { color: var(--rio-danger); }   /* "Delete", "Delete group" */
+.rio-action-link--muted  { color: var(--rio-text-hi); }  /* "History" */
 
 /* Disabled */
 .rio-btn:disabled,

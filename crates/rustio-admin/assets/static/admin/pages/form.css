@@ -43,23 +43,26 @@
   margin-block-end: var(--rio-space-20);
 }
 
-/* Radio option rows (lock_user duration). Stacked, tappable, with the
- * accent focus ring — same language as .rio-input. */
+/* Radio option rows (lock_user duration, reset mode). Full-width bordered
+ * rows, stacked and tappable end-to-end, with the accent focus ring — contract
+ * §6. The control aligns to the first text line so a trailing description wraps
+ * cleanly beneath the bold lead phrase. */
 .rio-radio {
   display: flex;
-  align-items: center;
+  align-items: flex-start;            /* control on the first text line (§6) */
   gap: var(--rio-space-12);
-  padding: 10px var(--rio-space-12);
-  border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-sm);
+  min-block-size: 52px;
+  padding: var(--rio-space-16);
+  border: 1px solid var(--rio-line-strong); /* §6: the strong input border */
+  border-radius: 10px;
   background: var(--rio-surface);
   cursor: pointer;
   transition: border-color var(--rio-dur-fast) var(--rio-ease), background-color var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-radio + .rio-radio { margin-block-start: var(--rio-space-8); }
+.rio-radio + .rio-radio { margin-block-start: var(--rio-space-12); }
 .rio-radio:hover { border-color: var(--rio-text-faint); background: var(--rio-raised); }
-.rio-radio:focus-within { border-color: var(--rio-rust); box-shadow: 0 0 0 3px var(--rio-rust-tint-2); }
-.rio-radio input[type="radio"] { inline-size: 18px; block-size: 18px; accent-color: var(--rio-rust); flex: none; }
+.rio-radio:focus-within { border-color: var(--rio-accent-focus); box-shadow: 0 0 0 4px var(--rio-accent-ring); }
+.rio-radio input[type="radio"] { inline-size: 20px; block-size: 20px; margin-block-start: 0.2em; accent-color: var(--rio-rust); flex: none; }
 .rio-radio > span { display: inline-flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
 
 /* Inline input — opts out of full-width block sizing for fields that sit
