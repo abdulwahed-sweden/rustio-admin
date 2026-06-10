@@ -53,8 +53,8 @@
   /* Radius + shadow */
   --rio-radius: var(--rio-radius-md);
   --rio-shadow: var(--rio-shadow-sm);
-  --rio-shadow-inset: inset 0 1px 1px rgba(15, 23, 42, 0.03); /* contract value */
-  --rio-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+  /* --rio-shadow-inset / --rio-shadow-card live in tokens/shadows.css so they
+     carry per-theme values (heavier alpha on dark). */
 
   /* Accent (Teal) + secondary (gold) */
   --rio-accent: var(--rio-rust);

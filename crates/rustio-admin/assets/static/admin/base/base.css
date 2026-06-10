@@ -76,9 +76,10 @@ p { text-wrap: pretty; }
   letter-spacing: 0;
   line-height: var(--rio-leading-tight);
 }
-/* Mono eyebrows carry wide caps tracking + uppercase — meaningless for Arabic;
-   neutralise both so Arabic labels read naturally. */
-:is(:lang(ar), [lang="ar"], [dir="rtl"]) :is(.rio-eyebrow, .rio-nav-section, .rio-table th, .rio-statstrip-label) {
+/* Uppercase eyebrows / legends / table headers carry caps tracking — meaningless
+   for Arabic (and letter-spacing breaks the connected script); neutralise both so
+   Arabic labels read naturally (contract §12). */
+:is(:lang(ar), [lang="ar"], [dir="rtl"]) :is(.rio-eyebrow, .rio-nav-section, .rio-table th, .rio-statstrip-label, .rio-fieldset-legend, .rio-fieldset > legend) {
   letter-spacing: 0;
   text-transform: none;
 }

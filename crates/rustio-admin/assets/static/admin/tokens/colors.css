@@ -88,48 +88,59 @@
   :root {
     color-scheme: dark;
 
-    --rio-bg:            #2B313D; /* page — comfortable cool blue-slate (not charcoal) */
-    --rio-surface:       #343B49;
-    --rio-raised:        #404857;
-    --rio-overlay:       #4B5466;
-    --rio-sunken:        #232834;
+    /* Surfaces — slate dark, re-derived by inverting the §1 light ladder. */
+    --rio-bg:            #0f172a; /* page — slate-900 */
+    --rio-surface:       #1e293b; /* cards — slate-800 */
+    --rio-raised:        #334155; /* hover / raised — slate-700 */
+    --rio-overlay:       #1e293b;
+    --rio-sunken:        #0b1120; /* inset / code wells */
+    --rio-surface-tint:  #122e2c; /* inline code / kbd chip — dark teal */
 
-    --rio-line:          #454E60;
-    --rio-line-strong:   #5A6479;
+    --rio-line:          #334155; /* card / divider */
+    --rio-line-strong:   #64748b; /* input / radio border — visible on dark */
     --rio-dot:           rgba(255, 255, 255, 0.03);
-    --rio-text-hi:       #D9DEE9;
-    --rio-text:          #C4CBD8;
-    --rio-text-mute:     #A8B1C0;
-    --rio-text-faint:    #828C9E;
+    --rio-text-hi:       #f1f5f9; /* titles — slate-100 */
+    --rio-text:          #cbd5e1; /* body — slate-300, ≥4.5:1 on surface */
+    --rio-text-mute:     #94a3b8; /* secondary — slate-400 */
+    --rio-text-faint:    #64748b; /* placeholder — slate-500 */
     --rio-text-onrust:   #FFFFFF;
 
-    --rio-rust:          #3FCBB2;
-    --rio-rust-hover:    #5CD8C2;
-    --rio-rust-active:   #80E4D2;
-    --rio-rust-tint:     rgba(63, 203, 178, 0.15);
-    --rio-rust-tint-2:   rgba(63, 203, 178, 0.26);
-    --rio-rust-ring:     rgba(63, 203, 178, 0.50);
+    /* Accent: teal lifted to teal-400 so it passes AA on dark surfaces. */
+    --rio-rust:          #2dd4bf;
+    --rio-rust-hover:    #5eead4;
+    --rio-rust-active:   #99f6e4;
+    --rio-rust-tint:     rgba(45, 212, 191, 0.14);
+    --rio-rust-tint-2:   rgba(45, 212, 191, 0.24);
+    --rio-rust-ring:     rgba(45, 212, 191, 0.45); /* focus ring — visible on dark */
+    --rio-accent-focus:  #2dd4bf;
 
-    --rio-rust-solid:        #128B78;
-    --rio-rust-solid-hover:  #16A08B;
-    --rio-rust-solid-active: #0F7A68;
+    /* Filled-button teal kept deep enough for white text (AA-large). */
+    --rio-rust-solid:        #0d9488;
+    --rio-rust-solid-hover:  #0f766e;
+    --rio-rust-solid-active: #115e59;
     --rio-on-solid:          #FFFFFF;
 
     --rio-gold:          #E0AE5A;
-  --rio-gold-tint:     rgba(224, 174, 90, 0.16);
-  --rio-success:       #6FB98A;
+    --rio-gold-tint:     rgba(224, 174, 90, 0.16);
+    --rio-success:       #6FB98A;
     --rio-success-tint:  rgba(111, 185, 138, 0.15);
     --rio-warn:          #D6A65A;
     --rio-warn-tint:     rgba(214, 166, 90, 0.15);
-    --rio-danger:        #E2796C;
-    --rio-danger-tint:   rgba(226, 121, 108, 0.15);
+    --rio-danger:        #ef4444; /* lifted red — legible as text AND as button fill */
+    --rio-danger-hover:  #dc2626;
+    --rio-danger-tint:   rgba(239, 68, 68, 0.16);
 
-    --rio-syntax-key:    #5CD8C2;
+    --rio-pill-on-bg:    rgba(111, 185, 138, 0.16);
+    --rio-pill-on-text:  #86efac;
+    --rio-pill-off-bg:   #334155;
+    --rio-pill-off-text: #cbd5e1;
+
+    --rio-syntax-key:    #5eead4;
     --rio-syntax-str:    #6FB98A;
     --rio-syntax-num:    #D6A65A;
-    --rio-syntax-fn:     #D9DEE9;
-    --rio-syntax-comment:#828C9E;
-    --rio-syntax-punc:   #A8B1C0;
+    --rio-syntax-fn:     #f1f5f9;
+    --rio-syntax-comment:#64748b;
+    --rio-syntax-punc:   #94a3b8;
   }
 }
 
@@ -188,28 +199,30 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --rio-bg:            #2B313D;
-  --rio-surface:       #343B49;
-  --rio-raised:        #404857;
-  --rio-overlay:       #4B5466;
-  --rio-sunken:        #232834;
-  --rio-line:          #454E60;
-  --rio-line-strong:   #5A6479;
+  --rio-bg:            #0f172a;
+  --rio-surface:       #1e293b;
+  --rio-raised:        #334155;
+  --rio-overlay:       #1e293b;
+  --rio-sunken:        #0b1120;
+  --rio-surface-tint:  #122e2c;
+  --rio-line:          #334155;
+  --rio-line-strong:   #64748b;
   --rio-dot:           rgba(255, 255, 255, 0.03);
-  --rio-text-hi:       #D9DEE9;
-  --rio-text:          #C4CBD8;
-  --rio-text-mute:     #A8B1C0;
-  --rio-text-faint:    #828C9E;
+  --rio-text-hi:       #f1f5f9;
+  --rio-text:          #cbd5e1;
+  --rio-text-mute:     #94a3b8;
+  --rio-text-faint:    #64748b;
   --rio-text-onrust:   #FFFFFF;
-  --rio-rust:          #3FCBB2;
-  --rio-rust-hover:    #5CD8C2;
-  --rio-rust-active:   #80E4D2;
-  --rio-rust-tint:     rgba(63, 203, 178, 0.15);
-  --rio-rust-tint-2:   rgba(63, 203, 178, 0.26);
-  --rio-rust-ring:     rgba(63, 203, 178, 0.50);
-  --rio-rust-solid:        #128B78;
-  --rio-rust-solid-hover:  #16A08B;
-  --rio-rust-solid-active: #0F7A68;
+  --rio-rust:          #2dd4bf;
+  --rio-rust-hover:    #5eead4;
+  --rio-rust-active:   #99f6e4;
+  --rio-rust-tint:     rgba(45, 212, 191, 0.14);
+  --rio-rust-tint-2:   rgba(45, 212, 191, 0.24);
+  --rio-rust-ring:     rgba(45, 212, 191, 0.45);
+  --rio-accent-focus:  #2dd4bf;
+  --rio-rust-solid:        #0d9488;
+  --rio-rust-solid-hover:  #0f766e;
+  --rio-rust-solid-active: #115e59;
   --rio-on-solid:          #FFFFFF;
   --rio-gold:          #E0AE5A;
   --rio-gold-tint:     rgba(224, 174, 90, 0.16);
@@ -217,12 +230,17 @@
   --rio-success-tint:  rgba(111, 185, 138, 0.15);
   --rio-warn:          #D6A65A;
   --rio-warn-tint:     rgba(214, 166, 90, 0.15);
-  --rio-danger:        #E2796C;
-  --rio-danger-tint:   rgba(226, 121, 108, 0.15);
-  --rio-syntax-key:    #5CD8C2;
+  --rio-danger:        #ef4444;
+  --rio-danger-hover:  #dc2626;
+  --rio-danger-tint:   rgba(239, 68, 68, 0.16);
+  --rio-pill-on-bg:    rgba(111, 185, 138, 0.16);
+  --rio-pill-on-text:  #86efac;
+  --rio-pill-off-bg:   #334155;
+  --rio-pill-off-text: #cbd5e1;
+  --rio-syntax-key:    #5eead4;
   --rio-syntax-str:    #6FB98A;
   --rio-syntax-num:    #D6A65A;
-  --rio-syntax-fn:     #D9DEE9;
-  --rio-syntax-comment:#828C9E;
-  --rio-syntax-punc:   #A8B1C0;
+  --rio-syntax-fn:     #f1f5f9;
+  --rio-syntax-comment:#64748b;
+  --rio-syntax-punc:   #94a3b8;
 }

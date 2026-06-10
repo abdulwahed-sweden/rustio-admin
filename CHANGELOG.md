@@ -168,6 +168,28 @@ leaves the alpha track.
   new password** (renamed from "Confirm") at `span: 1` (Old password keeps its own row).
   Behaviour change: two field labels change and the two-column layout engages. The
   public recovery flow (token reset / forgot-password) is unchanged.
+- **Visual Contract v2.0 conformance — Phase 8 (dark theme re-derivation + RTL §12).**
+  The dark blocks of `tokens/colors.css` (`@media (prefers-color-scheme: dark)` and
+  `[data-theme="dark"]`) are re-derived from the new slate+teal light palette,
+  **token-driven only — no per-component dark CSS**. Surfaces invert to a slate ladder
+  (`--rio-bg` `#0f172a`, `--rio-surface` `#1e293b`, `--rio-raised` `#334155`,
+  `--rio-sunken` `#0b1120`, `--rio-overlay` `#1e293b`); borders `--rio-line` `#334155`,
+  `--rio-line-strong` `#64748b`; text `--rio-text-hi` `#f1f5f9`, `--rio-text` `#cbd5e1`
+  (≥4.5:1), `--rio-text-mute` `#94a3b8`, `--rio-text-faint` `#64748b`. The accent lifts
+  to teal-400 for AA on dark: `--rio-rust` `#2dd4bf` (hover `#5eead4`, active `#99f6e4`),
+  `--rio-rust-tint`/`-tint-2`/`-ring` re-hued to `rgba(45,212,191,…)` (ring `.45`),
+  `--rio-accent-focus` `#2dd4bf`; the filled button stays deep enough for white text
+  (`--rio-rust-solid` `#0d9488`, hover `#0f766e`, active `#115e59`). New Phase-1–6 tokens
+  gained dark values (previously light-only, would have leaked): `--rio-surface-tint`
+  `#122e2c`, `--rio-pill-on-bg` `rgba(111,185,138,.16)` / `--rio-pill-on-text` `#86efac`
+  / `--rio-pill-off-bg` `#334155` / `--rio-pill-off-text` `#cbd5e1`, `--rio-danger`
+  `#ef4444` / `--rio-danger-hover` `#dc2626` / `--rio-danger-tint` `rgba(239,68,68,.16)`,
+  and dark syntax tints. `--rio-shadow-card` / `--rio-shadow-inset` were relocated from
+  `tokens/compat.css` to `tokens/shadows.css` so they carry heavier-alpha dark values.
+  RTL: the `[dir="rtl"]`/`:lang(ar)` `letter-spacing: 0` neutralization now also covers
+  `.rio-fieldset > legend` / `.rio-fieldset-legend` (table headers were already covered).
+  `CLAUDE.md` updated — the framework ships light + dark, token-driven only (the
+  "light-only" claim is removed). Light theme is unchanged.
 
 
 ## [0.28.0] — 2026-06-08

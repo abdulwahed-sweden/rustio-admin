@@ -18,6 +18,8 @@
                     0 2px 6px -2px rgba(20, 30, 54, 0.08);
   --rio-shadow-xl:  0 24px 48px -20px rgba(20, 30, 54, 0.24),
                     0 6px 16px -8px rgba(20, 30, 54, 0.12);
+  --rio-shadow-inset: inset 0 1px 1px rgba(15, 23, 42, 0.03);
+  --rio-shadow-card:  0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
   /* top highlight is a no-op on light surfaces */
   --rio-highlight-top: 0 0 0 0 transparent; /* @kind shadow */
 }
@@ -33,6 +35,8 @@
                       0 12px 28px -14px rgba(0, 0, 0, 0.50);
     --rio-shadow-xl:  0 1px 0 rgba(255, 255, 255, 0.05),
                       0 28px 56px -24px rgba(0, 0, 0, 0.60);
+    --rio-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.30);
+    --rio-shadow-card:  0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px -6px rgba(0, 0, 0, 0.55);
     --rio-highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.04); /* @kind shadow */
   }
 }
@@ -47,6 +51,8 @@
                     0 2px 6px -2px rgba(20, 30, 54, 0.08);
   --rio-shadow-xl:  0 24px 48px -20px rgba(20, 30, 54, 0.24),
                     0 6px 16px -8px rgba(20, 30, 54, 0.12);
+  --rio-shadow-inset: inset 0 1px 1px rgba(15, 23, 42, 0.03);
+  --rio-shadow-card:  0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
   --rio-highlight-top: 0 0 0 0 transparent; /* @kind shadow */
 }
 
@@ -60,5 +66,7 @@
                     0 12px 28px -14px rgba(0, 0, 0, 0.50);
   --rio-shadow-xl:  0 1px 0 rgba(255, 255, 255, 0.05),
                     0 28px 56px -24px rgba(0, 0, 0, 0.60);
+  --rio-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.30);
+  --rio-shadow-card:  0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px -6px rgba(0, 0, 0, 0.55);
   --rio-highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.04); /* @kind shadow */
 }
