@@ -28,7 +28,15 @@ Source of truth lives at `docs/visual-reference/`:
 ```
 admin_reset_password.png · feature_flags.png · form.png · group_edit.png
 group_new.png · lock_user.png · password_change.png · user_new.png
+products_list.png
 ```
+
+`products_list.png` is the canonical **list/table** reference: the page-header
+Export + Add actions, the toolbar (search · filter · sort · per-page), the bulk
+bar revealed by selecting a row (`N selected` · Clear · Delete selected), and the
+no-zebra table with status pills. Captured with one row selected so the bulk bar
+is visible. (`form.png`, `user_new.png`, etc. cover the form pages; this covers
+the list shape.)
 
 If a page being changed has no screenshot, match the closest pattern and flag it.
 
