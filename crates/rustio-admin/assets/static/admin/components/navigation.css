@@ -116,7 +116,7 @@
 .rio-appfoot-links { display: flex; align-items: center; gap: var(--rio-space-16); }
 .rio-appfoot-links a { color: var(--rio-text-mute); text-decoration: none; }
 .rio-appfoot-links a:hover { color: var(--rio-text-hi); }
-.rio-appfoot-meta { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
+.rio-appfoot-meta { font-family: var(--rio-font-body); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
 
 /* DEVELOPMENT pill */
 .rio-devpill {

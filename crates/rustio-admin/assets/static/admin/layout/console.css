@@ -235,7 +235,8 @@
   inline-size: 44px; block-size: 44px; border-radius: 12px; flex: none;
   background: var(--rio-sunken); border: 1px solid var(--rio-line);
   display: grid; place-items: center;
-  font-family: var(--rio-font-mono); font-size: 16px; font-weight: 700; color: var(--rio-text-mute);
+  font-family: var(--rio-font-display); font-size: 16px; font-weight: 700; color: var(--rio-rust);
+  background: var(--rio-rust-tint); border-color: transparent;
 }
 
 /* status pill: use the canonical .rio-pill (--on/--off) from components/data.css */

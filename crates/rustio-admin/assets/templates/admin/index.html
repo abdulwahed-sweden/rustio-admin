@@ -44,8 +44,8 @@
         <td class="col-fields">{{ model.field_count }} field{% if model.field_count != 1 %}s{% endif %}</td>
         <td class="col-rows"><span class="rio-rownum">{{ model.row_estimate }}</span></td>
         <td class="col-browse">
-          <a class="rio-btn rio-btn--secondary rio-btn--sm" href="/admin/{{ model.admin_name }}">{{ icon("table") }} Browse</a>
-          {% if not read_only %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="/admin/{{ model.admin_name }}/new">{{ icon("plus") }} Add</a>{% endif %}
+          <a class="rio-action-link" href="/admin/{{ model.admin_name }}">{{ icon("table") }} Browse</a>
+          {% if not read_only %}<a class="rio-action-link rio-action-link--muted" href="/admin/{{ model.admin_name }}/new">{{ icon("plus") }} Add</a>{% endif %}
         </td>
       </tr>
       {% endfor %}{% endfor %}
