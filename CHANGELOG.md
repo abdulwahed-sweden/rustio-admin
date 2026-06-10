@@ -158,6 +158,16 @@ leaves the alpha track.
   across both header systems (`.rio-crumbs` and `.rio-breadcrumbs`). §10.1 shells:
   `.rio-form-shell` 1100px→**880px**, new `.rio-content-shell` 1040px; the 2-col grid
   drops to a 24px gap and stacks at 768px. No new CSS fragments.
+- **Visual Contract v2.0 conformance — Phase 7.5 (builtin render).** The builtin
+  user-create and password-change forms emitted their paired fields with `span == 2`
+  (full-width), so they stacked instead of landing in the §10.2 two-column grid.
+  `render::create_user_form_sections` now emits **Email** and **Temporary password**
+  (renamed from "Password" to match the reference) at `span: 1` so they pair under the
+  IDENTITY legend (Role stays on its own row); `render::password_change_form_sections`
+  and `render::must_change_password_form_sections` emit **New password** and **Confirm
+  new password** (renamed from "Confirm") at `span: 1` (Old password keeps its own row).
+  Behaviour change: two field labels change and the two-column layout engages. The
+  public recovery flow (token reset / forgot-password) is unchanged.
 
 
 ## [0.28.0] — 2026-06-08
