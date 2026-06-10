@@ -1,7 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">{{ index_title }}</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ index_title }}</span></nav>
 
 <div class="rio-masthead-top">
   <div>
@@ -52,7 +52,7 @@
     </tbody>
   </table>
   <div class="rio-board-foot">
-    <span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_models }}</strong> model{% if total_models != 1 %}s{% endif %} · <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_rows }}</strong> row{% if total_rows != 1 %}s{% endif %} total</span>
+    <span style="font-size:var(--rio-text-13);color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_models }}</strong> model{% if total_models != 1 %}s{% endif %} · <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_rows }}</strong> row{% if total_rows != 1 %}s{% endif %} total</span>
   </div>
 </div>
 {% else %}

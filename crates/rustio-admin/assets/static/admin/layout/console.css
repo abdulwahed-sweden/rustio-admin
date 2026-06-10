@@ -171,19 +171,19 @@
 }
 .rio-ledger-item:last-child { border-inline-end: 0; margin-inline-end: 0; }
 .rio-ledger-num {
-  font-family: var(--rio-font-mono); font-size: 30px; font-weight: 500;
+  font-family: var(--rio-font-display); font-size: 30px; font-weight: 700;
   color: var(--rio-text-hi); letter-spacing: -0.02em; line-height: 1;
   font-variant-numeric: lining-nums tabular-nums;
 }
 .rio-ledger-num .rio-ledger-unit { font-size: 15px; color: var(--rio-text-faint); margin-inline-start: 4px; font-weight: 500; }
 .rio-ledger-label {
-  font-family: var(--rio-font-mono); font-size: 11px; text-transform: uppercase;
-  letter-spacing: .085em; color: var(--rio-text-faint); font-weight: 600;
+  font-family: var(--rio-font-body); font-size: var(--rio-text-13); text-transform: uppercase;
+  letter-spacing: .085em; color: var(--rio-text-mute); font-weight: 700;
 }
 .rio-ledger-item--accent .rio-ledger-num { color: var(--rio-rust); }
 
 /* ---- Command toolbar (search + filters in one bar) ---- */
-.rio-cmdbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rio-cmdbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-block-end: var(--rio-space-20); }
 .rio-cmdbar .rio-search--hero { flex: 1; min-inline-size: 280px; }
 .rio-cmdbar-spacer { flex: 1; }
 
@@ -197,10 +197,10 @@
 }
 .rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
 .rio-dtable thead th {
-  text-align: start; font-family: var(--rio-font-mono); font-size: var(--rio-text-13);
-  font-weight: var(--rio-weight-semibold); letter-spacing: .05em; text-transform: uppercase;
-  color: var(--rio-text-mute); padding: 16px 22px;
-  background: var(--rio-raised); border-block-end: 1px solid var(--rio-line-strong);
+  text-align: start; font-family: var(--rio-font-body); font-size: var(--rio-text-13);
+  font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--rio-text-mute); padding: 14px 22px;
+  background: var(--rio-surface); border-block-end: 1px solid var(--rio-line);
   position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
 }
 .rio-dtable tbody td { padding: 0 22px; block-size: 72px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }

@@ -21,7 +21,7 @@
   position: absolute;
   inset-block-start: calc(100% + 6px);
   inset-inline-start: 0;
-  z-index: var(--rio-z-dropdown);
+  z-index: 40; /* above the sticky table header (z-index:1); matches the topbar menu (z-index:40) */
   min-inline-size: 220px;
   display: none;
   background: var(--rio-overlay);

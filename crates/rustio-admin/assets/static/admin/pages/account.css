@@ -32,7 +32,7 @@
 /* ---- Section eyebrow + empty state ---- */
 .rio-section { margin-block-start: var(--rio-space-24); }
 .rio-section__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--rio-space-16); margin-block-end: var(--rio-space-12); }
-.rio-section__label { display: block; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-faint); margin-block-end: var(--rio-space-8); }
+.rio-section__label { display: block; font-family: var(--rio-font-body); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-mute); font-weight: 700; margin-block-end: var(--rio-space-8); }
 .rio-section__title { font-family: var(--rio-font-display); font-weight: var(--rio-weight-display); font-size: var(--rio-text-24); color: var(--rio-text-hi); margin: 0; }
 .rio-empty-state { text-align: center; padding: var(--rio-space-32) var(--rio-space-24); }
 .rio-empty-state__icon { display: inline-grid; place-items: center; inline-size: 48px; block-size: 48px; border-radius: var(--rio-radius-lg); background: var(--rio-sunken); color: var(--rio-text-mute); margin-block-end: var(--rio-space-12); }
@@ -68,7 +68,7 @@
 .rio-sess-trust { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 6px; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 10px; border-radius: var(--rio-radius-pill); background: var(--rio-sunken); color: var(--rio-text-mute); }
 .rio-sess-card--current .rio-sess-trust { background: var(--rio-success-tint); color: var(--rio-success); }
 .rio-sess-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--rio-space-12); }
-.rio-sess-meta dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-faint); }
+.rio-sess-meta dt { font-family: var(--rio-font-body); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-mute); font-weight: 700; }
 .rio-sess-meta dd { margin: 2px 0 0; font-size: var(--rio-text-14); color: var(--rio-text); font-variant-numeric: tabular-nums; }
 .rio-sess-foot { margin-block-start: var(--rio-space-16); padding-block-start: var(--rio-space-16); border-block-start: 1px solid var(--rio-line); display: flex; align-items: center; }
 .rio-sess-note { color: var(--rio-text-faint); font-size: var(--rio-text-14); }

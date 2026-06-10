@@ -1,7 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">{{ user.email }}</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ user.email }}</span></nav>
 
 <div class="rio-masthead-top">
   <div><h1>{{ user.full_name }}</h1><p class="rio-masthead-desc">{{ user.email }}</p></div>

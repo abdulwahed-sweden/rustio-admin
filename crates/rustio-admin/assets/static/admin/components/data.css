@@ -116,7 +116,7 @@
 
 /* Stat card */
 .rio-stat { display: flex; flex-direction: column; gap: 6px; padding: var(--rio-space-16) var(--rio-space-20); }
-.rio-stat-label { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); letter-spacing: .04em; text-transform: uppercase; color: var(--rio-text-faint); font-weight: var(--rio-weight-semibold); }
+.rio-stat-label { font-family: var(--rio-font-body); font-size: var(--rio-text-12); letter-spacing: .04em; text-transform: uppercase; color: var(--rio-text-faint); font-weight: var(--rio-weight-semibold); }
 .rio-stat-value { font-family: var(--rio-font-display); font-size: var(--rio-text-30); font-weight: var(--rio-weight-bold); color: var(--rio-text-hi); letter-spacing: -0.01em; line-height: 1; font-variant-numeric: lining-nums tabular-nums; }
 .rio-stat-delta { font-size: var(--rio-text-12); color: var(--rio-text-mute); display: inline-flex; align-items: center; gap: 4px; }
 .rio-stat-delta--up { color: var(--rio-success); }
