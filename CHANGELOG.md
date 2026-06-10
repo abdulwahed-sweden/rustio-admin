@@ -210,6 +210,17 @@ leaves the alpha track.
   or `prefers-color-scheme` block, the framework logs a WARN naming the file and the
   consequence (light surfaces leak into dark). Detection only — the operator's CSS is
   served verbatim, never rewritten or wrapped.
+- **Retired the unused baked font faces Spectral and Hanken Grotesk.** After the
+  Visual Contract moved body + display to **Inter** and mono to the SFMono system
+  stack, the prior pairing's faces were dead weight. Removed: their `@font-face`
+  blocks (`base/fonts.css`), the six woff2 assets, the `include_bytes!`/`FONT_*`
+  constants and their static routes in `src/admin/routes.rs`. **Behaviour change** —
+  `/static/fonts/Spectral-*.woff2` and `/static/fonts/HankenGrotesk-Variable-*.woff2`
+  now return **404**, and any downstream override styling against `"Spectral"` or
+  `"Hanken Grotesk"` silently falls back to the next family in its stack. **JetBrains
+  Mono is kept**: the framework mono stack is SFMono-system, but the shop example's
+  brand override (`--rio-font-mono`) still selects it (audit-confirmed live). Shrinks
+  the binary by **~144 KB** (debug). Arabic fallbacks (Noto Naskh, Tajawal) untouched.
 
 
 ## [0.28.0] — 2026-06-08

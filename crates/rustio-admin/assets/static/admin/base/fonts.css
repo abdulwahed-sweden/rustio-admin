@@ -11,10 +11,11 @@
  * base/typography-i18n.css, lang-gated.
  *
  * Visual Contract v2.0: Inter is the single Latin face for both body and
- * display (titles lose the serif). The InterVariable.woff2 was already baked
- * (FONT_INTER in src/admin/routes.rs) and licensed (LICENSE.txt) — only this
- * @font-face was missing. Spectral / Hanken faces are kept for now and removed
- * in a separate cleanup commit once every phase has landed.
+ * display (titles lose the serif). The Spectral (display serif) and Hanken
+ * Grotesk (body) faces of the prior design were retired once the contract
+ * landed — their @font-face blocks, woff2 assets, and static routes are gone.
+ * JetBrains Mono stays: the framework's mono stack is SFMono-system, but the
+ * shop example's brand override (`--rio-font-mono`) still selects it.
  * ============================================================ */
 
 /* Inter — body + display (variable wght 100..900) */
@@ -23,27 +24,6 @@
   src: url("/static/fonts/InterVariable.woff2") format("woff2-variations"),
        url("/static/fonts/InterVariable.woff2") format("woff2");
   font-weight: 100 900; font-style: normal; font-display: swap;
-}
-
-/* Spectral — display serif (static 400/500/600/700) */
-@font-face { font-family: "Spectral"; src: url("/static/fonts/Spectral-400-latin.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Spectral"; src: url("/static/fonts/Spectral-500-latin.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
-@font-face { font-family: "Spectral"; src: url("/static/fonts/Spectral-600-latin.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
-@font-face { font-family: "Spectral"; src: url("/static/fonts/Spectral-700-latin.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
-
-/* Hanken Grotesk — body / UI (variable wght 400..800) */
-@font-face {
-  font-family: "Hanken Grotesk";
-  src: url("/static/fonts/HankenGrotesk-Variable-latin.woff2") format("woff2-variations"),
-       url("/static/fonts/HankenGrotesk-Variable-latin.woff2") format("woff2");
-  font-weight: 400 800; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: "Hanken Grotesk";
-  src: url("/static/fonts/HankenGrotesk-Variable-latinext.woff2") format("woff2-variations"),
-       url("/static/fonts/HankenGrotesk-Variable-latinext.woff2") format("woff2");
-  font-weight: 400 800; font-style: normal; font-display: swap;
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* JetBrains Mono — code / data (variable wght 400..700) */

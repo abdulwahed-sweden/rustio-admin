@@ -1,13 +1,15 @@
 /* ============================================================
-   RustIO — Typography tokens
-   A refined, elegant, English-first pairing:
-   · Display — Spectral (500–700) — an elegant low-contrast serif.
-               Page titles, hero, wordmark, stat values. Used sparingly.
-   · Body/UI — Hanken Grotesk (400–600) — clean, modern, very legible.
-   · Mono    — JetBrains Mono (400–700) — code, CLI, IDs, prices, labels.
+   RustIO — Typography tokens (Visual Contract v2.0)
+   · Display + Body/UI — Inter — one clean, legible Latin face for both
+               titles and body (the contract has no serif). Page titles,
+               hero, stat values, body, inputs, tables.
+   · Mono    — SFMono / Consolas system stack — code, CLI, IDs, prices,
+               labels. (Self-hosted JetBrains Mono remains baked for brand
+               overrides that select it, e.g. the shop example.)
 
-   Three roles, no overlap. Numerals are always Western (0–9); lining +
-   tabular figures are enforced in base.css.
+   Numerals are always Western (0–9); lining + tabular figures are
+   enforced in base.css. The prior Spectral (serif) + Hanken Grotesk
+   pairing was retired with the contract.
    ============================================================ */
 
 :root {
@@ -45,7 +47,7 @@
   --rio-weight-medium:   500;
   --rio-weight-semibold: 600;
   --rio-weight-bold:     700;
-  --rio-weight-display:  600; /* Spectral headings read elegant at 600 */
+  --rio-weight-display:  600; /* display family weight (titles use 800, see base.css) */
 
   /* --- Line heights — generous for comfortable reading --- */
   --rio-leading-display: 1.1;  /* serif display / headlines */
@@ -55,9 +57,9 @@
   --rio-leading-relaxed: 1.72; /* long-form */
 
   /* --- Letter spacing ---
-     Spectral (serif) needs ~0; Hanken reads refined with a hair of negative. */
-  --rio-tracking-display: -0.006em; /* Spectral headlines */
-  --rio-tracking-tight:   -0.008em; /* Hanken UI / body — crisp */
+     Inter reads refined with a hair of negative tracking at display + UI sizes. */
+  --rio-tracking-display: -0.006em; /* display headlines */
+  --rio-tracking-tight:   -0.008em; /* UI / body — crisp */
   --rio-tracking-normal:  0em;
   --rio-tracking-wide:    0.01em;
   --rio-tracking-mono:    0.005em;  /* mono labels */
