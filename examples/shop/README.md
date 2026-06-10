@@ -174,3 +174,7 @@ when you need more.
 | `templates/home.html`  | First-boot homepage. Three CSS custom properties at the top control the surface colours. |
 | `migrations/`          | Numerically prefixed `*.sql` files. `rustio-admin migrate apply` runs every pending one transactionally. `rustio-admin startapp <name>` adds the first one. |
 | `templates/admin/*.html` (optional) | Project-side overrides of any framework template. Set `RUSTIO_TEMPLATE_DIR=templates` to enable. |
+
+## Known issues
+
+- **Dark mode leaks light surfaces** when the `RUSTIO_TOKENS_CSS` brand override is active. `generated/tokens.css` is produced by `rustio-design`, which currently emits a light-only `:root` block with no dark counterpart; appended after the framework bundle it outranks the framework's dark theme in `[data-theme="dark"]` and OS-dark. The framework logs a startup WARN naming the file. This is a **generator** gap, not a framework bug — it clears once `rustio-design` emits dark blocks per `docs/design/TOKENS-EMIT-SPEC.md` and `generated/tokens.css` is regenerated. Light mode is unaffected.
