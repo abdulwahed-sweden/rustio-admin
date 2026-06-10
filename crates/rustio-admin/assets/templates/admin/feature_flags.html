@@ -11,8 +11,12 @@
 </header>
 
 <div class="rio-form">
-  <fieldset class="rio-fieldset" aria-label="Registered flags">
-    <legend class="rio-fieldset-legend">Flags · {{ flags|length }} registered</legend>
+  <div>
+  <header class="rio-section-head">
+    <p class="rio-section-head__eyebrow">Flags</p>
+    <h2 class="rio-section-head__title">{{ flags|length }} registered</h2>
+  </header>
+  <section class="rio-fieldset" aria-label="Registered flags">
     {% if flags %}
     <table class="rio-table">
       <thead>
@@ -24,9 +28,9 @@
           <td><code>{{ f.key }}</code></td>
           <td>
             {% if f.enabled %}
-            <span class="rio-pill rio-pill--on">Enabled</span>
+            <span class="rio-pill rio-pill--on">enabled</span>
             {% else %}
-            <span class="rio-pill rio-pill--off">Disabled</span>
+            <span class="rio-pill rio-pill--off">disabled</span>
             {% endif %}
           </td>
           <td>{{ f.description }}</td>
@@ -54,10 +58,15 @@
       </p>
     </div>
     {% endif %}
-  </fieldset>
+  </section>
+  </div>
 
-  <fieldset class="rio-fieldset" aria-label="Register a flag">
-    <legend class="rio-fieldset-legend">Add a flag</legend>
+  <div>
+  <header class="rio-section-head">
+    <p class="rio-section-head__eyebrow">Add</p>
+    <h2 class="rio-section-head__title">Register a new flag</h2>
+  </header>
+  <section class="rio-fieldset" aria-label="Register a flag">
     <form method="post" action="/admin/feature_flags" class="rio-form rio-form--inline">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
       <label class="rio-form-field">
@@ -72,6 +81,7 @@
       </label>
       <button type="submit" class="rio-btn rio-btn--primary">Add flag</button>
     </form>
-  </fieldset>
+  </section>
+  </div>
 </div>
 {% endblock %}

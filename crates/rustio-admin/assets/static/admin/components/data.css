@@ -12,6 +12,27 @@
 }
 .rio-card--pad { padding: var(--rio-space-20); }
 
+/* Section head — eyebrow + sub-heading stacked ABOVE an unlabeled card.
+   Visual Contract v2.1 §3(b): the list/table section pattern (feature_flags'
+   FLAGS / ADD). Not legend-on-border — the card below carries no legend. */
+.rio-section-head { margin: 0; }
+.rio-section-head__eyebrow {
+  margin: 0 0 var(--rio-space-4) 0;          /* s1 to the title */
+  font-size: var(--rio-text-12);              /* 14px */
+  font-weight: var(--rio-weight-bold);        /* 700 */
+  text-transform: uppercase;
+  letter-spacing: var(--rio-tracking-caps);   /* ~0.08em */
+  color: var(--rio-text-mute);
+}
+.rio-section-head__title {
+  margin: 0 0 var(--rio-space-16) 0;          /* s4 to the card */
+  font-family: var(--rio-font-display);
+  font-size: var(--rio-text-17);              /* ~17px */
+  font-weight: var(--rio-weight-bold);        /* 700 */
+  line-height: var(--rio-leading-tight);
+  color: var(--rio-text-hi);
+}
+
 /* Badge — small status label */
 .rio-badge {
   display: inline-flex;
