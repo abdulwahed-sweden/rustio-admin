@@ -27,11 +27,11 @@
 .rio-perm-matrix tbody tr:last-child th,
 .rio-perm-matrix tbody tr:last-child td { border-block-end: 0; }
 .rio-perm-matrix thead th {
-  font-family: var(--rio-font-mono);
+  font-family: var(--rio-font-body); font-weight: 800;
   font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em;
   color: var(--rio-text-mute); text-align: center;
-  background: var(--rio-raised);
-  border-block-end: 1px solid var(--rio-line-strong);
+  background: var(--rio-surface);
+  border-block-end: 1px solid var(--rio-line);
 }
 .rio-perm-matrix__model { text-align: start !important; color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); white-space: nowrap; }
 .rio-perm-matrix tbody tr:hover { background: var(--rio-raised); }
