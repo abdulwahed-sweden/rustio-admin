@@ -10,8 +10,9 @@ Companion to `DESIGN_SESSIONS.md`, `DESIGN_AUDIT.md`, and
 
 > **Status**
 >
-> Token surface stable from 0.3.0. The teal-emerald accent
-> palette is permanent. Token drift across feature branches
+> Token surface stable. The teal accent palette is permanent
+> (canonical values: [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1).
+> Token drift across feature branches
 > is the single biggest source of visual regressions; the
 > PR template's *Token disclosure* section enforces it.
 
@@ -196,7 +197,7 @@ A project that needs a different accent colour:
 ```rust
 // ✅ Typed override at boot. Emits a single _theme.html style block.
 let admin = Admin::new()
-    .accent_color("#0F8C7E");
+    .accent_color("#119588");
 ```
 
 A project that needs new tokens for its own components:
@@ -252,10 +253,10 @@ operators, and reviewers. Each is enforced by the patterns in
 
 ### 5.3 Accessibility floor
 
-> **Every text/surface pair clears WCAG AAA.** The single
-> light palette (the framework is light-only) is validated on
-> every token change. The visual checklist (appendix B) walks
-> the high-traffic surfaces before a token-touching PR merges.
+> **Every text/surface pair clears WCAG AA (body text ≥ 4.5:1).** Both the
+> light and dark palettes are validated per theme block on every token
+> change. The visual checklist (appendix B) walks the high-traffic surfaces
+> before a token-touching PR merges.
 
 ### 5.4 SemVer for tokens
 
@@ -369,8 +370,8 @@ comment so a diff in those blocks is visually loud:
 - `--rio-text*` — the slate text scale
 - `--rio-border*` — outline weights
 - `--rio-success / --rio-warning / --rio-danger` — semantic colours
-- `--rio-fs-*` — typography scale (12 / 14 / 15 / 16 / 17 / 19 / 24 / 30 px)
-- `--rio-font-sans / --rio-font-arabic / --rio-font-mono` — font stacks
+- `--rio-fs-*` — typography scale (14px floor; values owned by VISUAL-CONTRACT.md §2)
+- `--rio-font-body / --rio-font-display / --rio-font-mono` (+ `--rio-font-arabic`) — font stacks
 - `--rio-s1`–`--rio-s7` — spacing scale (4 / 8 / 12 / 16 / 24 / 32 / 48 px)
 - `--rio-radius / --rio-shadow*` — radii + shadows
 
@@ -385,7 +386,7 @@ stylesheet:
 ```css
 /* ❌ Wrong — silently forks the framework's accent */
 :root {
-  --rio-accent: #0F8C7E;
+  --rio-accent: #119588;
 }
 ```
 
@@ -394,7 +395,7 @@ Two right answers:
 ```rust
 // ✅ Typed override at boot. Emits a single _theme.html style block.
 let admin = Admin::new()
-    .accent_color("#0F8C7E");
+    .accent_color("#119588");
 ```
 
 ```css
@@ -428,51 +429,40 @@ Projects must **not** redefine `--rio-*` variables in CSS.
 
 ## 9. Canonical accent palette
 
-The framework default since 0.3.0 is teal-emerald.
+The framework default accent is **teal**. Its canonical value (`--rio-accent`)
+and the hover / focus / ring relatives are owned by
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (light) and §12 (the lifted dark
+variant) — one source of truth, not restated here. On dark surfaces the accent
+lifts for AA; the chrome (topbar / sidebar / footer) stays deep-slate in both themes.
 
-| Scope                                  | `--rio-accent` | `--rio-accent-hover` | `--rio-accent-rgb` |
-|----------------------------------------|----------------|----------------------|---------------------|
-| Page canvas (default)                  | `#0F8C7E`      | `#0A6E62`            | `15 140 126`        |
-| Chrome scope (topbar/sidebar/footer)   | `#3FAA9D`      | `#5FBFB3`            | `63 170 157`        |
-
-The chrome-scope lift exists because the base teal muddles to ~3:1
-contrast against the `#1F2A37` slate; the lifted variant restores
-~5.3:1 while staying in the same hue family. The lift is applied via
-the cascade inside `layout/shell.css`, not via a separate theme.
-
-The previous terracotta accent (`#A0341A` / `#C84934`) was
-retired in 0.3.0. It survives only as a comment reference in
-`admin.css`. Do not reintroduce red-family accents unless
-the framework identity changes deliberately.
-
-The teal palette is permanent. It was chosen because it is
-calmer and more operational for long admin sessions, holds
-contrast cleanly across the surface ladder, and reads cleaner
-with the Geist + Tajawal + Noto Naskh typography stack. Branding
-overrides via `Admin::accent_color()` are still supported
-per project, but the framework default does not re-shift.
+The teal identity is permanent — calmer and more operational for long admin
+sessions, holding contrast cleanly across the surface ladder. A previous
+terracotta accent was retired well before the contract; do not reintroduce
+red-family accents unless the framework identity changes deliberately. Per-project
+branding via `Admin::accent_color()` (or a generated, dark-aware `tokens.css` —
+see [`TOKENS-EMIT-SPEC.md`](TOKENS-EMIT-SPEC.md)) is supported; the framework
+default does not re-shift.
 
 ---
 
 
 ## 10. Typography philosophy
 
-Three families; one consistent ladder. Both Latin and Arabic
-stacks are declared so the browser's font resolution is
-deterministic on every page.
+The exact font stacks and the size scale are owned by
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2. In summary, both Latin and Arabic
+stacks are declared so the browser's font resolution is deterministic:
 
 | Role            | Family               | Notes                                       |
 |-----------------|----------------------|---------------------------------------------|
-| Latin UI        | **Geist** (variable) | Variable axis 100–900; UI surface default   |
+| Latin UI        | **Inter** (variable) | Body **and** display — titles are sans, no serif |
+| Code / mono     | SFMono system stack  | `<code>` / `<pre>` / IDs (self-hosted JetBrains Mono stays baked for brand overrides) |
 | Arabic UI       | **Tajawal**          | Static 400/500/700; compact admin surfaces  |
 | Arabic body     | **Noto Naskh Arabic** (variable) | Paragraph long-read fallback        |
-| Code / mono     | **Geist Mono**       | Tabular figures; all `<code>` and `<pre>`   |
 
-All four families live under `assets/static/fonts/` and are
-served as `woff2-variations` (Geist / Geist Mono / Noto
-Naskh) or static `woff2` (Tajawal). The fallback chain is
-documented inline in `admin.css` at the `--rio-font-*` token
-block.
+Latin faces live under `assets/static/fonts/` and are served as
+`woff2-variations` (Inter / JetBrains Mono / Noto Naskh) or static `woff2`
+(Tajawal); `@font-face` is in `base/fonts.css`. (The retired Geist / Spectral /
+Hanken faces are gone — see the font-cleanup CHANGELOG entries.)
 
 ### 10.1 Arabic typography rules
 
@@ -481,7 +471,7 @@ block.
   Noto Naskh as graceful fallback.
 - **Paragraph body** (long-read help text, descriptions) →
   Noto Naskh Arabic first.
-- **Numbers and code** stay in Geist Mono regardless of the
+- **Numbers and code** stay in the mono face regardless of the
   surrounding script so timestamps, counts, and identifiers
   align in tabular columns.
 - **Never** allow Arabic text to land on a Latin face. The
@@ -491,11 +481,12 @@ block.
 
 ### 10.2 Size ladder
 
-The framework ladder is `--rio-fs-xs` (12px) through
-`--rio-fs-3xl` (30px). Components must resolve through these
-tokens, not pick literal `font-size: 14px;` values. A
-project that needs a tighter or looser scale (POS terminal
-on a reflective display, density-tuned dashboard) overrides
+The size ladder and the **14px content-area floor** are owned by
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2 (body / inputs / tables 16px,
+legends / headers / kbd 14px, page titles 36px). Components must resolve through
+the `--rio-fs-*` / `--rio-text-*` tokens, never literal `font-size` — and never
+below 14px in the content area. A project that needs a tighter or looser scale
+(POS terminal on a reflective display, density-tuned dashboard) overrides
 via its own project-scoped class wrapper, never by
 redefining the framework size tokens.
 
@@ -575,10 +566,10 @@ Carry from the design doctrine. Do not re-litigate.
 
 | Decision | Value | Override path |
 |----------|-------|---------------|
-| Accent palette | **Teal-emerald** (`#0F8C7E` page canvas / `#3FAA9D` chrome scope — see § 9). Permanent since 0.3.0 | `Admin::accent_color("#…")` per project |
-| Retired accent | **Terracotta** (`#A0341A` / `#C84934`). Do not reintroduce | None — framework identity decision |
-| Typography stack | **Geist** (Latin UI), **Tajawal** (Arabic UI), **Noto Naskh Arabic** (Arabic body), **Geist Mono** (code) | Project-scoped class wrappers may layer; cannot redefine `--rio-font-*` |
-| Size ladder | `--rio-fs-xs` (12px) → `--rio-fs-3xl` (30px) | Project-scoped class wrappers; no token redefinition |
+| Accent palette | **Teal** — values owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (light) / §12 (dark). Permanent | `Admin::accent_color("#…")` per project |
+| Retired accent | A prior terracotta/red accent. Do not reintroduce | None — framework identity decision |
+| Typography stack | **Inter** (Latin UI, body + display), SFMono stack (mono), **Tajawal** (Arabic UI), **Noto Naskh Arabic** (Arabic body) — see VISUAL-CONTRACT.md §2 | Project class wrappers may layer; cannot redefine `--rio-font-*` |
+| Size ladder | Owned by VISUAL-CONTRACT.md §2 (16px body, 14px floor, 36px titles) | Project class wrappers; no token redefinition |
 | Spacing scale | `--rio-s1` (4px) → `--rio-s7` (48px) | Same |
 | Project token prefix | `--bsk-*` / `--app-*` / `--<project>-*` | None — convention |
 | Token authority | `crates/rustio-admin/assets/static/admin.css` | None — single source of truth |

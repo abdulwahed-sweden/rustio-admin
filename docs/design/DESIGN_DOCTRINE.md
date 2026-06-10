@@ -12,6 +12,13 @@ in `src/admin/routes.rs` for the assembly order. The order matches
 `admin/admin.css`'s `@import` manifest line-for-line; **both must be kept
 in lock-step.**
 
+> **Values live in the contract, not here.** As of the Visual Contract v2.0
+> rollout, all concrete token **values** — colors, the type scale, fonts,
+> light/dark — are owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md). This
+> document keeps the *principles, architecture, and rationale*; where it used to
+> restate hex/px/font values it now points there, so a rebrand changes one file.
+> If a number below and the contract disagree, the contract wins.
+
 ---
 
 ## 1. Token philosophy
@@ -22,68 +29,49 @@ Five variable groups, one source of truth per group:
 |-------------|-------------------------------|-----------------------------------------------|
 | Colors      | `tokens/colors.css`           | Accent, surface ladder, slate text, semantics |
 | Spacing     | `tokens/spacing.css`          | 4 / 8 / 12 / 16 / 24 / 32 / 48 px scale       |
-| Radius      | `tokens/radius.css`           | `sm` (6), default (10), `lg` (14)             |
-| Shadows     | `tokens/shadows.css`          | xs / default / lg — deliberately quiet        |
+| Radius      | `tokens/radius.css`           | `sm` 6 · `control` 8 · `md` 9 · `lg` 12 · `xl` 16 |
+| Shadows     | `tokens/shadows.css`          | sm / md / lg / xl + card / inset — quiet      |
 | Typography  | `tokens/typography.css`       | Fonts, sizes, line-heights, weights, tracking |
 
 Three rules:
 
-1. **One canonical value per token in `:root`.** The framework is
-   light-only — there are no dark or alternate-mode overrides anywhere.
+1. **One canonical value per token, per theme block.** The framework ships
+   **light and dark**, token-driven only — light in `:root`, dark re-derived in
+   the `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]` blocks of
+   `tokens/colors.css`. No per-component dark CSS (see
+   [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §12).
 2. **No hard-coded colours, spacing, or font sizes outside `tokens/`.**
    Every component resolves through `var(--rio-*)`. Projects override the
-   framework by patching `:root` from their own theme file; if a component
-   bakes in `#ffffff`, that override silently fails.
-3. **New token = CHANGELOG entry.** Tokens are public API. A new
-   `--rio-accent-hover-2` (or whatever) ships under "Tokens — colors"
-   so feature branches can't silently drift the palette.
+   framework by patching the token blocks from their own theme file; if a
+   component bakes in `#ffffff`, that override silently fails.
+3. **New token = CHANGELOG entry.** Tokens are public API; a new `--rio-*` token
+   ships under a "Tokens" CHANGELOG note so branches can't drift the palette.
 
-The brand accent is **teal-emerald `#0F8C7E`**, lifted to **`#3FAA9D`**
-inside the deep-slate chrome (topbar / sidebar / footer) where the base
-hue muddles to ~3:1 contrast. It is reserved for affordances — primary
-buttons, focus rings, active state, links, brand emblem. **It is never
-flood-filled across page chrome.** Surfaces stay neutral so the accent
-retains its weight as a call-to-action.
-
-The crimson `#A0341A` used pre-0.3.0 was retired so projects can override
-exactly one teal value to rebrand.
+The brand accent is **teal** — its canonical value (`--rio-accent`) lives in
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1, not restated here. It is reserved
+for affordances — primary buttons, focus rings, active state, links — and **never
+flood-filled across page chrome**; surfaces stay neutral so the accent keeps its
+weight as a call-to-action.
 
 ---
 
 ## 2. Typography system
 
-Three families, one scale:
-
 | Context     | Family                | When                                    |
 |-------------|-----------------------|-----------------------------------------|
-| Latin UI    | Geist Variable        | Default — body, headings, controls      |
-| Code        | Geist Mono Variable   | `code`, `pre`, datetime cells, IDs      |
+| Latin UI    | **Inter** Variable    | Default — body, headings, controls       |
+| Code / mono | SFMono system stack   | `code`, `pre`, datetime cells, IDs (self-hosted JetBrains Mono stays baked for brand overrides) |
 | Arabic UI   | Tajawal (400/500/700) | `lang="ar"` / `dir="rtl"` on UI surfaces|
 | Arabic body | Noto Naskh Variable   | `lang="ar"` paragraphs, prose, help     |
 
-All four are self-hosted from the binary (see `@font-face` in
-`base/typography.css`). The font binaries ship inside the `rustio-admin`
-crate; **there is no CDN round-trip, no FOUT, and no GDPR/tracking surface.**
-Arabic faces are gated by `unicode-range`, so a Latin-only page pays zero
-download cost for the Arabic shapers.
-
-### Size scale (rem-based, 16 px html root)
-
-| Token              | Pixels  | Used for                                  |
-|--------------------|---------|-------------------------------------------|
-| `--rio-fs-xs`      | 13      | kbd, footer, tiny meta, table headers     |
-| `--rio-fs-sm`      | 14.4    | hint text, datetime cells, pagination     |
-| `--rio-fs-md`      | 15      | sidebar, button label, nav link           |
-| `--rio-fs-base`    | 16      | body, table cell                          |
-| `--rio-fs-lg`      | 17      | main prose body                           |
-| `--rio-fs-xl`      | 20      | section h3                                |
-| `--rio-fs-h3`      | 22      | h3                                        |
-| `--rio-fs-h2`      | 26      | h2                                        |
-| `--rio-fs-h1`      | 30      | page title (calmer than 34 px)            |
-| `--rio-fs-display` | 36      | login title                               |
-
-The floor is **13 px** for true micro-text only. Everyday surfaces land
-between 14 and 16 px so a ten-hour operator session never strains.
+Latin faces are self-hosted from the binary (`@font-face` in `base/fonts.css`);
+**no CDN round-trip, no FOUT, no GDPR/tracking surface.** Arabic faces are gated
+by `unicode-range`, so a Latin-only page pays zero download for them. The exact
+font stacks and the type scale are owned by
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2 — body/labels/inputs/tables at 16px,
+legends/headers/kbd at 14px, page titles 36px, and a hard **14px floor: no
+content-area UI text below 14px.** (The prior Geist / Spectral / Hanken faces and
+the 13px floor were retired with the contract.)
 
 ### Line height is tuned per script
 
@@ -99,37 +87,31 @@ baseline, and 1.5 doesn't give them room.
 
 ### Tracking (Latin only)
 
-Geist is drawn for slight negative tracking on display sizes:
-`--rio-tracking-display: -0.022em`, `heading: -0.012em`, `body: -0.003em`.
-Arabic resets to 0 — applied automatically to anything tagged
-`:lang(ar)` / `[dir="rtl"]` in `base/typography.css`.
+Inter reads refined with a hair of negative tracking at display and UI sizes;
+the exact `--rio-tracking-*` values live in `tokens/typography.css`. Arabic
+resets to 0 — applied automatically to anything tagged `:lang(ar)` / `[dir="rtl"]`
+in `base/base.css`, and to `.rio-fieldset > legend` / `.rio-table th` per the
+contract §12 (connected script breaks under tracking).
 
 ---
 
 ## 3. Surface hierarchy
 
-Surfaces lift in **2–4 % steps** from page canvas up to popovers. Depth comes
-from *layering*, not from drop shadow. Five rungs (light mode):
+Surfaces lift in small steps from page canvas to popovers — depth comes from
+*layering*, not drop shadow. The canonical light values (`--rio-bg` `#fafcfb`,
+`--rio-surface` white, the code-chip tint, and the dark-theme inversions) are
+owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (and §12 for dark).
+Principles that hold regardless of value:
 
-| Token             | Hex       | Lives on                                          |
-|-------------------|-----------|---------------------------------------------------|
-| `--rio-bg`        | `#EEF1F6` | Page canvas                                       |
-| `--rio-surface`   | `#FFFFFF` | Cards, topbar, sidebar, table body, inputs        |
-| `--rio-surface-2` | `#F7F9FC` | Table head, zebra stripe, panel base              |
-| `--rio-surface-3` | `#EFF2F7` | Hover, pressed state, secondary chip              |
-| Accent wash       | 6–10 % α  | Selected row, active filter, sidebar `.is-active` |
+- Never pure white, never pure black.
+- Chrome (topbar / sidebar / footer) sits on a distinct deep-slate surface so the
+  operator skeleton reads without conscious attention. The chrome stays dark in
+  both light and dark themes.
+- Tables carry **no zebra** — rows separate by soft dividers and hover, not striping.
 
-Never pure white, never pure black. The deepest surface in the
-framework is the chrome floor `#1F2A37` — desaturated blue-slate, not
-`#000` or `#111` — used for the topbar, sidebar, and footer.
-
-Borders work in three weights:
-
-| Token                  | Use                                              |
-|------------------------|--------------------------------------------------|
-| `--rio-border-soft`    | In-card row dividers — almost invisible          |
-| `--rio-border`         | Card outlines, default divider                   |
-| `--rio-border-strong`  | Hover state, focused control                     |
+Borders are two weights (contract §1): a **soft** card/divider border
+(`--rio-border-soft`) and a **strong** input/control border (`--rio-border-input`)
+that keeps fields clearly outlined rather than melting into the card.
 
 ### Shadow scale
 
@@ -168,32 +150,25 @@ rules need to compute against them:
 
 ---
 
-## 5. Light-only stance
+## 5. Light and dark
 
-The framework ships a **single, light palette**. No dark variant, no
-`prefers-color-scheme` media block, no theme toggle, no
-`data-rio-theme` attribute. The single `:root` block in
-`tokens/colors.css` is the only colour definition the framework owns.
+The framework ships **both themes, token-driven only** (contract §12). Light is
+the default `:root`; dark is re-derived in the `@media (prefers-color-scheme:
+dark)` (auto) and `[data-theme="dark"]` (explicit toggle) blocks of
+`tokens/colors.css` — the auto block is placed before the explicit one so an
+explicit theme wins by source order. There is **no per-component dark CSS**:
+components reference tokens, and only the token blocks carry per-theme values.
 
-Why light-only:
-
-- **One palette to audit.** WCAG contrast pairs are checked once.
-  A dark variant doubled the surface area where token drift could
-  introduce a regression invisible to half the userbase.
-- **Operator software, not consumer.** Admin sessions are short and
-  bright-office by default; the cost of maintaining a parallel scale
-  was higher than the value it returned.
-- **Projects that need dark can override `:root`.** The token surface
-  is the same; a project stylesheet patching `--rio-bg`,
-  `--rio-surface*`, `--rio-text*`, `--rio-border*` can re-skin to a
-  dark palette without forking the framework.
-
-The accent lifts from `#0F8C7E` to `#3FAA9D` **inside the deep-slate
-chrome surfaces only** (topbar / sidebar / footer — see
-`layout/shell.css`). On the light page canvas the base accent has
-sufficient contrast; inside chrome it muddles, hence the lifted
-variant. The lift is scoped via CSS custom-property cascade through
-`.rio-topbar, .rio-sidebar, .rio-footer`, not a separate theme.
+- **Slate dark, not charcoal.** Dark inverts the surface ladder to a slate family
+  and lifts the accent so it clears AA on dark surfaces; body text clears 4.5:1
+  on its background. Exact dark values live in
+  [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §12 + `tokens/colors.css`.
+- **One re-derivation per theme block to audit.** Because dark is token-only, the
+  WCAG pairings are checked per block, not per component — no parallel component CSS.
+- **Projects rebrand via the token blocks.** A generated `tokens.css` override
+  must itself be dark-aware ([`TOKENS-EMIT-SPEC.md`](TOKENS-EMIT-SPEC.md)); a
+  light-only override leaks light into dark mode, and the runtime logs a WARN
+  naming the file at startup.
 
 ---
 
@@ -203,8 +178,9 @@ variant. The lift is scoped via CSS custom-property cascade through
 through a ten-hour shift — not to convert a free-trial user. Concretely:
 
 1. **Calm over flashy.** Buttons swap surface colour on hover instead of
-   dimming with opacity. Tables zebra-stripe with neutral surface-2, not
-   an accent-tinted overlay. Cards layer with borders, not glow.
+   dimming with opacity. Tables separate rows with soft dividers and a quiet
+   hover — **no zebra striping**, no accent-tinted overlay. Cards layer with
+   borders, not glow.
 2. **Reserve the accent for affordances.** Anything the user can act on
    may wear teal; anything that's just content stays neutral. If
    everything is teal, nothing is.
@@ -227,9 +203,9 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
    all read like a settings page, not a SaaS auth dashboard. No hero,
    no gradient, no "secure your account" illustration.
 8. **Operator readability first.** The default body font size sits at
-   16 px, the floor at 13 px, table cells at 16 px, line-height at 1.6.
-   Density is achieved with `gap` and surface contrast, not by shrinking
-   text.
+   16 px, the floor at **14 px** (contract §2 — no content-area text below it),
+   table cells at 16 px, line-height at 1.6. Density is achieved with `gap` and
+   surface contrast, not by shrinking text.
 9. **Deeper surface ladder.** Adjacent surfaces sit ≥ 4 % apart so the
    eye never squints to tell canvas from card from table-header from
    row-hover. Added v0.15.0; details in
@@ -262,50 +238,28 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
 crates/rustio-admin/assets/static/admin/
 ├── admin.css            ← contributor-facing @import manifest
 ├── tokens/              ← single source of truth for the visual scale
-│   ├── colors.css
-│   ├── spacing.css
-│   ├── radius.css
-│   ├── shadows.css
-│   └── typography.css
-├── base/                ← reset + body + headings + utilities
-│   ├── reset.css
-│   ├── base.css
-│   ├── typography.css   ← @font-face lives here
-│   └── utilities.css
-├── layout/              ← page-level shell
-│   ├── shell.css
-│   ├── topbar.css
-│   ├── sidebar.css
-│   ├── footer.css
-│   └── responsive.css   ← imported AFTER all components
+│   ├── colors.css       ← light :root + dark @media / [data-theme] blocks
+│   ├── compat.css       ← contract-name aliases onto the engine tokens
+│   ├── spacing.css · radius.css · shadows.css · motion.css · typography.css
+├── base/
+│   ├── base.css         ← element defaults, body, headings, RTL neutralisation
+│   ├── fonts.css        ← @font-face (Inter, JetBrains Mono, Arabic faces)
+│   └── typography-i18n.css ← lang-gated CJK / Thai / Devanagari faces
+├── layout/
+│   └── console.css      ← the console shell: rail, masthead, board, ledger
 ├── components/          ← reusable UI primitives
-│   ├── cards.css
-│   ├── buttons.css
-│   ├── forms.css
-│   ├── tables.css
-│   ├── filters.css
-│   ├── dropdowns.css
-│   ├── pagination.css
-│   ├── pills.css
-│   ├── flashes.css
-│   ├── timeline.css
-│   └── tabs.css
+│   ├── buttons.css · forms.css · data.css (tables/pills/cards) · code.css
+│   ├── feedback.css · navigation.css
 ├── pages/               ← screen-specific overrides
-│   ├── auth.css
-│   ├── dashboard.css
-│   ├── permissions.css
-│   ├── sessions.css
-│   └── errors.css
-└── print/
-    └── print.css
+│   ├── form.css · list.css · detail.css · account.css · auth.css
+│   ├── dashboard.css · permissions.css · states.css · tools.css
+└── print/print.css
 ```
 
-**Import order matters:** tokens before base before layout before
-components before pages before responsive before print.
-`responsive.css` is the only file in `layout/` that loads late on purpose
-— its `display: none` sidebar rule is meant to override the desktop layout
-in `sidebar.css`. If your change depends on cascade order, document it
-inline so the next contributor doesn't innocently break it.
+**Import order matters:** tokens before base before layout before components
+before pages before print. The exact order is owned by the `@import` manifest in
+`admin/admin.css` and the `ADMIN_CSS` concat in `routes.rs` — kept in lock-step
+(a test enforces it). If a change depends on cascade order, document it inline.
 
 ---
 
