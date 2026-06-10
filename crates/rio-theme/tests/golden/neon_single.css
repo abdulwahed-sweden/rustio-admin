@@ -43,4 +43,60 @@
 
 :root[data-theme="dark"] {
   --rio-brand-adaptive: var(--rio-brand-dark);
+  --rio-accent: #63a15b;
+  --rio-accent-hover: #76ad6e;
+  --rio-accent-rgb: 99 161 91;
+  --rio-accent-soft: #192933;
+  --rio-accent-border: #497553;
+  --rio-info-bg: #192933;
+  --rio-bg: #0f172a;
+  --rio-surface: #1e293b;
+  --rio-surface-2: #0b1120;
+  --rio-surface-3: #334155;
+  --rio-surface-chrome: #0f172a;
+  --rio-surface-elevated: #1e293b;
+  --rio-text-strong: #f1f5f9;
+  --rio-text: #cbd5e1;
+  --rio-text-muted: #94a3b8;
+  --rio-text-subtle: #64748b;
+  --rio-border-soft: #334155;
+  --rio-border: #334155;
+  --rio-border-strong: #64748b;
+  --rio-success: #6fb98a;
+  --rio-warning: #d6a65a;
+  --rio-danger: #ef4444;
+  --rio-success-bg: #1c2e39;
+  --rio-warning-bg: #2a2c35;
+  --rio-danger-bg: #312231;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rio-brand-adaptive: var(--rio-brand-dark);
+    --rio-accent: #63a15b;
+    --rio-accent-hover: #76ad6e;
+    --rio-accent-rgb: 99 161 91;
+    --rio-accent-soft: #192933;
+    --rio-accent-border: #497553;
+    --rio-info-bg: #192933;
+    --rio-bg: #0f172a;
+    --rio-surface: #1e293b;
+    --rio-surface-2: #0b1120;
+    --rio-surface-3: #334155;
+    --rio-surface-chrome: #0f172a;
+    --rio-surface-elevated: #1e293b;
+    --rio-text-strong: #f1f5f9;
+    --rio-text: #cbd5e1;
+    --rio-text-muted: #94a3b8;
+    --rio-text-subtle: #64748b;
+    --rio-border-soft: #334155;
+    --rio-border: #334155;
+    --rio-border-strong: #64748b;
+    --rio-success: #6fb98a;
+    --rio-warning: #d6a65a;
+    --rio-danger: #ef4444;
+    --rio-success-bg: #1c2e39;
+    --rio-warning-bg: #2a2c35;
+    --rio-danger-bg: #312231;
+  }
 }

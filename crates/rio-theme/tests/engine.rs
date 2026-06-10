@@ -17,7 +17,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use rio_theme::{emit, resolve_theme, Color, ThemeInput};
+use rio_theme::{emit, resolve_theme, Color, DarkPolicy, ThemeInput};
 
 fn golden_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -54,8 +54,76 @@ fn check(name: &str, input: ThemeInput) {
     );
 }
 
+/// Golden check for an explicit [`DarkPolicy`] (the dark-block cases).
+fn check_with(name: &str, input: ThemeInput, dark: DarkPolicy) {
+    let tokens = resolve_theme(input);
+    let actual = emit::emit_with(&tokens, &dark);
+    let path = golden_path(name);
+
+    if std::env::var("RIO_THEME_BLESS").is_ok() {
+        fs::write(&path, &actual)
+            .unwrap_or_else(|e| panic!("could not bless {}: {e}", path.display()));
+        return;
+    }
+
+    let expected = fs::read_to_string(&path).unwrap_or_else(|e| {
+        panic!(
+            "could not read golden {}: {e}\n\n\
+             If this is a new fixture, bless it with:\n\
+             RIO_THEME_BLESS=1 cargo test -p rio-theme --test engine\n\n\
+             --- engine output ---\n{actual}",
+            path.display()
+        )
+    });
+
+    assert_eq!(
+        actual, expected,
+        "\ngolden {} drifted.\n\nIf this change is intentional, re-bless with:\n  RIO_THEME_BLESS=1 cargo test -p rio-theme --test engine\n\n--- expected ---\n{expected}\n--- actual ---\n{actual}",
+        path.display()
+    );
+}
+
 fn hex(s: &str) -> Color {
     Color::from_hex(s).expect("test fixture should parse")
+}
+
+// --- Dark-block golden cases (the three DarkPolicy derivations) ---
+// All use the shop's Patina brand so the goldens double as a reference
+// for what the rustio-design repo must emit (docs/design/TOKENS-EMIT-SPEC.md).
+
+#[test]
+fn dark_auto_derived() {
+    check_with(
+        "dark_auto",
+        ThemeInput {
+            brand_colors: vec![hex("#0E6B5B")],
+        },
+        DarkPolicy::Auto,
+    );
+}
+
+#[test]
+fn dark_light_only() {
+    check_with(
+        "dark_light_only",
+        ThemeInput {
+            brand_colors: vec![hex("#0E6B5B")],
+        },
+        DarkPolicy::LightOnly,
+    );
+}
+
+#[test]
+fn dark_explicit() {
+    check_with(
+        "dark_explicit",
+        ThemeInput {
+            brand_colors: vec![hex("#0E6B5B")],
+        },
+        DarkPolicy::Explicit {
+            accent: hex("#14b8a6"),
+        },
+    );
 }
 
 #[test]

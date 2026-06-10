@@ -190,6 +190,21 @@ leaves the alpha track.
   `.rio-fieldset > legend` / `.rio-fieldset-legend` (table headers were already covered).
   `CLAUDE.md` updated — the framework ships light + dark, token-driven only (the
   "light-only" claim is removed). Light theme is unchanged.
+- **`rio-theme` emits dark blocks (dual-block dark-aware `tokens.css`).** The theme
+  engine's `emit` previously wrote only a stub `:root[data-theme="dark"]` block (just
+  `--rio-brand-adaptive`), so a generated override appended after the framework bundle
+  leaked light surfaces into dark mode. It now emits the **full dual dark structure**
+  the framework uses — `:root[data-theme="dark"]` (higher specificity, tie-breaks the
+  toggle) **and** `@media (prefers-color-scheme: dark) { :root { … } }` (auto/OS dark) —
+  with identical values. New `DarkPolicy` (re-exported) + `emit_with`: **Auto** derives
+  the dark slate ladder and lifts the brand accent for AA on dark; **LightOnly** pins
+  dark to framework defaults (a neutral override, never light values); **Explicit**
+  lifts an author-supplied dark accent. `emit` defaults to `Auto`. Golden fixtures
+  (`tests/golden/dark_{auto,light_only,explicit}.css`) cover all three; the five
+  existing goldens were re-blessed (their dark block grew). **Behaviour change in
+  generated output** — any project regenerating its `tokens.css` gets dark blocks.
+  Contract: `docs/design/TOKENS-EMIT-SPEC.md`. Version is workspace-governed, so a
+  release bump is a workspace decision (flagged here, not taken).
 
 
 ## [0.28.0] — 2026-06-08
