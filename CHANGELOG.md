@@ -221,6 +221,17 @@ leaves the alpha track.
   Mono is kept**: the framework mono stack is SFMono-system, but the shop example's
   brand override (`--rio-font-mono`) still selects it (audit-confirmed live). Shrinks
   the binary by **~144 KB** (debug). Arabic fallbacks (Noto Naskh, Tajawal) untouched.
+- **Retired the unreferenced baked Geist + Geist Mono faces, and fixed font license
+  attributions.** Geist/GeistMono were `include_bytes!`'d, routed, and licensed but had
+  **no `@font-face`** anywhere (audit: zero references) — pure dead weight. Removed their
+  woff2 assets, `FONT_GEIST*` constants, and static routes; `/static/fonts/Geist-*.woff2`
+  now **404**. The font routes were refactored into a ctx-free `register_font_routes`
+  helper with a unit test asserting shipped faces serve and retired ones 404. **License
+  hygiene:** added the missing **JetBrains Mono** OFL attribution to `LICENSE.txt` (it
+  ships and is rendered by the shop override but was never attributed); `LICENSE.txt` now
+  maps 1:1 to the shipped woff2 (Inter, JetBrains Mono, Noto Naskh, Tajawal, and the
+  i18n Noto Thai/Devanagari/JP/KR/SC). Binary **~194 KB** smaller (debug; woff2 + the
+  closure-dedup from the route refactor).
 
 
 ## [0.28.0] — 2026-06-08

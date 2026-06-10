@@ -47,7 +47,7 @@
   font-style: normal;
   font-display: swap;
   /* Thai script + zero-width joiners + dotted-circle placeholder.
-   * Latin / Latin-ext already covered by Geist + Inter. */
+   * Latin / Latin-ext already covered by Inter. */
   unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC;
 }
 

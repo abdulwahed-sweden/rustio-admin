@@ -191,16 +191,13 @@ const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 /// and avoids the FOUT/CDN round-trip every consuming app would
 /// otherwise inherit from a Google Fonts <link>.
 ///
-/// Latin (identity): Geist Variable wght 100..900. Latin fallback:
-/// Inter Variable (Latin-ext + Cyrillic + Greek + Vietnamese under
-/// one variable file). Mono: Geist Mono Variable. Arabic: Noto
+/// Latin (identity): Inter Variable wght 100..900 (body + display).
+/// Mono: JetBrains Mono Variable (latin + latin-ext). Arabic: Noto
 /// Naskh Arabic Variable wght 400..700 (default reading face) +
 /// Tajawal 400/500/700 (selective geometric accent). International
 /// scripts: Noto Sans Thai + Devanagari (variable, auto-loaded via
 /// unicode-range) + Noto Sans JP/KR/SC (static Regular, lang-gated
 /// to avoid Han Unification shape collisions).
-const FONT_GEIST: &[u8] = include_bytes!("../../assets/static/fonts/Geist-Variable.woff2");
-const FONT_GEIST_MONO: &[u8] = include_bytes!("../../assets/static/fonts/GeistMono-Variable.woff2");
 const FONT_INTER: &[u8] = include_bytes!("../../assets/static/fonts/InterVariable.woff2");
 const FONT_TAJAWAL_REG: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Regular.woff2");
 const FONT_TAJAWAL_MED: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Medium.woff2");
@@ -223,6 +220,50 @@ const FONT_JETBRAINS_LATIN: &[u8] =
     include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latin.woff2");
 const FONT_JETBRAINS_LATIN_EXT: &[u8] =
     include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latinext.woff2");
+
+/// One woff2 response: immutable 1-year cache (bytes never change per build).
+fn font_response(bytes: &'static [u8]) -> Response {
+    Response::new(hyper::StatusCode::OK, bytes::Bytes::from_static(bytes))
+        .with_header("content-type", "font/woff2")
+        .with_header("cache-control", "public, max-age=31536000, immutable")
+}
+
+/// Register every served font route. Ctx-free, so it's unit-testable
+/// (a removed face's path 404s; see `tests`). The retired Geist /
+/// Spectral / Hanken faces are intentionally absent.
+fn register_font_routes(router: Router) -> Router {
+    const FONTS: &[(&str, &[u8])] = &[
+        ("/static/fonts/InterVariable.woff2", FONT_INTER),
+        (
+            "/static/fonts/JetBrainsMono-Variable-latin.woff2",
+            FONT_JETBRAINS_LATIN,
+        ),
+        (
+            "/static/fonts/JetBrainsMono-Variable-latinext.woff2",
+            FONT_JETBRAINS_LATIN_EXT,
+        ),
+        ("/static/fonts/Tajawal-Regular.woff2", FONT_TAJAWAL_REG),
+        ("/static/fonts/Tajawal-Medium.woff2", FONT_TAJAWAL_MED),
+        ("/static/fonts/Tajawal-Bold.woff2", FONT_TAJAWAL_BOLD),
+        (
+            "/static/fonts/NotoNaskhArabic-Variable.woff2",
+            FONT_NOTO_NASKH_AR,
+        ),
+        ("/static/fonts/NotoSansThai-Variable.woff2", FONT_NOTO_THAI),
+        (
+            "/static/fonts/NotoSansDevanagari-Variable.woff2",
+            FONT_NOTO_DEVA,
+        ),
+        ("/static/fonts/NotoSansJP-Regular.woff2", FONT_NOTO_JP),
+        ("/static/fonts/NotoSansKR-Regular.woff2", FONT_NOTO_KR),
+        ("/static/fonts/NotoSansSC-Regular.woff2", FONT_NOTO_SC),
+    ];
+    let mut router = router;
+    for &(path, bytes) in FONTS {
+        router = router.get(path, move |_req| async move { Ok(font_response(bytes)) });
+    }
+    router
+}
 
 use super::handlers::{self, AdminCtx};
 use super::render;
@@ -786,67 +827,9 @@ pub fn register_admin_routes(
         .with_header("cache-control", "no-cache, must-revalidate"))
     });
 
-    // Self-hosted fonts. Cache aggressively: file contents are
-    // immutable per build, so a 1-year cache is safe — the binary
-    // ships a fresh copy on the next release.
-    fn font_response(bytes: &'static [u8]) -> Response {
-        Response::new(hyper::StatusCode::OK, bytes::Bytes::from_static(bytes))
-            .with_header("content-type", "font/woff2")
-            .with_header("cache-control", "public, max-age=31536000, immutable")
-    }
-    let router = router.get("/static/fonts/Geist-Variable.woff2", |_req| async move {
-        Ok(font_response(FONT_GEIST))
-    });
-    let router = router.get(
-        "/static/fonts/GeistMono-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_GEIST_MONO)) },
-    );
-    let router = router.get("/static/fonts/Tajawal-Regular.woff2", |_req| async move {
-        Ok(font_response(FONT_TAJAWAL_REG))
-    });
-    let router = router.get("/static/fonts/Tajawal-Medium.woff2", |_req| async move {
-        Ok(font_response(FONT_TAJAWAL_MED))
-    });
-    let router = router.get("/static/fonts/Tajawal-Bold.woff2", |_req| async move {
-        Ok(font_response(FONT_TAJAWAL_BOLD))
-    });
-    let router = router.get(
-        "/static/fonts/NotoNaskhArabic-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_NASKH_AR)) },
-    );
-    let router = router.get("/static/fonts/InterVariable.woff2", |_req| async move {
-        Ok(font_response(FONT_INTER))
-    });
-    let router = router.get(
-        "/static/fonts/NotoSansThai-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_THAI)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansDevanagari-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_DEVA)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansJP-Regular.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_JP)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansKR-Regular.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_KR)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansSC-Regular.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_SC)) },
-    );
-    // Latin identity faces (Inter above; JetBrains Mono below). The prior
-    // Spectral / Hanken Grotesk faces + routes were retired with the contract.
-    let router = router.get(
-        "/static/fonts/JetBrainsMono-Variable-latin.woff2",
-        |_req| async move { Ok(font_response(FONT_JETBRAINS_LATIN)) },
-    );
-    let router = router.get(
-        "/static/fonts/JetBrainsMono-Variable-latinext.woff2",
-        |_req| async move { Ok(font_response(FONT_JETBRAINS_LATIN_EXT)) },
-    );
+    // Self-hosted fonts (baked, immutable 1-year cache). Registered via a
+    // ctx-free helper so the served set is unit-testable (see tests).
+    let router = register_font_routes(router);
 
     // Public: liveness / readiness probe. No auth — load
     // balancers and k8s probes don't carry session cookies.
@@ -2271,6 +2254,46 @@ mod tests {
         // A spacing/radius-only override isn't a dark hazard.
         let css = ":root{--rio-radius-md:10px}";
         assert!(!override_is_dark_leak_hazard(css));
+    }
+
+    // Font routes: the shipped faces are served; the retired ones (Geist,
+    // Spectral, Hanken) 404. Exercises the real `register_font_routes`.
+    #[tokio::test]
+    async fn font_routes_serve_shipped_and_404_retired() {
+        let router = register_font_routes(Router::new());
+        let req = |p: &str| {
+            Request::new(
+                hyper::Method::GET,
+                p.to_string(),
+                String::new(),
+                Default::default(),
+                bytes::Bytes::new(),
+            )
+        };
+        for p in [
+            "/static/fonts/InterVariable.woff2",
+            "/static/fonts/JetBrainsMono-Variable-latin.woff2",
+            "/static/fonts/NotoNaskhArabic-Variable.woff2",
+            "/static/fonts/Tajawal-Regular.woff2",
+        ] {
+            assert_eq!(
+                router.dispatch(req(p)).await.status.as_u16(),
+                200,
+                "{p} is a shipped face and must be served"
+            );
+        }
+        for p in [
+            "/static/fonts/Geist-Variable.woff2",
+            "/static/fonts/GeistMono-Variable.woff2",
+            "/static/fonts/Spectral-400-latin.woff2",
+            "/static/fonts/HankenGrotesk-Variable-latin.woff2",
+        ] {
+            assert_eq!(
+                router.dispatch(req(p)).await.status.as_u16(),
+                404,
+                "{p} was retired and must 404"
+            );
+        }
     }
 
     // role_guard's decision is `Role::includes(min)`. The 25-case
