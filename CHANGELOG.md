@@ -205,6 +205,11 @@ leaves the alpha track.
   generated output** — any project regenerating its `tokens.css` gets dark blocks.
   Contract: `docs/design/TOKENS-EMIT-SPEC.md`. Version is workspace-governed, so a
   release bump is a workspace decision (flagged here, not taken).
+- **Runtime warns on a light-only `RUSTIO_TOKENS_CSS` override.** At startup, when the
+  appended override defines `:root` color tokens but carries no `[data-theme="dark"]`
+  or `prefers-color-scheme` block, the framework logs a WARN naming the file and the
+  consequence (light surfaces leak into dark). Detection only — the operator's CSS is
+  served verbatim, never rewritten or wrapped.
 
 
 ## [0.28.0] — 2026-06-08
