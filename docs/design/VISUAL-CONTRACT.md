@@ -210,6 +210,16 @@ the pill is emitted, not by capitalizing the source string.
 3. `admin_reset_password.png` — a radio control is misaligned against the bold line.
    Target: control centered on the first text line.
 
+### 11.1 Documented deferral — user_new "Active" checkbox
+
+`user_new.png` pairs **Role | Active** (2-col) in the IDENTITY section. The user
+model carries `is_active`, but `create_user` always inserts `is_active = TRUE` —
+a functional Active toggle on the **create** form would need new create-path
+behaviour (and a product decision on whether the admin should mint inactive
+accounts). It is **deferred, not built**: the create form shows Role full-width
+and omits Active. This is an adjudicated deviation, not an oversight. (An *edit*
+form, where `is_active` is real existing state, may surface it later.)
+
 ## 12. Dark theme and RTL
 
 Dark theme is **mandatory and token-driven only** — re-derived from the §1 light
