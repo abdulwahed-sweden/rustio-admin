@@ -3743,45 +3743,50 @@ pub(crate) fn user_new_form_sections(
                     target_model: None,
                     checked: false,
                 },
+                FormField {
+                    name: "role",
+                    label: "Role".to_string(),
+                    widget: "select",
+                    input_type: "select",
+                    value: role.to_string(),
+                    hint: Some(
+                        "Higher roles include all lower-role capabilities. Group memberships are assigned on the next page after save."
+                            .to_string(),
+                    ),
+                    placeholder: None,
+                    required: true,
+                    options: Some(role_select_options(editor_rank)),
+                    multiple: false,
+                    // Full-width. The reference (user_new.png) pairs Role with an
+                    // "Active" checkbox, but creating an inactive user would need
+                    // create-path behaviour the framework doesn't expose
+                    // (`create_user` always inserts `is_active = TRUE`). Active is
+                    // a documented deferral — see VISUAL-CONTRACT v2.1 §3 note.
+                    span: 2,
+                    autocomplete: None,
+                    autofocus: false,
+                    disabled: false,
+                    maxlength: None,
+                    searchable: false,
+                    has_more: false,
+                    search_url: None,
+                    errors: vec![],
+                    target_model: None,
+                    checked: false,
+                },
             ],
-        },
-        FormSection {
-            title: Some("Role"),
-            fields: vec![FormField {
-                name: "role",
-                label: "Role".to_string(),
-                widget: "select",
-                input_type: "select",
-                value: role.to_string(),
-                hint: Some(
-                    "Higher roles include all lower-role capabilities. Group memberships are assigned on the next page after save."
-                        .to_string(),
-                ),
-                placeholder: None,
-                required: true,
-                options: Some(role_select_options(editor_rank)),
-                multiple: false,
-                span: 2,
-                autocomplete: None,
-                autofocus: false,
-                disabled: false,
-                maxlength: None,
-                searchable: false,
-                has_more: false,
-                search_url: None,
-                errors: vec![],
-                target_model: None,
-                checked: false,
-            }],
         },
     ]
 }
 
-/// General section for group_new / group_edit. Two fields: name
-/// (text, required, 150-char max) and description (textarea).
+/// The single name/description card for group_new / group_edit. Two fields:
+/// name (text, required, 150-char max) and description (textarea). Per Visual
+/// Contract v2.1 §3(c) a lone field-group card is **legend-less** — the title is
+/// `None` so the template's `{% if section.title %}` guard emits no legend. (On
+/// group_edit the PERMISSIONS card keeps its own legend, set in its template.)
 pub(crate) fn group_form_sections(name: &str, description: &str) -> Vec<FormSection> {
     vec![FormSection {
-        title: Some("General"),
+        title: None,
         fields: vec![
             FormField {
                 name: "name",
@@ -3948,7 +3953,7 @@ pub(crate) fn password_change_form_sections(min_length: usize) -> Vec<FormSectio
         fields: vec![
             FormField {
                 name: "old_password",
-                label: "Old password".to_string(),
+                label: "Current password".to_string(),
                 widget: "input",
                 input_type: "password",
                 value: String::new(),
