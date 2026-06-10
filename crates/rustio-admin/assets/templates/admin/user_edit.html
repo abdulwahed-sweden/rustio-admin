@@ -1,12 +1,9 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">{{ email }}</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ email }}</span></nav>
 <div class="rio-masthead-top">
   <div><h1>Edit user</h1><p class="rio-masthead-desc">Editing <strong>{{ email }}</strong> — identity, role, and group memberships.</p></div>
-  <div class="rio-masthead-cta">
-    <a class="rio-btn rio-btn--subtle rio-btn--md" href="/admin/users/{{ user_id }}/delete" style="color:var(--rio-danger)">{{ icon("trash") }} Delete user</a>
-  </div>
 </div>
 
 {% if is_last_developer %}<div class="rio-alert rio-alert--warn" role="status">This is the only active Developer. Demoting or deactivating the account is blocked by the framework.</div>{% endif %}
@@ -35,9 +32,11 @@
   </fieldset>
 
   <div class="rio-form-actions">
-    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Save changes</button>
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/users" class="rio-btn rio-btn--subtle rio-btn--md">Back to users</a>
+    <button type="submit" class="rio-btn rio-btn--primary">Save changes</button>
+    <span class="rio-action-bar-end">
+      <a class="rio-action-link rio-action-link--danger" href="/admin/users/{{ user_id }}/delete">{{ icon("trash") }} Delete user</a>
+      <a href="/admin/users" class="rio-action-link">Back to users</a>
+    </span>
   </div>
 </form>
 </div>

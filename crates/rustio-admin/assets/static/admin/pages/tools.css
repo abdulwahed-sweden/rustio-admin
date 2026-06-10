@@ -10,23 +10,9 @@
  * component sheet, shadowed the §9 table globally. Removed so every .rio-table
  * renders the one contract look. */
 
-/* ---- Badge pills (audit actions / history) ---- */
-.rio-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
-  padding: 3px 10px; border-radius: var(--rio-radius-pill); text-transform: capitalize; white-space: nowrap;
-  background: var(--rio-sunken); color: var(--rio-text-mute);
-}
-.rio-pill::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 50%; background: currentColor; flex: none; }
-.rio-pill--success, .lx-badge--success { background: var(--rio-success-tint); color: var(--rio-success); }
-.rio-pill--danger,  .lx-badge--danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
-.rio-pill--warning, .lx-badge--warning { background: var(--rio-warn-tint);     color: var(--rio-warn); }
-.rio-pill--info,    .lx-badge--info     { background: var(--rio-rust-tint);     color: var(--rio-rust); }
-.rio-pill--neutral, .lx-badge--neutral  { background: var(--rio-sunken);        color: var(--rio-text-mute); }
-.rio-pill--badge-warning { background: var(--rio-warn-tint); color: var(--rio-warn); }
-.rio-pill--badge-success { background: var(--rio-success-tint); color: var(--rio-success); }
-.rio-pill--badge-danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
-.rio-pill--badge-neutral { background: var(--rio-sunken);       color: var(--rio-text-mute); }
+/* The canonical .rio-pill (contract §9) lives in components/data.css — the
+ * audit/history/health pages use it directly; the earlier duplicate here
+ * (mono, dotted) was removed so there is one pill system. */
 
 /* ---- Health page ---- */
 .rio-health__summary { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-16); }

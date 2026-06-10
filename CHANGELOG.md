@@ -139,6 +139,25 @@ leaves the alpha track.
   `.rio-code` well is unchanged. Radio rows (`.rio-radio`, §6) become full-width
   52px rows: strong input border, 10px radius, 16px padding, 20px teal control
   aligned to the first text line, 12px gap between rows. No new CSS fragments.
+- **Visual Contract v2.0 conformance — Phases 4–7 (sections, action bar, pills,
+  header).** §3 **legend-on-border**: `.rio-fieldset` is now a 14px-radius card
+  (soft border, `--rio-shadow-card`, 32px padding) whose native `<legend>` cuts the
+  top border (body font, 14px/700/uppercase/muted); `feature_flags` migrated from the
+  bespoke `.rio-section`/`.rio-card` to fieldsets, and `lock_user` radio rows gained
+  the §6 bold-lead + normal-weight description split. §8.2 **action bar**: hairline
+  top border, s6 margin / s5 padding, one wrapping row with `.rio-action-bar-end
+  { margin-inline-start:auto }` (the flex spacer is retired); History/Delete moved out
+  of the masthead into the bar as `.rio-action-link--muted` / `--danger`, killing the
+  orphaned Cancel (form, user_edit, group_edit, user_new, group_new, password_change,
+  lock_user, admin_reset_password). §9 **pills**: one canonical dot-less `.rio-pill` +
+  `--on`/`--off` (contract values) and the semantic variants now live in
+  `components/data.css`; the duplicate `.rio-pill` in `pages/tools.css` and
+  `.rio-pill-stock` in `layout/console.css` are removed (list / users_list migrated to
+  `--on`/`--off`). §2.1 **page header**: breadcrumb (15px, link segments strong/700,
+  `·` separator) → 36px/800 title → 17px/1.7 lead, on the §10.4 rhythm, reconciled
+  across both header systems (`.rio-crumbs` and `.rio-breadcrumbs`). §10.1 shells:
+  `.rio-form-shell` 1100px→**880px**, new `.rio-content-shell` 1040px; the 2-col grid
+  drops to a 24px gap and stacks at 768px. No new CSS fragments.
 
 
 ## [0.28.0] — 2026-06-08

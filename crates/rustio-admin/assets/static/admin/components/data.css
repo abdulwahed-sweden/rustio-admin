@@ -31,6 +31,25 @@
 .rio-badge--warn    { background: var(--rio-warn-tint); color: var(--rio-warn); }
 .rio-badge--danger  { background: var(--rio-danger-tint); color: var(--rio-danger); }
 
+/* Status pill — the single canonical pill (contract §9). Solid tint, no dot.
+   --on / --off are the contract's enabled/disabled states; the semantic
+   variants serve the audit / health / notifications pages. */
+.rio-pill {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--rio-radius-pill);
+  font-size: var(--rio-fs-sm);   /* 15px */
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rio-pill--on  { background: var(--rio-pill-on-bg);  color: var(--rio-pill-on-text); }
+.rio-pill--off { background: var(--rio-pill-off-bg); color: var(--rio-pill-off-text); }
+.rio-pill--success, .rio-pill--badge-success { background: var(--rio-success-tint); color: var(--rio-success); }
+.rio-pill--danger,  .rio-pill--badge-danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
+.rio-pill--warning, .rio-pill--badge-warning { background: var(--rio-warn-tint);     color: var(--rio-warn); }
+.rio-pill--info                              { background: var(--rio-rust-tint);     color: var(--rio-rust); }
+.rio-pill--neutral, .rio-pill--badge-neutral { background: var(--rio-sunken);        color: var(--rio-text-mute); }
+
 /* Tag — removable chip */
 .rio-tag {
   display: inline-flex;

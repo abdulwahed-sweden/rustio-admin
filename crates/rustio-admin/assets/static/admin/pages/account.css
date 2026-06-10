@@ -7,14 +7,15 @@
 /* ---- Legacy page header -> console masthead look ---- */
 .rio-breadcrumbs {
   display: flex; flex-wrap: wrap; gap: var(--rio-space-8); align-items: center;
-  font-size: var(--rio-text-14); color: var(--rio-text-mute);
+  font-size: var(--rio-fs-sm); color: var(--rio-text-mute);
   margin-block-end: var(--rio-space-12);
 }
-.rio-breadcrumbs a { color: var(--rio-text-mute); text-decoration: none; }
+.rio-breadcrumbs a { color: var(--rio-text-hi); font-weight: 700; text-decoration: none; }
 .rio-breadcrumbs a:hover { color: var(--rio-rust); }
-.rio-page-header { margin-block-end: var(--rio-space-20); }
+.rio-page-header { margin-block-end: var(--rio-space-32); }
 .rio-page-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--rio-space-16); }
-.rio-page-header__lead, .pgx-lead { color: var(--rio-text-mute); margin: var(--rio-space-8) 0 0; font-size: var(--rio-text-15); max-inline-size: 70ch; }
+/* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
+.rio-page-header__lead, .pgx-lead { color: var(--rio-text); margin: var(--rio-space-16) 0 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
 .pgx-head { margin-block-end: var(--rio-space-20); }
 .pgx-title { margin: var(--rio-space-4) 0 0; }
 

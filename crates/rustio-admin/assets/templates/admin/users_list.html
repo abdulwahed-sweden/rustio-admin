@@ -28,7 +28,7 @@
           </div>
         </td>
         <td>{{ u.role }}</td>
-        <td><span class="rio-pill-stock rio-pill-stock--{% if u.is_active %}in{% else %}out{% endif %}"><span class="rio-dot"></span>{% if u.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+        <td><span class="rio-pill rio-pill--{% if u.is_active %}on{% else %}off{% endif %}">{% if u.is_active %}Active{% else %}Inactive{% endif %}</span></td>
         <td style="font-family:var(--rio-font-mono);font-size:var(--rio-text-13);color:var(--rio-text-mute)">{{ u.created_at }}</td>
         <td class="col-act">{{ row_actions("users", u.id) }}</td>
       </tr>

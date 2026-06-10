@@ -191,7 +191,7 @@
           {% if loop.first %}
             <a class="rio-cell-primary" href="/admin/{{ admin_name }}/{{ row.id }}/edit">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value=row.id) }}{% endif %}</a>
           {% elif f.kind == "checkbox" %}
-            <span class="rio-pill-stock rio-pill-stock--{% if row[f.name] %}in{% else %}out{% endif %}"><span class="rio-dot"></span>{% if row[f.name] %}Yes{% else %}No{% endif %}</span>
+            <span class="rio-pill rio-pill--{% if row[f.name] %}on{% else %}off{% endif %}">{% if row[f.name] %}Yes{% else %}No{% endif %}</span>
           {% elif row.links[f.name] %}
             <a class="rio-prod-name" href="{{ row.links[f.name] }}">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value='') }}{% endif %}</a>
           {% elif row.highlights[f.name] %}

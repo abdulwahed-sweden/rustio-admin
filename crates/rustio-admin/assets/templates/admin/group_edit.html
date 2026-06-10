@@ -1,12 +1,9 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">{{ name }}</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ name }}</span></nav>
 <div class="rio-masthead-top">
   <div><h1>Edit group</h1><p class="rio-masthead-desc">Editing <strong>{{ name }}</strong> — change membership and attached permissions.</p></div>
-  <div class="rio-masthead-cta">
-    <a class="rio-btn rio-btn--subtle rio-btn--md" href="/admin/groups/{{ group_id }}/delete" style="color:var(--rio-danger)">{{ icon("trash") }} Delete group</a>
-  </div>
 </div>
 
 {% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
@@ -82,9 +79,11 @@
   </script>
 
   <div class="rio-form-actions">
-    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Save changes</button>
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/groups" class="rio-btn rio-btn--subtle rio-btn--md">Back to groups</a>
+    <button type="submit" class="rio-btn rio-btn--primary">Save changes</button>
+    <span class="rio-action-bar-end">
+      <a class="rio-action-link rio-action-link--danger" href="/admin/groups/{{ group_id }}/delete">{{ icon("trash") }} Delete group</a>
+      <a href="/admin/groups" class="rio-action-link">Back to groups</a>
+    </span>
   </div>
 </form>
 </div>

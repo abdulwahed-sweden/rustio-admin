@@ -30,28 +30,28 @@
     <legend>Duration</legend>
     <label class="rio-radio">
       <input type="radio" name="duration" value="15min"{% if duration == "15min" %} checked{% endif %}>
-      <span>15 minutes</span>
+      <span><strong>15 minutes</strong></span>
     </label>
     <label class="rio-radio">
       <input type="radio" name="duration" value="1h"{% if duration == "1h" %} checked{% endif %}>
-      <span>1 hour</span>
+      <span><strong>1 hour</strong></span>
     </label>
     <label class="rio-radio">
       <input type="radio" name="duration" value="24h"{% if duration == "24h" %} checked{% endif %}>
-      <span>24 hours</span>
+      <span><strong>24 hours</strong></span>
     </label>
     <label class="rio-radio">
       <input type="radio" name="duration" value="7d"{% if duration == "7d" %} checked{% endif %}>
-      <span>7 days</span>
+      <span><strong>7 days</strong></span>
     </label>
     <label class="rio-radio">
       <input type="radio" name="duration" value="indefinite"{% if duration == "indefinite" %} checked{% endif %}>
-      <span>Indefinite — until an admin unlocks</span>
+      <span><strong>Indefinite</strong> <span class="rio-radio-desc">— until an admin unlocks</span></span>
     </label>
     <label class="rio-radio">
       <input type="radio" name="duration" value="freeform"{% if duration == "freeform" %} checked{% endif %}>
       <span>
-        Freeform:
+        <strong>Freeform:</strong>
         <input
           type="number"
           name="freeform_minutes"
@@ -61,7 +61,7 @@
           placeholder="minutes"
           class="rio-input rio-input--inline"
           style="width: 8em;"
-        > minutes
+        > <span class="rio-radio-desc">minutes</span>
       </span>
     </label>
     {% if "duration" in field_errors %}
@@ -90,8 +90,10 @@
   </fieldset>
 
   <div class="rio-form-actions">
-    <button type="submit" class="rio-btn rio-btn--danger rio-btn--md">Lock account</button>
-    <a href="/admin/users/{{ target_user_id }}/edit" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
+    <button type="submit" class="rio-btn rio-btn--danger">Lock account</button>
+    <span class="rio-action-bar-end">
+      <a href="/admin/users/{{ target_user_id }}/edit" class="rio-action-link">Cancel</a>
+    </span>
   </div>
 </form>
 

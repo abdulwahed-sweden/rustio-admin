@@ -3,8 +3,8 @@
 <div class="rio-form-shell">
 
 <nav class="rio-crumbs">
-  <a href="/admin">Home</a><span class="rio-crumb-sep">/</span>
-  <a href="/admin/{{ admin_name }}">{{ display_name }}</a><span class="rio-crumb-sep">/</span>
+  <a href="/admin">Home</a><span class="rio-crumb-sep">·</span>
+  <a href="/admin/{{ admin_name }}">{{ display_name }}</a><span class="rio-crumb-sep">·</span>
   <span class="rio-crumb-current">{% if mode == "new" %}Add {{ singular_name }}{% else %}#{{ object_id }}{% endif %}</span>
 </nav>
 
@@ -13,12 +13,6 @@
     <h1>{% if mode == "new" %}Add {{ singular_name }}{% else %}Edit {{ singular_name }}{% endif %}</h1>
     <p class="rio-masthead-desc">{% if mode == "edit" %}Editing fields below — saves are atomic and audited.{% else %}Create a new {{ singular_name|lower }}. Required fields are marked.{% endif %}</p>
   </div>
-  {% if mode == "edit" %}
-  <div class="rio-masthead-cta">
-    <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/{{ admin_name }}/{{ object_id }}/history">{{ icon("clock") }} History</a>
-    {% if not read_only %}<a class="rio-btn rio-btn--subtle rio-btn--md" href="/admin/{{ admin_name }}/{{ object_id }}/delete" style="color:var(--rio-danger)">{{ icon("trash") }} Delete</a>{% endif %}
-  </div>
-  {% endif %}
 </div>
 
 {% if errors %}
@@ -41,14 +35,19 @@
 
   <div class="rio-form-actions">
     {% if not read_only %}
-    <button type="submit" name="_save" class="rio-btn rio-btn--primary rio-btn--md">Save</button>
-    <button type="submit" name="_continue" class="rio-btn rio-btn--secondary rio-btn--md">Save and continue editing</button>
-    <button type="submit" name="_addanother" class="rio-btn rio-btn--secondary rio-btn--md">Save and add another</button>
+    <button type="submit" name="_save" class="rio-btn rio-btn--primary">Save</button>
+    <button type="submit" name="_continue" class="rio-btn rio-btn--secondary">Save and continue editing</button>
+    <button type="submit" name="_addanother" class="rio-btn rio-btn--secondary">Save and add another</button>
     {% else %}
     <span style="color:var(--rio-text-mute);font-size:var(--rio-text-14)">Read-only mode — saves are disabled.</span>
     {% endif %}
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/{{ admin_name }}" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
+    <span class="rio-action-bar-end">
+      {% if mode == "edit" %}
+      <a class="rio-action-link rio-action-link--muted" href="/admin/{{ admin_name }}/{{ object_id }}/history">{{ icon("clock") }} History</a>
+      {% if not read_only %}<a class="rio-action-link rio-action-link--danger" href="/admin/{{ admin_name }}/{{ object_id }}/delete">{{ icon("trash") }} Delete</a>{% endif %}
+      {% endif %}
+      <a href="/admin/{{ admin_name }}" class="rio-action-link">Cancel</a>
+    </span>
   </div>
 </form>
 

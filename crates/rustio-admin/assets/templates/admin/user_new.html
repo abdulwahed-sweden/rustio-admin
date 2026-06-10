@@ -1,7 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Add user</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Add user</span></nav>
 <div class="rio-masthead-top"><div><h1>Add user</h1><p class="rio-masthead-desc">New account. Role determines what the user can see and change.</p></div></div>
 
 {% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
@@ -15,9 +15,10 @@
   </fieldset>
   {% endfor %}
   <div class="rio-form-actions">
-    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Create user</button>
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/users" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
+    <button type="submit" class="rio-btn rio-btn--primary">Create user</button>
+    <span class="rio-action-bar-end">
+      <a href="/admin/users" class="rio-action-link">Cancel</a>
+    </span>
   </div>
 </form>
 </div>

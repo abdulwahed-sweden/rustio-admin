@@ -153,9 +153,10 @@
 .rio-ws-inner { flex: 1; padding: 32px 44px 40px; display: flex; flex-direction: column; gap: 28px; max-inline-size: 1320px; inline-size: 100%; margin: 0 auto; }
 
 /* ---- Editorial masthead + ledger ---- */
-.rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; }
-.rio-masthead h1 { font-size: 42px; line-height: 1.04; margin: 6px 0 8px; }
-.rio-masthead-desc { color: var(--rio-text-mute); margin: 0; font-size: var(--rio-text-15); max-inline-size: 46ch; }
+.rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-block-end: var(--rio-space-32); }
+.rio-masthead h1 { font-size: var(--rio-fs-display); line-height: 1.15; margin: 0 0 var(--rio-space-16); } /* contract §2.1: 36px */
+/* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
+.rio-masthead-desc { color: var(--rio-text); margin: 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
 .rio-masthead-cta { display: flex; align-items: center; gap: 10px; flex: none; padding-block-start: 6px; }
 
 .rio-ledger {
@@ -237,13 +238,7 @@
   font-family: var(--rio-font-mono); font-size: 16px; font-weight: 700; color: var(--rio-text-mute);
 }
 
-/* status pill */
-.rio-pill-stock { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); border: 1px solid var(--rio-line); white-space: nowrap; }
-.rio-pill-stock .rio-dot { inline-size: 7px; block-size: 7px; border-radius: 999px; }
-.rio-pill-stock--in { color: var(--rio-text); background: var(--rio-surface); }
-.rio-pill-stock--in .rio-dot { background: var(--rio-success); }
-.rio-pill-stock--out { color: var(--rio-text-faint); background: var(--rio-sunken); border-color: transparent; }
-.rio-pill-stock--out .rio-dot { background: var(--rio-text-faint); }
+/* status pill: use the canonical .rio-pill (--on/--off) from components/data.css */
 
 /* inline row actions (reveal on hover) */
 .rio-row-actions { display: inline-flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity var(--rio-dur-fast) var(--rio-ease); }

@@ -1,7 +1,7 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Add group</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Add group</span></nav>
 <div class="rio-masthead-top"><div><h1>Add group</h1><p class="rio-masthead-desc">Name the group, then attach permissions on the edit screen.</p></div></div>
 
 {% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
@@ -15,9 +15,10 @@
   </fieldset>
   {% endfor %}
   <div class="rio-form-actions">
-    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Create group</button>
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/groups" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
+    <button type="submit" class="rio-btn rio-btn--primary">Create group</button>
+    <span class="rio-action-bar-end">
+      <a href="/admin/groups" class="rio-action-link">Cancel</a>
+    </span>
   </div>
 </form>
 </div>
