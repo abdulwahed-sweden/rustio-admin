@@ -84,7 +84,7 @@ implication for the recovery flow.
 | **8** Audit logs must be forensically useful | Every reset action (request, success, rejection) writes a row tied to a `correlation_id` so the chain "request → token issued → consumed → sessions revoked" is queryable. |
 | **9** Email is convenience, not root of trust | A reset never bypasses MFA (R3+); a reset never lifts trust above `Authenticated`; admin-driven recovery (R2) and CLI (R4) outrank email-driven reset. |
 | **11** Never log secrets | No plaintext token in any log line, audit summary, or error response. The `metadata` JSONB stores `token_fingerprint` (8-char redacted) for cross-row pivot, never the token itself. |
-| **13** Recovery pages match visual doctrine | Calm cards. Tajawal/Geist stack. `--rio-accent` teal-emerald. No marketing gradients, no illustrations, no "✨ Reset your password ✨" copy. |
+| **13** Recovery pages match visual doctrine | Calm cards, the framework type + teal accent per `VISUAL-CONTRACT.md`. No marketing gradients, no illustrations, no "✨ Reset your password ✨" copy. |
 | **15** Recovery never bypasses rank | Self-reset cannot promote a user. The only mutation is `password_hash`. Every other column on `rustio_users` (`role`, `is_active`, `is_demo`, `must_change_password`, …) is untouched by the reset path. |
 | **18** Audit events evolve toward typed | R1 promotes `AuditEvent` from `pub(crate)` to `pub` on the same release that introduces the new variants. Lower bound to the public typed surface lands as part of 0.5.0. |
 | **22** Centralised session invalidation | A grep for `revoked_at\s*=` across `crates/` must continue to return only `auth::sessions::invalidate_sessions`. R1 calls `invalidate_sessions(SessionTarget::User, SessionInvalidationReason::PasswordReset)`. |
@@ -378,7 +378,7 @@ callouts below are the contract.
 > `DESIGN_SYSTEM.md` Doctrine 13 governs the visual register.
 > No gradients, no auth illustrations, no "✨ Reset your
 > password ✨" copy. Calm cards, the standard typography
-> stack, the `--rio-accent` teal-emerald.
+> stack, the `--rio-accent` teal (value in `VISUAL-CONTRACT.md` §1).
 
 ### 5.5 Migration safety
 
@@ -719,10 +719,9 @@ the framework's auth-card chassis (the same shell as
 `/admin/login`):
 
 - Page background: `--rio-bg`.
-- Card surface: `--rio-surface`. Border `--rio-border`. Shadow per `admin.css` defaults.
-- Heading: Geist 600/24px (matches login).
-- Body text: Geist 400/15px.
-- Single primary CTA: `--rio-accent` teal-emerald.
+- Card surface: `--rio-surface`. Border `--rio-border-soft`. Shadow per the baked defaults.
+- Heading + body: the framework type (Inter), sizes per `VISUAL-CONTRACT.md` §2 (matches login).
+- Single primary CTA: `--rio-accent` (teal).
 - No illustrations. No marketing copy. Plain, declarative.
 
 The tone is **operational**, not consumer.

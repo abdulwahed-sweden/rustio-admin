@@ -1,0 +1,108 @@
+/* ============================================================
+   RustIO — Code & terminal · IO chat
+   ============================================================ */
+
+/* Inline code & kbd chip (contract §10.3) — flag keys in tables, API
+   expressions in lead paragraphs, the ⌘K hint. Block code wells (.rio-code /
+   .rio-term, which wrap a <pre>) opt out via the :not(pre) > code guard. */
+:not(pre) > code,
+kbd {
+  font-family: var(--rio-font-mono);
+  font-size: 0.875em;
+  background: var(--rio-surface-tint);
+  color: var(--rio-text-hi);
+  border-radius: var(--rio-radius-sm); /* 6px */
+  padding: 0.125rem 0.5rem;
+}
+
+/* Code block */
+.rio-code {
+  background: var(--rio-sunken);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-13);
+  line-height: 1.7;
+  color: var(--rio-text);
+  overflow: auto;
+}
+.rio-code-head {
+  display: flex; align-items: center; gap: var(--rio-space-8);
+  padding: var(--rio-space-8) var(--rio-space-12);
+  border-block-end: 1px solid var(--rio-line);
+  color: var(--rio-text-faint);
+  font-size: var(--rio-text-12);
+}
+.rio-code pre { margin: 0; padding: var(--rio-space-16); }
+.rio-code .tok-key { color: var(--rio-syntax-key); }
+.rio-code .tok-str { color: var(--rio-syntax-str); }
+.rio-code .tok-num { color: var(--rio-syntax-num); }
+.rio-code .tok-fn  { color: var(--rio-syntax-fn); font-weight: 500; }
+.rio-code .tok-com { color: var(--rio-syntax-comment); font-style: italic; }
+.rio-code .tok-punc{ color: var(--rio-syntax-punc); }
+
+/* Terminal block */
+.rio-term {
+  background: var(--rio-sunken);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-14);
+  line-height: 1.75;
+  overflow: hidden;
+  box-shadow: var(--rio-shadow-md), var(--rio-highlight-top);
+}
+.rio-term-bar {
+  display: flex; align-items: center; gap: var(--rio-space-8);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-term-bar .rio-term-title { font-size: var(--rio-text-12); color: var(--rio-text-faint); letter-spacing: .03em; }
+.rio-term-body { padding: var(--rio-space-16) var(--rio-space-20); color: var(--rio-text); }
+.rio-term-line { display: flex; gap: var(--rio-space-8); white-space: pre-wrap; }
+.rio-term-prompt { color: var(--rio-rust); flex: none; }
+.rio-term-cmd { color: var(--rio-text-hi); }
+.rio-term-out { color: var(--rio-text-mute); }
+.rio-term-ok { color: var(--rio-success); }
+.rio-term-ready { color: var(--rio-text-hi); font-weight: 500; }
+.rio-term-check { color: var(--rio-success); }
+
+/* IO chat */
+.rio-chat { display: flex; flex-direction: column; gap: var(--rio-space-16); }
+.rio-chat-row { display: flex; gap: var(--rio-space-12); align-items: flex-start; }
+.rio-chat-avatar { flex: none; inline-size: 28px; block-size: 28px; }
+.rio-chat-sys .rio-chat-bubble {
+  background: var(--rio-rust-tint);
+  border: 1px solid var(--rio-rust-tint-2);
+  color: var(--rio-text-hi);
+  border-radius: var(--rio-radius-lg);
+  border-start-start-radius: var(--rio-radius-sm);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  font-size: var(--rio-text-15);
+  line-height: 1.55;
+  max-inline-size: 80%;
+}
+.rio-chat-dev { justify-content: flex-end; }
+.rio-chat-dev .rio-chat-bubble {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line-strong);
+  color: var(--rio-text);
+  border-radius: var(--rio-radius-lg);
+  border-start-end-radius: var(--rio-radius-sm);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-13);
+  max-inline-size: 80%;
+}
+.rio-chat-input {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line-strong);
+  border-radius: var(--rio-radius-lg);
+}
+.rio-chat-input input {
+  flex: 1; border: 0; background: none; outline: none;
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-14); color: var(--rio-text-hi);
+}
+.rio-chat-input input::placeholder { color: var(--rio-text-faint); }

@@ -108,7 +108,7 @@ tokens/ → base/ → layout/ → components/ → pages/ → print/
 
 **Lock-step invariant:** the `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in the same order — `layout/responsive.css` is intentionally loaded **last** so its mobile-first overrides win.
 
-The framework is **light-only**: no dark variant, no `prefers-color-scheme` block, no `data-rio-theme` attribute. Token philosophy is owned by `design/DESIGN_DOCTRINE.md` (visual identity) and `design/DESIGN_SYSTEM.md` (token ownership).
+The framework ships **light and dark**, token-driven only: light in `:root`, dark re-derived in the `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]` blocks of `tokens/colors.css` (no per-component dark CSS). Token **values** are owned by `design/VISUAL-CONTRACT.md` (and `design/TOKENS-EMIT-SPEC.md` for generated overrides); `design/DESIGN_DOCTRINE.md` (visual identity) and `design/DESIGN_SYSTEM.md` (token ownership) carry the principles.
 
 Two project-side override paths, both layered *after* the baked bundle so they win the cascade without `!important`:
 

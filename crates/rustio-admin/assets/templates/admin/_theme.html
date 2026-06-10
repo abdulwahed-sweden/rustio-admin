@@ -14,8 +14,12 @@
 <style>
 html {
 {%- if accent_hex %}
-  --rio-accent: {{ accent_hex }};
-  --rio-accent-rgb: {{ accent_rgb }};
+  --rio-rust: {{ accent_hex }};
+  --rio-rust-hover: {{ accent_hex }};
+  --rio-rust-active: {{ accent_hex }};
+  --rio-rust-solid: {{ accent_hex }};
+  --rio-rust-solid-hover: {{ accent_hex }};
+  --rio-rust-solid-active: {{ accent_hex }};
 {%- endif %}
 {%- if theme_bg %}
   --rio-bg: {{ theme_bg }};
@@ -27,10 +31,10 @@ html {
   --rio-text: {{ theme_text }};
 {%- endif %}
 {%- if theme_text_muted %}
-  --rio-text-muted: {{ theme_text_muted }};
+  --rio-text-mute: {{ theme_text_muted }};
 {%- endif %}
 {%- if theme_border %}
-  --rio-border: {{ theme_border }};
+  --rio-line: {{ theme_border }};
 {%- endif %}
 }
 </style>

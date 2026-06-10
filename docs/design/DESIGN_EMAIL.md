@@ -107,8 +107,8 @@ low-contrast "Powered by RustIO" footer credit; default is
 ### 2.3 Single concentrated point of emphasis (HTML)
 
 Each email has exactly one saturated colour band: the CTA button
-in `--rio-accent` (`#0F8C7E`). Every other surface lives in the
-muted-text / surface / border range. Mirrors
+in `--rio-accent` (the teal — value in `VISUAL-CONTRACT.md` §1). Every other
+surface lives in the muted-text / surface / border range. Mirrors
 `DESIGN_CHROME.md §2.2` — operator focus matters in chrome;
 recipient focus matters in email.
 

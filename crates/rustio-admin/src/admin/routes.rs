@@ -63,68 +63,51 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/tokens/typography.css"),
     "\n",
+    include_str!("../../assets/static/admin/tokens/motion.css"),
+    "\n",
+    include_str!("../../assets/static/admin/tokens/compat.css"),
+    "\n",
     // ---- base -------------------------------------------------
-    include_str!("../../assets/static/admin/base/reset.css"),
+    include_str!("../../assets/static/admin/base/fonts.css"),
     "\n",
     include_str!("../../assets/static/admin/base/base.css"),
     "\n",
-    include_str!("../../assets/static/admin/base/typography.css"),
-    "\n",
     include_str!("../../assets/static/admin/base/typography-i18n.css"),
     "\n",
-    include_str!("../../assets/static/admin/base/utilities.css"),
-    "\n",
-    // ---- layout -----------------------------------------------
-    include_str!("../../assets/static/admin/layout/shell.css"),
-    "\n",
-    include_str!("../../assets/static/admin/layout/topbar.css"),
-    "\n",
-    include_str!("../../assets/static/admin/layout/sidebar.css"),
-    "\n",
-    include_str!("../../assets/static/admin/layout/footer.css"),
-    "\n",
     // ---- components -------------------------------------------
-    include_str!("../../assets/static/admin/components/cards.css"),
-    "\n",
     include_str!("../../assets/static/admin/components/buttons.css"),
     "\n",
     include_str!("../../assets/static/admin/components/forms.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/tables.css"),
+    include_str!("../../assets/static/admin/components/data.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/filters.css"),
+    include_str!("../../assets/static/admin/components/feedback.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/dropdowns.css"),
+    include_str!("../../assets/static/admin/components/navigation.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/search_palette.css"),
+    include_str!("../../assets/static/admin/components/code.css"),
     "\n",
-    include_str!("../../assets/static/admin/components/pagination.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/pills.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/flashes.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/timeline.css"),
-    "\n",
-    include_str!("../../assets/static/admin/components/tabs.css"),
+    // ---- layout (RustIO Console) ------------------------------
+    include_str!("../../assets/static/admin/layout/console.css"),
     "\n",
     // ---- pages ------------------------------------------------
-    include_str!("../../assets/static/admin/pages/auth.css"),
-    "\n",
     include_str!("../../assets/static/admin/pages/dashboard.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/db_browser.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/permissions.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/sessions.css"),
-    "\n",
-    include_str!("../../assets/static/admin/pages/errors.css"),
     "\n",
     include_str!("../../assets/static/admin/pages/list.css"),
     "\n",
-    // ---- responsive — mobile-first overrides, last so they win.
-    include_str!("../../assets/static/admin/layout/responsive.css"),
+    include_str!("../../assets/static/admin/pages/form.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/auth.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/states.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/permissions.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/detail.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/account.css"),
+    "\n",
+    include_str!("../../assets/static/admin/pages/tools.css"),
     "\n",
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
@@ -152,16 +135,46 @@ fn admin_css_payload(override_css: Option<&str>) -> bytes::Bytes {
     }
 }
 
+/// Detect the "light-only override" hazard.
+///
+/// A `RUSTIO_TOKENS_CSS` file that defines `:root` color tokens but
+/// carries **no** dark handling (`[data-theme="dark"]` and
+/// `prefers-color-scheme`) is appended *after* the baked bundle, so its
+/// `:root` block ties the framework's `[data-theme="dark"]` on
+/// specificity and wins by source order — leaking light surfaces into
+/// dark mode. This is detection only; the override is never rewritten or
+/// wrapped (Doctrine: the operator's CSS is theirs).
+fn override_is_dark_leak_hazard(css: &str) -> bool {
+    let defines_root_colors = css.contains(":root")
+        && (css.contains("--rio-bg")
+            || css.contains("--rio-surface")
+            || css.contains("--rio-accent"));
+    let handles_dark =
+        css.contains("[data-theme=\"dark\"]") || css.contains("prefers-color-scheme");
+    defines_root_colors && !handles_dark
+}
+
 /// Read the `RUSTIO_TOKENS_CSS` override file, if the env var is set.
 ///
 /// A set-but-unreadable path logs a warning and degrades to the baked
 /// bundle rather than failing boot — a theming typo must never take the
 /// admin offline. Returns `None` when the var is unset or the file can't
-/// be read.
+/// be read. A readable but light-only override logs a WARN (see
+/// [`override_is_dark_leak_hazard`]) but is still served verbatim.
 fn load_token_override() -> Option<String> {
     let path = std::env::var("RUSTIO_TOKENS_CSS").ok()?;
     match std::fs::read_to_string(&path) {
-        Ok(css) => Some(css),
+        Ok(css) => {
+            if override_is_dark_leak_hazard(&css) {
+                log::warn!(
+                    "RUSTIO_TOKENS_CSS={path:?} is a light-only override: it sets :root \
+                     color tokens but has no [data-theme=\"dark\"] or prefers-color-scheme \
+                     block, so it will leak light surfaces into dark mode. Regenerate with a \
+                     dark-aware generator or add a dark block."
+                );
+            }
+            Some(css)
+        }
         Err(e) => {
             log::warn!("RUSTIO_TOKENS_CSS={path:?} unreadable: {e}; serving baked CSS");
             None
@@ -178,16 +191,13 @@ const ADMIN_JS: &str = include_str!("../../assets/static/admin.js");
 /// and avoids the FOUT/CDN round-trip every consuming app would
 /// otherwise inherit from a Google Fonts <link>.
 ///
-/// Latin (identity): Geist Variable wght 100..900. Latin fallback:
-/// Inter Variable (Latin-ext + Cyrillic + Greek + Vietnamese under
-/// one variable file). Mono: Geist Mono Variable. Arabic: Noto
+/// Latin (identity): Inter Variable wght 100..900 (body + display).
+/// Mono: JetBrains Mono Variable (latin + latin-ext). Arabic: Noto
 /// Naskh Arabic Variable wght 400..700 (default reading face) +
 /// Tajawal 400/500/700 (selective geometric accent). International
 /// scripts: Noto Sans Thai + Devanagari (variable, auto-loaded via
 /// unicode-range) + Noto Sans JP/KR/SC (static Regular, lang-gated
 /// to avoid Han Unification shape collisions).
-const FONT_GEIST: &[u8] = include_bytes!("../../assets/static/fonts/Geist-Variable.woff2");
-const FONT_GEIST_MONO: &[u8] = include_bytes!("../../assets/static/fonts/GeistMono-Variable.woff2");
 const FONT_INTER: &[u8] = include_bytes!("../../assets/static/fonts/InterVariable.woff2");
 const FONT_TAJAWAL_REG: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Regular.woff2");
 const FONT_TAJAWAL_MED: &[u8] = include_bytes!("../../assets/static/fonts/Tajawal-Medium.woff2");
@@ -201,6 +211,59 @@ const FONT_NOTO_DEVA: &[u8] =
 const FONT_NOTO_JP: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansJP-Regular.woff2");
 const FONT_NOTO_KR: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansKR-Regular.woff2");
 const FONT_NOTO_SC: &[u8] = include_bytes!("../../assets/static/fonts/NotoSansSC-Regular.woff2");
+// Latin identity faces. Body + display: Inter (variable wght 100..900,
+// FONT_INTER above). Mono: JetBrains Mono (variable wght 400..700, latin +
+// latin-ext) — the framework mono stack is SFMono-system, but the shop
+// example's brand override selects JetBrains. @font-face in base/fonts.css.
+// (The prior Spectral / Hanken Grotesk faces were retired with the contract.)
+const FONT_JETBRAINS_LATIN: &[u8] =
+    include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latin.woff2");
+const FONT_JETBRAINS_LATIN_EXT: &[u8] =
+    include_bytes!("../../assets/static/fonts/JetBrainsMono-Variable-latinext.woff2");
+
+/// One woff2 response: immutable 1-year cache (bytes never change per build).
+fn font_response(bytes: &'static [u8]) -> Response {
+    Response::new(hyper::StatusCode::OK, bytes::Bytes::from_static(bytes))
+        .with_header("content-type", "font/woff2")
+        .with_header("cache-control", "public, max-age=31536000, immutable")
+}
+
+/// Register every served font route. Ctx-free, so it's unit-testable
+/// (a removed face's path 404s; see `tests`). The retired Geist /
+/// Spectral / Hanken faces are intentionally absent.
+fn register_font_routes(router: Router) -> Router {
+    const FONTS: &[(&str, &[u8])] = &[
+        ("/static/fonts/InterVariable.woff2", FONT_INTER),
+        (
+            "/static/fonts/JetBrainsMono-Variable-latin.woff2",
+            FONT_JETBRAINS_LATIN,
+        ),
+        (
+            "/static/fonts/JetBrainsMono-Variable-latinext.woff2",
+            FONT_JETBRAINS_LATIN_EXT,
+        ),
+        ("/static/fonts/Tajawal-Regular.woff2", FONT_TAJAWAL_REG),
+        ("/static/fonts/Tajawal-Medium.woff2", FONT_TAJAWAL_MED),
+        ("/static/fonts/Tajawal-Bold.woff2", FONT_TAJAWAL_BOLD),
+        (
+            "/static/fonts/NotoNaskhArabic-Variable.woff2",
+            FONT_NOTO_NASKH_AR,
+        ),
+        ("/static/fonts/NotoSansThai-Variable.woff2", FONT_NOTO_THAI),
+        (
+            "/static/fonts/NotoSansDevanagari-Variable.woff2",
+            FONT_NOTO_DEVA,
+        ),
+        ("/static/fonts/NotoSansJP-Regular.woff2", FONT_NOTO_JP),
+        ("/static/fonts/NotoSansKR-Regular.woff2", FONT_NOTO_KR),
+        ("/static/fonts/NotoSansSC-Regular.woff2", FONT_NOTO_SC),
+    ];
+    let mut router = router;
+    for &(path, bytes) in FONTS {
+        router = router.get(path, move |_req| async move { Ok(font_response(bytes)) });
+    }
+    router
+}
 
 use super::handlers::{self, AdminCtx};
 use super::render;
@@ -764,57 +827,9 @@ pub fn register_admin_routes(
         .with_header("cache-control", "no-cache, must-revalidate"))
     });
 
-    // Self-hosted fonts. Cache aggressively: file contents are
-    // immutable per build, so a 1-year cache is safe — the binary
-    // ships a fresh copy on the next release.
-    fn font_response(bytes: &'static [u8]) -> Response {
-        Response::new(hyper::StatusCode::OK, bytes::Bytes::from_static(bytes))
-            .with_header("content-type", "font/woff2")
-            .with_header("cache-control", "public, max-age=31536000, immutable")
-    }
-    let router = router.get("/static/fonts/Geist-Variable.woff2", |_req| async move {
-        Ok(font_response(FONT_GEIST))
-    });
-    let router = router.get(
-        "/static/fonts/GeistMono-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_GEIST_MONO)) },
-    );
-    let router = router.get("/static/fonts/Tajawal-Regular.woff2", |_req| async move {
-        Ok(font_response(FONT_TAJAWAL_REG))
-    });
-    let router = router.get("/static/fonts/Tajawal-Medium.woff2", |_req| async move {
-        Ok(font_response(FONT_TAJAWAL_MED))
-    });
-    let router = router.get("/static/fonts/Tajawal-Bold.woff2", |_req| async move {
-        Ok(font_response(FONT_TAJAWAL_BOLD))
-    });
-    let router = router.get(
-        "/static/fonts/NotoNaskhArabic-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_NASKH_AR)) },
-    );
-    let router = router.get("/static/fonts/InterVariable.woff2", |_req| async move {
-        Ok(font_response(FONT_INTER))
-    });
-    let router = router.get(
-        "/static/fonts/NotoSansThai-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_THAI)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansDevanagari-Variable.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_DEVA)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansJP-Regular.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_JP)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansKR-Regular.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_KR)) },
-    );
-    let router = router.get(
-        "/static/fonts/NotoSansSC-Regular.woff2",
-        |_req| async move { Ok(font_response(FONT_NOTO_SC)) },
-    );
+    // Self-hosted fonts (baked, immutable 1-year cache). Registered via a
+    // ctx-free helper so the served set is unit-testable (see tests).
+    let router = register_font_routes(router);
 
     // Public: liveness / readiness probe. No auth — load
     // balancers and k8s probes don't carry session cookies.
@@ -2169,24 +2184,116 @@ mod tests {
         let css = admin_css_payload(None);
         assert_eq!(css.as_ref(), ADMIN_CSS.as_bytes());
         // Sanity: the baked bundle still carries a known token.
-        assert!(ADMIN_CSS.contains("--rio-accent"));
+        assert!(ADMIN_CSS.contains("--rio-rust"));
     }
 
     #[test]
     fn admin_css_payload_appends_override_after_baked_bundle() {
-        let override_css = ":root{--rio-accent:#abcdef}";
+        let override_css = ":root{--rio-rust:#abcdef}";
         let css = admin_css_payload(Some(override_css));
         let text = std::str::from_utf8(css.as_ref()).expect("utf-8");
         // Override is present...
         assert!(text.ends_with(override_css));
         // ...and lands *after* the baked colours layer, so its `:root`
-        // wins the cascade. The baked bundle's first token is the
-        // generated `--rio-brand-light`; the override must come later.
-        let baked = text.find("--rio-brand-light").expect("baked token present");
-        let overridden = text
-            .rfind("--rio-accent:#abcdef")
-            .expect("override present");
+        // wins the cascade. The baked bundle defines the DS accent
+        // `--rio-rust` near the top of colors.css; the override (its
+        // last occurrence) must come later.
+        let baked = text.find("--rio-rust").expect("baked token present");
+        let overridden = text.rfind("--rio-rust:#abcdef").expect("override present");
         assert!(overridden > baked, "override must follow the baked bundle");
+    }
+
+    // Light-only override hazard detector. Fixtures mirror the two real
+    // shapes: the shop's current (pre-fix) generator output, which is
+    // light-only, and rio-theme's new dual-block output.
+
+    /// Mirrors `examples/shop/generated/tokens.css` as it ships today:
+    /// `:root` brand + surface tokens, no dark handling at all.
+    const SHOP_LIGHT_ONLY: &str = "/* GENERATED by rustio-design */\n\
+        :root {\n  --rio-brand-light: #0e6b5b;\n  --rio-accent: #0e6b5b;\n  \
+        --rio-bg: #f7f5f2;\n  --rio-surface: #ffffff;\n}\n";
+
+    /// Mirrors rio-theme's new emission: `:root` light + an explicit
+    /// `[data-theme="dark"]` block + a `prefers-color-scheme` auto block.
+    const DARK_AWARE: &str = "/* Generated by rio-theme */\n\
+        :root {\n  --rio-accent: #0e6b5b;\n  --rio-bg: #f7f5f2;\n}\n\
+        :root[data-theme=\"dark\"] {\n  --rio-bg: #0f172a;\n}\n\
+        @media (prefers-color-scheme: dark) {\n  :root {\n    --rio-bg: #0f172a;\n  }\n}\n";
+
+    #[test]
+    fn dark_leak_detector_warns_on_shop_light_only_override() {
+        assert!(
+            override_is_dark_leak_hazard(SHOP_LIGHT_ONLY),
+            "the shop's current light-only override must be flagged"
+        );
+    }
+
+    #[test]
+    fn dark_leak_detector_clears_rio_theme_dual_block_output() {
+        assert!(
+            !override_is_dark_leak_hazard(DARK_AWARE),
+            "rio-theme's dual-block output must NOT be flagged"
+        );
+    }
+
+    #[test]
+    fn dark_leak_detector_clears_explicit_dark_block_alone() {
+        let css = ":root{--rio-bg:#fff}\n:root[data-theme=\"dark\"]{--rio-bg:#0f172a}";
+        assert!(!override_is_dark_leak_hazard(css));
+    }
+
+    #[test]
+    fn dark_leak_detector_clears_media_block_alone() {
+        let css =
+            ":root{--rio-bg:#fff}\n@media (prefers-color-scheme: dark){:root{--rio-bg:#0f172a}}";
+        assert!(!override_is_dark_leak_hazard(css));
+    }
+
+    #[test]
+    fn dark_leak_detector_ignores_override_with_no_color_tokens() {
+        // A spacing/radius-only override isn't a dark hazard.
+        let css = ":root{--rio-radius-md:10px}";
+        assert!(!override_is_dark_leak_hazard(css));
+    }
+
+    // Font routes: the shipped faces are served; the retired ones (Geist,
+    // Spectral, Hanken) 404. Exercises the real `register_font_routes`.
+    #[tokio::test]
+    async fn font_routes_serve_shipped_and_404_retired() {
+        let router = register_font_routes(Router::new());
+        let req = |p: &str| {
+            Request::new(
+                hyper::Method::GET,
+                p.to_string(),
+                String::new(),
+                Default::default(),
+                bytes::Bytes::new(),
+            )
+        };
+        for p in [
+            "/static/fonts/InterVariable.woff2",
+            "/static/fonts/JetBrainsMono-Variable-latin.woff2",
+            "/static/fonts/NotoNaskhArabic-Variable.woff2",
+            "/static/fonts/Tajawal-Regular.woff2",
+        ] {
+            assert_eq!(
+                router.dispatch(req(p)).await.status.as_u16(),
+                200,
+                "{p} is a shipped face and must be served"
+            );
+        }
+        for p in [
+            "/static/fonts/Geist-Variable.woff2",
+            "/static/fonts/GeistMono-Variable.woff2",
+            "/static/fonts/Spectral-400-latin.woff2",
+            "/static/fonts/HankenGrotesk-Variable-latin.woff2",
+        ] {
+            assert_eq!(
+                router.dispatch(req(p)).await.status.as_u16(),
+                404,
+                "{p} was retired and must 404"
+            );
+        }
     }
 
     // role_guard's decision is `Role::includes(min)`. The 25-case

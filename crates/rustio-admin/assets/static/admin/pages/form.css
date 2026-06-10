@@ -1,0 +1,178 @@
+/* ============================================================
+ * rustio-admin / pages / form  —  detail / create / edit (console)
+ *
+ * The form reuses the console masthead + the DS form controls
+ * (components/forms.css: .rio-field / .rio-label / .rio-input /
+ * .rio-help / .rio-error / .rio-select-wrap). This sheet lays out
+ * the fieldset cards, the responsive field grid, and the action bar.
+ * ============================================================ */
+
+.rio-form-shell { max-inline-size: 880px; margin-inline: auto; }    /* contract §10.1 */
+.rio-content-shell { max-inline-size: 1040px; margin-inline: auto; }
+.rio-form { display: flex; flex-direction: column; gap: var(--rio-space-32); }
+
+/* Page title (contract §2.1): 36px / 800 / line-height 1.15, with the §10.4
+ * rhythm (title → lead = s4). */
+.rio-form-shell .rio-masthead-top h1,
+.rio-page-header h1 {
+  font-family: var(--rio-font-body);
+  font-weight: 800;
+  font-size: var(--rio-fs-display);  /* 36px */
+  line-height: 1.15;
+  letter-spacing: -0.018em;
+  color: var(--rio-text-hi);
+  margin: 0 0 var(--rio-space-16);
+}
+
+/* Section card with the label cutting the top border (contract §3,
+ * legend-on-border). A native <fieldset>/<legend> produces this for free:
+ * the legend interrupts the border line. White surface, 14px radius, soft
+ * border, soft shadow, generous 32px padding. */
+.rio-fieldset {
+  border: 1px solid var(--rio-line);
+  border-radius: 14px;
+  background: var(--rio-surface);
+  box-shadow: var(--rio-shadow-card);
+  padding: var(--rio-space-32);
+  margin: 0;
+  overflow: visible; /* never clip the legend that cuts the top border */
+}
+.rio-fieldset-legend,
+.rio-fieldset > legend {
+  font-family: var(--rio-font-body);
+  font-weight: 700;
+  font-size: var(--rio-text-12);   /* 14px */
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rio-text-mute);
+  padding: 0 var(--rio-space-8);
+  margin-inline-start: var(--rio-space-8);
+}
+
+/* Radio option rows (lock_user duration, reset mode). Full-width bordered
+ * rows, stacked and tappable end-to-end, with the accent focus ring — contract
+ * §6. The control aligns to the first text line so a trailing description wraps
+ * cleanly beneath the bold lead phrase. */
+.rio-radio {
+  display: flex;
+  align-items: flex-start;            /* control on the first text line (§6) */
+  gap: var(--rio-space-12);
+  min-block-size: 52px;
+  padding: var(--rio-space-16);
+  border: 1px solid var(--rio-line-strong); /* §6: the strong input border */
+  border-radius: 10px;
+  background: var(--rio-surface);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text-hi);
+  cursor: pointer;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), background-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-radio + .rio-radio { margin-block-start: var(--rio-space-12); }
+.rio-radio:hover { border-color: var(--rio-text-faint); background: var(--rio-raised); }
+.rio-radio:focus-within { border-color: var(--rio-accent-focus); box-shadow: 0 0 0 4px var(--rio-accent-ring); }
+.rio-radio input[type="radio"] { inline-size: 20px; block-size: 20px; margin-block-start: 0.2em; accent-color: var(--rio-rust); flex: none; }
+.rio-radio > span { display: inline-flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
+/* §6: the option's primary phrase is weight 700; a trailing description on the
+ * same line is weight 400 in --rio-text. */
+.rio-radio > span strong { font-weight: 700; }
+.rio-radio-desc { font-weight: var(--rio-weight-regular); color: var(--rio-text); }
+
+/* Inline input — opts out of full-width block sizing for fields that sit
+ * inside a sentence (the freeform "… [n] minutes" row). */
+.rio-input--inline { display: inline-block; inline-size: auto; min-block-size: 36px; padding: 6px var(--rio-space-8); }
+
+.rio-field-error { color: var(--rio-danger); font-size: var(--rio-text-13); margin: var(--rio-space-8) 0 0; }
+
+/* Two-column responsive field grid (contract §10.2): 24px gap, stacks at 768px. */
+.rio-fieldset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--rio-space-24);
+  row-gap: var(--rio-space-24);
+}
+.rio-field--full,
+.rio-field--textarea,
+.rio-field--file { grid-column: 1 / -1; }
+@media (max-width: 768px) {
+  .rio-fieldset-grid { grid-template-columns: 1fr; }
+}
+
+/* Checkbox row — label + native control inline. */
+.rio-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-space-8);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text-hi);
+  cursor: pointer;
+}
+.rio-check input[type="checkbox"] { inline-size: 18px; block-size: 18px; accent-color: var(--rio-rust); flex: none; }
+.rio-field--checkbox { justify-content: center; }
+
+.rio-field-errors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.rio-file-current a { color: var(--rio-rust); }
+
+/* Action bar (contract §8.2) — one wrapping row with a hairline top border.
+ * Order: primary → secondary save variants → (auto gap) → muted/destructive
+ * text actions + Cancel. No orphaned Cancel on its own line. */
+.rio-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rio-space-16);
+  margin-block-start: var(--rio-space-32);
+  padding-block-start: var(--rio-space-24);
+  border-block-start: 1px solid var(--rio-line);
+}
+/* Trailing group — History / Delete / Cancel — pushed to the inline end. */
+.rio-action-bar-end {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--rio-space-16);
+}
+/* Legacy spacer kept as a no-op for any template still emitting it. */
+.rio-form-actions-spacer { display: none; }
+
+/* Inline (related children) sections. */
+.rio-inline-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rio-space-16);
+  padding: var(--rio-space-16) var(--rio-space-20);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-inline-section__header h2 {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-20);
+  color: var(--rio-text-hi);
+  margin: 0;
+}
+.rio-inline-section .rio-dtable td { padding-block: 12px; block-size: auto; }
+
+/* Inline create form (feature-flag "register") — label-over-input
+ * fields in a row with the submit button on their baseline. Wraps to a
+ * stack on narrow screens. */
+.rio-form--inline {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--rio-space-16);
+}
+.rio-form--inline .rio-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-space-6);
+  flex: 1 1 200px;
+  min-inline-size: 0;
+}
+.rio-form--inline .rio-form-field > span {
+  font-weight: var(--rio-weight-semibold);
+  font-size: var(--rio-text-14);
+  color: var(--rio-text-hi);
+}
+.rio-form--inline .rio-btn { flex: 0 0 auto; }

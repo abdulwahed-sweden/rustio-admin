@@ -37,8 +37,9 @@ Pull request review runs against this document, not only the diff.
   `Admin::theme(...)`, an inline `<style>` block, not the engine.
 - CSS layout, components, the cascade order of the baked bundle →
   `CLAUDE.md` "Templates and CSS" and `DESIGN_DOCTRINE.md`.
-- Dark mode as a *shipped feature*. The engine produces dark variants
-  (§8) but the framework is light-only today.
+- The framework's own dark theme — the runtime ships **light and dark**,
+  token-driven (`VISUAL-CONTRACT.md` §12). This doc covers how the *engine*
+  emits a dark-aware `tokens.css` (§8 + `TOKENS-EMIT-SPEC.md`).
 
 ### 1.3 Closing principle
 
@@ -186,12 +187,16 @@ what fired.
 
 ## 8. Dark-mode structure
 
-`rustio-admin` is light-only today, so Case 5 frequently yields
-`light == dark == input`. The engine still produces both variants and
-`emit.rs` **always** writes the `:root[data-theme="dark"]` block (even
-when identical). This is deliberate: a future dark-mode return is a
-configuration flip, not a refactor. `DARK_BG` is `#15161a` — graphite,
-not OLED black, per `DESIGN_DOCTRINE.md`.
+The framework ships a real dark theme, so a generated `tokens.css` **must** be
+dark-aware. `emit.rs` writes the framework's full dual dark structure — an
+explicit `:root[data-theme="dark"]` block **and** a
+`@media (prefers-color-scheme: dark) { :root { … } }` auto block — with identical
+values, via a [`DarkPolicy`] (auto-derive / light-only / explicit). A `:root`-only
+override would tie `[data-theme="dark"]` on specificity and win by source order,
+leaking light into dark; the dual structure prevents that. The full contract for
+generators (in-repo and the external `rustio-design`) is
+[`TOKENS-EMIT-SPEC.md`](TOKENS-EMIT-SPEC.md); the framework also logs a startup
+WARN if a `RUSTIO_TOKENS_CSS` override is light-only.
 
 ---
 

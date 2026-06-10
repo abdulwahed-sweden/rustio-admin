@@ -1,52 +1,37 @@
-/* rustio-admin — hand-written stylesheet, split for contributors.
+/* rustio-admin — RustIO Design System stylesheet, split for contributors.
  *
- * Six-variable theme; project overrides via Admin::theme(...) and
- * its `_theme.html` partial that injects `html { --rio-* … }`.
- * Mobile-first, three breakpoints. Light-only — the framework
- * ships a single palette and ignores the OS colour-scheme
- * preference.
+ * The admin adopts the RustIO Design System: RustIO Cobalt accent
+ * (--rio-rust*), warm-stone neutrals, Spectral / Hanken Grotesk /
+ * JetBrains Mono type, and TWO themes (light default + dim-slate dark
+ * via @media + [data-theme]). The layout is the "RustIO Console": a
+ * dark command-rail, a slim workspace header, an editorial masthead,
+ * a metrics ledger, and a reworked data board (layout/console.css).
  *
- * Source layout follows the Primer / Carbon convention:
+ * Source order (matches the DS's own styles.css, plus the framework's
+ * multi-script i18n typography and a print sheet):
  *
- *   tokens  → base → layout → components →
- *   pages   → responsive → print
- *
- * Each fragment is a stand-alone CSS file with its own section
- * header; admin.css is the manifest that wires them in cascade
- * order. See DESIGN_DOCTRINE.md for the visual identity behind the
- * tokens — what every colour, weight, and surface lift means and
- * when to use them.
+ *   tokens → base → components → layout(console) → pages → print
  *
  * --- Delivery ---------------------------------------------------
  *
  * The framework binary concatenates every fragment at compile time
- * (see `ADMIN_CSS` in `src/admin/routes.rs`) and serves one bundle
- * at `/static/admin.css`. The `@import` statements below are the
- * contributor-facing source of truth for cascade order. **If you
- * add a fragment, update BOTH this manifest AND the `concat!`
- * list in routes.rs** — they must stay in lock-step or the served
- * bundle will silently drift.
+ * (see `ADMIN_CSS` in `src/admin/routes.rs`) and serves one bundle at
+ * `/static/admin.css`. The `@import` statements below are the
+ * contributor-facing source of truth for cascade order. **If you add
+ * a fragment, update BOTH this manifest AND the `concat!` list in
+ * routes.rs** — they must stay in lock-step or the served bundle will
+ * silently drift.
  *
  * --- Self-hosted fonts (SIL OFL-1.1) ----------------------------
  *
- *   Latin / UI    — Geist Variable (wght 100..900, primary identity)
- *   Latin fallback — Inter Variable  (wght 100..900, Latin-ext +
- *                   Cyrillic + Greek + Vietnamese coverage)
- *   Code          — Geist Mono Variable (wght 100..900)
- *   Arabic        — Noto Naskh Arabic Variable (wght 400..700, primary
- *                   reading face across the framework)
- *   Arabic accent — Tajawal 400 / 500 / 700 (geometric display use,
- *                   opt-in via .rio-arabic-display)
- *   Thai          — Noto Sans Thai Variable (wght 100..900, auto)
- *   Devanagari    — Noto Sans Devanagari Variable (wght 100..900, auto)
- *   Japanese      — Noto Sans JP Regular   (lang-gated)
- *   Korean        — Noto Sans KR Regular   (lang-gated)
- *   Simpl. Chinese — Noto Sans SC Regular  (lang-gated)
+ *   Display — Spectral (serif; titles, h1/h2, stat values)
+ *   Body/UI — Hanken Grotesk (variable 400..800)
+ *   Mono    — JetBrains Mono (variable 400..700)
+ *   Arabic  — Noto Naskh Arabic + Tajawal
+ *   i18n    — Thai / Devanagari / CJK (lang-gated, typography-i18n.css)
  *
  * The font binaries are baked into the rustio-admin binary; no CDN
- * round-trip, no FOUT, no GDPR/tracking surface. @font-face
- * declarations live in base/typography.css (Latin + Arabic) and
- * base/typography-i18n.css (Thai, Devanagari, CJK).
+ * round-trip. @font-face lives in base/fonts.css (+ typography-i18n).
  */
 
 /* ---- Design tokens — single source of truth for the visual scale. */
@@ -55,46 +40,35 @@
 @import url("tokens/radius.css");
 @import url("tokens/shadows.css");
 @import url("tokens/typography.css");
+@import url("tokens/motion.css");
+@import url("tokens/compat.css");
 
-/* ---- Base — reset, body, typography, utilities. */
-@import url("base/reset.css");
+/* ---- Base — self-hosted @font-face, element defaults, i18n type. */
+@import url("base/fonts.css");
 @import url("base/base.css");
-@import url("base/typography.css");
 @import url("base/typography-i18n.css");
-@import url("base/utilities.css");
 
-/* ---- Layout shell — topbar / sidebar / main / footer. */
-@import url("layout/shell.css");
-@import url("layout/topbar.css");
-@import url("layout/sidebar.css");
-@import url("layout/footer.css");
-
-/* ---- Components — concrete UI primitives. */
-@import url("components/cards.css");
+/* ---- Components — the DS primitives. */
 @import url("components/buttons.css");
 @import url("components/forms.css");
-@import url("components/tables.css");
-@import url("components/filters.css");
-@import url("components/dropdowns.css");
-@import url("components/search_palette.css");
-@import url("components/pagination.css");
-@import url("components/pills.css");
-@import url("components/flashes.css");
-@import url("components/timeline.css");
-@import url("components/tabs.css");
+@import url("components/data.css");
+@import url("components/feedback.css");
+@import url("components/navigation.css");
+@import url("components/code.css");
+
+/* ---- Layout — the RustIO Console shell + masthead + ledger + board. */
+@import url("layout/console.css");
 
 /* ---- Pages — anything specific to one screen. */
-@import url("pages/auth.css");
 @import url("pages/dashboard.css");
-@import url("pages/db_browser.css");
-@import url("pages/permissions.css");
-@import url("pages/sessions.css");
-@import url("pages/errors.css");
 @import url("pages/list.css");
-
-/* ---- Responsive — mobile-first overrides; MUST come after layout
- *      and components so its rules win the cascade on small screens. */
-@import url("layout/responsive.css");
+@import url("pages/form.css");
+@import url("pages/auth.css");
+@import url("pages/states.css");
+@import url("pages/permissions.css");
+@import url("pages/detail.css");
+@import url("pages/account.css");
+@import url("pages/tools.css");
 
 /* ---- Print — drop chrome, keep ink. */
 @import url("print/print.css");

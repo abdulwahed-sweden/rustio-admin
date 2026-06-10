@@ -15,11 +15,11 @@
 </header>
 
 {% if error %}
-<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>
+<div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>
 {% endif %}
 
 <section class="rio-confirm rio-confirm--neutral">
-  <header class="rio-confirm__header">
+  <header class="rio-confirm__head">
     <div class="rio-confirm__icon">{{ icon("key", class="rio-icon") }}</div>
     <div>
       <h2 class="rio-confirm__title">Generate new codes</h2>
@@ -33,9 +33,9 @@
 
   <form method="post" action="/admin/account/mfa/regenerate-codes" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <a href="/admin" class="rio-button rio-button--ghost">Cancel</a>
+    <a href="/admin" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <button type="submit" class="rio-button rio-button--primary">
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">
       Generate new codes
     </button>
   </form>

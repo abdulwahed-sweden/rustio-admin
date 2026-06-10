@@ -1,373 +1,121 @@
 /* ============================================================
- * rustio-admin / pages / list
+ * rustio-admin / pages / list  —  model list (console)
  *
- * List-page-specific layout: the calm operational workspace that
- * sits at /admin/<model>. Scoped under `.rio-list-page` so nothing
- * here can leak into auth, forms, dashboard, db_browser, or any
- * other admin surface.
- *
- * Three zones, in order:
- *
- *   1. Header   — title, subtitle, primary Add button.
- *   2. Toolbar  — Row 1 "Find"     (search + chip filters + reset)
- *                 Row 2 "Arrange"  (sort + direction + rows + saved
- *                                   view + export + import)
- *   3. Surface  — table card OR empty-state card.
- *   4. Bottom   — row count + pagination.
- *
- * The previous list page collapsed Sort, Rows-per-page, Export, and
- * Import into a single "View ▾" overflow dropdown — a known UX
- * failure during the clinic POC. This stylesheet promotes each of
- * those back to a first-class control with an icon + label, splits
- * Find vs Arrange into two visually distinct rows, and gives the
- * empty state a proper icon-led card instead of a sentence floating
- * in a blank table area.
- *
- * Width / typography overrides are scoped to `.rio-list-page` so
- * forms (which need narrower editorial width and 16px body) stay
- * unaffected. See `tokens/typography.css` for the global ladder
- * this file selectively re-tunes.
+ * The list reuses the console masthead + command bar + board
+ * (layout/console.css) and the DS button/form/data/navigation
+ * components. This sheet adds the glue for the framework-specific
+ * interactive controls the DS kit doesn't ship: the JS dropdowns
+ * (filters / sort / rows / saved views), filter chips, the active-
+ * filter pills, the bulk-select reveal, and the filter-form bodies.
+ * All built on DS tokens.
  * ============================================================ */
 
-/* ----- Page container --------------------------------------------
- * 1440px content cap (matches the global `--rio-content-max`) but
- * with a touch more horizontal breathing room than the framework's
- * 32px default. The extra 8–16px gutter softens the table-edge feel
- * against the sidebar and reads as a deliberate operational
- * workspace rather than a settings page. Forms are not widened —
- * their `.rio-card` retains the editorial cap from forms.css. */
-.rio-list-page {
-  --rlp-content-max: 1440px;
-  --rlp-page-pad-x: var(--rio-s6);    /* 32px — overridden per breakpoint below */
-}
-.rio-main:has(> .rio-list-page) {
-  /* `:has()` is the modern way to lift the page-level padding only
-   * when the page IS a list page; pages that don't wrap their body
-   * in `.rio-list-page` keep the framework default. Safari ≥15.4,
-   * Chrome ≥105, Firefox ≥121 — well past the framework's modern-
-   * browser baseline. */
-  padding-inline: var(--rlp-page-pad-x);
-}
-.rio-list-page,
-.rio-list-page > * {
-  max-width: var(--rlp-content-max);
-  margin-inline: auto;
-}
+/* Icon sizing fallback (icon() emits sized SVGs; this keeps inline
+ * label-adjacent icons aligned). */
+.rio-icon { inline-size: 1em; block-size: 1em; flex: none; vertical-align: -0.12em; }
+.rio-chev { inline-size: 15px; block-size: 15px; flex: none; opacity: 0.7; }
 
-/* ----- Header zone ----------------------------------------------- */
-.rio-list-page .rlp-header {
-  margin-bottom: var(--rio-s5);
+/* ---- JS dropdowns (filters / sort / rows / saved views) ---- */
+.rio-dropdown { position: relative; display: inline-flex; }
+.rio-dropdown-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: var(--rio-z-dropdown);
+  min-inline-size: 220px;
+  display: none;
+  background: var(--rio-overlay);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-lg), var(--rio-highlight-top);
+  padding: 6px;
 }
-.rio-list-page .rlp-header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--rio-s4);
-  flex-wrap: wrap;
+.rio-dropdown-toggle[aria-expanded="true"] + .rio-dropdown-panel { display: block; }
+.rio-dropdown-toggle.is-active {
+  border-color: var(--rio-rust);
+  color: var(--rio-rust);
 }
-.rio-list-page .rlp-header-titles {
-  flex: 1 1 320px;
-  min-width: 0;
+.rio-dropdown-section { padding: 6px; }
+.rio-dropdown-section + .rio-dropdown-section { border-block-start: 1px solid var(--rio-line); }
+.rio-dropdown-label {
+  display: block;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rio-text-faint);
+  margin-block-end: 6px;
 }
-.rio-list-page .rlp-title {
-  font-size: var(--rio-fs-h1);              /* 32px */
-  font-weight: var(--rio-fw-bold);
-  line-height: var(--rio-lh-tight);
-  letter-spacing: var(--rio-tracking-display);
-  margin: var(--rio-s1) 0 var(--rio-s1);
-  color: var(--rio-text-strong);
-}
-.rio-list-page .rlp-subtitle {
-  font-size: var(--rio-fs-md);              /* 16px — readable but quiet */
-  line-height: 1.5;
-  color: var(--rio-text-muted);
-  margin: 0;
-  max-width: 60ch;                          /* keep subtitle prose-width */
-}
-
-/* ----- Toolbar shell --------------------------------------------- */
-.rio-list-page .rlp-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s4);
-}
-
-/* ----- Row 1 — Find ----------------------------------------------
- * Search dominates; promoted filter chips sit beside it; a single
- * "More filters" dropdown collects overflow; "Reset" appears only
- * when there's state to reset (search OR ≥1 active filter).
- *
- * The row sits inside a softly-tinted accent-soft panel. That tint
- * gives "Find" its own surface without a heading or icon — operators
- * read the group at a glance as one zone, distinct from the
- * transparent Arrange row below. The fill uses `--rio-accent-soft`
- * so a project that retunes the brand via Admin::theme(...) gets
- * the panel re-tinted automatically; nothing in this rule is a
- * hardcoded hex. */
-.rio-list-page .rlp-find {
-  display: flex;
-  align-items: center;
-  gap: var(--rio-s2);
-  flex-wrap: wrap;
-  padding: var(--rio-s3);
-  background: var(--rio-accent-soft);
-  border: 1px solid var(--rio-accent-border);
-  border-radius: var(--rio-radius);
-}
-.rio-list-page .rlp-find .rio-search-bar {
-  flex: 1 1 360px;
-  min-width: 260px;
-  margin-bottom: 0;
-}
-/* The search input height is the row baseline; chips align to it. */
-.rio-list-page .rlp-find .rio-dropdown-toggle,
-.rio-list-page .rlp-arrange .rio-dropdown-toggle {
-  min-height: 40px;
-  font-size: var(--rio-fs-sm);              /* 15px */
-  padding-block: var(--rio-s2);
-}
-.rio-list-page .rlp-reset {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--rio-s1);
-  height: 40px;
-  padding: 0 var(--rio-s3);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--rio-radius-sm);
-  color: var(--rio-text-muted);
-  font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
-  text-decoration: none;
-  transition: background 0.12s, color 0.12s;
-}
-.rio-list-page .rlp-reset:hover {
-  background: var(--rio-surface-2);
-  color: var(--rio-danger);
-  text-decoration: none;
-}
-.rio-list-page .rlp-reset .rio-icon { width: 14px; height: 14px; }
-
-/* ----- Row 2 — Arrange + Data ------------------------------------
- * Sort field / direction / rows / saved view sit on the leading
- * edge; export / import are pinned to the trailing edge via a flex
- * spacer. No fill or border on this row — the toolbar's vertical
- * gap plus the Find panel's coloured frame above already do the
- * "two zones" job, so a second border here would read as noise.
- * The leading-edge sort/rows/saved cluster reads as the lighter,
- * transparent counterpart to the framed Find panel. */
-.rio-list-page .rlp-arrange {
-  display: flex;
-  align-items: center;
-  gap: var(--rio-s2);
-  flex-wrap: wrap;
-}
-.rio-list-page .rlp-arrange-spacer {
-  flex: 1 1 auto;
-  min-width: var(--rio-s3);
-}
-
-/* ----- Sort direction toggle -------------------------------------
- * A compact pill that sits flush against the Sort field menu. The
- * label ("newest first" / "A → Z") reads the direction; the arrow
- * icon is decorative. Hidden when no sort is active (no field to
- * toggle). */
-.rio-list-page .rlp-sort-dir {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--rio-s1);
-  height: 40px;
-  padding: 0 var(--rio-s3);
-  background: var(--rio-surface);
-  color: var(--rio-text-muted);
-  border: 1px solid var(--rio-border);
-  border-radius: var(--rio-radius-sm);
-  font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.rio-list-page .rlp-sort-dir:hover {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
-  text-decoration: none;
-}
-.rio-list-page .rlp-sort-dir .rio-icon { width: 14px; height: 14px; opacity: 0.7; }
-
-/* Export / Import look like quiet ghost buttons — secondary in
- * weight, never competing with the primary Add. */
-.rio-list-page .rlp-data-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--rio-s2);
-  height: 40px;
-  padding: 0 var(--rio-s3);
-  background: var(--rio-surface);
-  color: var(--rio-text);
-  border: 1px solid var(--rio-border);
-  border-radius: var(--rio-radius-sm);
-  font-size: var(--rio-fs-sm);
-  font-weight: var(--rio-fw-semibold);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.rio-list-page .rlp-data-link:hover {
-  background: var(--rio-surface-3);
-  border-color: var(--rio-border-strong);
-  color: var(--rio-text-strong);
-  text-decoration: none;
-}
-.rio-list-page .rlp-data-link .rio-icon { width: 15px; height: 15px; opacity: 0.85; }
-.rio-list-page .rlp-import-form { margin: 0; display: inline-flex; }
-
-/* ----- Table density --------------------------------------------
- * Inside the list scope, cells trade the global 16px body for 15px
- * so a wide table fits without horizontal scroll on a 1440px-wide
- * 7-column model. Padding stays generous (~14px vertical) so row
- * height clears the 48px tap target target — operational workspaces
- * over 8-hour shifts read this as comfortable, not dense. */
-.rio-list-page .rio-table {
-  font-size: var(--rio-fs-sm);              /* 15px */
-}
-.rio-list-page .rio-table th,
-.rio-list-page .rio-table td {
-  padding-block: var(--rio-s3);             /* 12px */
-}
-.rio-list-page .rio-table tbody td {
-  padding-block: 14px;
-}
-
-/* ----- Table header bar -----------------------------------------
- * The header carries the same slate-900 chrome surface as the
- * sidebar. Two reasons: (1) sidebar + table-header reading as one
- * coloured frame around the data is the "designed workspace" cue
- * the operator latches onto on first glance; (2) the data-row
- * surface (white / surface-2 zebra) now contrasts hard against the
- * header instead of fading into the same neutral.
- *
- * Each header cell needs light-on-dark token values to stay legible.
- * Rather than touching every component rule, we redefine the
- * relevant tokens on the `thead` scope — the same chrome-cascade
- * trick `layout/shell.css` uses for the sidebar (CSS variables
- * inherit, so `var(--rio-text)` etc. inside a th picks up the
- * dark-surface values automatically). Hover and active-sort copy
- * stays readable without a separate set of selectors. */
-.rio-list-page .rio-table thead {
-  --rio-text-strong: #F8FAFC;   /* slate-50 */
-  --rio-text:        #E2E8F0;   /* slate-200 */
-  --rio-text-muted:  #94A3B8;   /* slate-400 */
-  --rio-text-subtle: #64748B;   /* slate-500 */
-  --rio-border:      #334155;   /* slate-700 — bottom rule blends into chrome */
-  /* Lifted accent: the active-sort link sits at #0D9488 (teal-600)
-   * on the slate-900 chrome at only ~4.3:1. Promoting it to teal-400
-   * inside this scope brings the active-column highlight to ~9.6:1,
-   * the same lift the sidebar uses for its active rail. */
-  --rio-accent:      #2DD4BF;   /* teal-400 */
-}
-.rio-list-page .rio-table th {
-  background: var(--rio-surface-chrome);     /* slate-900 — matches sidebar */
-  color: var(--rio-text);
-  font-size: 13px;                           /* quiet label tier */
-  letter-spacing: var(--rio-tracking-allcaps);
-  border-bottom-color: var(--rio-border);
-}
-
-/* ----- Empty state ----------------------------------------------
- * Replaces the previous one-sentence `<p class="rio-empty">` that
- * floated weakly inside a large blank card. The new version is a
- * vertically-centered card body with an icon, a strong heading,
- * one short explanatory sentence, and the primary Add CTA. Copy
- * stays model-agnostic via {{ display_name }} / {{ singular_name }}
- * — the template substitutes "appointments" / "appointment" or
- * any other model name without per-project overrides. */
-.rio-list-page .rlp-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: var(--rio-s7) var(--rio-s5);
-  background: var(--rio-surface);
-  /* The .rio-list card already paints its own background; this
-   * inner block just centers the empty-state stack with generous
-   * vertical air. */
-}
-.rio-list-page .rlp-empty-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
+.rio-dropdown-menu { display: flex; flex-direction: column; gap: 1px; }
+.rio-dropdown-footer { padding: 6px; border-block-start: 1px solid var(--rio-line); }
+.rio-dropdown-badge {
+  display: inline-grid; place-items: center;
+  min-inline-size: 20px; block-size: 20px; padding: 0 6px;
   border-radius: 999px;
-  background: var(--rio-accent-soft);
-  color: var(--rio-accent);
-  margin-bottom: var(--rio-s4);
-}
-.rio-list-page .rlp-empty-icon .rio-icon {
-  width: 28px;
-  height: 28px;
-}
-.rio-list-page .rlp-empty-title {
-  font-size: var(--rio-fs-h2);              /* 24px */
-  font-weight: var(--rio-fw-bold);
-  color: var(--rio-text-strong);
-  margin: 0 0 var(--rio-s2);
-  line-height: var(--rio-lh-tight);
-}
-.rio-list-page .rlp-empty-body {
-  font-size: var(--rio-fs-md);              /* 16px — readable */
-  color: var(--rio-text-muted);
-  margin: 0 0 var(--rio-s5);
-  max-width: 44ch;
+  background: var(--rio-rust-tint-2); color: var(--rio-rust);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-13); font-weight: 600; /* 14px — contract floor */
 }
 
-/* ----- Bottom bar -----------------------------------------------
- * Row count on the leading edge, pagination on the trailing edge.
- * Always renders when there are rows so the operator knows the
- * count at a glance — even with one page. Hidden in the empty
- * state because there's nothing to count or paginate. */
-.rio-list-page .rlp-bottom-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--rio-s3);
-  flex-wrap: wrap;
-  margin-top: var(--rio-s4);
-  padding: var(--rio-s2) 0;
-  color: var(--rio-text-muted);
-  font-size: var(--rio-fs-sm);
+/* ---- Filter chips (single-select filter + rows-per-page) ---- */
+.rio-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.rio-chip {
+  display: inline-flex; align-items: center;
+  padding: 5px 11px; border-radius: var(--rio-radius-pill);
+  border: 1px solid var(--rio-line); background: var(--rio-surface);
+  color: var(--rio-text); font-size: var(--rio-text-13); text-decoration: none;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-list-page .rlp-row-count {
-  font-weight: var(--rio-fw-medium);
-  font-variant-numeric: tabular-nums;
-}
-.rio-list-page .rlp-row-count strong {
-  color: var(--rio-text-strong);
-  font-weight: var(--rio-fw-semibold);
-}
-.rio-list-page .rlp-bottom-bar .rio-pagination {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--rio-s1);
+.rio-chip:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
+.rio-chip.is-active {
+  border-color: var(--rio-rust); background: var(--rio-rust-tint); color: var(--rio-rust);
+  font-weight: var(--rio-weight-semibold);
 }
 
-/* ----- Responsive ------------------------------------------------
- * Below 768px Row 1 + Row 2 stack vertically (already handled by
- * `flex-wrap: wrap`), search takes the full width, and export /
- * import survive in the same row. Tighten page padding to match
- * the framework's mobile gutter; the table itself remains
- * horizontally scrollable through its parent `.rio-list` card. */
-@media (max-width: 1279px) {
-  .rio-list-page { --rlp-page-pad-x: var(--rio-s5); }   /* 24px */
+/* ---- Active-filter pills strip ---- */
+.rio-active-filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-block-start: -8px;
 }
-@media (max-width: 767px) {
-  .rio-list-page { --rlp-page-pad-x: var(--rio-s4); }   /* 16px */
-  .rio-list-page .rlp-header-row { flex-direction: column; align-items: stretch; }
-  .rio-list-page .rlp-find .rio-search-bar { flex-basis: 100%; }
-  .rio-list-page .rlp-arrange { padding-top: var(--rio-s2); }
-  .rio-list-page .rlp-empty { padding: var(--rio-s5) var(--rio-s4); }
+.rio-active-filters-label {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--rio-text-faint);
 }
+.rio-active-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 11px; border-radius: var(--rio-radius-pill);
+  background: var(--rio-rust-tint); color: var(--rio-text);
+  font-size: var(--rio-text-13);
+}
+.rio-active-pill-key { color: var(--rio-text-mute); }
+.rio-active-pill-x {
+  display: inline-grid; place-items: center;
+  inline-size: 18px; block-size: 18px; border-radius: 999px;
+  color: var(--rio-text-mute); text-decoration: none; line-height: 1;
+}
+.rio-active-pill-x:hover { background: var(--rio-rust-tint-2); color: var(--rio-rust); }
+.rio-active-filters-clear { color: var(--rio-rust); font-size: var(--rio-text-13); text-decoration: none; }
+.rio-active-filters-clear:hover { text-decoration: underline; }
+
+/* ---- Bulk-select reveal ---- */
+.rio-bulk-form .rio-bulkbar { display: none; }
+.rio-bulk-form.is-active .rio-bulkbar { display: flex; }
+
+/* ---- Sortable table headers ---- */
+.rio-dtable thead th a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.rio-dtable thead th a:hover { color: var(--rio-text-hi); }
+.rio-dtable thead th.is-sort-asc a,
+.rio-dtable thead th.is-sort-desc a { color: var(--rio-rust); }
+
+/* ---- Filter-form bodies (FK autocomplete / multi-select / date) ---- */
+.rio-fk-autocomplete, .rio-multi-select, .rio-date-range { display: flex; flex-direction: column; gap: 10px; min-inline-size: 240px; }
+.rio-fk-autocomplete-wrap { position: relative; }
+.rio-fk-autocomplete-results {
+  list-style: none; margin: 4px 0 0; padding: 4px;
+  border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md);
+  background: var(--rio-overlay); max-block-size: 220px; overflow: auto;
+}
+.rio-fk-autocomplete-actions, .rio-multi-select-actions, .rio-date-range-actions { display: flex; gap: 8px; }
+.rio-multi-select-options { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-block-size: 240px; overflow: auto; }
+.rio-multi-select-option { display: flex; align-items: center; gap: 8px; font-size: var(--rio-text-14); cursor: pointer; }
+.rio-date-range-field { display: flex; flex-direction: column; gap: 4px; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-date-range { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }

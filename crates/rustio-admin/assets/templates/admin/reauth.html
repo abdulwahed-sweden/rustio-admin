@@ -10,7 +10,7 @@
       Re-enter your password to continue. This step protects sensitive admin actions.
     {% endif %}
   </p>
-  {% if error %}<div class="rio-flash rio-flash--error" role="alert">{{ error }}</div>{% endif %}
+  {% if error %}<div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>{% endif %}
   <form method="post" action="/admin/reauth" class="rio-form rio-form--login" autocomplete="off">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <input type="hidden" name="return_to" value="{{ return_to }}">
@@ -53,7 +53,7 @@
       >
     </div>
     {% endif %}
-    <button type="submit" class="rio-button rio-button--primary">Continue</button>
+    <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Continue</button>
   </form>
   <p class="rio-login-footer">
     <a href="/admin">Cancel</a>

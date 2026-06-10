@@ -1,0 +1,66 @@
+/* ============================================================
+ * rustio-admin / pages / states  —  confirm dialogs + error pages
+ * ============================================================ */
+
+/* ---- Confirm (delete / bulk delete / admin action) ---- */
+.rio-confirm { padding: var(--rio-space-24); }
+.rio-confirm__head { display: flex; gap: var(--rio-space-16); align-items: flex-start; }
+.rio-confirm__icon {
+  flex: none;
+  inline-size: 44px; block-size: 44px; border-radius: var(--rio-radius-lg);
+  display: grid; place-items: center;
+  background: var(--rio-danger-tint); color: var(--rio-danger);
+}
+.rio-confirm__icon svg { inline-size: 22px; block-size: 22px; }
+.rio-confirm--danger { border-color: color-mix(in srgb, var(--rio-danger) 35%, var(--rio-line)); }
+.rio-confirm--neutral .rio-confirm__icon { background: var(--rio-rust-tint); color: var(--rio-rust); }
+.rio-confirm__head .rio-error { margin-block-start: var(--rio-space-8); }
+.rio-confirm__title {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-24);
+  color: var(--rio-text-hi);
+  margin: 2px 0 var(--rio-space-6);
+}
+.rio-confirm__lead { color: var(--rio-text-mute); margin: 0; font-size: var(--rio-text-15); line-height: var(--rio-leading-snug); }
+.rio-confirm__lead strong { color: var(--rio-text-hi); }
+
+.rio-confirm__section-title {
+  margin: var(--rio-space-24) 0 var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--rio-text-faint);
+}
+.rio-confirm__small { color: var(--rio-text-mute); font-size: var(--rio-text-13); margin: var(--rio-space-8) 0 0; }
+.rio-confirm__items {
+  list-style: none; margin: 0; padding: var(--rio-space-12) var(--rio-space-16);
+  background: var(--rio-sunken); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md);
+  display: flex; flex-direction: column; gap: var(--rio-space-6);
+  max-block-size: 260px; overflow: auto; font-size: var(--rio-text-14);
+}
+.rio-confirm__items a { color: var(--rio-rust); text-decoration: none; }
+.rio-confirm .rio-form-actions { margin-block-start: var(--rio-space-24); }
+
+/* ---- Error / forbidden ---- */
+.rio-error {
+  max-inline-size: 520px;
+  margin-inline: auto;
+  margin-block: var(--rio-space-64) 0;
+  padding: var(--rio-space-32);
+  text-align: center;
+}
+.rio-auth .rio-error { margin-block: 0; }
+.rio-error-status {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-48);
+  font-weight: 500;
+  color: var(--rio-rust);
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1;
+}
+.rio-error h1 {
+  font-size: var(--rio-text-30);
+  margin: var(--rio-space-12) 0 var(--rio-space-8);
+}
+.rio-error p { color: var(--rio-text-mute); margin: var(--rio-space-8) 0; }
+.rio-error .rio-btn { margin-block-start: var(--rio-space-16); }

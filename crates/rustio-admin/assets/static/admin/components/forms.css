@@ -1,202 +1,228 @@
 /* ============================================================
- * rustio-admin / components / forms
- *
- * Form shell, fieldsets, fields, inputs, textareas, selects,
- * checkboxes, and the form action bar. Single-column flow by
- * default with optional `.rio-field--full` for explicit grid spans
- * inside a grid-mode fieldset.
- *
- * Table-row bulk-select checkboxes (.rio-row-checkbox) live in
- * components/tables.css since they're table-shaped controls, not
- * form-shell controls.
- * ============================================================ */
+   RustIO — Form controls
+   Input · Textarea · Select · Checkbox · Radio · Switch · Search
+   Label / help / error states · visible copper focus rings
+   ============================================================ */
 
-/* Editorial wrapper for form pages — caps content width so labels +
- * inputs read at a comfortable line length. Forms ship at 880px max
- * (matches Linear / Stripe / Vercel admin); page header lives inside
- * the same shell so headings, breadcrumbs, and inputs share an
- * alignment guide. */
-.rio-form-shell {
-  max-width: 880px;
-  margin: 0 auto;
+.rio-field { display: flex; flex-direction: column; gap: var(--rio-space-12); }
+.rio-label {
+  font-family: var(--rio-font-body);
+  font-size: 1rem;                 /* 16px */
+  font-weight: var(--rio-weight-semibold);
+  color: var(--rio-text-hi);
 }
+.rio-label .rio-req { color: var(--rio-rust); margin-inline-start: 2px; }
+.rio-help { font-size: var(--rio-text-13); color: var(--rio-text-mute); margin-block-start: 2px; }
+.rio-error { font-size: var(--rio-text-13); color: var(--rio-danger); }
 
-/* Forms stack vertically with a comfortable rhythm. `gap` on the
- * form means consecutive .rio-field / .rio-fieldset / .rio-form-actions
- * siblings get spacing automatically — no per-element margin
- * accounting and no double-margin collapse surprises. */
-.rio-form {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--rio-s5);
-}
-.rio-fieldset {
-  /* v0.16 — generous 32px internal padding on cards. Previously
-   * 24/24 felt pinched; the new 32/32 pad gives form sections the
-   * "premium card" feel without inflating the page. */
-  border: 1px solid var(--rio-border-soft);
-  border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6);
-  margin: 0;
+/* Text input / textarea / select share .rio-input */
+.rio-input {
+  inline-size: 100%;
+  min-block-size: 46px;            /* comfortable touch target (≥ contract 44px) */
+  padding: 11px 14px;
+  font-family: var(--rio-font-body);
+  font-size: 1rem;                 /* 16px */
+  color: var(--rio-text-hi);
   background: var(--rio-surface);
-  box-shadow: var(--rio-shadow);
+  border: 1px solid var(--rio-line-strong);
+  border-radius: var(--rio-radius-control); /* contract §5: 8px */
+  box-shadow: var(--rio-shadow-inset);       /* reads as "place to type" */
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), box-shadow var(--rio-dur-fast) var(--rio-ease);
+  appearance: none;
 }
-.rio-fieldset > legend {
-  font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--rio-text-subtle);
-  padding: 0 var(--rio-s2);
-  margin-inline-start: calc(-1 * var(--rio-s2));
-}
-/* Single-column field flow by default. Forms read better as a
- * vertical reading column than a 2-up grid that leaves gaps when a
- * model has 3 short fields and 1 textarea. The grid still resolves
- * `field--full` cleanly because every cell is implicitly full-width. */
-.rio-fieldset-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rio-s5);
-}
-
-.rio-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rio-s2);
-}
-.rio-field--full { grid-column: 1 / -1; }
-.rio-field-label {
-  font-weight: var(--rio-fw-semibold);
-  font-size: var(--rio-fs-md);
-  color: var(--rio-text-strong);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.rio-required {
-  color: var(--rio-danger);
-  font-size: var(--rio-fs-xs);
-  font-weight: var(--rio-fw-bold);
-  margin-inline-start: 0;
-}
-.rio-field-hint {
-  margin: 0;
-  font-size: var(--rio-fs-sm);
-  color: var(--rio-text-muted);
-  line-height: var(--rio-lh-ui);
-}
-.rio-field-errors {
-  list-style: none;
-  margin: var(--rio-s1) 0 0;
-  padding: 0;
-  color: var(--rio-danger);
-  font-size: var(--rio-fs-sm);
-}
-
-.rio-input,
-.rio-textarea,
-.rio-select {
-  /* v0.16 — 44px target height (touch-target standard). Padding bumped
-   * to 10/14 so single-line inputs sit at exactly 44px with 16px text
-   * at 1.6 line-height. Inputs read as "place to type" not "drawn
-   * rectangle." */
-  width: 100%;
-  min-height: 44px;
-  padding: 0.625rem var(--rio-s3);              /* 10px / 12px */
-  border: 1px solid var(--rio-border-strong);
-  border-radius: var(--rio-radius-sm);
-  background: var(--rio-surface);
-  color: var(--rio-text-strong);
-  box-shadow: var(--rio-shadow-inset);
-  font: inherit;
-  font-size: var(--rio-fs-md);                  /* 16px */
-  line-height: var(--rio-lh-ui);
-  transition: border-color 0.12s, box-shadow 0.12s, background-color 0.12s;
-}
-.rio-input::placeholder,
-.rio-textarea::placeholder { color: var(--rio-text-subtle); }
-.rio-input:hover,
-.rio-textarea:hover,
-.rio-select:hover { border-color: var(--rio-text-muted); }
+.rio-input::placeholder { color: var(--rio-text-faint); }
+/* Identifier fields (slug, flag key) render their placeholder in mono (contract §5). */
+.rio-input--mono::placeholder { font-family: var(--rio-font-mono); }
+.rio-input:hover { border-color: var(--rio-text-faint); }
 .rio-input:focus,
-.rio-textarea:focus,
-.rio-select:focus {
+.rio-input:focus-visible {
   outline: none;
-  border-color: var(--rio-accent);
-  /* v0.16 — focus ring uses the new --rio-accent-border token (teal-200)
-   * as a 4px halo. Reads as "this is the focused field" from across the
-   * page without flash. Inset stays so the field keeps its depth. */
-  box-shadow: var(--rio-shadow-inset),
-              0 0 0 4px var(--rio-accent-border);
+  border-color: var(--rio-accent-focus);     /* contract §5 focus border */
+  box-shadow: var(--rio-shadow-inset), 0 0 0 4px var(--rio-accent-ring);
 }
-.rio-input:disabled,
-.rio-textarea:disabled,
-.rio-select:disabled {
-  background: var(--rio-surface-2);
-  color: var(--rio-text-subtle);
-  cursor: not-allowed;
-}
-.rio-textarea { font-family: var(--rio-font-sans); resize: vertical; min-height: 7rem; }
+.rio-input:disabled { background: var(--rio-sunken); color: var(--rio-text-faint); cursor: not-allowed; }
+.rio-input[aria-invalid="true"] { border-color: var(--rio-danger); }
+.rio-input[aria-invalid="true"]:focus { box-shadow: var(--rio-shadow-inset), 0 0 0 4px var(--rio-danger-tint); }
+textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; }
 
-.rio-checkbox {
+/* Select wrapper — chevron via background, mono-free */
+.rio-select-wrap { position: relative; display: block; }
+.rio-select-wrap::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 12px;
+  inset-block-start: 50%;
+  inline-size: 8px; block-size: 8px;
+  border-inline-end: 1.5px solid var(--rio-text-mute);
+  border-block-end: 1.5px solid var(--rio-text-mute);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+.rio-select-wrap .rio-input { padding-inline-end: 32px; cursor: pointer; }
+
+/* Search field with leading mark/icon */
+.rio-search { position: relative; display: flex; align-items: center; }
+.rio-search .rio-input { padding-inline-start: 36px; }
+.rio-search-icon {
+  position: absolute;
+  inset-inline-start: 11px;
+  inline-size: 16px; block-size: 16px;
+  color: var(--rio-text-faint);
+  pointer-events: none;
+}
+/* Large variant — the prominent list search */
+.rio-search--lg .rio-input { block-size: 46px; padding-inline-start: 44px; font-size: var(--rio-text-15); border-radius: var(--rio-radius-lg); }
+.rio-search--lg .rio-search-icon { inset-inline-start: 15px; inline-size: 18px; block-size: 18px; }
+
+/* Hero variant — the page's visual focal point.
+   Stronger 1.5px frame, soft lift, and a clear accent focus ring so any user
+   spots it instantly. A "Search" action button reveals on hover / focus. */
+.rio-search--hero .rio-input {
+  block-size: 44px;
+  border-width: 1px;
+  border-color: var(--rio-line-strong);
+  background: var(--rio-surface);
+  box-shadow: var(--rio-shadow-sm);
+  padding-inline-start: 42px;
+  padding-inline-end: 116px; /* room for clear + reveal button */
+  font-size: var(--rio-text-14);
+  transition: border-color var(--rio-dur-base) var(--rio-ease),
+              box-shadow var(--rio-dur-base) var(--rio-ease);
+}
+.rio-search--hero .rio-search-icon { color: var(--rio-text-mute); inset-inline-start: 14px; inline-size: 17px; block-size: 17px; transition: color var(--rio-dur-base) var(--rio-ease); }
+.rio-search--hero:hover .rio-input { border-color: var(--rio-rust); }
+.rio-search--hero:focus-within .rio-input {
+  border-color: var(--rio-rust);
+  box-shadow: 0 0 0 4px var(--rio-rust-ring), var(--rio-shadow-md);
+}
+.rio-search--hero:focus-within .rio-search-icon { color: var(--rio-rust); }
+
+/* Reveal-on-hover "Search" button — slides in from the trailing edge.
+   When the field has text (--filled) it shifts left to clear the × button. */
+.rio-search-go {
+  position: absolute;
+  inset-inline-end: 6px;
+  inset-block-start: 50%;
+  display: inline-flex; align-items: center; gap: 6px;
+  block-size: 34px; padding: 0 13px;
+  font-family: var(--rio-font-body);
+  font-size: var(--rio-text-13); font-weight: var(--rio-weight-semibold);
+  color: var(--rio-on-solid);
+  background: var(--rio-rust-solid);
+  border: 0; border-radius: var(--rio-radius-md);
+  cursor: pointer; white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-50%) translateX(8px) scale(0.96);
+  transform-origin: center right;
+  pointer-events: none;
+  transition: opacity var(--rio-dur-base) var(--rio-ease),
+              transform var(--rio-dur-base) var(--rio-ease),
+              background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-search--hero:hover .rio-search-go,
+.rio-search--hero:focus-within .rio-search-go {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0) scale(1);
+  pointer-events: auto;
+}
+.rio-search-go:hover { background: var(--rio-rust-solid-hover); }
+.rio-search-go:active { background: var(--rio-rust-solid-active); }
+.rio-search-go svg { inline-size: 15px; block-size: 15px; }
+.rio-search--filled .rio-search-go { inset-inline-end: 40px; }
+@media (prefers-reduced-motion: reduce) {
+  .rio-search-go { transition: opacity var(--rio-dur-fast) var(--rio-ease); transform: translateY(-50%); }
+  .rio-search--hero:hover .rio-search-go,
+  .rio-search--hero:focus-within .rio-search-go { transform: translateY(-50%); }
+}
+
+/* Clear (×) button — sits at the trailing edge whenever there's a query */
+.rio-search-clear {
+  position: absolute;
+  inset-inline-end: 9px;
+  inset-block-start: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  inline-size: 26px; block-size: 26px;
+  color: var(--rio-text-faint);
+  background: transparent; border: 0; border-radius: var(--rio-radius-sm);
+  cursor: pointer;
+  transition: color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-search-clear:hover { color: var(--rio-text-hi); background: var(--rio-raised); }
+
+/* Button variant — a fake search box that opens the command palette */
+.rio-search--button {
+  appearance: none; cursor: pointer; text-align: start;
+  gap: var(--rio-space-8); padding: 0 12px 0 34px;
+  block-size: 36px;
+  background: var(--rio-sunken);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md);
+  color: var(--rio-text-faint);
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-search--button:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
+.rio-search--button:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-search-placeholder { font-size: var(--rio-text-14); }
+.rio-search--hero .rio-input::placeholder { color: var(--rio-text-faint); }
+
+/* Checkbox & radio */
+.rio-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--rio-space-8);
+  cursor: pointer;
+  font-size: var(--rio-text-14);
+  color: var(--rio-text);
+}
+.rio-check input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
+.rio-check-box {
+  inline-size: 18px; block-size: 18px;
+  flex: none;
+  margin-block-start: 1px;
+  border: 1.5px solid var(--rio-line-strong);
+  border-radius: 5px;
+  background: var(--rio-surface);
   display: inline-flex;
   align-items: center;
-  gap: var(--rio-s2);
-  cursor: pointer;
+  justify-content: center;
+  transition: background var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-checkbox input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--rio-accent);
+.rio-check-box--radio { border-radius: 999px; }
+.rio-check:hover .rio-check-box { border-color: var(--rio-text-faint); }
+.rio-check input:focus-visible + .rio-check-box { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-check input:checked + .rio-check-box {
+  background: var(--rio-rust);
+  border-color: var(--rio-rust);
 }
-.rio-checkbox-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--rio-s2);
+.rio-check-box svg { inline-size: 12px; block-size: 12px; color: var(--rio-text-onrust); opacity: 0; }
+.rio-check input:checked + .rio-check-box svg { opacity: 1; }
+.rio-check-box--radio::after {
+  content: ""; inline-size: 7px; block-size: 7px; border-radius: 999px;
+  background: var(--rio-text-onrust); transform: scale(0); transition: transform var(--rio-dur-fast) var(--rio-ease);
 }
+.rio-check input:checked + .rio-check-box--radio::after { transform: scale(1); }
+.rio-check input:disabled + .rio-check-box { opacity: 0.5; }
 
-/* Form action bar — primary save buttons sit left, secondary
- * (History) and destructive (Delete / Cancel) push right via
- * `.rio-form-actions-spacer`. A top divider grounds the row so it
- * reads as a deliberate footer rather than buttons floating below
- * the card. */
-.rio-form-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--rio-s2);
-  flex-wrap: wrap;
-  padding-top: var(--rio-s5);
-  border-top: 1px solid var(--rio-border-soft);
+/* Switch */
+.rio-switch { display: inline-flex; align-items: center; gap: var(--rio-space-8); cursor: pointer; }
+.rio-switch input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
+.rio-switch-track {
+  inline-size: 38px; block-size: 22px;
+  border-radius: 999px;
+  background: var(--rio-line-strong);
+  position: relative;
+  transition: background var(--rio-dur-base) var(--rio-ease);
 }
-.rio-form-actions-spacer { flex: 1; min-width: var(--rio-s4); }
-
-/* Inline-children sections — rendered below the parent edit form
- * when a model declares ModelAdmin::inlines(). v1 is read-only:
- * each row is a click-through to the child's own edit page, with
- * "Add new …" / "View all …" affordances in the footer. */
-.rio-inline-section {
-  margin-top: var(--rio-s5);
+.rio-switch-thumb {
+  position: absolute;
+  inset-block-start: 2px; inset-inline-start: 2px;
+  inline-size: 18px; block-size: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--rio-shadow-sm);
+  transition: inset-inline-start var(--rio-dur-base) var(--rio-ease);
 }
-.rio-inline-section__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--rio-s3);
-  margin-bottom: var(--rio-s3);
-}
-.rio-inline-section__header h2 {
-  margin: 0;
-  font-size: var(--rio-fs-lg);
-  font-weight: var(--rio-fw-semibold);
-}
-.rio-inline-table { margin-bottom: var(--rio-s3); }
-.rio-inline-section__actions {
-  display: flex;
-  gap: var(--rio-s2);
-  flex-wrap: wrap;
-}
+.rio-switch input:checked + .rio-switch-track { background: var(--rio-rust); }
+.rio-switch input:checked + .rio-switch-track .rio-switch-thumb { inset-inline-start: 18px; }
+.rio-switch input:focus-visible + .rio-switch-track { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-switch input:disabled + .rio-switch-track { opacity: 0.5; }

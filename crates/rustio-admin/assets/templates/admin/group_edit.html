@@ -1,45 +1,32 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
-
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <a href="/admin/groups">Groups</a> · <span>{{ name }}</span>
-  </nav>
-  <h1>Edit group</h1>
-  <p class="rio-page-header__lead">Editing <strong>{{ name }}</strong> — change membership and attached permissions.</p>
-</header>
-
-{% if errors %}
-<div class="rio-flash rio-flash--error" role="alert">
-  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ name }}</span></nav>
+<div class="rio-masthead-top">
+  <div><h1>Edit group</h1><p class="rio-masthead-desc">Editing <strong>{{ name }}</strong> — change membership and attached permissions.</p></div>
 </div>
-{% endif %}
+
+{% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
 
 <form method="post" action="/admin/groups/{{ group_id }}/edit" class="rio-form">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-
   {% for section in sections %}
-  <fieldset class="rio-fieldset">
-    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
-    <div class="rio-fieldset-grid">
-      {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
-    </div>
+  <fieldset class="rio-fieldset rio-board">
+    {% if section.title %}<legend class="rio-fieldset-legend">{{ section.title }}</legend>{% endif %}
+    <div class="rio-fieldset-grid">{% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}</div>
   </fieldset>
   {% endfor %}
 
-  <fieldset class="rio-fieldset">
-    <legend>Permissions</legend>
+  <fieldset class="rio-fieldset rio-board">
+    <legend class="rio-fieldset-legend">Permissions</legend>
     {% if matrix.rows or matrix.extras %}
-
     {% if matrix.rows %}
+    <div style="overflow:auto">
     <table class="rio-perm-matrix">
       <thead>
         <tr>
           <th class="rio-perm-matrix__model">Model</th>
-          {% for col in matrix.columns %}
-          <th class="rio-perm-matrix__col">{{ col|capitalize }}</th>
-          {% endfor %}
+          {% for col in matrix.columns %}<th class="rio-perm-matrix__col">{{ col|capitalize }}</th>{% endfor %}
           <th class="rio-perm-matrix__row-toggle" aria-label="Row toggle">All</th>
         </tr>
       </thead>
@@ -50,22 +37,16 @@
           {% for cell in row.cells %}
           <td class="rio-perm-matrix__cell">
             {% if cell %}
-            <label class="rio-perm-cell" title="{{ cell.name }}">
-              <input type="checkbox" name="perm_{{ cell.id }}" value="on" data-rio-perm-checkbox{% if cell.checked %} checked{% endif %}>
-              <span class="rio-perm-cell__sr">{{ cell.name }}</span>
-            </label>
-            {% else %}
-            <span class="rio-perm-na" aria-hidden="true">—</span>
-            {% endif %}
+            <label class="rio-perm-cell" title="{{ cell.name }}"><input type="checkbox" name="perm_{{ cell.id }}" value="on" data-rio-perm-checkbox{% if cell.checked %} checked{% endif %}><span class="rio-perm-cell__sr">{{ cell.name }}</span></label>
+            {% else %}<span class="rio-perm-na" aria-hidden="true">—</span>{% endif %}
           </td>
           {% endfor %}
-          <td class="rio-perm-matrix__cell">
-            <button type="button" class="rio-perm-row-all" data-rio-perm-row-all>All</button>
-          </td>
+          <td class="rio-perm-matrix__cell"><button type="button" class="rio-perm-row-all" data-rio-perm-row-all>All</button></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% endif %}
 
     {% if matrix.extras %}
@@ -73,26 +54,17 @@
       <summary>Other permissions ({{ matrix.extras|length }})</summary>
       <ul class="rio-checkbox-list">
         {% for cell in matrix.extras %}
-        <li>
-          <label class="rio-checkbox">
-            <input type="checkbox" name="perm_{{ cell.id }}" value="on"{% if cell.checked %} checked{% endif %}>
-            <code>{{ cell.name }}</code>
-          </label>
-        </li>
+        <li><label class="rio-checkbox"><input type="checkbox" name="perm_{{ cell.id }}" value="on"{% if cell.checked %} checked{% endif %}><code>{{ cell.name }}</code></label></li>
         {% endfor %}
       </ul>
     </details>
     {% endif %}
-
     {% else %}
     <p class="rio-meta">No permissions registered yet. Permissions are seeded automatically by <code>Admin::seed_permissions</code>.</p>
     {% endif %}
   </fieldset>
 
   <script>
-  // "All" buttons toggle every checkbox in their row. Pure DOM, no
-  // dependency on a JS bundle so the matrix degrades to plain
-  // multi-checkbox usage if scripts are off.
   (function () {
     document.querySelectorAll('[data-rio-perm-row-all]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -107,12 +79,12 @@
   </script>
 
   <div class="rio-form-actions">
-    <button type="submit" class="rio-button rio-button--primary">Save changes</button>
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/groups/{{ group_id }}/delete" class="rio-button rio-button--danger-ghost">{{ icon("trash", class="rio-icon") }} Delete group</a>
-    <a href="/admin/groups" class="rio-button rio-button--ghost">Back to groups</a>
+    <button type="submit" class="rio-btn rio-btn--primary">Save changes</button>
+    <span class="rio-action-bar-end">
+      <a class="rio-action-link rio-action-link--danger" href="/admin/groups/{{ group_id }}/delete">{{ icon("trash") }} Delete group</a>
+      <a href="/admin/groups" class="rio-action-link">Back to groups</a>
+    </span>
   </div>
 </form>
-
 </div>
 {% endblock %}

@@ -2,20 +2,21 @@
 {% block content %}
 <div class="rio-form-shell">
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> ·
-    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
-    <span>{% if mode == "new" %}Add {{ singular_name }}{% else %}#{{ object_id }}{% endif %}</span>
-  </nav>
-  <h1>{% if mode == "new" %}Add {{ singular_name }}{% else %}Edit {{ singular_name }} #{{ object_id }}{% endif %}</h1>
-  {% if mode == "edit" %}
-  <p class="rio-page-header__lead">Editing fields below — saves are atomic and audited.</p>
-  {% endif %}
-</header>
+<nav class="rio-crumbs">
+  <a href="/admin">Home</a><span class="rio-crumb-sep">·</span>
+  <a href="/admin/{{ admin_name }}">{{ display_name }}</a><span class="rio-crumb-sep">·</span>
+  <span class="rio-crumb-current">{% if mode == "new" %}Add {{ singular_name }}{% else %}#{{ object_id }}{% endif %}</span>
+</nav>
+
+<div class="rio-masthead-top">
+  <div>
+    <h1>{% if mode == "new" %}Add {{ singular_name }}{% else %}Edit {{ singular_name }}{% endif %}</h1>
+    <p class="rio-masthead-desc">{% if mode == "edit" %}Editing fields below — saves are atomic and audited.{% else %}Create a new {{ singular_name|lower }}. Required fields are marked.{% endif %}</p>
+  </div>
+</div>
 
 {% if errors %}
-<div class="rio-flash rio-flash--error" role="alert">
+<div class="rio-alert rio-alert--danger" role="alert">
   <strong>Please correct the errors below:</strong>
   <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
 </div>
@@ -24,87 +25,68 @@
 <form method="post" action="{% if mode == 'new' %}/admin/{{ admin_name }}/new{% else %}/admin/{{ admin_name }}/{{ object_id }}/edit{% endif %}" class="rio-form"{% if has_file_field %} enctype="multipart/form-data"{% endif %}>
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for section in sections %}
-  <fieldset class="rio-fieldset">
-    {% if section.title %}<legend>{{ section.title }}</legend>{% endif %}
+  <fieldset class="rio-fieldset rio-board">
+    {% if section.title %}<legend class="rio-fieldset-legend">{{ section.title }}</legend>{% endif %}
     <div class="rio-fieldset-grid">
       {% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}
     </div>
   </fieldset>
   {% endfor %}
 
-  {# Primary save buttons stay left; secondary (History) and
-   # destructive (Delete) + Cancel are pushed right by the spacer.
-   # On wrap (narrow viewports) the whole row stacks naturally. #}
   <div class="rio-form-actions">
     {% if not read_only %}
-    <button type="submit" name="_save" class="rio-button rio-button--primary">Save</button>
-    <button type="submit" name="_continue" class="rio-button">Save and continue editing</button>
-    <button type="submit" name="_addanother" class="rio-button">Save and add another</button>
+    <button type="submit" name="_save" class="rio-btn rio-btn--primary">Save</button>
+    <button type="submit" name="_continue" class="rio-btn rio-btn--secondary">Save and continue editing</button>
+    <button type="submit" name="_addanother" class="rio-btn rio-btn--secondary">Save and add another</button>
     {% else %}
-    <span class="rio-meta">Read-only mode — saves are disabled.</span>
+    <span style="color:var(--rio-text-mute);font-size:var(--rio-text-14)">Read-only mode — saves are disabled.</span>
     {% endif %}
-    <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    {% if mode == "edit" %}
-    <a href="/admin/{{ admin_name }}/{{ object_id }}/history" class="rio-button rio-button--ghost">{{ icon("clock", class="rio-icon") }} History</a>
-    {% if not read_only %}
-    <a href="/admin/{{ admin_name }}/{{ object_id }}/delete" class="rio-button rio-button--danger-ghost">{{ icon("trash", class="rio-icon") }} Delete</a>
-    {% endif %}
-    {% endif %}
-    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
+    <span class="rio-action-bar-end">
+      {% if mode == "edit" %}
+      <a class="rio-action-link rio-action-link--muted" href="/admin/{{ admin_name }}/{{ object_id }}/history">{{ icon("clock") }} History</a>
+      {% if not read_only %}<a class="rio-action-link rio-action-link--danger" href="/admin/{{ admin_name }}/{{ object_id }}/delete">{{ icon("trash") }} Delete</a>{% endif %}
+      {% endif %}
+      <a href="/admin/{{ admin_name }}" class="rio-action-link">Cancel</a>
+    </span>
   </div>
 </form>
 
-{# Related-children sections — declared via ModelAdmin::inlines().
- # v1 is read-only: each row is a click-through to the child's own
- # edit / delete pages, with an "Add new …" affordance that lands
- # the operator on the child's normal new form. #}
 {% for inline in inlines %}
-<section class="rio-card rio-inline-section" aria-labelledby="inline-{{ inline.target_admin_name }}">
+<section class="rio-board rio-inline-section" aria-labelledby="inline-{{ inline.target_admin_name }}">
   <header class="rio-inline-section__header">
     <h2 id="inline-{{ inline.target_admin_name }}">{{ inline.label }}</h2>
-    <span class="rio-meta">
-      {% if inline.has_more %}
-        Showing {{ inline.rows|length }} of {{ inline.total }}
-      {% else %}
-        {{ inline.total }} {% if inline.total == 1 %}row{% else %}rows{% endif %}
-      {% endif %}
+    <span style="font-family:var(--rio-font-mono);font-size:var(--rio-text-12);color:var(--rio-text-faint)">
+      {% if inline.has_more %}Showing {{ inline.rows|length }} of {{ inline.total }}{% else %}{{ inline.total }} {% if inline.total == 1 %}row{% else %}rows{% endif %}{% endif %}
     </span>
   </header>
   {% if inline.rows %}
-  <table class="rio-table rio-inline-table">
+  <table class="rio-dtable">
     <tbody>
       {% for r in inline.rows %}
       <tr>
-        <td><a href="{{ r.edit_url }}">#{{ r.id }} — {{ r.label }}</a></td>
-        <td class="rio-td--actions">
+        <td><a class="rio-prod-name" href="{{ r.edit_url }}">#{{ r.id }} — {{ r.label }}</a></td>
+        <td class="col-act">
           {% if not read_only %}
-          <a class="rio-button rio-button--ghost rio-button--sm" href="{{ r.edit_url }}">{{ icon("pencil", class="rio-icon") }} Edit</a>
-          <a class="rio-button rio-button--danger-ghost rio-button--sm" href="{{ r.delete_url }}">{{ icon("trash", class="rio-icon") }} Delete</a>
-          {% else %}
-          <a class="rio-button rio-button--ghost rio-button--sm" href="{{ r.edit_url }}">View</a>
-          {% endif %}
+          <span class="rio-row-actions">
+            <a class="rio-iconbtn rio-iconbtn--sm" href="{{ r.edit_url }}" aria-label="Edit">{{ icon("pencil") }}</a>
+            <a class="rio-iconbtn rio-iconbtn--sm" href="{{ r.delete_url }}" aria-label="Delete" style="color:var(--rio-danger)">{{ icon("trash") }}</a>
+          </span>
+          {% else %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="{{ r.edit_url }}">View</a>{% endif %}
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("table", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No related {{ inline.target_display_name|lower }} yet</h3>
-    {% if not read_only %}
-    <p class="rio-empty-state__lead">Add the first one — it will link back to this row automatically.</p>
-    <a class="rio-button rio-button--primary rio-button--sm" href="{{ inline.add_url }}">{{ icon("plus", class="rio-icon") }} Add {{ inline.target_display_name|lower }}</a>
-    {% endif %}
+  <div class="rio-empty">
+    {{ icon("table") }}
+    <div class="rio-empty-title">No related {{ inline.target_display_name|lower }} yet</div>
+    {% if not read_only %}<div>Add the first one — it links back to this row automatically.</div><div style="margin-block-start:12px"><a class="rio-btn rio-btn--primary rio-btn--sm" href="{{ inline.add_url }}">{{ icon("plus") }} Add {{ inline.target_display_name|lower }}</a></div>{% endif %}
   </div>
   {% endif %}
-  <div class="rio-inline-section__actions">
-    {% if not read_only %}
-    <a class="rio-button rio-button--ghost rio-button--sm" href="{{ inline.add_url }}">{{ icon("plus", class="rio-icon") }} Add new {{ inline.target_display_name|lower }}</a>
-    {% endif %}
-    {% if inline.has_more %}
-    <a class="rio-button rio-button--ghost rio-button--sm" href="{{ inline.list_url }}">View all {{ inline.total }} →</a>
-    {% endif %}
+  <div class="rio-board-foot">
+    {% if not read_only %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="{{ inline.add_url }}">{{ icon("plus") }} Add new {{ inline.target_display_name|lower }}</a>{% endif %}
+    {% if inline.has_more %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="{{ inline.list_url }}">View all {{ inline.total }} {{ icon("arrow-right") }}</a>{% endif %}
   </div>
 </section>
 {% endfor %}

@@ -1,0 +1,79 @@
+/* ============================================================
+ * rustio-admin / tokens / compat
+ *
+ * Alias layer: a handful of admin pages (api surface, docs, csv-import
+ * result, and a few page headers) carry self-contained inline <style>
+ * blocks that reference the framework's earlier token names. Rather
+ * than hand-rewrite each, this sheet maps every legacy name onto its
+ * live DS token, so those pages render with the current Teal palette,
+ * stone neutrals, and type scale. New code should use the canonical
+ * tokens directly — this exists only so the inline-styled pages stay
+ * correct without a second visual system.
+ * ============================================================ */
+
+:root {
+  /* Spacing */
+  --rio-s1: var(--rio-space-4);
+  --rio-s2: var(--rio-space-8);
+  --rio-s3: var(--rio-space-12);
+  --rio-s4: var(--rio-space-16);
+  --rio-s5: var(--rio-space-20);
+  --rio-s6: var(--rio-space-32);
+
+  /* Font sizes — Visual Contract v2.0 scale (px it renders) */
+  --rio-fs-display: 2.25rem; /* 36 — page title (contract §2) */
+  --rio-fs-h2: 26px;
+  --rio-fs-lg: 19px;
+  --rio-fs-lead: 1.0625rem;  /* 17 — page lead paragraph (contract §2.1) */
+  --rio-fs-md: 16px;
+  --rio-fs-base: 16px;
+  --rio-fs-sm: 15px;
+  --rio-fs-xs: 0.875rem;     /* 14 — contract floor (was 13) */
+
+  /* Font weights + line heights */
+  --rio-fw-bold: 700;
+  --rio-fw-semibold: 600;
+  --rio-fw-regular: 400;
+  --rio-lh-tight: 1.12;
+  --rio-lh-ui: 1.5;
+
+  /* Text roles */
+  --rio-text-strong: var(--rio-text-hi);
+  --rio-text-muted: var(--rio-text-mute);
+  --rio-text-subtle: var(--rio-text-faint);
+
+  /* Surfaces + lines */
+  --rio-surface-2: var(--rio-sunken);
+  --rio-surface-3: var(--rio-raised);
+  --rio-surface-chrome: #11202b;          /* dark code slab (both themes) */
+  --rio-border: var(--rio-line);
+  --rio-border-soft: var(--rio-line);
+  --rio-border-strong: var(--rio-line-strong);
+
+  /* Radius + shadow */
+  --rio-radius: var(--rio-radius-md);
+  --rio-shadow: var(--rio-shadow-sm);
+  /* --rio-shadow-inset / --rio-shadow-card live in tokens/shadows.css so they
+     carry per-theme values (heavier alpha on dark). */
+
+  /* Accent (Teal) + secondary (gold) */
+  --rio-accent: var(--rio-rust);
+  --rio-accent-hover: var(--rio-rust-hover);
+  --rio-accent-ring: var(--rio-rust-ring);
+  --rio-accent-soft: var(--rio-rust-tint);
+  --rio-accent-border: var(--rio-rust-tint-2);
+  --rio-accent-rgb: 17, 149, 136;
+  --rio-accent2: var(--rio-gold);
+  --rio-accent2-soft: var(--rio-gold-tint);
+  --rio-accent2-ink: var(--rio-gold);
+
+  /* Borders — contract distinguishes the soft card border from the strong
+     input border; --rio-line / --rio-line-strong already carry those values. */
+  --rio-border-input: var(--rio-line-strong);
+
+  /* Status fills */
+  --rio-warning: var(--rio-warn);
+  --rio-success-bg: var(--rio-success-tint);
+  --rio-danger-bg: var(--rio-danger-tint);
+  --rio-warning-bg: var(--rio-warn-tint);
+}

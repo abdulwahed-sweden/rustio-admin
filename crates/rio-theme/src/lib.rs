@@ -26,6 +26,7 @@ pub mod semantic;
 pub mod vivid;
 
 pub use color::{Color, ColorError};
+pub use emit::{emit, emit_with, DarkPolicy};
 pub use engine::{
     resolve_theme, resolve_theme_with_report, ResolveReport, ThemeInput, ThemeTokens,
 };

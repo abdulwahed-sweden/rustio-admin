@@ -1,0 +1,252 @@
+/* ============================================================
+   RustIO Console — kit-local layout for the Shop admin.
+   A bold reimagining: persistent dark command-rail + editorial
+   ledger masthead + reworked data table. Built on RustIO tokens;
+   not shipped globally (linked only by this kit's index.html).
+   ============================================================ */
+
+.rio-console { display: flex; height: 100vh; overflow: hidden; }
+
+/* ---- Persistent dark command rail (always dark, both themes) ---- */
+.rio-rail {
+  inline-size: 78px; flex: none;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 18px 0 14px;
+  background: #232833;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.07);
+  position: relative; z-index: 30;
+  transition: inline-size var(--rio-dur-slow) var(--rio-ease);
+}
+/* Expanded variant — icons + labels */
+.rio-rail.rio-rail--open { inline-size: 236px !important; flex: 0 0 236px !important; align-items: stretch; padding: 16px 14px 14px; gap: 2px; }
+
+/* Rail header: mark (+ wordmark when open) + collapse toggle */
+.rio-rail-head { display: flex; align-items: center; gap: 11px; min-block-size: 46px; margin-block-end: 12px; inline-size: 100%; }
+.rio-rail:not(.rio-rail--open) .rio-rail-head { justify-content: center; flex-direction: column; gap: 10px; }
+.rio-rail-word { font-family: var(--rio-font-display); font-weight: 600; font-size: 20px; letter-spacing: -0.01em; color: #fff; flex: 1; white-space: nowrap; }
+.rio-rail:not(.rio-rail--open) .rio-rail-word { display: none; }
+.rio-rail-toggle {
+  inline-size: 32px; block-size: 32px; border-radius: 9px; flex: none;
+  display: grid; place-items: center; cursor: pointer; border: 0;
+  color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.06);
+  transition: color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-rail-toggle:hover { color: #fff; background: rgba(255,255,255,0.12); }
+.rio-rail-toggle svg { inline-size: 17px; block-size: 17px; }
+
+.rio-rail-mark { display: grid; place-items: center; flex: none; }
+.rio-rail-sep { inline-size: 30px; block-size: 1px; background: rgba(255,255,255,0.09); margin: 9px 0; flex: none; }
+.rio-rail--open .rio-rail-sep { inline-size: calc(100% - 8px); margin: 9px 4px; }
+.rio-rail-caption { font-family: var(--rio-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,0.4); padding: 14px 12px 6px; white-space: nowrap; }
+.rio-rail-spacer { flex: 1; }
+.rio-rail-btn {
+  inline-size: 46px; block-size: 46px; border-radius: 13px;
+  display: grid; place-items: center;
+  color: rgba(255, 255, 255, 0.52);
+  background: transparent; border: 0; cursor: pointer;
+  position: relative; flex: none;
+  transition: color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-rail-btn svg { inline-size: 21px; block-size: 21px; flex: none; }
+.rio-rail-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.rio-rail-btn[aria-current="page"] { color: #fff; background: rgba(110, 140, 255, 0.20); }
+.rio-rail-btn[aria-current="page"]::before {
+  content: ""; position: absolute; inset-inline-start: -18px; inset-block: 13px;
+  inline-size: 3px; border-radius: 999px; background: #6E8CFF;
+}
+/* Open mode: full-width rows with labels */
+.rio-rail-label { display: none; font-family: var(--rio-font-body); font-size: var(--rio-text-17); font-weight: var(--rio-weight-semibold); white-space: nowrap; }
+.rio-rail--open .rio-rail-btn { inline-size: 100%; block-size: 42px; border-radius: 10px; grid-template-columns: 21px 1fr; justify-items: start; align-items: center; gap: 13px; padding-inline: 12px; }
+.rio-rail--open .rio-rail-btn .rio-rail-label { display: block; }
+.rio-rail--open .rio-rail-btn::after { display: none; }
+.rio-rail--open .rio-rail-btn[aria-current="page"]::before { inset-inline-start: -14px; inset-block: 9px; }
+/* Hover tooltip label (collapsed only) */
+.rio-rail-btn::after {
+  content: attr(data-label);
+  position: absolute; inset-inline-start: calc(100% + 12px); inset-block-start: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  padding: 6px 10px; border-radius: 8px;
+  background: #181C24; color: #fff;
+  font-family: var(--rio-font-body); font-size: 12px; font-weight: 600; letter-spacing: -0.005em;
+  white-space: nowrap; pointer-events: none; opacity: 0; z-index: 60;
+  box-shadow: 0 6px 20px -6px rgba(0,0,0,.5);
+  transition: opacity var(--rio-dur-fast) var(--rio-ease), transform var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-rail-btn:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+/* Foot row (avatar + identity when open) */
+.rio-rail-foot { display: flex; align-items: center; gap: 11px; inline-size: 100%; margin-block-start: 4px; }
+.rio-rail:not(.rio-rail--open) .rio-rail-foot { justify-content: center; }
+.rio-rail-avatar {
+  inline-size: 38px; block-size: 38px; border-radius: 11px; flex: none;
+  display: grid; place-items: center; cursor: pointer;
+  background: #6E8CFF; color: #0E1E54;
+  font-family: var(--rio-font-mono); font-weight: 700; font-size: 15px;
+  border: 0;
+}
+.rio-rail-id { display: none; flex-direction: column; min-inline-size: 0; }
+.rio-rail--open .rio-rail-id { display: flex; }
+.rio-rail-id-name { font-family: var(--rio-font-body); font-size: var(--rio-text-13); font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rio-rail-id-role { font-family: var(--rio-font-mono); font-size: 11px; color: #E0AE5A; letter-spacing: .02em; }
+
+/* ---- Workspace column ---- */
+.rio-ws { flex: 1; display: flex; flex-direction: column; min-inline-size: 0; }
+
+/* Slim workspace header — global search centered */
+.rio-wshead {
+  block-size: 60px; flex: none;
+  display: flex; align-items: center; gap: 18px;
+  padding-inline: 24px;
+  background: var(--rio-surface);
+  border-block-end: 1px solid var(--rio-line);
+  position: relative; z-index: 20;
+}
+.rio-ws-id { display: flex; align-items: center; gap: 9px; font-family: var(--rio-font-mono); font-size: 13px; color: var(--rio-text-mute); white-space: nowrap; }
+.rio-ws-id strong { color: var(--rio-text-hi); font-weight: 600; }
+.rio-ws-id .rio-devpill { margin-inline-start: 2px; }
+.rio-ws-search {
+  flex: 1; max-inline-size: 460px; margin: 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  block-size: 38px; padding: 0 12px;
+  background: var(--rio-sunken); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-pill); color: var(--rio-text-faint);
+  cursor: pointer; font-size: var(--rio-text-14);
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-ws-search:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
+.rio-ws-search .rio-kbd { margin-inline-start: auto; }
+.rio-ws-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ---- Header account menu (the account center lives here, not the rail) ---- */
+.rio-usermenu { margin-inline-start: 4px; }
+.rio-usermenu-btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  block-size: 40px; padding: 0 10px 0 6px;
+  border: 1px solid var(--rio-line); border-radius: 999px;
+  background: var(--rio-surface); color: var(--rio-text); cursor: pointer; font: inherit;
+  transition: background-color var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-usermenu-btn:hover { background: var(--rio-raised); border-color: var(--rio-line-strong); }
+.rio-usermenu-avatar {
+  inline-size: 30px; block-size: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  background: var(--rio-rust-tint); color: var(--rio-rust);
+  font-family: var(--rio-font-mono); font-weight: 700; font-size: 14px;
+}
+.rio-usermenu-name { font-size: var(--rio-text-14); font-weight: 600; color: var(--rio-text-hi); max-inline-size: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rio-usermenu-btn svg { color: var(--rio-text-mute); flex: none; }
+@media (max-width: 980px) { .rio-usermenu-name { display: none; } }
+
+.rio-usermenu .rio-usermenu-panel { inset-inline-end: 0; inset-inline-start: auto; min-inline-size: 268px; padding: 8px; }
+.rio-usermenu-head { padding: 8px 12px 10px; }
+.rio-usermenu-head-name { display: block; font-weight: 600; color: var(--rio-text-hi); font-size: var(--rio-text-14); }
+.rio-usermenu-head-role { display: block; font-family: var(--rio-font-mono); font-size: 12px; color: var(--rio-text-mute); text-transform: uppercase; letter-spacing: .04em; margin-block-start: 3px; }
+.rio-usermenu-sep { block-size: 1px; background: var(--rio-line); margin: 6px 4px; }
+.rio-usermenu-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; color: var(--rio-text); text-decoration: none; font-size: var(--rio-text-14); }
+.rio-usermenu-item:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
+.rio-usermenu-item svg { inline-size: 18px; block-size: 18px; flex: none; color: var(--rio-text-mute); }
+.rio-usermenu-item--danger { color: var(--rio-danger); }
+.rio-usermenu-item--danger svg { color: var(--rio-danger); }
+.rio-usermenu-item--danger:hover { background: var(--rio-danger-tint); color: var(--rio-danger); }
+
+/* Scroll body */
+.rio-ws-body { flex: 1; overflow: auto; display: flex; flex-direction: column; }
+.rio-ws-inner { flex: 1; padding: 32px 44px 40px; display: flex; flex-direction: column; gap: 28px; max-inline-size: 1320px; inline-size: 100%; margin: 0 auto; }
+
+/* ---- Editorial masthead + ledger ---- */
+.rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-block-end: var(--rio-space-32); }
+.rio-masthead h1 { font-size: var(--rio-fs-display); line-height: 1.15; margin: 0 0 var(--rio-space-16); } /* contract §2.1: 36px */
+/* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
+.rio-masthead-desc { color: var(--rio-text); margin: 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
+.rio-masthead-cta { display: flex; align-items: center; gap: 10px; flex: none; padding-block-start: 6px; }
+
+.rio-ledger {
+  display: flex; flex-wrap: wrap;
+  border-block-start: 1px solid var(--rio-line-strong);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-ledger-item {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 16px 32px 16px 0; margin-inline-end: 32px;
+  border-inline-end: 1px solid var(--rio-line);
+}
+.rio-ledger-item:last-child { border-inline-end: 0; margin-inline-end: 0; }
+.rio-ledger-num {
+  font-family: var(--rio-font-mono); font-size: 30px; font-weight: 500;
+  color: var(--rio-text-hi); letter-spacing: -0.02em; line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-ledger-num .rio-ledger-unit { font-size: 15px; color: var(--rio-text-faint); margin-inline-start: 4px; font-weight: 500; }
+.rio-ledger-label {
+  font-family: var(--rio-font-mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .085em; color: var(--rio-text-faint); font-weight: 600;
+}
+.rio-ledger-item--accent .rio-ledger-num { color: var(--rio-rust); }
+
+/* ---- Command toolbar (search + filters in one bar) ---- */
+.rio-cmdbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rio-cmdbar .rio-search--hero { flex: 1; min-inline-size: 280px; }
+.rio-cmdbar-spacer { flex: 1; }
+
+/* ---- Reworked data table ---- */
+.rio-board {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+  overflow: hidden;
+}
+.rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
+.rio-dtable thead th {
+  text-align: start; font-family: var(--rio-font-mono); font-size: var(--rio-text-13);
+  font-weight: var(--rio-weight-semibold); letter-spacing: .05em; text-transform: uppercase;
+  color: var(--rio-text-mute); padding: 16px 22px;
+  background: var(--rio-raised); border-block-end: 1px solid var(--rio-line-strong);
+  position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
+}
+.rio-dtable tbody td { padding: 0 22px; block-size: 72px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
+.rio-dtable tbody tr:last-child td { border-block-end: 0; }
+.rio-dtable tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); position: relative; }
+.rio-dtable tbody tr:hover { background: var(--rio-raised); }
+.rio-dtable tbody tr[aria-selected="true"] { background: var(--rio-rust-tint); }
+/* hover/selected accent left edge */
+.rio-dtable tbody td:first-child { position: relative; }
+.rio-dtable tbody tr:hover td:first-child::before,
+.rio-dtable tbody tr[aria-selected="true"] td:first-child::before {
+  content: ""; position: absolute; inset-inline-start: 0; inset-block: 0;
+  inline-size: 3px; background: var(--rio-rust);
+}
+.rio-dtable .col-check { inline-size: 52px; }
+.rio-dtable .col-price { text-align: end; inline-size: 130px; }
+.rio-dtable .col-stock { inline-size: 160px; }
+.rio-dtable .col-act { inline-size: 96px; text-align: end; }
+
+/* primary (first) cell — the row's click-through to its edit page. */
+.rio-cell-primary { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; }
+.rio-cell-primary:hover { color: var(--rio-rust); }
+
+/* product cell: monogram tile + name + category (users / groups lists) */
+.rio-prod { display: flex; align-items: center; gap: 15px; min-inline-size: 0; inline-size: 100%; }
+.rio-prod-text { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; flex: 1; }
+.rio-prod-name { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rio-prod-name:hover { color: var(--rio-rust); }
+.rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); display: block; }
+.rio-price { font-family: var(--rio-font-mono); font-size: var(--rio-text-15); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
+.rio-mono-tile {
+  inline-size: 44px; block-size: 44px; border-radius: 12px; flex: none;
+  background: var(--rio-sunken); border: 1px solid var(--rio-line);
+  display: grid; place-items: center;
+  font-family: var(--rio-font-mono); font-size: 16px; font-weight: 700; color: var(--rio-text-mute);
+}
+
+/* status pill: use the canonical .rio-pill (--on/--off) from components/data.css */
+
+/* inline row actions (reveal on hover) */
+.rio-row-actions { display: inline-flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity var(--rio-dur-fast) var(--rio-ease); }
+.rio-dtable tbody tr:hover .rio-row-actions, .rio-row-actions:focus-within { opacity: 1; }
+
+/* board footer */
+.rio-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rio-row-actions { opacity: 1; }
+}

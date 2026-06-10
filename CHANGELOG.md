@@ -65,6 +65,174 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **Admin design overhaul — the "RustIO Console" at an operator-comfort
+  scale.** Every admin surface (dashboard, lists, forms, confirms,
+  errors, login + recovery/MFA, users & groups + permission grid, account
+  / sessions, audit log, db browser, feature flags, API surface, docs,
+  health, notifications) is rebuilt on one language: a dark **labeled**
+  command rail, a teal accent (`--rio-rust*` switched from cobalt to
+  RustIO Teal), and self-hosted Spectral / Hanken Grotesk / JetBrains Mono
+  type. The type scale was rescaled to the px it renders — body is 16px,
+  sidebar nav 17px, form labels 16px semibold, inputs 16px on a 46px
+  control, tables 16px, page titles 42–48px — with generous form spacing
+  (40px cards, 32px field gaps) and a wider 1100px form column. The
+  **account menu lives in the top-right header** (sessions / change
+  password / two-factor / sign out); the rail is navigation only. Theme
+  (light default + dim-slate dark) and rail-collapse toggles are wired and
+  persisted. New `tokens/compat.css` maps the legacy token names still used
+  by the inline-styled tool pages onto the live DS tokens. **No backend
+  change** — CSS, templates, JS, and two `admin_css_payload` test updates
+  only; no schema, route, auth, permission, or migration impact.
+- **Visual Contract v2.0 conformance — Phase 1 (tokens).** The content-area
+  palette is re-valued to the contract's measured reference values (light
+  theme only this phase; dark is re-derived in a later phase). Plan of record:
+  `docs/design/REMEDIATION_V2.md`. Changed `--rio-*` tokens (light): `--rio-bg`
+  `#F3F6FD`→`#fafcfb`; `--rio-line` `#DBE0EB`→`#e2e8f0`; `--rio-line-strong`
+  `#C2CAD9`→`#94a3b8`; `--rio-text-hi` `#111722`→`#1e293b`; `--rio-text`
+  `#3B4453`→`#475569`; `--rio-text-mute` `#677083`→`#64748b`; `--rio-text-faint`
+  `#99A1B2`→`#94a3b8`; `--rio-rust`/`--rio-rust-solid` `#0F8C7B`→`#119588`;
+  `--rio-rust-hover`/`-solid-hover` `#0C7567`→`#0e7c72`; `--rio-rust-active`/
+  `-solid-active` `#095E53`→`#0b655c`; `--rio-rust-tint`/`-tint-2`/`-ring`
+  re-hued to `rgba(17,149,136,…)` with the ring opacity `.38`→`.20`; `--rio-danger`
+  `#AE382C`→`#dc2626`; `--rio-danger-tint` re-hued; `--rio-syntax-key`
+  `#0F8C7B`→`#119588`. New tokens: `--rio-surface-tint` `#edf7f8`,
+  `--rio-accent-focus` `#1f8987`, `--rio-danger-hover` `#b91c1c`,
+  `--rio-pill-on-bg`/`-on-text`/`-off-bg`/`-off-text`. New compat aliases:
+  `--rio-accent-hover`, `--rio-accent-ring`, `--rio-border-input`,
+  `--rio-shadow-card`; `--rio-shadow-inset` retuned to the contract value and
+  `--rio-accent-rgb` `15,140,123`→`17,149,136`. The content-area dot-grid texture
+  is removed and body `letter-spacing` zeroed (flat `#fafcfb` per the reference).
+- **Visual Contract v2.0 conformance — Phase 2 (typography & fonts).** The content
+  area moves to **Inter** as the single Latin face for both body and titles (the
+  serif display is retired — `--rio-font-display` and `--rio-font-body` now point at
+  the contract's Inter stack; the already-baked, already-licensed `InterVariable.woff2`
+  gains its missing `@font-face`). `--rio-font-mono` switches to the contract's
+  `"SFMono-Regular", Consolas, …` stack. Per-script Arabic fallbacks (Naskh / Tajawal)
+  are preserved. Enforced the contract's **14px content-area floor**: the small type
+  token `--rio-text-12` `0.8125rem`→`0.875rem` (lifts table headers, badges, hints,
+  code chrome, stat labels, and the permission-matrix headers to 14px in one move) and
+  the lone literal offender `.rio-dropdown-badge` 11px→14px. Page-title tokens:
+  `--rio-fs-display` `44px`→`2.25rem` (36px), `--rio-fs-xs` `13px`→`0.875rem` (14px);
+  added `--rio-fs-lead` `1.0625rem` (17px). `h1` now inherits weight **800** /
+  line-height **1.15** from the base layer rather than per-page overrides. The frozen
+  top bar / sidebar / footer use literal sizes and are untouched. Spectral / Hanken
+  faces remain baked for now (separate cleanup commit later).
+- **Visual Contract v2.0 conformance — Phase 3 (components).** Inputs, selects,
+  textareas and buttons land on an 8px control radius (new `--rio-radius-control`
+  token); `.rio-input` gains the inset shadow at rest and a **4px** teal focus ring
+  (`--rio-accent-focus` border + `--rio-accent-ring`), and a `.rio-input--mono`
+  utility renders identifier placeholders in mono (applied to the feature-flag key
+  field). Every `.rio-btn` is now **44px / weight 700 / 8px** at the base — `--md`
+  and `--lg` match it, so no per-size opt-in is needed to reach the contract size
+  (`--sm` stays a compact exception). `.rio-btn--danger` is solid `#dc2626` with a
+  `--rio-danger-hover` hover, replacing the brightness-filter hack; new
+  `.rio-action-link` (+ `--danger` / `--muted`) defines the red text-link
+  destructive action (templates wire it in Phase 5). `.rio-table th` → 14px /
+  weight 800 / `--rio-text-mute` in the body font (Inter, so 800 actually renders),
+  cells → `--rio-text-strong` with 16px padding, sticky header kept; zebra/striping
+  is removed (`--zebra` / `--striped` are no-ops, no row shading) and a competing
+  `.rio-table` redefinition in `pages/tools.css` (a gray mono-header "legacy table"
+  that shadowed the §9 table globally) was removed so every table renders the one
+  contract look. Inline `code` /
+  `kbd` become a `--rio-surface-tint` chip (mono, 6px radius) while the block
+  `.rio-code` well is unchanged. Radio rows (`.rio-radio`, §6) become full-width
+  52px rows: strong input border, 10px radius, 16px padding, 20px teal control
+  aligned to the first text line, 12px gap between rows. No new CSS fragments.
+- **Visual Contract v2.0 conformance — Phases 4–7 (sections, action bar, pills,
+  header).** §3 **legend-on-border**: `.rio-fieldset` is now a 14px-radius card
+  (soft border, `--rio-shadow-card`, 32px padding) whose native `<legend>` cuts the
+  top border (body font, 14px/700/uppercase/muted); `feature_flags` migrated from the
+  bespoke `.rio-section`/`.rio-card` to fieldsets, and `lock_user` radio rows gained
+  the §6 bold-lead + normal-weight description split. §8.2 **action bar**: hairline
+  top border, s6 margin / s5 padding, one wrapping row with `.rio-action-bar-end
+  { margin-inline-start:auto }` (the flex spacer is retired); History/Delete moved out
+  of the masthead into the bar as `.rio-action-link--muted` / `--danger`, killing the
+  orphaned Cancel (form, user_edit, group_edit, user_new, group_new, password_change,
+  lock_user, admin_reset_password). §9 **pills**: one canonical dot-less `.rio-pill` +
+  `--on`/`--off` (contract values) and the semantic variants now live in
+  `components/data.css`; the duplicate `.rio-pill` in `pages/tools.css` and
+  `.rio-pill-stock` in `layout/console.css` are removed (list / users_list migrated to
+  `--on`/`--off`). §2.1 **page header**: breadcrumb (15px, link segments strong/700,
+  `·` separator) → 36px/800 title → 17px/1.7 lead, on the §10.4 rhythm, reconciled
+  across both header systems (`.rio-crumbs` and `.rio-breadcrumbs`). §10.1 shells:
+  `.rio-form-shell` 1100px→**880px**, new `.rio-content-shell` 1040px; the 2-col grid
+  drops to a 24px gap and stacks at 768px. No new CSS fragments.
+- **Visual Contract v2.0 conformance — Phase 7.5 (builtin render).** The builtin
+  user-create and password-change forms emitted their paired fields with `span == 2`
+  (full-width), so they stacked instead of landing in the §10.2 two-column grid.
+  `render::create_user_form_sections` now emits **Email** and **Temporary password**
+  (renamed from "Password" to match the reference) at `span: 1` so they pair under the
+  IDENTITY legend (Role stays on its own row); `render::password_change_form_sections`
+  and `render::must_change_password_form_sections` emit **New password** and **Confirm
+  new password** (renamed from "Confirm") at `span: 1` (Old password keeps its own row).
+  Behaviour change: two field labels change and the two-column layout engages. The
+  public recovery flow (token reset / forgot-password) is unchanged.
+- **Visual Contract v2.0 conformance — Phase 8 (dark theme re-derivation + RTL §12).**
+  The dark blocks of `tokens/colors.css` (`@media (prefers-color-scheme: dark)` and
+  `[data-theme="dark"]`) are re-derived from the new slate+teal light palette,
+  **token-driven only — no per-component dark CSS**. Surfaces invert to a slate ladder
+  (`--rio-bg` `#0f172a`, `--rio-surface` `#1e293b`, `--rio-raised` `#334155`,
+  `--rio-sunken` `#0b1120`, `--rio-overlay` `#1e293b`); borders `--rio-line` `#334155`,
+  `--rio-line-strong` `#64748b`; text `--rio-text-hi` `#f1f5f9`, `--rio-text` `#cbd5e1`
+  (≥4.5:1), `--rio-text-mute` `#94a3b8`, `--rio-text-faint` `#64748b`. The accent lifts
+  to teal-400 for AA on dark: `--rio-rust` `#2dd4bf` (hover `#5eead4`, active `#99f6e4`),
+  `--rio-rust-tint`/`-tint-2`/`-ring` re-hued to `rgba(45,212,191,…)` (ring `.45`),
+  `--rio-accent-focus` `#2dd4bf`; the filled button stays deep enough for white text
+  (`--rio-rust-solid` `#0d9488`, hover `#0f766e`, active `#115e59`). New Phase-1–6 tokens
+  gained dark values (previously light-only, would have leaked): `--rio-surface-tint`
+  `#122e2c`, `--rio-pill-on-bg` `rgba(111,185,138,.16)` / `--rio-pill-on-text` `#86efac`
+  / `--rio-pill-off-bg` `#334155` / `--rio-pill-off-text` `#cbd5e1`, `--rio-danger`
+  `#ef4444` / `--rio-danger-hover` `#dc2626` / `--rio-danger-tint` `rgba(239,68,68,.16)`,
+  and dark syntax tints. `--rio-shadow-card` / `--rio-shadow-inset` were relocated from
+  `tokens/compat.css` to `tokens/shadows.css` so they carry heavier-alpha dark values.
+  RTL: the `[dir="rtl"]`/`:lang(ar)` `letter-spacing: 0` neutralization now also covers
+  `.rio-fieldset > legend` / `.rio-fieldset-legend` (table headers were already covered).
+  `CLAUDE.md` updated — the framework ships light + dark, token-driven only (the
+  "light-only" claim is removed). Light theme is unchanged.
+- **`rio-theme` emits dark blocks (dual-block dark-aware `tokens.css`).** The theme
+  engine's `emit` previously wrote only a stub `:root[data-theme="dark"]` block (just
+  `--rio-brand-adaptive`), so a generated override appended after the framework bundle
+  leaked light surfaces into dark mode. It now emits the **full dual dark structure**
+  the framework uses — `:root[data-theme="dark"]` (higher specificity, tie-breaks the
+  toggle) **and** `@media (prefers-color-scheme: dark) { :root { … } }` (auto/OS dark) —
+  with identical values. New `DarkPolicy` (re-exported) + `emit_with`: **Auto** derives
+  the dark slate ladder and lifts the brand accent for AA on dark; **LightOnly** pins
+  dark to framework defaults (a neutral override, never light values); **Explicit**
+  lifts an author-supplied dark accent. `emit` defaults to `Auto`. Golden fixtures
+  (`tests/golden/dark_{auto,light_only,explicit}.css`) cover all three; the five
+  existing goldens were re-blessed (their dark block grew). **Behaviour change in
+  generated output** — any project regenerating its `tokens.css` gets dark blocks.
+  Contract: `docs/design/TOKENS-EMIT-SPEC.md`. Version is workspace-governed, so a
+  release bump is a workspace decision (flagged here, not taken).
+- **Runtime warns on a light-only `RUSTIO_TOKENS_CSS` override.** At startup, when the
+  appended override defines `:root` color tokens but carries no `[data-theme="dark"]`
+  or `prefers-color-scheme` block, the framework logs a WARN naming the file and the
+  consequence (light surfaces leak into dark). Detection only — the operator's CSS is
+  served verbatim, never rewritten or wrapped.
+- **Retired the unused baked font faces Spectral and Hanken Grotesk.** After the
+  Visual Contract moved body + display to **Inter** and mono to the SFMono system
+  stack, the prior pairing's faces were dead weight. Removed: their `@font-face`
+  blocks (`base/fonts.css`), the six woff2 assets, the `include_bytes!`/`FONT_*`
+  constants and their static routes in `src/admin/routes.rs`. **Behaviour change** —
+  `/static/fonts/Spectral-*.woff2` and `/static/fonts/HankenGrotesk-Variable-*.woff2`
+  now return **404**, and any downstream override styling against `"Spectral"` or
+  `"Hanken Grotesk"` silently falls back to the next family in its stack. **JetBrains
+  Mono is kept**: the framework mono stack is SFMono-system, but the shop example's
+  brand override (`--rio-font-mono`) still selects it (audit-confirmed live). Shrinks
+  the binary by **~144 KB** (debug). Arabic fallbacks (Noto Naskh, Tajawal) untouched.
+- **Retired the unreferenced baked Geist + Geist Mono faces, and fixed font license
+  attributions.** Geist/GeistMono were `include_bytes!`'d, routed, and licensed but had
+  **no `@font-face`** anywhere (audit: zero references) — pure dead weight. Removed their
+  woff2 assets, `FONT_GEIST*` constants, and static routes; `/static/fonts/Geist-*.woff2`
+  now **404**. The font routes were refactored into a ctx-free `register_font_routes`
+  helper with a unit test asserting shipped faces serve and retired ones 404. **License
+  hygiene:** added the missing **JetBrains Mono** OFL attribution to `LICENSE.txt` (it
+  ships and is rendered by the shop override but was never attributed); `LICENSE.txt` now
+  maps 1:1 to the shipped woff2 (Inter, JetBrains Mono, Noto Naskh, Tajawal, and the
+  i18n Noto Thai/Devanagari/JP/KR/SC). Binary **~194 KB** smaller (debug; woff2 + the
+  closure-dedup from the route refactor).
+
 
 ## [0.28.0] — 2026-06-08
 

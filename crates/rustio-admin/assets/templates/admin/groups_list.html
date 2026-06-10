@@ -1,55 +1,47 @@
 {% extends "admin/_base.html" %}
 {% from "admin/_row_actions.html" import row_actions %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>Groups</span></nav>
-  <div class="rio-page-actions">
-    <h1>Groups</h1>
-    <a class="rio-button rio-button--primary" href="/admin/groups/new">{{ icon("plus", class="rio-icon") }} Add group</a>
-  </div>
-  <p class="rio-page-header__lead">Bundle permissions into reusable groups; assign groups to users.</p>
-</header>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Groups</span></nav>
 
-<section class="rio-section" aria-label="Groups">
-  <header class="rio-section__header">
-    <div class="rio-section__heading">
-      <span class="rio-section__label">All groups</span>
-      <h2 class="rio-section__title">{{ groups|length }} group{% if groups|length != 1 %}s{% endif %}</h2>
-    </div>
-  </header>
-  <div class="rio-card rio-card--quiet rio-list">
-    {% if groups %}
-    <table class="rio-table rio-table--striped">
-      <thead>
-        <tr>
-          <th class="rio-th">ID</th>
-          <th class="rio-th">Name</th>
-          <th class="rio-th">Description</th>
-          <th class="rio-th rio-th--actions">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for g in groups %}
-        <tr>
-          <td class="rio-td rio-td--number">{{ g.id }}</td>
-          <td class="rio-td rio-td--text"><a href="/admin/groups/{{ g.id }}/edit">{{ g.name }}</a></td>
-          <td class="rio-td rio-td--text" title="{{ g.description }}">{{ g.description }}</td>
-          <td class="rio-td rio-td--actions">{{ row_actions("groups", g.id) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div class="rio-empty-state">
-      <div class="rio-empty-state__icon">{{ icon("key", class="rio-icon") }}</div>
-      <h3 class="rio-empty-state__title">No groups yet</h3>
-      <p class="rio-empty-state__lead">
-        Create a group to bundle permissions — then assign the
-        group to users instead of granting permissions one by one.
-      </p>
-      <a class="rio-button rio-button--primary" href="/admin/groups/new">{{ icon("plus", class="rio-icon") }} Add group</a>
-    </div>
-    {% endif %}
+<div class="rio-masthead-top">
+  <div>
+    <h1>Groups</h1>
+    <p class="rio-masthead-desc">Bundle permissions into reusable groups; assign groups to users.</p>
   </div>
-</section>
+  <div class="rio-masthead-cta">
+    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/groups/new">{{ icon("plus") }} Add group</a>
+  </div>
+</div>
+
+<div class="rio-board">
+  {% if groups %}
+  <div style="overflow:auto">
+  <table class="rio-dtable">
+    <thead><tr><th>Group</th><th>Description</th><th class="col-act">&nbsp;</th></tr></thead>
+    <tbody>
+      {% for g in groups %}
+      <tr>
+        <td>
+          <div class="rio-prod">
+            <span class="rio-mono-tile">{{ g.name | first | upper }}</span>
+            <span class="rio-prod-text"><a class="rio-prod-name" href="/admin/groups/{{ g.id }}/edit">{{ g.name }}</a><span class="rio-prod-cat">#{{ g.id }}</span></span>
+          </div>
+        </td>
+        <td style="color:var(--rio-text-mute)">{{ g.description }}</td>
+        <td class="col-act">{{ row_actions("groups", g.id) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="rio-board-foot"><span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ groups|length }}</strong> group{% if groups|length != 1 %}s{% endif %}</span></div>
+  {% else %}
+  <div class="rio-empty">
+    {{ icon("key") }}
+    <div class="rio-empty-title">No groups yet</div>
+    <div>Create a group to bundle permissions — then assign the group to users instead of granting permissions one by one.</div>
+    <div style="margin-block-start:14px"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/groups/new">{{ icon("plus") }} Add group</a></div>
+  </div>
+  {% endif %}
+</div>
 {% endblock %}

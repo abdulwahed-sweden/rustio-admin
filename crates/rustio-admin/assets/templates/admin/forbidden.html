@@ -1,11 +1,11 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<section class="rio-card rio-error">
+<section class="rio-board rio-error">
   <p class="rio-error-status">403</p>
   <h1>{{ page_title }}</h1>
   <p>You do not have permission to access this page.</p>
-  {% if required_role %}<p class="rio-meta">Minimum role required: <strong>{{ required_role }}</strong>.</p>{% endif %}
-  {% if attempted %}<p class="rio-meta">Attempted: <code>{{ attempted }}</code></p>{% endif %}
-  <p><a class="rio-button rio-button--ghost" href="/admin">{{ icon("arrow-left", class="rio-icon") }} Back to dashboard</a></p>
+  {% if required_role %}<p>Minimum role required: <strong>{{ required_role }}</strong>.</p>{% endif %}
+  {% if attempted %}<p>Attempted: <code>{{ attempted }}</code></p>{% endif %}
+  <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin">{{ icon("arrow-left") }} Back to dashboard</a>
 </section>
 {% endblock %}

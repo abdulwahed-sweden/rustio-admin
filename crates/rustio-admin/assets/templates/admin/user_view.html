@@ -1,26 +1,22 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">{{ user.email }}</span></nav>
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>{{ user.email }}</span>
-  </nav>
-  <div class="rio-page-actions">
-    <h1>{{ user.full_name }}</h1>
-    {% if can_edit %}<a class="rio-button rio-button--primary" href="/admin/users/{{ user.id }}/edit">{{ icon("pencil", class="rio-icon") }} Edit</a>{% endif %}
-  </div>
-</header>
+<div class="rio-masthead-top">
+  <div><h1>{{ user.full_name }}</h1><p class="rio-masthead-desc">{{ user.email }}</p></div>
+  {% if can_edit %}<div class="rio-masthead-cta"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/{{ user.id }}/edit">{{ icon("pencil") }} Edit</a></div>{% endif %}
+</div>
 
 <nav class="rio-tabs" aria-label="Profile sections">
-  <a href="/admin/users/{{ user.id }}?tab=overview"     class="rio-tab{% if tab == 'overview' %} rio-tab--active{% endif %}">Overview</a>
-  <a href="/admin/users/{{ user.id }}?tab=activity"     class="rio-tab{% if tab == 'activity' %} rio-tab--active{% endif %}">Activity ({{ activity_count }})</a>
-  <a href="/admin/users/{{ user.id }}?tab=permissions"  class="rio-tab{% if tab == 'permissions' %} rio-tab--active{% endif %}">Permissions ({{ permission_count }})</a>
-  <a href="/admin/users/{{ user.id }}?tab=sessions"     class="rio-tab{% if tab == 'sessions' %} rio-tab--active{% endif %}">Sessions ({{ session_count }})</a>
+  <a href="/admin/users/{{ user.id }}?tab=overview" class="rio-tab{% if tab == 'overview' %} rio-tab--active{% endif %}">Overview</a>
+  <a href="/admin/users/{{ user.id }}?tab=activity" class="rio-tab{% if tab == 'activity' %} rio-tab--active{% endif %}">Activity ({{ activity_count }})</a>
+  <a href="/admin/users/{{ user.id }}?tab=permissions" class="rio-tab{% if tab == 'permissions' %} rio-tab--active{% endif %}">Permissions ({{ permission_count }})</a>
+  <a href="/admin/users/{{ user.id }}?tab=sessions" class="rio-tab{% if tab == 'sessions' %} rio-tab--active{% endif %}">Sessions ({{ session_count }})</a>
 </nav>
 
 {% if tab == "overview" %}
-<section class="rio-card">
+<section class="rio-board rio-detail-card">
   <dl class="rio-dl">
     <dt>Email</dt><dd>{{ user.email }}</dd>
     <dt>Full name</dt><dd>{% if user.full_name_value %}{{ user.full_name_value }}{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
@@ -37,80 +33,54 @@
   {% if recent_events %}
   <h2 class="rio-card-section">Recent activity</h2>
   <ul class="rio-timeline">
-    {% for evt in recent_events %}
-    <li class="rio-timeline-item rio-timeline-item--{{ evt.kind }}">
-      <span class="rio-meta">{{ evt.timestamp_relative }}</span>
-      {{ evt.message|safe }}
-    </li>
-    {% endfor %}
+    {% for evt in recent_events %}<li class="rio-timeline-item rio-timeline-item--{{ evt.kind }}"><span class="rio-meta">{{ evt.timestamp_relative }}</span>{{ evt.message|safe }}</li>{% endfor %}
   </ul>
   {% endif %}
 
   {% block project_user_fields %}
-  {% if project_fields %}
-    {% for ps in project_fields %}
-    <h2 class="rio-card-section">{{ ps.label }}</h2>
-    <dl class="rio-dl">
-      {% for r in ps.rows %}<dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>{% endfor %}
-    </dl>
-    {% endfor %}
-  {% endif %}
+  {% if project_fields %}{% for ps in project_fields %}
+  <h2 class="rio-card-section">{{ ps.label }}</h2>
+  <dl class="rio-dl">{% for r in ps.rows %}<dt>{{ r.label }}</dt><dd>{{ r.value }}</dd>{% endfor %}</dl>
+  {% endfor %}{% endif %}
   {% endblock %}
 </section>
 
 {% elif tab == "activity" %}
-<section class="rio-card">
-  <h2>Activity</h2>
+<section class="rio-board rio-detail-card">
   {% if recent_events %}
   <ul class="rio-timeline">
-    {% for evt in recent_events %}
-    <li class="rio-timeline-item rio-timeline-item--{{ evt.kind }}">
-      <span class="rio-meta">{{ evt.timestamp_relative }}</span>
-      {{ evt.message|safe }}
-    </li>
-    {% endfor %}
+    {% for evt in recent_events %}<li class="rio-timeline-item rio-timeline-item--{{ evt.kind }}"><span class="rio-meta">{{ evt.timestamp_relative }}</span>{{ evt.message|safe }}</li>{% endfor %}
   </ul>
   {% if activity_total_pages > 1 %}
-  <nav class="rio-pagination">
-    <span class="rio-meta">Page {{ activity_page }} of {{ activity_total_pages }}</span>
-    {% if activity_page > 1 %}<a class="rio-pagination-link" href="?tab=activity&page={{ activity_page - 1 }}">← Previous</a>{% endif %}
-    {% if activity_page < activity_total_pages %}<a class="rio-pagination-link" href="?tab=activity&page={{ activity_page + 1 }}">Next →</a>{% endif %}
+  <nav class="rio-pagination" style="margin-block-start:var(--rio-space-16)">
+    {% if activity_page > 1 %}<a class="rio-page" href="?tab=activity&page={{ activity_page - 1 }}">{{ icon("arrow-left") }}</a>{% endif %}
+    <span class="rio-page" aria-current="page">{{ activity_page }} / {{ activity_total_pages }}</span>
+    {% if activity_page < activity_total_pages %}<a class="rio-page rio-page--next" href="?tab=activity&page={{ activity_page + 1 }}">Next {{ icon("arrow-right") }}</a>{% endif %}
   </nav>
   {% endif %}
   {% else %}
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No activity recorded</h3>
-    <p class="rio-empty-state__lead">Anything this user does in the admin will appear here.</p>
-  </div>
+  <div class="rio-empty">{{ icon("clock") }}<div class="rio-empty-title">No activity recorded</div><div>Anything this user does in the admin will appear here.</div></div>
   {% endif %}
 </section>
 
 {% elif tab == "permissions" %}
-<section class="rio-card">
-  <h2>Permissions</h2>
+<section class="rio-board">
   {% if permissions %}
-  <table class="rio-table">
+  <table class="rio-dtable">
     <thead><tr><th>Permission</th><th>Source</th></tr></thead>
-    <tbody>
-      {% for p in permissions %}<tr><td><code>{{ p.name }}</code></td><td>{{ p.source }}</td></tr>{% endfor %}
-    </tbody>
+    <tbody>{% for p in permissions %}<tr><td><code>{{ p.name }}</code></td><td>{{ p.source }}</td></tr>{% endfor %}</tbody>
   </table>
   {% else %}
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("key", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No permissions granted</h3>
-    <p class="rio-empty-state__lead">Add this user to a group, or grant a direct permission, to see entries here.</p>
-  </div>
+  <div class="rio-empty">{{ icon("key") }}<div class="rio-empty-title">No permissions granted</div><div>Add this user to a group, or grant a direct permission, to see entries here.</div></div>
   {% endif %}
 </section>
 
 {% elif tab == "sessions" %}
-<section class="rio-card">
-  <h2>Sessions</h2>
+<section class="rio-board">
   {% if sessions %}
-  <table class="rio-table">
-    <thead><tr><th>Token</th><th>Created</th><th>Last seen</th><th>IP</th><th>User agent</th><th class="rio-table__action-col"></th></tr></thead>
+  <div style="overflow:auto">
+  <table class="rio-dtable">
+    <thead><tr><th>Token</th><th>Created</th><th>Last seen</th><th>IP</th><th>User agent</th><th class="col-act">&nbsp;</th></tr></thead>
     <tbody>
       {% for s in sessions %}
       <tr>
@@ -119,28 +89,17 @@
         <td>{{ s.last_seen_relative }}</td>
         <td>{{ s.ip|default("—") }}</td>
         <td>{{ s.user_agent|default("—") }}</td>
-        <td class="rio-table__action-cell">
-          {% if s.is_current %}
-            <span class="rio-meta">Your session</span>
-          {% else %}
-            <form method="post"
-                  action="/admin/users/{{ user.id }}/sessions/{{ s.session_id }}/revoke"
-                  class="rio-form-inline">
-              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-              <button type="submit" class="rio-button rio-button--ghost rio-button--sm">Revoke</button>
-            </form>
-          {% endif %}
+        <td class="col-act">
+          {% if s.is_current %}<span class="rio-meta">Your session</span>
+          {% else %}<form method="post" action="/admin/users/{{ user.id }}/sessions/{{ s.session_id }}/revoke" class="rio-form-inline"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm">Revoke</button></form>{% endif %}
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("log-out", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No active sessions</h3>
-    <p class="rio-empty-state__lead">When this user signs in, their sessions appear here for revocation.</p>
   </div>
+  {% else %}
+  <div class="rio-empty">{{ icon("log-out") }}<div class="rio-empty-title">No active sessions</div><div>When this user signs in, their sessions appear here for revocation.</div></div>
   {% endif %}
 </section>
 {% endif %}

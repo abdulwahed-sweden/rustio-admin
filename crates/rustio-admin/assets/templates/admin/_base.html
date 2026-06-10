@@ -4,69 +4,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ page_title|default("") }}{% if page_title %} · {% endif %}{{ site_title }}{% endblock %}</title>
+{# Flicker-free theme: set data-theme before first paint. #}
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("rio-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+  })();
+</script>
 <link rel="stylesheet" href="/static/admin.css">
 {# _theme.html MUST come after admin.css — project token overrides
  # win cascade ties on source order without needing !important. #}
 {% include "admin/_theme.html" %}
 {% block extra_head %}{% endblock %}
 </head>
-<body class="rio-shell{% if is_demo_session %} rio-shell--demo{% endif %}{% if read_only %} rio-shell--read-only{% endif %}">
-{% if is_demo_session %}
-<div class="rio-banner rio-banner--demo" role="status">
-  DEMO USER{% if demo_label %} ({{ demo_label }}){% endif %} — actions are visible to other operators.
-</div>
+<body class="rio-canvas {% if identity %}rio-console{% if is_demo_session %} rio-console--demo{% endif %}{% if read_only %} rio-console--read-only{% endif %}{% else %}rio-auth{% endif %}">
+{% if identity %}
+  {% block sidebar %}{% include "admin/_sidebar.html" %}{% endblock %}
+  <div class="rio-ws">
+    {% block topbar %}{% include "admin/_topbar.html" %}{% endblock %}
+    <div class="rio-ws-body">
+      <div class="rio-ws-inner">
+        {% if is_demo_session %}<div class="rio-alert rio-alert--info" role="status">DEMO USER{% if demo_label %} ({{ demo_label }}){% endif %} — actions are visible to other operators.</div>{% endif %}
+        {% if read_only %}<div class="rio-alert rio-alert--warn" role="status">READ-ONLY — project-data mutations are disabled. Auth flows still work.</div>{% endif %}
+        {% if flash %}<div class="rio-alert rio-alert--{{ flash.kind }}" role="status">{{ flash.message }}</div>{% endif %}
+        <main id="main">
+{% else %}
+  <header class="rio-auth-top">
+    <span class="rio-brand-word">{{ app_name }}</span>
+    <span class="rio-devpill rio-devpill--{{ environment_kind }}">{{ environment_label }}</span>
+  </header>
+  <main id="main" class="rio-auth-main">
+    {% if flash %}<div class="rio-alert rio-alert--{{ flash.kind }}" role="status">{{ flash.message }}</div>{% endif %}
 {% endif %}
-{% if read_only %}
-<div class="rio-banner rio-banner--read-only" role="status">
-  READ-ONLY — project-data mutations are disabled. Auth flows (sign-in, password change, session revoke) still work.
-</div>
-{% endif %}
-{% block topbar %}{% include "admin/_topbar.html" %}{% endblock %}
-<div class="rio-layout">
-  {% block sidebar %}{% if identity %}{% include "admin/_sidebar.html" %}{% endif %}{% endblock %}
-  <main class="rio-main" id="main">
-    {% if flash %}
-    <div class="rio-flash rio-flash--{{ flash.kind }}" role="status">{{ flash.message }}</div>
-    {% endif %}
-    {% block content %}{% endblock %}
+
+        {% block content %}{% endblock %}
+
+{% if identity %}
+        </main>
+        <footer class="rio-appfoot" role="contentinfo">
+          <span class="rio-brand-word">{{ app_name }}</span>
+          <span class="rio-appfoot-links">
+            <a href="/admin/history">Audit log</a>
+            <a href="/admin/apis">API surface</a>
+            <a href="/admin/health">Health</a>
+            <a href="/admin/docs">Docs</a>
+            <a href="/admin/account/sessions">Sessions</a>
+          </span>
+          <span class="rio-appfoot-meta">{{ identity.email }} · <time datetime="{{ server_now }}">{{ server_now }}</time></span>
+        </footer>
+      </div>
+    </div>
+  </div>
+{% else %}
   </main>
-</div>
-<footer class="rio-footer" role="contentinfo" aria-label="Administration footer">
-  <div class="rio-footer__col rio-footer__col--id">
-    <span class="rio-footer__brand">{{ app_name }}</span>
-    <span class="rio-footer__sep" aria-hidden="true">·</span>
-    <span class="rio-footer__env rio-footer__env--{{ environment_kind }}" title="Runtime environment ({{ environment_label }})">{{ environment_label }}</span>
-  </div>
-  <nav class="rio-footer__col rio-footer__col--nav" aria-label="Footer navigation">
-    {% if identity %}
-    <a class="rio-footer__link" href="/admin/history">Audit log</a>
-    <span class="rio-footer__sep" aria-hidden="true">·</span>
-    <a class="rio-footer__link" href="/admin/apis">API surface</a>
-    <span class="rio-footer__sep" aria-hidden="true">·</span>
-    <a class="rio-footer__link" href="/admin/health">Health</a>
-    <span class="rio-footer__sep" aria-hidden="true">·</span>
-    <a class="rio-footer__link" href="/admin/docs">Docs</a>
-    <span class="rio-footer__sep" aria-hidden="true">·</span>
-    <a class="rio-footer__link" href="/admin/account/sessions">Sessions</a>
-    {% else %}
-    {# Login page: only operational metadata in the centre column #}
-    <span class="rio-footer__time" datetime="{{ server_now }}" title="Server render time (UTC)">{{ server_now }}</span>
-    {% endif %}
-  </nav>
-  <div class="rio-footer__col rio-footer__col--context">
-    {% if identity %}
-    <span class="rio-footer__user" title="Signed in as">{{ identity.email }}</span>
-    <span class="rio-footer__sep" aria-hidden="true">·</span>
-    <time class="rio-footer__time" datetime="{{ server_now }}" title="Server render time (UTC)">{{ server_now }}</time>
-    {% else %}
-    {# Off-platform credits: opt-in framework attribution + version + docs.
-     # Stays invisible by default so end users never see RustIO. #}
-    {% if show_powered_by %}
-    <a class="rio-footer__powered" href="https://docs.rs/rustio-admin/{{ framework_version }}" target="_blank" rel="noopener noreferrer" title="Framework documentation">Powered by RustIO v{{ framework_version }}</a>
-    {% endif %}
-    {% endif %}
-  </div>
-</footer>
+  <footer class="rio-auth-foot">
+    <time datetime="{{ server_now }}">{{ server_now }}</time>
+    {% if show_powered_by %}<span aria-hidden="true">·</span><a href="https://docs.rs/rustio-admin/{{ framework_version }}" target="_blank" rel="noopener noreferrer">Powered by RustIO v{{ framework_version }}</a>{% endif %}
+  </footer>
+{% endif %}
 <script src="/static/admin.js" defer></script>
 </body>
 </html>

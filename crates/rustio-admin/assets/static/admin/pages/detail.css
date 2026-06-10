@@ -1,0 +1,63 @@
+/* ============================================================
+ * rustio-admin / pages / detail  —  tabbed detail (user_view) bits:
+ * tabs, definition list, in-card section heading, timeline, badge.
+ * ============================================================ */
+
+/* ---- Tabs ---- */
+.rio-tabs {
+  display: flex;
+  gap: var(--rio-space-4);
+  border-block-end: 1px solid var(--rio-line);
+  margin-block: var(--rio-space-4) var(--rio-space-20);
+}
+.rio-tab {
+  padding: 10px 16px;
+  color: var(--rio-text-mute);
+  text-decoration: none;
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-medium);
+  border-block-end: 2px solid transparent;
+  margin-block-end: -1px;
+  white-space: nowrap;
+}
+.rio-tab:hover { color: var(--rio-text-hi); }
+.rio-tab--active { color: var(--rio-rust); border-block-end-color: var(--rio-rust); }
+
+/* ---- Detail card (a padded board) ---- */
+.rio-detail-card { padding: var(--rio-space-24); }
+
+/* ---- Definition list ---- */
+.rio-dl { display: grid; grid-template-columns: 190px 1fr; margin: 0; }
+.rio-dl dt {
+  padding: 11px 0;
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-faint);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-dl dd { padding: 11px 0; margin: 0; color: var(--rio-text-hi); border-block-end: 1px solid var(--rio-line); }
+.rio-dl dt:last-of-type, .rio-dl dd:last-of-type { border-block-end: 0; }
+@media (max-width: 600px) { .rio-dl { grid-template-columns: 1fr; } .rio-dl dt { border-block-end: 0; padding-block-end: 0; } }
+
+.rio-card-section {
+  font-family: var(--rio-font-display); font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-20); color: var(--rio-text-hi);
+  margin: var(--rio-space-24) 0 var(--rio-space-12);
+}
+
+/* ---- Timeline (recent activity) ---- */
+.rio-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-12); }
+.rio-timeline-item {
+  padding-inline-start: var(--rio-space-16);
+  border-inline-start: 2px solid var(--rio-line);
+  font-size: var(--rio-text-14); color: var(--rio-text);
+}
+.rio-timeline-item .rio-meta { display: block; font-size: var(--rio-text-12); margin-block-end: 2px; }
+.rio-timeline-item--create { border-inline-start-color: var(--rio-success); }
+.rio-timeline-item--delete { border-inline-start-color: var(--rio-danger); }
+.rio-timeline-item--update { border-inline-start-color: var(--rio-rust); }
+
+/* ---- Badge pill ---- */
+.rio-pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: var(--rio-radius-pill); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold); background: var(--rio-sunken); color: var(--rio-text-mute); }
+.rio-pill--badge-warning { background: var(--rio-warn-tint); color: var(--rio-warn); }
+
+.rio-form-inline { display: inline; }

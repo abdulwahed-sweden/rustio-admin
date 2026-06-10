@@ -1,0 +1,75 @@
+/* ============================================================
+ * rustio-admin / pages / account  —  account + MFA flows, and the
+ * shared legacy page primitives (page-header, card, empty-state,
+ * code block, backup codes, form-row) restyled to the console DS.
+ * ============================================================ */
+
+/* ---- Legacy page header -> console masthead look ---- */
+.rio-breadcrumbs {
+  display: flex; flex-wrap: wrap; gap: var(--rio-space-8); align-items: center;
+  font-size: var(--rio-fs-sm); color: var(--rio-text-mute);
+  margin-block-end: var(--rio-space-12);
+}
+.rio-breadcrumbs a { color: var(--rio-text-hi); font-weight: 700; text-decoration: none; }
+.rio-breadcrumbs a:hover { color: var(--rio-rust); }
+.rio-page-header { margin-block-end: var(--rio-space-32); }
+.rio-page-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--rio-space-16); }
+/* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
+.rio-page-header__lead, .pgx-lead { color: var(--rio-text); margin: var(--rio-space-16) 0 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
+.pgx-head { margin-block-end: var(--rio-space-20); }
+.pgx-title { margin: var(--rio-space-4) 0 0; }
+
+/* ---- Card -> padded board ---- */
+.rio-card {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+  padding: var(--rio-space-24);
+}
+.rio-card--quiet { box-shadow: none; }
+
+/* ---- Section eyebrow + empty state ---- */
+.rio-section { margin-block-start: var(--rio-space-24); }
+.rio-section__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--rio-space-16); margin-block-end: var(--rio-space-12); }
+.rio-section__label { display: block; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-faint); margin-block-end: var(--rio-space-8); }
+.rio-section__title { font-family: var(--rio-font-display); font-weight: var(--rio-weight-display); font-size: var(--rio-text-24); color: var(--rio-text-hi); margin: 0; }
+.rio-empty-state { text-align: center; padding: var(--rio-space-32) var(--rio-space-24); }
+.rio-empty-state__icon { display: inline-grid; place-items: center; inline-size: 48px; block-size: 48px; border-radius: var(--rio-radius-lg); background: var(--rio-sunken); color: var(--rio-text-mute); margin-block-end: var(--rio-space-12); }
+.rio-empty-state__title { font-family: var(--rio-font-display); font-weight: var(--rio-weight-display); font-size: var(--rio-text-20); color: var(--rio-text-hi); margin: 0 0 var(--rio-space-8); }
+.rio-empty-state__lead { color: var(--rio-text-mute); margin: 0; }
+
+/* ---- Form row (label + control), generic ---- */
+.rio-form-row { display: flex; flex-direction: column; gap: var(--rio-space-6); margin-block-end: var(--rio-space-16); }
+
+/* ---- Code block + link ---- */
+.rio-code-block {
+  display: inline-block; font-family: var(--rio-font-mono); font-size: var(--rio-text-14);
+  background: var(--rio-sunken); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md); padding: 8px 12px; color: var(--rio-text-hi);
+  word-break: break-all;
+}
+.rio-link { color: var(--rio-rust); text-decoration: none; font-weight: var(--rio-weight-medium); }
+.rio-link:hover { text-decoration: underline; }
+
+/* ---- Backup codes grid ---- */
+.rio-backup-codes { list-style: none; margin: var(--rio-space-12) 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--rio-space-8); }
+.rio-backup-codes .rio-code-block { display: block; text-align: center; }
+
+/* ---- Active-sessions list (rewritten account_sessions) ---- */
+.rio-sess-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-16); max-inline-size: 920px; }
+.rio-sess-card { position: relative; background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); padding: var(--rio-space-20); }
+.rio-sess-card--current { border-color: var(--rio-rust); box-shadow: inset 3px 0 0 var(--rio-rust), var(--rio-shadow-sm); }
+.rio-sess-top { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-16); }
+.rio-sess-glyph { inline-size: 40px; block-size: 40px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-sunken); color: var(--rio-text-mute); }
+.rio-sess-card--current .rio-sess-glyph { background: var(--rio-rust-tint); color: var(--rio-rust); }
+.rio-sess-glyph svg { inline-size: 20px; block-size: 20px; }
+.rio-sess-title { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-sess-trust { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 6px; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 10px; border-radius: var(--rio-radius-pill); background: var(--rio-sunken); color: var(--rio-text-mute); }
+.rio-sess-card--current .rio-sess-trust { background: var(--rio-success-tint); color: var(--rio-success); }
+.rio-sess-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--rio-space-12); }
+.rio-sess-meta dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-faint); }
+.rio-sess-meta dd { margin: 2px 0 0; font-size: var(--rio-text-14); color: var(--rio-text); font-variant-numeric: tabular-nums; }
+.rio-sess-foot { margin-block-start: var(--rio-space-16); padding-block-start: var(--rio-space-16); border-block-start: 1px solid var(--rio-line); display: flex; align-items: center; }
+.rio-sess-note { color: var(--rio-text-faint); font-size: var(--rio-text-14); }
+.rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); margin-block-start: var(--rio-space-20); max-inline-size: 920px; }

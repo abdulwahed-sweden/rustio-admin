@@ -2,51 +2,42 @@
 {% block content %}
 <div class="rio-form-shell">
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> ·
-    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
-    <span>{{ action_label }}</span>
-  </nav>
-  <h1>{{ action_label }}</h1>
-</header>
+<nav class="rio-crumbs">
+  <a href="/admin">Home</a><span class="rio-crumb-sep">/</span>
+  <a href="/admin/{{ admin_name }}">{{ display_name }}</a><span class="rio-crumb-sep">/</span>
+  <span class="rio-crumb-current">{{ action_label }}</span>
+</nav>
 
-<section class="rio-confirm {% if action_destructive %}rio-confirm--danger{% else %}rio-confirm--neutral{% endif %}">
-  <header class="rio-confirm__header">
-    <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
+<div class="rio-masthead-top"><div><h1>{{ action_label }}</h1></div></div>
+
+<section class="rio-board rio-confirm {% if action_destructive %}rio-confirm--danger{% else %}rio-confirm--neutral{% endif %}">
+  <div class="rio-confirm__head">
+    <span class="rio-confirm__icon">{{ icon("circle-alert") }}</span>
     <div>
       <h2 class="rio-confirm__title">Confirm: {{ action_label }}</h2>
-      <p class="rio-confirm__lead">
-        You are about to apply <strong>{{ action_label }}</strong> to
-        <strong>{{ items|length }}</strong> {{ singular_name }}{% if items|length != 1 %}s{% endif %}.
-      </p>
+      <p class="rio-confirm__lead">You are about to apply <strong>{{ action_label }}</strong> to <strong>{{ items|length }}</strong> {{ singular_name|lower }}{% if items|length != 1 %}s{% endif %}.</p>
     </div>
-  </header>
+  </div>
 
   <p class="rio-confirm__section-title">Affected rows</p>
   <ul class="rio-confirm__items">
-    {% for it in items %}
-    <li><a href="/admin/{{ admin_name }}/{{ it.id }}/edit">#{{ it.id }}</a> &mdash; <em>{{ it.label }}</em></li>
-    {% endfor %}
+    {% for it in items %}<li><a href="/admin/{{ admin_name }}/{{ it.id }}/edit">#{{ it.id }}</a> &mdash; <em>{{ it.label }}</em></li>{% endfor %}
   </ul>
 
   {% if read_only %}
   <div class="rio-form-actions">
-    <span class="rio-meta">Read-only mode — bulk actions are disabled.</span>
+    <span style="color:var(--rio-text-mute);font-size:var(--rio-text-14)">Read-only mode — bulk actions are disabled.</span>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Back</a>
+    <a href="/admin/{{ admin_name }}" class="rio-btn rio-btn--subtle rio-btn--md">Back</a>
   </div>
   {% else %}
   <form method="post" action="/admin/{{ admin_name }}/bulk/{{ action_name }}" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <input type="hidden" name="_ids" value="{{ ids_csv }}">
     <input type="hidden" name="_confirmed" value="1">
-    <a href="/admin/{{ admin_name }}" class="rio-button rio-button--ghost">Cancel</a>
+    <button type="submit" class="rio-btn {% if action_destructive %}rio-btn--danger{% else %}rio-btn--primary{% endif %} rio-btn--md">{% if action_destructive %}{{ icon("trash") }} {% endif %}Confirm: {{ action_label }}</button>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <button type="submit" class="rio-button {% if action_destructive %}rio-button--danger{% else %}rio-button--primary{% endif %}">
-      {% if action_destructive %}{{ icon("trash", class="rio-icon") }}{% endif %}
-      Confirm: {{ action_label }}
-    </button>
+    <a href="/admin/{{ admin_name }}" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
   </form>
   {% endif %}
 </section>

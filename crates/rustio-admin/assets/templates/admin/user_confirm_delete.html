@@ -1,36 +1,20 @@
 {% extends "admin/_base.html" %}
 {% block content %}
 <div class="rio-form-shell">
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Delete {{ email }}</span></nav>
+<div class="rio-masthead-top"><div><h1>Delete user</h1></div></div>
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <a href="/admin/users">Users</a> · <span>Delete {{ email }}</span>
-  </nav>
-  <h1>Delete user</h1>
-</header>
-
-<section class="rio-confirm rio-confirm--danger">
-  <header class="rio-confirm__header">
-    <div class="rio-confirm__icon">{{ icon("circle-alert", class="rio-icon") }}</div>
+<section class="rio-board rio-confirm rio-confirm--danger">
+  <div class="rio-confirm__head">
+    <span class="rio-confirm__icon">{{ icon("circle-alert") }}</span>
     <div>
       <h2 class="rio-confirm__title">Are you sure?</h2>
-      <p class="rio-confirm__lead">
-        You are about to delete <strong>{{ email }}</strong> (role: <code>{{ role }}</code>).
-        This action cannot be undone.
-      </p>
+      <p class="rio-confirm__lead">You are about to delete <strong>{{ email }}</strong> (role: <code>{{ role }}</code>). This action cannot be undone.</p>
     </div>
-  </header>
-
-  {% if is_self or is_last_developer %}
-  <div class="rio-confirm__warnings">
-    {% if is_self %}
-    <p class="rio-flash rio-flash--error">You cannot delete your own account while signed in.</p>
-    {% endif %}
-    {% if is_last_developer %}
-    <p class="rio-flash rio-flash--error">This is the only active Developer. Promote a backup first via <code>rustio-cli</code>.</p>
-    {% endif %}
   </div>
-  {% endif %}
+
+  {% if is_self %}<div class="rio-alert rio-alert--danger" role="alert">You cannot delete your own account while signed in.</div>{% endif %}
+  {% if is_last_developer %}<div class="rio-alert rio-alert--danger" role="alert">This is the only active Developer. Promote a backup first via <code>rustio-cli</code>.</div>{% endif %}
 
   <p class="rio-confirm__section-title">Cascade impact</p>
   <ul class="rio-confirm__items">
@@ -41,11 +25,10 @@
 
   <form method="post" action="/admin/users/{{ user_id }}/delete" class="rio-form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <a href="/admin/users/{{ user_id }}" class="rio-button rio-button--ghost">Cancel</a>
+    <button type="submit" class="rio-btn rio-btn--danger rio-btn--md"{% if is_self or is_last_developer %} disabled{% endif %}>{{ icon("trash") }} Yes, delete</button>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
-    <button type="submit" class="rio-button rio-button--danger" {% if is_self or is_last_developer %}disabled{% endif %}>{{ icon("trash", class="rio-icon") }} Yes, delete</button>
+    <a href="/admin/users/{{ user_id }}" class="rio-btn rio-btn--subtle rio-btn--md">Cancel</a>
   </form>
 </section>
-
 </div>
 {% endblock %}

@@ -4,18 +4,20 @@ Fonts bundled with rustio-admin
 All fonts in this directory are licensed under the SIL Open Font
 License, Version 1.1 — full text at https://openfontlicense.org/.
 
-Latin UI + monospace
---------------------
-  Geist-Variable.woff2          Copyright 2023 The Geist Font Project Authors
-  GeistMono-Variable.woff2      Copyright 2023 The Geist Mono Font Project Authors
-                                Source: https://github.com/vercel/geist-font
-
-Latin fallback (full Latin-ext / Cyrillic / Greek / Vietnamese)
----------------------------------------------------------------
+Latin UI (body + display)
+-------------------------
   InterVariable.woff2           Copyright 2016 The Inter Project Authors
                                 (Rasmus Andersson and contributors)
                                 Source: https://github.com/rsms/inter
                                 Variable wght axis: 100..900
+
+Monospace (code, CLI, IDs, tabular numerals)
+--------------------------------------------
+  JetBrainsMono-Variable-latin.woff2
+  JetBrainsMono-Variable-latinext.woff2
+                                Copyright 2020 The JetBrains Mono Project Authors
+                                Source: https://github.com/JetBrains/JetBrainsMono
+                                Variable wght axis: 400..700
 
 Arabic (primary reading face — Naskh, humanist)
 -----------------------------------------------

@@ -1,72 +1,34 @@
 {% extends "admin/_base.html" %}
-
-{# Redesigned active-sessions page: each session is a card with a status
- # glyph, a tidy meta grid, a trust badge, and a clear revoke action. The
- # current session is accented; bulk sign-out actions sit in a footer bar.
- # Scoped under `.sx`; amber accent via the accent2 fallback. #}
-{% block extra_head %}
-<style>
-  .pgx-head { margin-bottom: var(--rio-s6); }
-  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
-  .pgx-lead { margin-top: var(--rio-s2); max-width: 70ch; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
-
-  .sx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-s4); max-width: 920px; }
-  .sx-card { position: relative; background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); padding: var(--rio-s5); }
-  .sx-card--current { border-color: var(--rio-accent); box-shadow: inset 3px 0 0 var(--rio-accent), var(--rio-shadow); }
-
-  .sx-top { display: flex; align-items: center; gap: var(--rio-s3); margin-bottom: var(--rio-s4); }
-  .sx-glyph { width: 40px; height: 40px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-surface-2); color: var(--rio-text-muted); }
-  .sx-card--current .sx-glyph { background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
-  .sx-glyph .rio-icon { width: 20px; height: 20px; }
-  .sx-title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
-  .sx-trust { margin-left: auto; display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); text-transform: uppercase; letter-spacing: 0.04em; padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--rio-surface-2); color: var(--rio-text-muted); }
-  .sx-card--current .sx-trust { background: var(--rio-success-bg); color: var(--rio-success); }
-  .sx-card--current .sx-trust::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-
-  .sx-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--rio-s4); }
-  .sx-meta > div { display: flex; flex-direction: column; gap: 2px; }
-  .sx-meta dt { font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-subtle); }
-  .sx-meta dd { margin: 0; font-size: var(--rio-fs-sm); color: var(--rio-text); font-variant-numeric: tabular-nums; }
-
-  .sx-foot { margin-top: var(--rio-s4); padding-top: var(--rio-s4); border-top: 1px solid var(--rio-border-soft); display: flex; align-items: center; }
-  .sx-note { color: var(--rio-text-subtle); font-size: var(--rio-fs-sm); }
-  .sx-revoke { margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.85rem; border: 1px solid var(--rio-border); border-radius: var(--rio-radius-sm); background: var(--rio-surface); color: var(--rio-danger); font: inherit; font-size: var(--rio-fs-sm); font-weight: var(--rio-fw-semibold); cursor: pointer; transition: all .14s ease; }
-  .sx-revoke:hover { background: var(--rio-danger-bg); border-color: var(--rio-danger); }
-
-  .sx-bulk { display: flex; flex-wrap: wrap; gap: var(--rio-s3); margin-top: var(--rio-s5); padding-top: var(--rio-s5); border-top: 1px solid var(--rio-border); max-width: 920px; }
-</style>
-{% endblock %}
-
 {% block content %}
-<header class="pgx-head">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>Active sessions</span></nav>
-  <h1 class="pgx-title">{{ page_title }}</h1>
-  <p class="pgx-lead">Every device currently signed in to your account. Revoke any session you don't recognise.</p>
-</header>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">/</span><span class="rio-crumb-current">Active sessions</span></nav>
+<div class="rio-masthead-top"><div>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-masthead-desc">Every device currently signed in to your account. Revoke any session you don't recognise.</p>
+</div></div>
 
 {% if sessions %}
-<ul class="sx-list" role="list">
+<ul class="rio-sess-list" role="list">
   {% for s in sessions %}
-  <li class="sx-card{% if s.is_current %} sx-card--current{% endif %}">
-    <div class="sx-top">
-      <span class="sx-glyph">{{ icon("key", class="rio-icon") }}</span>
-      <span class="sx-title">{% if s.is_current %}Current session{% else %}Other session{% endif %}</span>
-      <span class="sx-trust">{{ s.trust_label }}</span>
+  <li class="rio-sess-card{% if s.is_current %} rio-sess-card--current{% endif %}">
+    <div class="rio-sess-top">
+      <span class="rio-sess-glyph">{{ icon("key") }}</span>
+      <span class="rio-sess-title">{% if s.is_current %}Current session{% else %}Other session{% endif %}</span>
+      <span class="rio-sess-trust">{{ s.trust_label }}</span>
     </div>
-    <dl class="sx-meta">
+    <dl class="rio-sess-meta">
       <div><dt>IP</dt><dd>{{ s.ip }}</dd></div>
       <div><dt>Device</dt><dd>{{ s.ua_summary }}</dd></div>
       <div><dt>Created</dt><dd>{{ s.created_at }}</dd></div>
       <div><dt>Last active</dt><dd>{{ s.last_seen_relative }}</dd></div>
       <div><dt>Expires</dt><dd>{{ s.expires_relative }}</dd></div>
     </dl>
-    <div class="sx-foot">
+    <div class="rio-sess-foot">
       {% if s.is_current %}
-      <span class="sx-note">This session — use &ldquo;Sign out everywhere&rdquo; below to revoke it.</span>
+      <span class="rio-sess-note">This session — use &ldquo;Sign out everywhere&rdquo; below to revoke it.</span>
       {% else %}
-      <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline" style="margin-left:auto">
+      <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline" style="margin-inline-start:auto">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-        <button type="submit" class="sx-revoke">{{ icon("circle-x", class="rio-icon") }} Revoke</button>
+        <button type="submit" class="rio-btn rio-btn--secondary rio-btn--sm" style="color:var(--rio-danger)">{{ icon("trash") }} Revoke</button>
       </form>
       {% endif %}
     </div>
@@ -74,24 +36,17 @@
   {% endfor %}
 </ul>
 
-<div class="sx-bulk">
+<div class="rio-sess-bulk">
   <form method="post" action="/admin/account/sessions/revoke-others" class="rio-form-inline">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--ghost">{{ icon("log-out", class="rio-icon") }} Sign out of every other device</button>
+    <button type="submit" class="rio-btn rio-btn--secondary rio-btn--md">{{ icon("log-out") }} Sign out of every other device</button>
   </form>
   <form method="post" action="/admin/account/sessions/revoke-all" class="rio-form-inline">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-button rio-button--danger">{{ icon("log-out", class="rio-icon") }} Sign out everywhere</button>
+    <button type="submit" class="rio-btn rio-btn--danger rio-btn--md">{{ icon("log-out") }} Sign out everywhere</button>
   </form>
 </div>
-
 {% else %}
-<div class="rio-card rio-card--quiet">
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("log-out", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No active sessions</h3>
-    <p class="rio-empty-state__lead">Sign in fresh on another device to see this page populate.</p>
-  </div>
-</div>
+<div class="rio-board"><div class="rio-empty">{{ icon("log-out") }}<div class="rio-empty-title">No active sessions</div><div>Sign in fresh on another device to see this page populate.</div></div></div>
 {% endif %}
 {% endblock %}

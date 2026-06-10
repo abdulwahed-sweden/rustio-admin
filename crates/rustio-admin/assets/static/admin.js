@@ -590,8 +590,58 @@
     });
   }
 
+  // ---- RustIO Console chrome: theme toggle + collapsible rail -----
+  // The flicker-free <head> script sets the initial data-theme; this
+  // wires the rail's moon/sun toggle (persisted to localStorage) and
+  // the rail collapse/expand arrow.
+  function syncThemeIcons(theme) {
+    const moon = document.querySelector(".rio-theme-moon");
+    const sun = document.querySelector(".rio-theme-sun");
+    if (!moon || !sun) return;
+    const dark = theme === "dark";
+    moon.style.display = dark ? "none" : "";
+    sun.style.display = dark ? "" : "none";
+  }
+  function initConsole() {
+    const themeBtn = document.getElementById("themeToggle");
+    if (themeBtn) {
+      themeBtn.addEventListener("click", () => {
+        const next =
+          document.documentElement.getAttribute("data-theme") === "dark"
+            ? "light"
+            : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        try { localStorage.setItem("rio-theme", next); } catch (e) {}
+        syncThemeIcons(next);
+      });
+    }
+    syncThemeIcons(document.documentElement.getAttribute("data-theme") || "light");
+
+    const rail = document.getElementById("rail");
+    const railBtn = document.getElementById("railToggle");
+    if (rail && railBtn) {
+      // Labeled by default (matches the reference); collapse to the
+      // icon-only rail only when the operator has chosen it before.
+      try {
+        if (localStorage.getItem("rio-rail-open") === "0") {
+          rail.classList.remove("rio-rail--open");
+          railBtn.setAttribute("aria-expanded", "false");
+        } else {
+          rail.classList.add("rio-rail--open");
+          railBtn.setAttribute("aria-expanded", "true");
+        }
+      } catch (e) {}
+      railBtn.addEventListener("click", () => {
+        const open = rail.classList.toggle("rio-rail--open");
+        railBtn.setAttribute("aria-expanded", String(open));
+        try { localStorage.setItem("rio-rail-open", open ? "1" : "0"); } catch (e) {}
+      });
+    }
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
+      initConsole();
       initSidebar();
       initDropdowns();
       initRowActions();
@@ -600,6 +650,7 @@
       initSearchPalette();
     });
   } else {
+    initConsole();
     initSidebar();
     initDropdowns();
     initRowActions();

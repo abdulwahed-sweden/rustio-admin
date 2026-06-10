@@ -56,7 +56,7 @@
       <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <a href="/admin/{{ admin_name }}">{{ display_name }}</a> · <span>CSV import</span></nav>
       <h1 class="pgx-title">Import complete</h1>
     </div>
-    <a class="rio-button rio-button--ghost" href="/admin/{{ admin_name }}">← Back to {{ display_name }}</a>
+    <a class="rio-btn rio-btn--subtle rio-btn--md" href="/admin/{{ admin_name }}">← Back to {{ display_name }}</a>
   </div>
   <div class="imp-summary">
     {% if failed == 0 %}<span class="imp-pill imp-pill--ok">All rows OK</span>{% else %}<span class="imp-pill imp-pill--fail">{{ failed }} failed</span>{% endif %}

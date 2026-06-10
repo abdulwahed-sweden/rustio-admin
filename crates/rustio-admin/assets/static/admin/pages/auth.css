@@ -1,95 +1,97 @@
 /* ============================================================
- * rustio-admin / pages / auth
+ * rustio-admin / pages / auth  —  login & unauthenticated shell
  *
- * Login screen — narrow card centered in the viewport, full-width
- * primary submit. Recovery / MFA / sessions self-service surfaces
- * inherit the generic component styles; only the login card needs
- * a page-level shell.
+ * The auth shell (_base.html, no rail): a slim brand top bar, a
+ * centered card, and a quiet footer. Used by login, forgot/reset
+ * password, MFA verify, must-change-password, re-auth.
  * ============================================================ */
 
-.rio-login {
-  max-width: 440px;
-  margin: var(--rio-s7) auto;
+.rio-auth {
+  min-block-size: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rio-auth-top {
+  display: flex;
+  align-items: center;
+  gap: var(--rio-space-12);
+  padding: var(--rio-space-20) var(--rio-space-32);
+}
+.rio-auth-top .rio-brand-word { font-size: var(--rio-text-20); }
+
+.rio-auth-main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--rio-space-24);
+}
+
+.rio-auth-foot {
+  padding: var(--rio-space-20) var(--rio-space-32);
+  text-align: center;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  color: var(--rio-text-faint);
+}
+.rio-auth-foot a { color: var(--rio-text-mute); text-decoration: none; }
+.rio-auth-foot a:hover { color: var(--rio-rust); }
+
+/* The card */
+.rio-auth-card {
+  inline-size: 100%;
+  max-inline-size: 408px;
   background: var(--rio-surface);
-  border: 1px solid var(--rio-border);
-  border-radius: var(--rio-radius-lg);
-  padding: var(--rio-s6) var(--rio-s5);
-  box-shadow: var(--rio-shadow-lg);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-lg), var(--rio-highlight-top);
+  padding: var(--rio-space-32);
+}
+.rio-auth-title {
+  font-family: var(--rio-font-display);
+  font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-30);
+  letter-spacing: var(--rio-tracking-display);
+  text-align: center;
+  color: var(--rio-text-hi);
+  margin: 0 0 var(--rio-space-24);
+}
+
+/* Stack fields in the auth card. */
+.rio-auth-card .rio-form { display: flex; flex-direction: column; gap: var(--rio-space-16); }
+.rio-auth-card .rio-btn { inline-size: 100%; justify-content: center; }
+
+.rio-auth-card-foot {
+  margin: var(--rio-space-20) 0 0;
+  text-align: center;
+  font-size: var(--rio-text-14);
+}
+.rio-auth-card-foot a { color: var(--rio-rust); text-decoration: none; }
+.rio-auth-card-foot a:hover { text-decoration: underline; }
+
+/* ---- Recovery / MFA flows that use the .rio-login wrapper
+   (forgot / reset / mfa-verify / reauth / must-change). Same card as
+   .rio-auth-card, with an intro line and an optional info aside. ---- */
+.rio-login {
+  inline-size: 100%;
+  max-inline-size: 440px;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-lg), var(--rio-highlight-top);
+  padding: var(--rio-space-32);
 }
 .rio-login-title {
-  text-align: center;
-  margin: 0 0 var(--rio-s4) 0;
-  color: var(--rio-text-strong);
+  font-family: var(--rio-font-display); font-weight: var(--rio-weight-display);
+  font-size: var(--rio-text-30); letter-spacing: var(--rio-tracking-display);
+  text-align: center; color: var(--rio-text-hi); margin: 0 0 var(--rio-space-12);
 }
-/* Calm intro paragraph under the title — gives the form context
- * without competing with it. Wraps for ~50ch comfortable reading. */
-.rio-login-intro {
-  text-align: center;
-  color: var(--rio-text-muted);
-  font-size: var(--rio-fs-md);
-  line-height: 1.6;
-  margin: 0 auto var(--rio-s5) auto;
-  max-width: 36ch;
-}
-.rio-login-footer {
-  margin: var(--rio-s5) 0 0 0;
-  text-align: center;
-  font-size: var(--rio-fs-sm);
-}
-.rio-form--login .rio-button {
-  width: 100%;
-  justify-content: center;
-  padding: 0.7rem var(--rio-s4);
-}
-
-/* ============================================================
- * Auth aside — operational security panel rendered under the
- * primary form on recovery surfaces (forgot, sent, reset).
- *
- * Calm. One small dot of accent per bullet (matching DESIGN_CHROME.md
- * §2.2 single-point-of-emphasis rule). Surface-2 background lifts the
- * panel from the card body without competing for attention.
- * ============================================================ */
-
-.rio-login-aside {
-  margin: var(--rio-s5) 0 0 0;
-  padding: var(--rio-s4) var(--rio-s4);
-  background: var(--rio-surface-2);
-  border: 1px solid var(--rio-border-soft);
-  border-radius: var(--rio-radius);
-}
-.rio-login-aside__title {
-  margin: 0 0 var(--rio-s3) 0;
-  font-size: 11px;
-  font-weight: var(--rio-fw-semibold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rio-text-muted);
-}
-.rio-login-aside__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--rio-text);
-  font-size: var(--rio-fs-sm);
-  line-height: 1.6;
-}
-.rio-login-aside__list li {
-  position: relative;
-  padding-inline-start: var(--rio-s4);
-  margin: 0 0 var(--rio-s2) 0;
-}
-.rio-login-aside__list li:last-child {
-  margin-bottom: 0;
-}
-.rio-login-aside__list li::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  top: 0.55em;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--rio-accent);
-  opacity: 0.65;
-}
+.rio-login-intro { color: var(--rio-text-mute); font-size: var(--rio-text-14); text-align: center; line-height: var(--rio-leading-snug); margin: 0 0 var(--rio-space-20); }
+.rio-login .rio-form, .rio-form--login { display: flex; flex-direction: column; gap: var(--rio-space-16); }
+.rio-login .rio-btn { inline-size: 100%; justify-content: center; }
+.rio-login-footer { margin: var(--rio-space-20) 0 0; text-align: center; font-size: var(--rio-text-14); }
+.rio-login-footer a { color: var(--rio-rust); text-decoration: none; }
+.rio-login-footer a:hover { text-decoration: underline; }
+.rio-login-aside { margin-block-start: var(--rio-space-20); padding: var(--rio-space-16); background: var(--rio-sunken); border-radius: var(--rio-radius-md); }
+.rio-login-aside__title { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-faint); margin: 0 0 var(--rio-space-8); }
+.rio-login-aside__list { margin: 0; padding-inline-start: var(--rio-space-16); color: var(--rio-text-mute); font-size: var(--rio-text-13); display: flex; flex-direction: column; gap: var(--rio-space-6); }

@@ -315,7 +315,7 @@ sent back.
   by …" is style violation territory; the framework's value is
   evident from the surface itself.
 - No CLS regressions. Variable-font weight axes are fine
-  (Geist + Inter both swap weights without metric shift); a new
+  (Inter swaps weights without a metric shift); a new
   static-weight family in chrome would be flagged.
 
 
