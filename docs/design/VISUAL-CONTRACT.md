@@ -1,8 +1,16 @@
 # RustIO Admin Visual Contract
 
-Version: 2.0
+Version: 2.1
 Status: Mandatory — the source of truth for all content-area token **values**
 (colors, type scale, fonts, spacing, dark theme, RTL).
+
+Changelog:
+- **2.1** — §3 split into three section-pattern cases (form / list-table / single-group),
+  derived from the §0 references after the §13 walkthrough surfaced that "legend-on-border
+  everywhere" contradicted feature_flags.png and the simple-create cards; §13 checklist
+  line updated to "section pattern matches its case"; encoded two label facts the
+  references settle (lowercase status pills; "Current password").
+- **2.0** — initial contract.
 
 This contract is the single owner of the concrete visual numbers. Doctrine docs
 (`DESIGN_DOCTRINE.md`, `DESIGN_SYSTEM.md`, …) own *principles and architecture*
@@ -95,19 +103,52 @@ muted; current segment muted/400) → page title (36px/800/line-height 1.15,
 `--rio-text-strong`) → lead (`--rio-fs-lead`/1.7/`--rio-text`, max-width ~70ch).
 Rhythm: breadcrumb→title s3, title→lead s4, lead→first section s6.
 
-## 3. Sections: legend-on-border
+## 3. Section patterns — three cases
 
-Each form section is a card whose label sits **on the card's top border**
-(fieldset-legend style). Use native `<fieldset>`/`<legend>`. Card: white, 14px
-radius, `--rio-border-soft`, `--rio-shadow-card`, s6 (32px) padding. Legend:
-`--rio-fs-xs`, 700, uppercase, `letter-spacing: 0.08em`, `--rio-text-muted`. Do
-not replace with plain headings above plain cards.
+The §0 references use **three** distinct section patterns. Pick by the page's
+shape, not by habit. All three share the card shell: white, 14px radius,
+`--rio-border-soft`, `--rio-shadow-card`, s6 (32px) padding.
+
+### 3(a) Multi-section FORM pages → legend-on-border
+
+For forms with two or more named sections (`CONTENT`, `IDENTITY`, `MODE`,
+`REASON`, `DURATION`, `PERMISSIONS`). The section label sits **on the card's top
+border**, fieldset-legend style. Use native `<fieldset>`/`<legend>`. Legend:
+`--rio-fs-xs` (14px), 700, uppercase, `letter-spacing: 0.08em`,
+`--rio-text-muted`. References: `form.png`, `user_new.png`, `lock_user.png`,
+`admin_reset_password.png`, and `group_edit.png`'s `PERMISSIONS` card.
+
+### 3(b) LIST / TABLE page sections → eyebrow heading
+
+For content pages whose sections introduce a table or a sub-form (feature_flags'
+`FLAGS` and `ADD`). The label is an **eyebrow + sub-heading stacked ABOVE the
+card**, and the card itself is **unlabeled** (no legend cutting its border):
+
+- Eyebrow: `--rio-fs-xs` (14px), 700, uppercase, `letter-spacing: 0.08em`,
+  `--rio-text-muted`. Margin-block-end s1.
+- Sub-heading: `--rio-fs-lead` (17px), 700, `--rio-text-strong`. Margin-block-end s4.
+- Then the card (table or form), unlabeled.
+
+Measured from `feature_flags.png`: `FLAGS` eyebrow over a `2 registered`
+sub-heading over the flags table; `ADD` eyebrow over `Register a new flag` over
+the add-flag card. Do **not** convert these to legend-on-border.
+
+### 3(c) Single-field-group cards on simple create forms → legend-less
+
+When a create/edit form has exactly **one** field group and no second section
+(`group_new`, `group_edit`'s name/description card, `password_change`), the card
+carries **no legend and no eyebrow** — fields sit directly inside the card. A
+lone section needs no name. References: `group_new.png`, `password_change.png`,
+`group_edit.png` (top card).
 
 ## 4. Labels, required markers, hints
 
 Bold label (`--rio-fs-md`/700/`--rio-text-strong`); required asterisk in
 `--rio-danger`; inline hint a normal-weight parenthetical on the same line in
 `--rio-text-muted`. Gap label→control: s2. Never let labels touch inputs.
+
+Settled label fact: the password-change form's first field is **"Current
+password"** (per `password_change.png`), not "Old password".
 
 ## 5. Inputs, textareas, selects
 
@@ -149,7 +190,9 @@ Cancel on its own line.
 `th` 14px / weight 800 / uppercase / `--rio-text-muted`; cells `--rio-fs-md` /
 `--rio-text-strong`; s4 padding; soft row dividers; **no zebra**. Row actions are
 700-weight text links. Pills: `inline-block`, `0.25rem 0.75rem`, pill radius,
-`--rio-fs-sm`/700; `--on` and `--off` use the §1 pill tokens.
+`--rio-fs-sm`/700; `--on` and `--off` use the §1 pill tokens. Status-pill **text
+is lowercase** (`enabled` / `disabled`, per `feature_flags.png`) — set it where
+the pill is emitted, not by capitalizing the source string.
 
 ## 10. Layout primitives
 
@@ -183,10 +226,12 @@ start`). `letter-spacing` is neutralized to 0 for Arabic/RTL on
 ## 13. Acceptance checklist
 
 Verify each touched page light/LTR against its screenshot, then light/RTL,
-dark/LTR, dark/RTL: header rhythm (§2.1); legend-on-border sections (§3); 14px-min
-cards with the §1 surfaces; 44px inputs with the teal 4px focus ring; full-width
-teal radio rows; all checkboxes teal; the §8 button/action-bar taxonomy; §9 tables
-(16px cells, 14px/800 headers, no zebra, §9 pills); inline code chips; **no UI text
+dark/LTR, dark/RTL: header rhythm (§2.1); **section pattern matches its §3 case**
+(legend-on-border for multi-section forms, eyebrow-heading for list/table
+sections, legend-less for single-group create cards); 14px-min cards with the §1
+surfaces; 44px inputs with the teal 4px focus ring; full-width teal radio rows;
+all checkboxes teal; the §8 button/action-bar taxonomy; §9 tables (16px cells,
+14px/800 headers, no zebra, lowercase §9 pills); inline code chips; **no UI text
 below 14px**; nothing cramped; top bar/sidebar/footer untouched.
 
 ## 14. Implementation approach
