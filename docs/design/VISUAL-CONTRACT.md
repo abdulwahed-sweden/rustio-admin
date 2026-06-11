@@ -38,6 +38,10 @@ no-zebra table with status pills. Captured with one row selected so the bulk bar
 is visible. (`form.png`, `user_new.png`, etc. cover the form pages; this covers
 the list shape.)
 
+The same nine pages are mirrored in **dark** under `docs/visual-reference/dark/`
+— the comfortable graphite-grey theme (§12), captured at the same spec
+(1340px @2×, `[data-theme="dark"]`).
+
 If a page being changed has no screenshot, match the closest pattern and flag it.
 
 ## 1. Canonical tokens (measured, light theme)
