@@ -89,20 +89,20 @@
     color-scheme: dark;
 
     /* Surfaces — slate dark, re-derived by inverting the §1 light ladder. */
-    --rio-bg:            #0f172a; /* page — slate-900 */
-    --rio-surface:       #1e293b; /* cards — slate-800 */
-    --rio-raised:        #334155; /* hover / raised — slate-700 */
-    --rio-overlay:       #1e293b;
-    --rio-sunken:        #0b1120; /* inset / code wells */
-    --rio-surface-tint:  #122e2c; /* inline code / kbd chip — dark teal */
+    --rio-bg:            #22272e; /* page — soft graphite, deliberately not near-black */
+    --rio-surface:       #2d333b; /* cards — one clear step up from the page */
+    --rio-raised:        #373e47; /* hover / raised */
+    --rio-overlay:       #2d333b;
+    --rio-sunken:        #1c2128; /* inset / code wells — just below the page */
+    --rio-surface-tint:  #1c302d; /* inline code / kbd chip — dark teal */
 
-    --rio-line:          #334155; /* card / divider */
-    --rio-line-strong:   #64748b; /* input / radio border — visible on dark */
+    --rio-line:          #444c56; /* card / divider — clearly visible */
+    --rio-line-strong:   #697079; /* input / radio border */
     --rio-dot:           rgba(255, 255, 255, 0.03);
-    --rio-text-hi:       #f1f5f9; /* titles — slate-100 */
-    --rio-text:          #cbd5e1; /* body — slate-300, ≥4.5:1 on surface */
-    --rio-text-mute:     #94a3b8; /* secondary — slate-400 */
-    --rio-text-faint:    #64748b; /* placeholder — slate-500 */
+    --rio-text-hi:       #e6edf3; /* titles — bright, comfortable */
+    --rio-text:          #adbac7; /* body — soft grey, ~7:1 on surface */
+    --rio-text-mute:     #8b949e; /* secondary */
+    --rio-text-faint:    #6e7681; /* placeholder */
     --rio-text-onrust:   #FFFFFF;
 
     /* Accent: teal lifted to teal-400 so it passes AA on dark surfaces. */
@@ -132,8 +132,8 @@
 
     --rio-pill-on-bg:    rgba(111, 185, 138, 0.16);
     --rio-pill-on-text:  #86efac;
-    --rio-pill-off-bg:   #334155;
-    --rio-pill-off-text: #cbd5e1;
+    --rio-pill-off-bg:   #373e47;
+    --rio-pill-off-text: #adbac7;
 
     --rio-syntax-key:    #5eead4;
     --rio-syntax-str:    #6FB98A;
@@ -199,19 +199,19 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --rio-bg:            #0f172a;
-  --rio-surface:       #1e293b;
-  --rio-raised:        #334155;
-  --rio-overlay:       #1e293b;
-  --rio-sunken:        #0b1120;
-  --rio-surface-tint:  #122e2c;
-  --rio-line:          #334155;
-  --rio-line-strong:   #64748b;
+  --rio-bg:            #22272e;
+  --rio-surface:       #2d333b;
+  --rio-raised:        #373e47;
+  --rio-overlay:       #2d333b;
+  --rio-sunken:        #1c2128;
+  --rio-surface-tint:  #1c302d;
+  --rio-line:          #444c56;
+  --rio-line-strong:   #697079;
   --rio-dot:           rgba(255, 255, 255, 0.03);
-  --rio-text-hi:       #f1f5f9;
-  --rio-text:          #cbd5e1;
-  --rio-text-mute:     #94a3b8;
-  --rio-text-faint:    #64748b;
+  --rio-text-hi:       #e6edf3;
+  --rio-text:          #adbac7;
+  --rio-text-mute:     #8b949e;
+  --rio-text-faint:    #6e7681;
   --rio-text-onrust:   #FFFFFF;
   --rio-rust:          #2dd4bf;
   --rio-rust-hover:    #5eead4;
@@ -235,8 +235,8 @@
   --rio-danger-tint:   rgba(239, 68, 68, 0.16);
   --rio-pill-on-bg:    rgba(111, 185, 138, 0.16);
   --rio-pill-on-text:  #86efac;
-  --rio-pill-off-bg:   #334155;
-  --rio-pill-off-text: #cbd5e1;
+  --rio-pill-off-bg:   #373e47;
+  --rio-pill-off-text: #adbac7;
   --rio-syntax-key:    #5eead4;
   --rio-syntax-str:    #6FB98A;
   --rio-syntax-num:    #D6A65A;

@@ -67,6 +67,15 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **Dark theme re-tuned to a comfortable graphite-grey.** The dark palette moved
+  off the near-black slate (`--rio-bg #0f172a`) to a softer graphite
+  (`#22272e`) with clearer surface steps (`--rio-surface #2d333b`, `--rio-raised
+  #373e47`) and a visibly lighter divider (`--rio-line #444c56`), so cards and
+  tables separate logically instead of dissolving into the background. Text lifts
+  to a soft, legible grey ladder (`--rio-text-hi #e6edf3`, `--rio-text #adbac7`).
+  The aim: a dark mode that's pleasant for long sessions, not gloomy. Token-only;
+  the lifted teal accent and AA contrast are preserved. Applies to both the
+  `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]` blocks.
 - **Subtle elevation pass for surfaces.** The card/divider border token
   (`--rio-line`) is darkened a step (`#e2e8f0 → #d6dee9`) and the surface shadows
   (`--rio-shadow-sm`, `--rio-shadow-card`) gain a soft second layer, so every
