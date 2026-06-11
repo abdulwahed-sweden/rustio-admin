@@ -135,7 +135,10 @@
 /* Legacy spacer kept as a no-op for any template still emitting it. */
 .rio-form-actions-spacer { display: none; }
 
-/* Inline (related children) sections. */
+/* Inline (related children) sections. Each is a distinct block below the form's
+   action bar, so it needs clear separation from the bar (and from the previous
+   inline) — without it the cards butt straight against the Save row. */
+.rio-inline-section { margin-block-start: var(--rio-space-32); }
 .rio-inline-section__header {
   display: flex;
   align-items: baseline;
