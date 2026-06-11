@@ -28,7 +28,6 @@ impl ModelAdmin for Address {
     /// `--field` declaration order.
     fn list_display() -> &'static [&'static str] {
         &[
-            "id",
             "customer_id",
             "recipient_name",
             "city",

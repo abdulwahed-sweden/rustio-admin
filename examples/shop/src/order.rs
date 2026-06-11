@@ -14,7 +14,7 @@ pub struct Order {
 // Admin list-page configuration. Each method overrides a default.
 impl ModelAdmin for Order {
     fn list_display() -> &'static [&'static str] {
-        &["id", "customer_id", "total", "status"]
+        &["customer_id", "total", "status"]
     }
 
     fn list_filter() -> &'static [&'static str] {

@@ -12,7 +12,7 @@ pub struct Category {
 // Admin list-page configuration. Each method overrides a default.
 impl ModelAdmin for Category {
     fn list_display() -> &'static [&'static str] {
-        &["id", "name", "slug"]
+        &["name", "slug"]
     }
 
     fn list_filter() -> &'static [&'static str] {

@@ -15,7 +15,7 @@ pub struct Customer {
 // Admin list-page configuration. Each method overrides a default.
 impl ModelAdmin for Customer {
     fn list_display() -> &'static [&'static str] {
-        &["id", "full_name", "email", "phone"]
+        &["full_name", "email", "phone"]
     }
 
     fn list_filter() -> &'static [&'static str] {

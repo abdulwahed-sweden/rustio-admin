@@ -20,7 +20,7 @@ impl ModelAdmin for ProductImage {
     /// Columns shown in the list-page table. Order matches the
     /// `--field` declaration order.
     fn list_display() -> &'static [&'static str] {
-        &["id", "product_id", "url", "position", "is_primary"]
+        &["product_id", "url", "position", "is_primary"]
     }
 
     /// Columns whose `=` value is filterable via `?filter_<col>=<v>`

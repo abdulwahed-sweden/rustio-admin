@@ -22,7 +22,7 @@ impl ModelAdmin for Payment {
     /// Columns shown in the list-page table. Order matches the
     /// `--field` declaration order.
     fn list_display() -> &'static [&'static str] {
-        &["id", "order_id", "provider", "method", "amount", "status"]
+        &["order_id", "provider", "method", "amount", "status"]
     }
 
     /// Columns whose `=` value is filterable via `?filter_<col>=<v>`

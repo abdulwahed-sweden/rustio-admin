@@ -16,7 +16,7 @@ pub struct Product {
 // Admin list-page configuration. Each method overrides a default.
 impl ModelAdmin for Product {
     fn list_display() -> &'static [&'static str] {
-        &["id", "name", "price", "in_stock"]
+        &["name", "price", "in_stock"]
     }
 
     fn list_filter() -> &'static [&'static str] {

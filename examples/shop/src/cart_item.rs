@@ -18,7 +18,7 @@ impl ModelAdmin for CartItem {
     /// Columns shown in the list-page table. Order matches the
     /// `--field` declaration order.
     fn list_display() -> &'static [&'static str] {
-        &["id", "customer_id", "product_id", "quantity"]
+        &["customer_id", "product_id", "quantity"]
     }
 
     /// Columns whose `=` value is filterable via `?filter_<col>=<v>`
