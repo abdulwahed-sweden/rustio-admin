@@ -1672,12 +1672,11 @@ pub(crate) fn list_ctx(
         // record and the raw id is rarely useful for scanning. A project that
         // wants it back lists "id" explicitly in `list_display`. Guard the
         // edge case of an id-only model so the table never loses all columns.
-        let without_id: Vec<&AdminField> =
-            entry.fields.iter().filter(|f| f.name != "id").collect();
-        if without_id.is_empty() {
+        let shown: Vec<&AdminField> = entry.fields.iter().filter(|f| f.name != "id").collect();
+        if shown.is_empty() {
             entry.fields.iter().collect()
         } else {
-            without_id
+            shown
         }
     } else {
         entry
