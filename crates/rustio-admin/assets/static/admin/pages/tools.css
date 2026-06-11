@@ -20,15 +20,15 @@
 .rio-health__row--warn td { background: var(--rio-warn-tint); }
 
 /* ---- Avatar + "by" ---- */
-.rio-avatar { inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--rio-radius-md); background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-family: var(--rio-font-mono); font-weight: 700; font-size: var(--rio-text-12); }
+.rio-avatar { inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--rio-radius-md); background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-12); }
 .rio-by { display: inline-flex; align-items: center; gap: var(--rio-space-8); color: var(--rio-text); text-decoration: none; }
 .rio-by:hover { color: var(--rio-rust); }
 
 /* ---- Date divider rows ---- */
 .rio-history-date-divider th, tr.lx-date th {
-  padding: 8px 16px !important; background: var(--rio-sunken);
-  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
-  letter-spacing: 0.04em; text-transform: uppercase; color: var(--rio-text-faint); text-align: start;
+  padding: 8px 16px !important; background: var(--rio-bg);
+  font-family: var(--rio-font-body); font-size: var(--rio-text-12); font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--rio-text-mute); text-align: start;
 }
 
 /* ---- Field diffs ---- */
@@ -42,12 +42,12 @@
 
 /* ---- DB browser ---- */
 .rio-db-stats { display: flex; flex-wrap: wrap; gap: var(--rio-space-48); margin: 0; }
-.rio-db-stat dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-faint); }
+.rio-db-stat dt { font-family: var(--rio-font-body); font-weight: 700; font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-mute); }
 .rio-db-stat dd { margin: 2px 0 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-30); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
 .rio-db-table { padding: 0 !important; overflow: hidden; }
 .rio-db-table__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--rio-space-16); padding: var(--rio-space-16) var(--rio-space-20); border-block-end: 1px solid var(--rio-line); }
 .rio-db-table__header h2 { margin: 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-17); color: var(--rio-text-hi); }
 .rio-db-fks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--rio-space-20); padding: var(--rio-space-20); border-block-start: 1px solid var(--rio-line); }
-.rio-db-fks__group h3 { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-faint); margin: 0 0 var(--rio-space-8); }
+.rio-db-fks__group h3 { font-family: var(--rio-font-body); font-weight: 700; font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-mute); margin: 0 0 var(--rio-space-8); }
 .rio-db-fk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-6); font-size: var(--rio-text-13); }
 .rio-db-fk-list a { color: var(--rio-rust); text-decoration: none; }
