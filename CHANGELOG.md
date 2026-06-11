@@ -67,6 +67,11 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **Subtle elevation pass for surfaces.** The card/divider border token
+  (`--rio-line`) is darkened a step (`#e2e8f0 → #d6dee9`) and the surface shadows
+  (`--rio-shadow-sm`, `--rio-shadow-card`) gain a soft second layer, so every
+  card / panel / table / input separates cleanly from the near-white background.
+  Token-only, light theme; dark is unchanged.
 - **Admin list pages hide the `id` column by default.** When a model doesn't set
   `list_display`, the primary-key `id` column is dropped from the table (the row
   still links to the record, and `id` is shown if a project lists it explicitly).

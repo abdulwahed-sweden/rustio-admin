@@ -29,7 +29,7 @@
   --rio-surface-tint:  #edf7f8; /* inline code / kbd chip (measured) */
 
   /* Lines — contract: soft card border vs strong input border */
-  --rio-line:          #e2e8f0; /* hairline / card border = --rio-border-soft */
+  --rio-line:          #d6dee9; /* hairline / card border = --rio-border-soft */
   --rio-line-strong:   #94a3b8; /* input / radio border   = --rio-border-input */
 
   /* Canvas dot-grid — faint engineered texture */
@@ -154,7 +154,7 @@
   --rio-overlay:       #FFFFFF;
   --rio-sunken:        #E7ECF4;
   --rio-surface-tint:  #edf7f8;
-  --rio-line:          #e2e8f0;
+  --rio-line:          #d6dee9;
   --rio-line-strong:   #94a3b8;
   --rio-dot:           rgba(40, 60, 110, 0.05);
   --rio-text-hi:       #1e293b;
