@@ -109,11 +109,13 @@
   block-size: 38px; padding: 0 12px;
   background: var(--rio-sunken); border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-pill); color: var(--rio-text-faint);
-  cursor: pointer; font-size: var(--rio-text-14);
+  cursor: pointer; font-size: var(--rio-text-14); text-align: start;
   transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-ws-search:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
-.rio-ws-search .rio-kbd { margin-inline-start: auto; }
+.rio-ws-search:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-ws-search-label { flex: 1; text-align: start; }
+.rio-ws-search .rio-kbd { flex: none; }
 .rio-ws-actions { display: flex; align-items: center; gap: 8px; }
 
 /* ---- Header account menu (the account center lives here, not the rail) ---- */

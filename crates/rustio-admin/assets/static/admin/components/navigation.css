@@ -105,18 +105,24 @@
 }
 
 /* App footer bar */
+/* Full-width page footer: the bar spans the whole workspace (surface +
+   top hairline edge-to-edge); its content aligns to the page column. */
 .rio-appfoot {
-  block-size: 44px; flex: none;
-  display: flex; align-items: center; gap: var(--rio-space-16);
-  padding-inline: var(--rio-space-20);
+  flex: none;
   background: var(--rio-surface);
   border-block-start: 1px solid var(--rio-line);
+}
+.rio-appfoot-inner {
+  max-inline-size: 1320px; inline-size: 100%; margin: 0 auto;
+  min-block-size: 56px;
+  display: flex; align-items: center; gap: var(--rio-space-16);
+  padding: var(--rio-space-12) 44px;
   font-size: var(--rio-text-13); color: var(--rio-text-mute);
 }
 .rio-appfoot-links { display: flex; align-items: center; gap: var(--rio-space-16); }
 .rio-appfoot-links a { color: var(--rio-text-mute); text-decoration: none; }
 .rio-appfoot-links a:hover { color: var(--rio-text-hi); }
-.rio-appfoot-meta { font-family: var(--rio-font-body); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
+.rio-appfoot-meta { margin-inline-start: auto; font-family: var(--rio-font-body); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
 
 /* DEVELOPMENT pill */
 .rio-devpill {
@@ -212,3 +218,45 @@
 
 /* "Next" pagination button with a label */
 .rio-page--next { inline-size: auto; gap: 5px; padding-inline: 12px; font-family: var(--rio-font-body); font-weight: var(--rio-weight-medium); }
+
+/* ---- Global ⌘K search palette ---- */
+.rio-search-palette {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 12vh 16px 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+.rio-search-palette[aria-hidden="true"] { display: none; }
+.rio-search-palette__dialog {
+  inline-size: 100%; max-inline-size: 560px; max-block-size: 70vh;
+  display: flex; flex-direction: column;
+  background: var(--rio-overlay); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-lg);
+  overflow: hidden;
+}
+.rio-search-palette__field {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-block-end: 1px solid var(--rio-line);
+  color: var(--rio-text-mute);
+}
+.rio-search-palette__input {
+  flex: 1; min-inline-size: 0; border: 0; background: transparent; outline: none;
+  font: inherit; font-size: var(--rio-fs-lead); color: var(--rio-text-hi);
+}
+.rio-search-palette__input::placeholder { color: var(--rio-text-faint); }
+.rio-search-palette__input::-webkit-search-cancel-button { display: none; }
+.rio-search-palette__results { list-style: none; margin: 0; padding: 8px; overflow: auto; }
+.rio-search-palette__group { display: block; margin-block-end: 4px; }
+.rio-search-palette__group-label {
+  display: block; padding: 8px 12px 4px;
+  font-size: var(--rio-text-12); font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--rio-text-mute);
+}
+.rio-search-palette__result {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--rio-radius-md);
+  color: var(--rio-text-hi); text-decoration: none; font-size: var(--rio-fs-md);
+}
+.rio-search-palette__result.is-selected,
+.rio-search-palette__result:hover { background: var(--rio-rust-tint); color: var(--rio-rust); }
+.rio-search-palette__empty { padding: 18px 16px; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }

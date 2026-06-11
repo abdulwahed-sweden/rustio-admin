@@ -1668,7 +1668,17 @@ pub(crate) fn list_ctx(
     // including bulky `body` / `description` fields the model author
     // had explicitly excluded.
     let visible_fields: Vec<&AdminField> = if entry.list_display.is_empty() {
-        entry.fields.iter().collect()
+        // Hide the primary-key `id` column by default — the row links to the
+        // record and the raw id is rarely useful for scanning. A project that
+        // wants it back lists "id" explicitly in `list_display`. Guard the
+        // edge case of an id-only model so the table never loses all columns.
+        let without_id: Vec<&AdminField> =
+            entry.fields.iter().filter(|f| f.name != "id").collect();
+        if without_id.is_empty() {
+            entry.fields.iter().collect()
+        } else {
+            without_id
+        }
     } else {
         entry
             .list_display

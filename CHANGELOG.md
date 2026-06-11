@@ -66,6 +66,24 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **Admin list pages hide the `id` column by default.** When a model doesn't set
+  `list_display`, the primary-key `id` column is dropped from the table (the row
+  still links to the record, and `id` is shown if a project lists it explicitly).
+  Keeps lists focused on meaningful columns. An id-only model is guarded so the
+  table never loses all columns.
+- **Full-width page footer.** The admin footer now spans the whole workspace (a
+  surface bar with a top hairline edge-to-edge) with its content aligned to the
+  page column and the identity/timestamp pushed to the end — instead of sitting
+  inside the constrained content column.
+
+### Fixed
+- **Top-bar search now works (⌘K).** The search control linked to a non-existent
+  `/admin/search` (404) and the `⌘K` command palette had its full implementation
+  in `admin.js` but was never given markup, so it silently no-op'd. Wired the
+  trigger + palette dialog to the existing handler: ⌘K (or clicking the bar) opens
+  a grouped, keyboard-navigable palette backed by `/admin/_search`.
+
 ## [0.29.0] — 2026-06-10
 
 ### Changed

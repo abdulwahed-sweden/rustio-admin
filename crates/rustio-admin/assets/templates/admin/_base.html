@@ -44,7 +44,9 @@
 
 {% if identity %}
         </main>
-        <footer class="rio-appfoot" role="contentinfo">
+      </div>{# /rio-ws-inner — content column ends here #}
+      <footer class="rio-appfoot" role="contentinfo">
+        <div class="rio-appfoot-inner">
           <span class="rio-brand-word">{{ app_name }}</span>
           <span class="rio-appfoot-links">
             <a href="/admin/history">Audit log</a>
@@ -54,8 +56,19 @@
             <a href="/admin/account/sessions">Sessions</a>
           </span>
           <span class="rio-appfoot-meta">{{ identity.email }} · <time datetime="{{ server_now }}">{{ server_now }}</time></span>
-        </footer>
+        </div>
+      </footer>
+    </div>
+  </div>
+  {# Global ⌘K search palette (wired by initSearchPalette in admin.js) #}
+  <div class="rio-search-palette" data-rio-search-palette aria-hidden="true">
+    <div class="rio-search-palette__dialog" data-rio-search-palette-dialog role="dialog" aria-modal="true" aria-label="Search records">
+      <div class="rio-search-palette__field">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" class="rio-search-palette__input" data-rio-search-palette-input placeholder="Search records…" autocomplete="off" spellcheck="false" aria-label="Search records" role="combobox" aria-expanded="true" aria-controls="rio-search-palette-results" aria-autocomplete="list">
+        <span class="rio-kbd">Esc</span>
       </div>
+      <ul class="rio-search-palette__results" id="rio-search-palette-results" data-rio-search-palette-results role="listbox" aria-label="Results"></ul>
     </div>
   </div>
 {% else %}
