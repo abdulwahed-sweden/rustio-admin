@@ -33,6 +33,20 @@ Sales     = "Orders, Payments"
 _hidden   = "Order items, Cart items, Product images, Address"
 _out      = "templates/admin/_sidebar.html"
 
+# ── Product list view (rustio-design view layer, D-001/D-002) ──
+# Lead with the product name; fold price + stock into one cell, the stock
+# rendered as a badge. `build` freezes generated/views/products.view.json and
+# writes the list.html override straight into the served templates dir (like
+# _sidebar above). Edit, then `rustio-design build`.
+[views.products]
+model     = "Product"
+source    = "src/product.rs"
+mode      = "list"
+primary   = "name"
+secondary = "price + in_stock (badge)"
+hidden    = "id"
+_out      = "templates/admin/products/list.html"
+
 # ── RustIO Patina palette (D-010) — one accent, warm-stone neutrals, light.
 #    Token values mapped from rustio-design-system/tokens/colors.css. ──
 [colors]
