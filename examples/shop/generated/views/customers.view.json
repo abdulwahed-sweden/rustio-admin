@@ -1,0 +1,12 @@
+{
+  "_generated_by": "rustio-design",
+  "project": "Shop",
+  "table": "customers",
+  "default_mode": "list",
+  "modes": ["list", "cards", "gallery"],
+  "cells": [
+    { "members": ["full_name"], "role": "primary", "style": "stacked" },
+    { "members": ["email", "phone"], "role": "secondary", "style": "inline" },
+    { "members": ["id"], "role": "hidden", "style": "stacked" }
+  ]
+}
