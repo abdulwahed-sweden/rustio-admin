@@ -47,6 +47,18 @@ secondary = "price + in_stock (badge)"
 hidden    = "id"
 _out      = "templates/admin/products/list.html"
 
+# ── Order list view (rustio-design view layer, D-001/D-002) ──
+# Lead with the order number; fold the amount + status into one cell, the
+# status rendered as a badge; show the customer alongside. Same pipeline as
+# the product view above — edit, then `rustio-design build`.
+[views.orders]
+model     = "Order"
+source    = "src/order.rs"
+mode      = "list"
+primary   = "id"
+secondary = "total + status (badge), customer_id"
+_out      = "templates/admin/orders/list.html"
+
 # ── RustIO Patina palette (D-010) — one accent, warm-stone neutrals, light.
 #    Token values mapped from rustio-design-system/tokens/colors.css. ──
 [colors]
