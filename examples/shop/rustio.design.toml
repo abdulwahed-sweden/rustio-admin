@@ -59,6 +59,19 @@ primary   = "id"
 secondary = "total + status (badge), customer_id"
 _out      = "templates/admin/orders/list.html"
 
+# ── Customer list view (rustio-design view layer, D-001/D-002) ──
+# Lead with the customer name; fold the contact details (email + phone) into one
+# inline cell beneath it — the classic "name on top, contact alongside" shape.
+# Same pipeline as the views above — edit, then `rustio-design build`.
+[views.customers]
+model     = "Customer"
+source    = "src/customer.rs"
+mode      = "list"
+primary   = "full_name"
+secondary = "email + phone (inline)"
+hidden    = "id"
+_out      = "templates/admin/customers/list.html"
+
 # ── RustIO Patina palette (D-010) — one accent, warm-stone neutrals, light.
 #    Token values mapped from rustio-design-system/tokens/colors.css. ──
 [colors]
