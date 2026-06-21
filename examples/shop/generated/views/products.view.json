@@ -1,0 +1,12 @@
+{
+  "_generated_by": "rustio-design",
+  "project": "Shop",
+  "table": "products",
+  "default_mode": "list",
+  "modes": ["list", "cards", "gallery"],
+  "cells": [
+    { "members": ["name"], "role": "primary", "style": "stacked" },
+    { "members": ["price", "in_stock"], "role": "secondary", "style": "badge" },
+    { "members": ["id"], "role": "hidden", "style": "stacked" }
+  ]
+}
