@@ -10,6 +10,8 @@ Project README: `README.md`. Architecture map: `docs/architecture.md`. Design co
 
 ## Common commands
 
+Workspace pins `rust-version = "1.88"` (MSRV), `edition = "2021"`, and a single workspace `version` (currently `0.30.0`) in the root `Cargo.toml`. There is no `rust-toolchain.toml` — use a stable toolchain ≥ 1.88.
+
 CI runs with `RUSTFLAGS="-D warnings"` — clippy/build/test all fail on any warning. Match that locally.
 
 ```sh
@@ -38,7 +40,7 @@ git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_vali
 
 The `crates/*/assets/**` exclusion matches CI: bundled docs under those dirs legitimately *mention* these symbols when explaining the guard itself, so the guard scans source/TOML/templates only. Any match is a CI failure. These symbols belong to a future `rustio-pro` layer and must never appear in this repo.
 
-The `rustio-admin` CLI (built from `crates/rustio-admin-cli`) reads `DATABASE_URL` from `.env`:
+The CLI binary is named **`rustio-admin`** (built from `crates/rustio-admin-cli`; renamed from `rustio` in v0.22.0). It reads `DATABASE_URL` from `.env`:
 
 ```sh
 cargo run -p rustio-admin-cli -- migrate apply
@@ -48,7 +50,16 @@ cargo run -p rustio-admin-cli -- theme list            # curated AdminTheme snip
 cargo run -p rustio-admin-cli -- theme generate --brand '#2563eb'  # rio-theme → tokens.css
 ```
 
-The `theme` verbs are pure printers/generators — they never edit your `main.rs` or in-progress files. `theme generate` drives the `rio-theme` crate (see below).
+The CLI surface is larger than the framework's runtime surface; the top-level verbs (`crates/rustio-admin-cli/src/main.rs`, the `Command` enum) group as:
+
+- **Scaffolding** — `new` (friendly interactive wizard; alias for `startproject`, `--no-interactive` to disable), `startproject` (`--preset minimal|blog`), `startapp` (adds a model + table + admin page + migration; repeatable `--field name:type`).
+- **Database & authority** — `migrate` (`apply`/`status`), `user` (`create`/`list`/`role`/`delete`), `group` (`create`/`list`/`add-user`), `perm` (`grant-user`/`grant-group`/`list`), `audit` (read-only inspection of `rustio_admin_actions`).
+- **Builder authoring** (network-free, atomic; governed by `DESIGN_BUILDER.md`) — `builder new`, `add` (`model`/`field`), `plan` (preview, read-only), `commit` (apply atomically, `--force`). Implementation in `crates/rustio-admin-cli/src/builder/`.
+- **Project memory / AI policy** — `memory` (`render`/`show`/`verify`, drives CLOUD.md; `src/memory/`), `ai` (`status`/`init` for the `.rustio/ai.toml` assistant permission policy).
+- **Theme & assets** — `theme` (`list`/`generate`), `override` (copies an embedded admin template to `./templates`, `--force`/`--out`).
+- **Diagnostics & dev** — `doctor` (health check; `doctor email [--to …] [--html-preview]`), `docs` (`--open`), `reload` (`cargo watch -x run` wrapper), `test-init` (generates `tests/smoke.rs`).
+
+The `theme`, `override`, `plan`, `docs`, and `audit` verbs are pure printers/inspectors — they never edit your `main.rs` or in-progress files. `theme generate` drives the `rio-theme` crate (see below). The CLI UX (interactive wizard, four-part error shape, `--quiet`/`--no-progress`, welcome banner) is itself a contract — see `docs/design/DESIGN_ONBOARDING.md`.
 
 ## Architecture — the big picture
 
@@ -98,7 +109,7 @@ The narrow surface is the point. If a feature feels like it wants schema-driven 
 
 ## Where to look first
 
-- Touching authority/sessions/recovery/MFA/emergency → read the matching `docs/design/DESIGN_*.md` *before* the code. Pull requests are reviewed against the doctrine, not only the diff.
+- Touching authority/sessions/recovery/MFA/emergency → read the matching `docs/design/DESIGN_*.md` *before* the code. Pull requests are reviewed against the doctrine, not only the diff. The design set has ~17 contracts and the naming is not always obvious — sessions=`DESIGN_SESSIONS`, recovery=`DESIGN_RECOVERY`, **MFA=`DESIGN_R3_MFA`**, **emergency=`DESIGN_R4_EMERGENCY`**, org/groups=`DESIGN_R2_ORGANISATIONAL`, permissions=`DESIGN_PERMISSIONS`, audit=`DESIGN_AUDIT`, email=`DESIGN_EMAIL`. CLI/tooling subsystems have contracts too: `DESIGN_ONBOARDING` (CLI UX), `DESIGN_BUILDER` (`builder`/`add`/`plan`/`commit`), `DESIGN_AI_ASSISTANT` + `DESIGN_CLOUD`/`DESIGN_CLOUD_IMPL` (the `ai`/`memory` verbs). Visual contracts: `DESIGN_THEME`, `DESIGN_DOCTRINE`, `DESIGN_SYSTEM`, `DESIGN_CHROME`, plus `docs/design/VISUAL-CONTRACT.md` and `docs/design/TOKENS-EMIT-SPEC.md`.
 - Touching CSS, tokens, or templates → `docs/design/DESIGN_DOCTRINE.md` § 1 (tokens), § 7 (source layout), § 9 (adding a fragment). The PR template requires a token disclosure and a visual regression checklist (`.github/pull_request_template.md`).
 - Changing what's public → `docs/public-api.md` is generated/descriptive; the canonical `pub use` surface lives in `crates/rustio-admin/src/lib.rs`. Anything not re-exported there is `pub(crate)` or `pub` inside `admin::*` for testing only.
 - Understanding scope and history → `ROADMAP.md`, `CHANGELOG.md`, and `docs/archive/STRATEGIC_RESET_PLAN.md` § 8 (strict architectural rules).
