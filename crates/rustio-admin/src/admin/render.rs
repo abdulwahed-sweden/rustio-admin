@@ -2115,7 +2115,14 @@ pub(crate) fn adaptive_for_list(
             .map(|r| {
                 let mut rd = RowData::new();
                 for (f, val) in fields.iter().zip(r.cells.iter()) {
-                    rd.insert(f.name.to_string(), val.clone());
+                    // Humanise booleans for display, matching the legacy
+                    // table's Yes/No pill (the renderer only sees strings).
+                    let display = match (f.field_type, val.as_str()) {
+                        (FieldType::Bool, "true") => "Yes".to_string(),
+                        (FieldType::Bool, "false") => "No".to_string(),
+                        _ => val.clone(),
+                    };
+                    rd.insert(f.name.to_string(), display);
                 }
                 (r.id, rd)
             })
@@ -3554,12 +3561,7 @@ fn sample_value(field: &AdminField, idx: usize) -> String {
         }
     }
     match field.field_type {
-        FieldType::Bool => if idx.is_multiple_of(2) {
-            "true"
-        } else {
-            "false"
-        }
-        .to_string(),
+        FieldType::Bool => if idx.is_multiple_of(2) { "Yes" } else { "No" }.to_string(),
         FieldType::DateTime | FieldType::OptionalDateTime | FieldType::Date | FieldType::Time => {
             "2026-01-15".to_string()
         }
@@ -5053,6 +5055,7 @@ mod adaptive_list_tests {
             field("id", FieldType::I64, None),
             field("full_name", FieldType::String, None),
             field("status", FieldType::String, Some(&["active", "closed"])),
+            field("in_stock", FieldType::Bool, None),
             field("password_hash", FieldType::String, None),
         ]
     }
@@ -5064,9 +5067,10 @@ mod adaptive_list_tests {
                 "42".into(),
                 "Nadim".into(),
                 "active".into(),
+                "true".into(),
                 "$2b$secret".into(),
             ],
-            cell_links: vec![None, None, None, None],
+            cell_links: vec![None, None, None, None, None],
         }
     }
 
@@ -5098,6 +5102,9 @@ mod adaptive_list_tests {
 
         let json = serde_json::to_string(&view).unwrap();
         assert!(json.contains("Nadim"));
+        // booleans are humanised to Yes/No, not rendered as "true"/"false"
+        assert!(json.contains("Yes"), "bool not humanised: {json}");
+        assert!(!json.contains("\"true\""), "raw bool leaked: {json}");
         assert!(
             !json.contains("secret"),
             "hidden password_hash leaked: {json}"

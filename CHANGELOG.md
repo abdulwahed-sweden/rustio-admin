@@ -77,7 +77,9 @@ leaves the alpha track.
   concat in lock-step (after `components/code.css`). **No new tokens** — reuses
   existing surface/line/shadow/status-tint/accent/typography `--rio-*` tokens, so
   dark mode works automatically (no per-component dark CSS). The view layer's
-  badge span is namespaced `av-badge` (was an unprefixed `badge`).
+  badge span is namespaced `av-badge` (was an unprefixed `badge`). Booleans in
+  adaptive cells render as **Yes/No** (matching the legacy table's pill, not raw
+  `true`/`false`), and badges no longer stretch full-width inside cards.
 
 - **Live list pages consume a saved `ViewSpec` (opt-in adaptive modes).** When a
   model has a spec saved via the view designer, its list page gains a mode

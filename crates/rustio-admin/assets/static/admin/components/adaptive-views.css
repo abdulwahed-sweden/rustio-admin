@@ -132,6 +132,8 @@
 .av-badge {
   display: inline-flex;
   align-items: center;
+  /* shrink to content even inside a stretched card column */
+  align-self: flex-start;
   gap: 5px;
   padding: 2px 8px;
   border: 1px solid transparent;
