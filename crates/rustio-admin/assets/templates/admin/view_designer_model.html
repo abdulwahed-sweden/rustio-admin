@@ -1,0 +1,81 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs">
+    <a href="/admin">Home</a> · <a href="/admin/dev/view-designer">View designer</a> · <span>{{ display_name }}</span>
+  </nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    {% if is_saved %}Editing the saved spec.{% else %}Editing an inferred draft — nothing is saved until you click Save.{% endif %}
+    Assign each field a role, ordering, and filter, then preview and save.
+  </p>
+</header>
+
+{% if flash %}
+<div class="rio-notice rio-notice--{{ flash.kind }}">{{ flash.message }}</div>
+{% endif %}
+
+<form method="post" action="/admin/dev/view-designer/{{ admin_name }}/save" class="rio-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+  <header class="rio-section-head">
+    <p class="rio-section-head__eyebrow">Layout</p>
+    <h2 class="rio-section-head__title">Default mode</h2>
+  </header>
+  <section class="rio-fieldset" aria-label="Default mode">
+    <label class="rio-form-field">
+      <span>Mode shown when no <code>?view=</code> is requested</span>
+      <select name="default_mode" class="rio-input">
+        {% for opt in mode_options %}
+        <option value="{{ opt.slug }}"{% if opt.slug == default_mode %} selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </section>
+
+  <header class="rio-section-head">
+    <p class="rio-section-head__eyebrow">Fields</p>
+    <h2 class="rio-section-head__title">Roles &amp; ordering</h2>
+  </header>
+  <section class="rio-fieldset" aria-label="Fields">
+    <table class="rio-table">
+      <thead>
+        <tr><th>Field</th><th>Role</th><th>Priority</th><th>Filterable</th></tr>
+      </thead>
+      <tbody>
+        {% for field in fields %}
+        <tr>
+          <td><code>{{ field.name }}</code> <span class="rio-meta">{{ field.label }}</span></td>
+          <td>
+            <select name="role__{{ field.name }}" class="rio-input">
+              {% for opt in role_options %}
+              <option value="{{ opt.slug }}"{% if opt.slug == field.role %} selected{% endif %}>{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td><input type="number" name="priority__{{ field.name }}" value="{{ field.priority }}" class="rio-input rio-input--mono" style="width:6rem"></td>
+          <td><input type="checkbox" name="filter__{{ field.name }}"{% if field.filterable %} checked{% endif %}></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="rio-btn rio-btn--primary">Save view spec</button>
+  </section>
+</form>
+
+<header class="rio-section-head">
+  <p class="rio-section-head__eyebrow">Preview</p>
+  <h2 class="rio-section-head__title">Live render ({{ preview.mode }})</h2>
+</header>
+<section class="rio-fieldset" aria-label="Preview">
+  <p class="rio-page-header__lead">
+    Rendered by the runtime renderer from the spec above, using placeholder rows.
+    Reflects the last <strong>saved</strong> state — save to update the preview.
+  </p>
+  <div class="av-preview">
+    {% for row in preview.rows %}
+    <div class="av-preview-row">{% include "admin/view_layer/_row.html" %}</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

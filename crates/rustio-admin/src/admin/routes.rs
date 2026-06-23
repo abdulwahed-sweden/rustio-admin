@@ -954,6 +954,43 @@ pub fn register_admin_routes(
         }
     });
 
+    // View designer — Developer-only adaptive-view-layer editor at
+    // `/admin/dev/view-designer`. Lists models, edits a saved
+    // `ViewSpec` per model (or an inferred draft), previews via the
+    // runtime renderer, and saves. Registered before the generic
+    // `/admin/:admin_name` so the `dev` literal wins on tie. Save is
+    // the only authority; preview reuses `view_layer::render_view`.
+    let c = ctx.clone();
+    let router = router.get("/admin/dev/view-designer", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_view_designer(&c, ident, &req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.get("/admin/dev/view-designer/:admin_name", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_view_designer_model(&c, ident, &req).await,
+            }
+        }
+    });
+    let c = ctx.clone();
+    let router = router.post("/admin/dev/view-designer/:admin_name/save", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::do_save_view_spec(&c, ident, req).await,
+            }
+        }
+    });
+
     // Notifications — per-operator list page. Any signed-in
     // operator sees their own notifications (filtered by user_id
     // in the handler), so the gate is just Staff. The topbar

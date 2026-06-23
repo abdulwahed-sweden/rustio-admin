@@ -39,6 +39,49 @@ impl FieldRole {
     pub fn reaches_template(self) -> bool {
         self != FieldRole::Hidden
     }
+
+    // public:
+    /// The stable slug used in forms and serde, e.g. `detail_only`. Matches
+    /// the `snake_case` serde representation.
+    pub fn slug(self) -> &'static str {
+        match self {
+            FieldRole::Primary => "primary",
+            FieldRole::Secondary => "secondary",
+            FieldRole::Badge => "badge",
+            FieldRole::Timestamp => "timestamp",
+            FieldRole::DetailOnly => "detail_only",
+            FieldRole::Hidden => "hidden",
+        }
+    }
+
+    // public:
+    /// Parse a role slug coming from the designer form. Unknown values return
+    /// `None` so the caller can keep the field's previous role.
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        match slug {
+            "primary" => Some(FieldRole::Primary),
+            "secondary" => Some(FieldRole::Secondary),
+            "badge" => Some(FieldRole::Badge),
+            "timestamp" => Some(FieldRole::Timestamp),
+            "detail_only" => Some(FieldRole::DetailOnly),
+            "hidden" => Some(FieldRole::Hidden),
+            _ => None,
+        }
+    }
+
+    // public:
+    /// Every role and its slug, in display order — for building the role
+    /// `<select>` in the designer without hard-coding the list in a template.
+    pub fn all() -> &'static [FieldRole] {
+        &[
+            FieldRole::Primary,
+            FieldRole::Secondary,
+            FieldRole::Badge,
+            FieldRole::Timestamp,
+            FieldRole::DetailOnly,
+            FieldRole::Hidden,
+        ]
+    }
 }
 
 // public:
@@ -71,5 +114,31 @@ impl SemanticClass {
             SemanticClass::Warning => "warning",
             SemanticClass::Danger => "danger",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn role_slug_roundtrips_for_every_variant() {
+        for role in FieldRole::all() {
+            assert_eq!(FieldRole::from_slug(role.slug()), Some(*role));
+        }
+    }
+
+    #[test]
+    fn role_slug_matches_serde_repr() {
+        // slug() must equal the snake_case serde tag the renderer/spec use.
+        for role in FieldRole::all() {
+            let json = serde_json::to_string(role).unwrap();
+            assert_eq!(json, format!("\"{}\"", role.slug()));
+        }
+    }
+
+    #[test]
+    fn unknown_role_slug_is_none() {
+        assert_eq!(FieldRole::from_slug("nope"), None);
     }
 }

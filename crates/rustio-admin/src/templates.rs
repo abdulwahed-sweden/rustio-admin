@@ -410,6 +410,22 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/feature_flags.html"),
     ),
     (
+        "admin/view_designer.html",
+        include_str!("../assets/templates/admin/view_designer.html"),
+    ),
+    (
+        "admin/view_designer_model.html",
+        include_str!("../assets/templates/admin/view_designer_model.html"),
+    ),
+    (
+        "admin/view_layer/_cell.html",
+        include_str!("../assets/templates/admin/view_layer/_cell.html"),
+    ),
+    (
+        "admin/view_layer/_row.html",
+        include_str!("../assets/templates/admin/view_layer/_row.html"),
+    ),
+    (
         "admin/notifications.html",
         include_str!("../assets/templates/admin/notifications.html"),
     ),

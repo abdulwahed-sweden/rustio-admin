@@ -3005,6 +3005,321 @@ pub(crate) async fn do_toggle_feature_flag(
     Ok(Response::redirect("/admin/feature_flags"))
 }
 
+// ---- View designer (/admin/dev/view-designer) ------------------------------
+
+/// Index: list every project model so a developer can pick one to design.
+pub(crate) async fn show_view_designer(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let saved: HashSet<String> = super::view_specs::saved_models(&ctx.db)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    let mut view = render::view_designer_index_ctx(&identity, &ctx.admin, csrf_token(req), &saved);
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/view_designer.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// Editor for one model: shows the effective spec (saved, or an inferred
+/// draft) as an editable form plus a live preview through the runtime renderer.
+pub(crate) async fn show_view_designer_model(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let name = req.param("admin_name").unwrap_or_default().to_string();
+    let entry = ctx
+        .admin
+        .find(&name)
+        .filter(|e| !e.core)
+        .ok_or_else(|| Error::NotFound(format!("no designable model named {name}")))?;
+
+    let saved = super::view_specs::load(&ctx.db, entry.admin_name).await?;
+    let (spec, is_saved) = match saved {
+        Some(s) => (s, true),
+        None => (
+            crate::view_layer::infer_view_spec_from_fields(entry.admin_name, entry.fields),
+            false,
+        ),
+    };
+
+    let flash = req.query().contains("saved").then(|| render::FlashCtx {
+        kind: "success",
+        message: "View spec saved.".to_string(),
+    });
+    let mut view = render::view_designer_ctx(
+        &identity,
+        &ctx.admin,
+        csrf_token(req),
+        entry,
+        &spec,
+        is_saved,
+        flash,
+    );
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx
+        .templates
+        .render("admin/view_designer_model.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// Save the edited spec. Save is the only authority for the view layer: it
+/// writes the spec to the store and emits an audit row. Redirects back to the
+/// editor (post/redirect/get).
+pub(crate) async fn do_save_view_spec(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    let name = req.param("admin_name").unwrap_or_default().to_string();
+    let entry = ctx
+        .admin
+        .find(&name)
+        .filter(|e| !e.core)
+        .ok_or_else(|| Error::NotFound(format!("no designable model named {name}")))?;
+    let admin_name = entry.admin_name;
+
+    let form = req.form()?;
+    let spec = spec_from_form(admin_name, entry.fields, &form);
+    super::view_specs::save(&ctx.db, admin_name, &spec).await?;
+
+    let ip = super::builtin::client_ip(&req);
+    let cid = super::builtin::correlation_id_from(&req);
+    let _ = audit::record(
+        &ctx.db,
+        audit::LogEntry {
+            user_id: identity.user_id,
+            action_type: audit::ActionType::Update,
+            model_name: "view_specs",
+            object_id: 0,
+            ip_address: ip.as_deref(),
+            summary: format!("saved ViewSpec for model {admin_name}"),
+            correlation_id: cid.as_deref(),
+            session_id: None,
+            metadata: None,
+            actor_user_id: None,
+            event: None,
+        },
+    )
+    .await;
+
+    Ok(Response::redirect(format!(
+        "/admin/dev/view-designer/{admin_name}?saved=1"
+    )))
+}
+
+/// Pure: build a [`ViewSpec`](crate::view_layer::ViewSpec) from the designer
+/// form. One field per `AdminField` (preserving declaration order); per-field
+/// the form carries `role__<name>`, `priority__<name>`, `filter__<name>`, plus
+/// a single `default_mode`. Unknown/missing values fall back to safe defaults
+/// (Secondary role, index-derived priority, Table mode). `allowed_modes` and
+/// compositions are not yet editable, so the full mode set and an empty
+/// composition list are used.
+fn spec_from_form(
+    admin_name: &str,
+    fields: &[super::types::AdminField],
+    form: &crate::http::FormData,
+) -> crate::view_layer::ViewSpec {
+    use crate::view_layer::{FieldRole, FieldViewSpec, ViewMode, ViewSpec, VIEW_SPEC_VERSION};
+
+    let mut out_fields = Vec::with_capacity(fields.len());
+    let mut default_filters = Vec::new();
+    for (i, f) in fields.iter().enumerate() {
+        let role = form
+            .get(&format!("role__{}", f.name))
+            .and_then(FieldRole::from_slug)
+            .unwrap_or(FieldRole::Secondary);
+        let priority = form
+            .get(&format!("priority__{}", f.name))
+            .and_then(|s| s.trim().parse::<i32>().ok())
+            .unwrap_or((i as i32) * 10);
+        let filterable = form.bool_flag(&format!("filter__{}", f.name));
+
+        let mut spec = FieldViewSpec::new(f.name, role);
+        spec.priority = priority;
+        spec.filterable = filterable;
+        if filterable {
+            spec.default_filter = true;
+            default_filters.push(f.name.to_string());
+        }
+        out_fields.push(spec);
+    }
+
+    let default_mode = form
+        .get("default_mode")
+        .and_then(ViewMode::from_slug)
+        .unwrap_or(ViewMode::Table);
+
+    ViewSpec {
+        model: admin_name.to_string(),
+        default_mode,
+        allowed_modes: vec![
+            ViewMode::Table,
+            ViewMode::List,
+            ViewMode::Cards,
+            ViewMode::Compact,
+        ],
+        fields: out_fields,
+        compositions: Vec::new(),
+        default_filters,
+        version: VIEW_SPEC_VERSION,
+    }
+}
+
+#[cfg(test)]
+mod view_designer_tests {
+    use super::spec_from_form;
+    use crate::admin::types::{AdminField, FieldType};
+    use crate::http::FormData;
+    use crate::view_layer::{FieldRole, ViewMode};
+
+    fn field(name: &'static str, ft: FieldType) -> AdminField {
+        AdminField {
+            name,
+            label: name,
+            field_type: ft,
+            editable: true,
+            relation: None,
+            choices: None,
+        }
+    }
+
+    #[test]
+    fn parses_roles_priority_filter_and_mode() {
+        let fields = [
+            field("full_name", FieldType::String),
+            field("status", FieldType::String),
+            field("secret_token", FieldType::String),
+        ];
+        let form = FormData::from_urlencoded(
+            "role__full_name=primary&priority__full_name=5\
+             &role__status=badge&filter__status=on&priority__status=20\
+             &role__secret_token=hidden\
+             &default_mode=list",
+        );
+        let spec = spec_from_form("customer", &fields, &form);
+
+        assert_eq!(spec.model, "customer");
+        assert_eq!(spec.default_mode, ViewMode::List);
+        let by = |n: &str| {
+            spec.fields
+                .iter()
+                .find(|f| f.field_name == n)
+                .unwrap()
+                .clone()
+        };
+        assert_eq!(by("full_name").role, FieldRole::Primary);
+        assert_eq!(by("full_name").priority, 5);
+        assert!(!by("full_name").filterable);
+        assert_eq!(by("status").role, FieldRole::Badge);
+        assert!(by("status").filterable);
+        assert!(by("status").default_filter);
+        assert_eq!(by("secret_token").role, FieldRole::Hidden);
+        assert_eq!(spec.default_filters, vec!["status".to_string()]);
+    }
+
+    #[test]
+    fn unknown_role_and_mode_fall_back_to_defaults() {
+        let fields = [field("x", FieldType::String)];
+        let form = FormData::from_urlencoded("role__x=bogus&default_mode=bogus");
+        let spec = spec_from_form("m", &fields, &form);
+        assert_eq!(spec.fields[0].role, FieldRole::Secondary);
+        assert_eq!(spec.default_mode, ViewMode::Table);
+        assert_eq!(spec.fields[0].priority, 0); // index 0 * 10
+    }
+
+    // Renders the SHIPPED editor template against a realistic context, with a
+    // stub base, to catch template-variable typos and prove the role/mode
+    // `selected` logic and the preview include-chain work end to end.
+    #[test]
+    fn editor_template_renders_with_real_context() {
+        use crate::view_layer::{render_view, FieldViewSpec, RowData, ViewSpec, VIEW_SPEC_VERSION};
+        use minijinja::{context, Environment, Value};
+
+        let spec = ViewSpec {
+            model: "customer".into(),
+            default_mode: ViewMode::List,
+            allowed_modes: vec![ViewMode::Table, ViewMode::List],
+            fields: vec![
+                FieldViewSpec::new("full_name", FieldRole::Primary),
+                FieldViewSpec::new("status", FieldRole::Badge),
+            ],
+            compositions: vec![],
+            default_filters: vec!["status".into()],
+            version: VIEW_SPEC_VERSION,
+        };
+        let mut row = RowData::new();
+        row.insert("full_name".into(), "Nadim Shahin".into());
+        row.insert("status".into(), "active".into());
+        let preview = render_view(&spec, spec.default_mode, std::slice::from_ref(&row));
+
+        let mut env = Environment::new();
+        env.add_template("admin/_base.html", "{% block content %}{% endblock %}")
+            .unwrap();
+        env.add_template(
+            "admin/view_designer_model.html",
+            include_str!("../../assets/templates/admin/view_designer_model.html"),
+        )
+        .unwrap();
+        env.add_template(
+            "admin/view_layer/_row.html",
+            include_str!("../../assets/templates/admin/view_layer/_row.html"),
+        )
+        .unwrap();
+        env.add_template(
+            "admin/view_layer/_cell.html",
+            include_str!("../../assets/templates/admin/view_layer/_cell.html"),
+        )
+        .unwrap();
+
+        let role_options = vec![
+            context! { slug => "primary", label => "Primary" },
+            context! { slug => "badge", label => "Badge" },
+            context! { slug => "hidden", label => "Hidden" },
+        ];
+        let mode_options = vec![
+            context! { slug => "table", label => "Table" },
+            context! { slug => "list", label => "List" },
+        ];
+        let fields = vec![
+            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false },
+            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true },
+        ];
+
+        let tmpl = env.get_template("admin/view_designer_model.html").unwrap();
+        let html = tmpl
+            .render(context! {
+                csrf_token => "tok123",
+                admin_name => "customer",
+                display_name => "Customers",
+                page_title => "View designer",
+                is_saved => false,
+                flash => Option::<()>::None,
+                default_mode => "list",
+                mode_options => mode_options,
+                role_options => role_options,
+                fields => fields,
+                preview => Value::from_serialize(&preview),
+            })
+            .unwrap();
+
+        // form targets the save route and carries the CSRF token
+        assert!(html.contains("/admin/dev/view-designer/customer/save"));
+        assert!(html.contains("name=\"_csrf\" value=\"tok123\""));
+        // role + mode selects mark the current value selected
+        assert!(html.contains("value=\"primary\" selected"));
+        assert!(html.contains("value=\"badge\" selected"));
+        assert!(html.contains("value=\"list\" selected"));
+        // preview rendered through the cell partial chain
+        assert!(html.contains("av-primary"));
+        assert!(html.contains("Nadim Shahin"));
+    }
+}
+
 pub(crate) async fn show_health(
     ctx: &AdminCtx,
     identity: Identity,

@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 
 use super::audit::AdminAction;
-use super::types::{Admin, AdminEntry, AdminField, EditRow, ListRow};
+use super::types::{Admin, AdminEntry, AdminField, EditRow, FieldType, ListRow};
 use crate::auth::Identity;
 use crate::error::Result;
 use crate::http::FormData;
@@ -3341,6 +3341,206 @@ pub(crate) fn feature_flags_ctx(
                 updated_iso: f.updated_at.to_rfc3339(),
             })
             .collect(),
+        flash,
+    }
+}
+
+// ---- View designer (/admin/dev/view-designer) ------------------------------
+
+/// A `slug` + human `label` pair for building `<select>` options in the
+/// designer without hard-coding the role/mode lists in a template.
+#[derive(Serialize)]
+pub(crate) struct SlugLabel {
+    pub slug: String,
+    pub label: String,
+}
+
+/// One model link on the designer index.
+#[derive(Serialize)]
+pub(crate) struct DesignerModelCtx {
+    pub admin_name: &'static str,
+    pub display_name: &'static str,
+    /// `true` when a spec has been saved; `false` means the editor will show
+    /// the inferred draft.
+    pub is_saved: bool,
+}
+
+/// The designer index — every project model, with its saved/draft status.
+#[derive(Serialize)]
+pub(crate) struct ViewDesignerIndexCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub models: Vec<DesignerModelCtx>,
+}
+
+/// One editable field row in the designer.
+#[derive(Serialize)]
+pub(crate) struct DesignerFieldCtx {
+    pub name: String,
+    pub label: String,
+    /// The field's current role slug (matched against `role_options`).
+    pub role: String,
+    pub priority: i32,
+    pub filterable: bool,
+}
+
+/// The per-model designer editor: editable field rows plus a live preview
+/// rendered through the exact runtime [`render_view`](crate::view_layer::render_view).
+#[derive(Serialize)]
+pub(crate) struct ViewDesignerCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: String,
+    pub entries: Vec<SidebarEntry>,
+    pub admin_name: &'static str,
+    pub display_name: &'static str,
+    /// `true` when editing a saved spec, `false` when seeding from inference.
+    pub is_saved: bool,
+    /// Current default-mode slug (matched against `mode_options`).
+    pub default_mode: String,
+    pub mode_options: Vec<SlugLabel>,
+    pub role_options: Vec<SlugLabel>,
+    pub fields: Vec<DesignerFieldCtx>,
+    /// Live preview produced by the runtime renderer from the effective spec.
+    pub preview: crate::view_layer::RenderedView,
+    pub flash: Option<FlashCtx>,
+}
+
+/// Build the designer index context.
+pub(crate) fn view_designer_index_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    saved: &std::collections::HashSet<String>,
+) -> ViewDesignerIndexCtx {
+    ViewDesignerIndexCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: "View designer",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        models: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(|e| DesignerModelCtx {
+                admin_name: e.admin_name,
+                display_name: e.display_name,
+                is_saved: saved.contains(e.admin_name),
+            })
+            .collect(),
+    }
+}
+
+fn role_options() -> Vec<SlugLabel> {
+    crate::view_layer::FieldRole::all()
+        .iter()
+        .map(|r| SlugLabel {
+            slug: r.slug().to_string(),
+            label: humanise_field(r.slug()),
+        })
+        .collect()
+}
+
+fn mode_options() -> Vec<SlugLabel> {
+    [
+        crate::view_layer::ViewMode::Table,
+        crate::view_layer::ViewMode::List,
+        crate::view_layer::ViewMode::Cards,
+        crate::view_layer::ViewMode::Compact,
+    ]
+    .iter()
+    .map(|m| SlugLabel {
+        slug: m.slug().to_string(),
+        label: humanise_field(m.slug()),
+    })
+    .collect()
+}
+
+/// A placeholder cell value for the preview, so the designer can show layout
+/// without fetching real rows (keeps the page side-effect-free). Uses a
+/// declared choice when present, a date for temporal fields, else a labelled
+/// sample.
+fn sample_value(field: &AdminField, idx: usize) -> String {
+    if let Some(choices) = field.choices {
+        if !choices.is_empty() {
+            return choices[idx % choices.len()].to_string();
+        }
+    }
+    match field.field_type {
+        FieldType::Bool => if idx.is_multiple_of(2) {
+            "true"
+        } else {
+            "false"
+        }
+        .to_string(),
+        FieldType::DateTime | FieldType::OptionalDateTime | FieldType::Date | FieldType::Time => {
+            "2026-01-15".to_string()
+        }
+        _ => format!("{} {}", field.label, idx + 1),
+    }
+}
+
+/// Build the per-model designer editor context from the *effective* spec
+/// (saved, or an inferred draft). The preview reuses the runtime renderer.
+pub(crate) fn view_designer_ctx(
+    identity: &Identity,
+    admin: &Admin,
+    csrf_token: String,
+    entry: &AdminEntry,
+    spec: &crate::view_layer::ViewSpec,
+    is_saved: bool,
+    flash: Option<FlashCtx>,
+) -> ViewDesignerCtx {
+    let fields = spec
+        .fields
+        .iter()
+        .map(|f| DesignerFieldCtx {
+            name: f.field_name.clone(),
+            label: f
+                .label
+                .clone()
+                .unwrap_or_else(|| humanise_field(&f.field_name)),
+            role: f.role.slug().to_string(),
+            priority: f.priority,
+            filterable: f.filterable,
+        })
+        .collect();
+
+    // Two placeholder rows keyed by field name, fed through render_view.
+    let rows: Vec<crate::view_layer::RowData> = (0..2)
+        .map(|idx| {
+            entry
+                .fields
+                .iter()
+                .map(|f| (f.name.to_string(), sample_value(f, idx)))
+                .collect()
+        })
+        .collect();
+    let preview = crate::view_layer::render_view(spec, spec.default_mode, &rows);
+
+    ViewDesignerCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin),
+        page_title: format!("View designer · {}", entry.display_name),
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        admin_name: entry.admin_name,
+        display_name: entry.display_name,
+        is_saved,
+        default_mode: spec.default_mode.slug().to_string(),
+        mode_options: mode_options(),
+        role_options: role_options(),
+        fields,
+        preview,
         flash,
     }
 }
