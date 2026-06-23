@@ -68,6 +68,21 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Added
+- **Live list pages consume a saved `ViewSpec` (opt-in adaptive modes).** When a
+  model has a spec saved via the view designer, its list page gains a mode
+  switcher and renders `?view=list|cards|compact` through the runtime
+  `view_layer::render_view`; `?view=table` (and the no-spec case) stays the
+  **existing table, byte-for-byte unchanged** — search, filters, sort,
+  pagination, bulk actions, FK links, search highlighting, and edit/delete all
+  remain on the legacy table path. The data pipeline is untouched (same
+  `ConcreteOps::list`); only the rows region switches, behind a fallback (a spec
+  lookup failure logs and keeps the table). `RenderedRow` gains an optional `id`
+  (via new `render_view_with_ids`) so adaptive cards/list rows link to the
+  record. New `_list_adaptive.html` partial; `list.html` wraps just its data
+  board in an additive `{% if adaptive %}…{% else %}<legacy table>{% endif %}`.
+  Guarded by a full-`list.html` render test for **both** branches (legacy table
+  intact vs. adaptive swap) plus `adaptive_for_list` unit tests — hidden fields
+  never reach the adaptive HTML.
 - **View designer page at `/admin/dev/view-designer` (Developer-gated).** The
   first editor for the adaptive view layer: lists project models, and per model
   shows the effective `ViewSpec` (the saved one, or a deterministically inferred

@@ -37,7 +37,8 @@ pub use infer::{infer_view_spec, infer_view_spec_from_fields, FieldKind, FieldMe
 pub use modes::ViewMode;
 // public:
 pub use render::{
-    render_row, render_view, CellPart, RenderedCell, RenderedRow, RenderedView, RowData,
+    render_row, render_view, render_view_with_ids, CellPart, RenderedCell, RenderedRow,
+    RenderedView, RowData,
 };
 // public:
 pub use roles::{FieldRole, SemanticClass};

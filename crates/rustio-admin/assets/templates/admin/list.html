@@ -156,8 +156,15 @@
 </div>
 {% endif %}
 
+{# ---- View-mode switcher (only when a saved ViewSpec exists) ---- #}
+{% if mode_links %}
+<nav class="rio-view-modes" aria-label="View mode">
+  {% for m in mode_links %}<a href="{{ m.href }}" class="rio-view-mode{% if m.active %} is-active{% endif %}">{{ m.label }}</a>{% endfor %}
+</nav>
+{% endif %}
+
 {# ---- Board ---- #}
-{% if not read_only %}
+{% if not read_only and not adaptive %}
 <form method="post" action="/admin/{{ admin_name }}/bulk_delete" class="rio-bulk-form" data-rio-bulk>
 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 <input type="hidden" name="_ids" value="" data-rio-bulk-ids>
@@ -173,6 +180,7 @@
 
 <div class="rio-board">
   {% if rows %}
+  {% if adaptive %}{% include "admin/_list_adaptive.html" %}{% else %}
   <div style="overflow:auto">
   <table class="rio-dtable">
     <thead>
@@ -214,6 +222,7 @@
     </tbody>
   </table>
   </div>
+  {% endif %}
   <div class="rio-board-foot">
     <span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ rows|length }}</strong> of <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_rows }}</strong> {{ display_name|lower }}</span>
     {% if total_pages > 1 %}
@@ -234,5 +243,5 @@
   {% endif %}
 </div>
 
-{% if not read_only %}</form>{% endif %}
+{% if not read_only and not adaptive %}</form>{% endif %}
 {% endblock %}
