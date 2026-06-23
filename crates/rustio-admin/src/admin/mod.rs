@@ -36,6 +36,7 @@ mod render;
 mod routes;
 pub(crate) mod saved_filters;
 mod types;
+pub(crate) mod view_specs;
 // public:
 pub mod validation;
 

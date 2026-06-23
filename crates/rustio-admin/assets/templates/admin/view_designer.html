@@ -1,0 +1,42 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+  <h1>{{ page_title }}</h1>
+  <p class="rio-page-header__lead">
+    Record how each model is displayed as a saved, versioned
+    <code>ViewSpec</code>. The renderer reads the saved spec deterministically —
+    inference only seeds a draft to edit. Choose a model to design its view.
+  </p>
+</header>
+
+<section class="rio-fieldset" aria-label="Designable models">
+  {% if models %}
+  <table class="rio-table">
+    <thead>
+      <tr><th>Model</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for m in models %}
+      <tr>
+        <td><a href="/admin/dev/view-designer/{{ m.admin_name }}">{{ m.display_name }}</a></td>
+        <td>
+          {% if m.is_saved %}
+          <span class="rio-pill rio-pill--on">saved</span>
+          {% else %}
+          <span class="rio-pill rio-pill--off">draft (inferred)</span>
+          {% endif %}
+        </td>
+        <td><a class="rio-action-link" href="/admin/dev/view-designer/{{ m.admin_name }}">Design →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="rio-empty-state">
+    <h3 class="rio-empty-state__title">No project models registered</h3>
+    <p class="rio-empty-state__lead">Register a model with <code>Admin::model::&lt;M&gt;()</code> to design its view.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

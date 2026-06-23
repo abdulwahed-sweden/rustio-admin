@@ -152,6 +152,15 @@ pub mod __integration {
         crate::auth::sessions::hash_token_for_storage(token)
     }
 
+    // internal: test-only re-export of the view-spec store
+    /// View-designer persistence (`admin::view_specs`) is `pub(crate)`;
+    /// these aliases let `tests/integration_view_specs.rs` exercise the
+    /// real Postgres round-trip (`ensure_table` → `save` → `load` →
+    /// `saved_models`) without promoting the store to permanent `pub`.
+    pub use crate::admin::view_specs::{
+        load as view_specs_load, save as view_specs_save, saved_models as view_specs_saved_models,
+    };
+
     // internal: test-only request builder
     /// Construct a minimal [`crate::http::Request`] for integration
     /// tests. POST to `/test`, no headers, no body, no params.

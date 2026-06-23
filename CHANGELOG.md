@@ -68,6 +68,22 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Added
+- **View designer page at `/admin/dev/view-designer` (Developer-gated).** The
+  first editor for the adaptive view layer: lists project models, and per model
+  shows the effective `ViewSpec` (the saved one, or a deterministically inferred
+  draft when none exists) as an editable form — per-field role, priority, and
+  filterable, plus the default view mode — with a **live preview rendered through
+  the exact runtime `view_layer::render_view`** (placeholder rows, so the page is
+  side-effect-free). **Save is the only authority:** it writes the spec to a new
+  global per-model store (`rustio_admin_view_specs`, lazy `ensure_table` like the
+  feature-flags/saved-filters stores — no migration) and emits an `Update` audit
+  row. Inference still only *produces* a draft; nothing reads a spec dynamically.
+  Routes are gated on `Role::Developer` and registered before the generic
+  `/admin/:admin_name`. Additive: the live list page is **not** wired to consume
+  saved specs yet (a deliberate follow-up) — it still uses the existing table
+  path. Adds `FieldRole::slug`/`from_slug`/`all`. Verified by pure form→spec
+  parsing tests, a shipped-template render test, and a Postgres store round-trip
+  (`integration_view_specs`).
 - **Adaptive View Layer (`view_layer`) — presentation-only, additive.** A new
   module that lets a model record *visual importance* (which the schema can't
   express) once, as a stable, serde-serializable, versioned `ViewSpec`, and
