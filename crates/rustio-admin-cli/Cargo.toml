@@ -32,13 +32,13 @@ rpassword = "7"
 # / NO_COLOR detection short-circuits to a no-op draw target in
 # pipes / CI; we layer one additional gate on top so the global
 # `--quiet` / `--no-progress` flags work too.
-indicatif = "0.17"
+indicatif = "0.18"
 # Terminal styling for `rustio-admin startapp` spatial-orientation output
 # (paths, commands, URLs visually distinct). `console` is already in
 # the transitive tree via `indicatif`; declaring it directly keeps
 # the call site reviewable and locks the version. NO_COLOR / TTY
 # detection lives inside the crate.
-console = "0.15"
+console = "0.16"
 
 # DB + env (DATABASE_URL is read from .env when present)
 sqlx      = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "chrono"] }
@@ -67,7 +67,7 @@ lettre = { version = "0.11", default-features = false, features = ["smtp-transpo
 # Builder is build-time only — none of these crates is reachable
 # from runtime code in `rustio-admin`.
 ulid = "1"
-toml_edit = "0.22"
+toml_edit = "0.25"
 sha2 = "0.10"
 unicode-normalization = "0.1"
 serde = { version = "1", features = ["derive"] }

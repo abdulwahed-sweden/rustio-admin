@@ -67,7 +67,20 @@ leaves the alpha track.
 
 ## [Unreleased]
 
-## [0.30.0] — 2026-06-11
+### Changed
+- **Dependency refresh (no behaviour change).** Bumped a tier of non-security,
+  non-database dependencies to their latest major versions and re-resolved the
+  lockfile to the newest MSRV-1.88-compatible patch releases. Direct major bumps:
+  `thiserror` 1 → 2, `testcontainers` 0.23 → 0.27 and `testcontainers-modules`
+  0.11 → 0.15 (integration harness, behind the `integration-test` feature),
+  `toml_edit` 0.22 → 0.25 (Builder), `console` 0.15 → 0.16 and `indicatif` 0.17
+  → 0.18 (CLI onboarding output). No source changes were required; fmt, clippy
+  `-D warnings`, the full unit/doc suite, and the integration suite all stay
+  green. The security-sensitive crypto stack (`argon2`, `sha2`, `sha1`, `hmac`,
+  `aes-gcm`, `rand`) and the Postgres core (`sqlx` 0.8) are intentionally left in
+  place — their major bumps are coupled (shared RustCrypto `digest` trait
+  versions) and touch doctrine subsystems, so they belong in a separate,
+  individually reviewed migration rather than a blanket dependency sweep.
 
 ### Changed
 - **Dark theme re-tuned to a comfortable graphite-grey.** The dark palette moved
