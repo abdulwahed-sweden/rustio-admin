@@ -55,6 +55,7 @@
 @import url("components/feedback.css");
 @import url("components/navigation.css");
 @import url("components/code.css");
+@import url("components/adaptive-views.css");
 
 /* ---- Layout — the RustIO Console shell + masthead + ledger + board. */
 @import url("layout/console.css");

@@ -1,0 +1,202 @@
+/* ============================================================
+   RustIO — Adaptive view layer · cards / list / compact
+   ============================================================ */
+
+/* Styles the view-layer render output (`view_layer::render_view`) used by the
+   live list page's `?view=list|cards|compact` modes and the view-designer
+   preview. Token-only; dark mode is handled entirely by `tokens/colors.css`
+   (no per-component dark block — Doctrine §5). Cascade: loads after
+   `components/data.css`, whose `--rio-*` surface/badge tokens it reuses.
+
+   Markup: `.av-list--<mode>` > `.av-row` (an <a>) > the per-cell spans emitted
+   by `_cell.html` (`.av-primary` / `.av-secondary` / `.av-ts` / `.av-badge` /
+   `.av-cell`). The mode switcher is `.rio-view-modes` > `.rio-view-mode`. */
+
+/* ---- Mode switcher ---------------------------------------- */
+.rio-view-modes {
+  display: inline-flex;
+  gap: var(--rio-space-4);
+  margin-block-end: var(--rio-space-16);
+  padding: var(--rio-space-2);
+  background: var(--rio-sunken);
+  border-radius: var(--rio-radius-control);
+}
+.rio-view-mode {
+  display: inline-flex;
+  align-items: center;
+  padding-block: var(--rio-space-4);
+  padding-inline: var(--rio-space-12);
+  border-radius: var(--rio-radius-sm);
+  color: var(--rio-text-mute);
+  text-decoration: none;
+  font-size: var(--rio-text-13);
+  font-weight: var(--rio-weight-medium);
+  transition: color var(--rio-dur-fast) var(--rio-ease),
+    background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-view-mode:hover {
+  color: var(--rio-text-hi);
+}
+.rio-view-mode.is-active {
+  background: var(--rio-surface);
+  color: var(--rio-rust);
+  box-shadow: var(--rio-shadow-sm);
+}
+
+/* ---- Row container (an <a> wrapping a record's cells) ----- */
+.av-list {
+  display: block;
+}
+.av-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--rio-space-6) var(--rio-space-12);
+  padding-block: var(--rio-space-12);
+  padding-inline: var(--rio-space-16);
+  color: var(--rio-text);
+  text-decoration: none;
+  border-radius: var(--rio-radius-md);
+  transition: background var(--rio-dur-fast) var(--rio-ease);
+}
+.av-row:hover {
+  background: var(--rio-raised);
+}
+
+/* Cards: a responsive grid; each row becomes a card with cells stacked. */
+.av-list--cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--rio-space-16);
+}
+.av-list--cards .av-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--rio-space-6);
+  padding: var(--rio-space-16);
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+  transition: box-shadow var(--rio-dur-fast) var(--rio-ease),
+    border-color var(--rio-dur-fast) var(--rio-ease);
+}
+.av-list--cards .av-row:hover {
+  background: var(--rio-surface);
+  border-color: var(--rio-rust);
+  box-shadow: var(--rio-shadow-md);
+}
+
+/* List: divided rows, primary leads, the rest trail. */
+.av-list--list .av-row {
+  border-block-end: 1px solid var(--rio-line);
+  border-radius: 0;
+}
+.av-list--list .av-row:hover {
+  background: var(--rio-surface-tint);
+}
+
+/* Compact: denser rows for large datasets. */
+.av-list--compact .av-row {
+  gap: var(--rio-space-8);
+  padding-block: var(--rio-space-6);
+  border-block-end: 1px solid var(--rio-line);
+  border-radius: 0;
+  font-size: var(--rio-text-13);
+}
+.av-list--compact .av-row:hover {
+  background: var(--rio-surface-tint);
+}
+
+/* ---- Cells ------------------------------------------------ */
+.av-primary {
+  color: var(--rio-text-hi);
+  font-weight: var(--rio-weight-semibold);
+  font-size: var(--rio-text-15);
+}
+.av-list--cards .av-primary {
+  font-size: var(--rio-text-17);
+}
+.av-secondary {
+  color: var(--rio-text-mute);
+  font-size: var(--rio-text-13);
+}
+.av-ts {
+  color: var(--rio-text-faint);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+}
+
+/* Badges — token tints mirroring `.rio-badge--*`, keyed by the view layer's
+   `SemanticClass` (neutral / info / success / warning / danger). */
+.av-badge {
+  display: inline-flex;
+  align-items: center;
+  /* shrink to content even inside a stretched card column */
+  align-self: flex-start;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--rio-radius-sm);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-medium);
+  line-height: 1.5;
+}
+.av-badge--neutral {
+  background: var(--rio-sunken);
+  color: var(--rio-text-mute);
+}
+.av-badge--info {
+  background: var(--rio-rust-tint);
+  color: var(--rio-rust);
+}
+.av-badge--success {
+  background: var(--rio-success-tint);
+  color: var(--rio-success);
+}
+.av-badge--warning {
+  background: var(--rio-warn-tint);
+  color: var(--rio-warn);
+}
+.av-badge--danger {
+  background: var(--rio-danger-tint);
+  color: var(--rio-danger);
+}
+
+/* ---- Composed cells (`CellComposition`) ------------------- */
+.av-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--rio-space-6);
+}
+.av-cell--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rio-space-2);
+}
+.av-cell--badge_inline {
+  align-items: center;
+}
+.av-part {
+  color: var(--rio-text);
+}
+.av-part.is-primary {
+  color: var(--rio-text-hi);
+  font-weight: var(--rio-weight-medium);
+}
+
+/* ---- Designer preview (view_designer_model.html) ---------- */
+.av-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rio-space-4);
+}
+.av-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--rio-space-6) var(--rio-space-12);
+  padding-block: var(--rio-space-8);
+  border-block-end: 1px solid var(--rio-line);
+}

@@ -68,6 +68,19 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Added
+- **Styling for the adaptive card / list / compact layouts.** New token-only CSS
+  fragment `components/adaptive-views.css` styles the view-layer render output
+  (the `?view=cards|list|compact` modes and the designer preview): a card grid,
+  divided list/compact rows with hover, primary/secondary/timestamp cell type,
+  semantic badges, and the `.rio-view-modes` switcher (active pill in the teal
+  accent). Registered in the `admin.css` `@import` list and the `ADMIN_CSS`
+  concat in lock-step (after `components/code.css`). **No new tokens** — reuses
+  existing surface/line/shadow/status-tint/accent/typography `--rio-*` tokens, so
+  dark mode works automatically (no per-component dark CSS). The view layer's
+  badge span is namespaced `av-badge` (was an unprefixed `badge`). Booleans in
+  adaptive cells render as **Yes/No** (matching the legacy table's pill, not raw
+  `true`/`false`), and badges no longer stretch full-width inside cards.
+
 - **Live list pages consume a saved `ViewSpec` (opt-in adaptive modes).** When a
   model has a spec saved via the view designer, its list page gains a mode
   switcher and renders `?view=list|cards|compact` through the runtime

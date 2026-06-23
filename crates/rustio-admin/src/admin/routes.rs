@@ -87,6 +87,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/components/code.css"),
     "\n",
+    include_str!("../../assets/static/admin/components/adaptive-views.css"),
+    "\n",
     // ---- layout (RustIO Console) ------------------------------
     include_str!("../../assets/static/admin/layout/console.css"),
     "\n",
