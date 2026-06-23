@@ -34,6 +34,22 @@
   </section>
 
   <header class="rio-section-head">
+    <p class="rio-section-head__eyebrow">Layout</p>
+    <h2 class="rio-section-head__title">Modes in the switcher</h2>
+  </header>
+  <section class="rio-fieldset" aria-label="Allowed modes">
+    <p class="rio-page-header__lead">Which layouts appear in the <code>?view=</code> switcher. The default mode is always available.</p>
+    <div class="rio-form-inline">
+      {% for m in mode_choices %}
+      <label style="display:inline-flex;align-items:center;gap:6px;margin-inline-end:16px">
+        <input type="checkbox" name="mode_allowed__{{ m.slug }}"{% if m.allowed %} checked{% endif %}{% if m.is_default %} disabled{% endif %}>
+        <span>{{ m.label }}{% if m.is_default %} (default){% endif %}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  <header class="rio-section-head">
     <p class="rio-section-head__eyebrow">Fields</p>
     <h2 class="rio-section-head__title">Roles &amp; ordering</h2>
   </header>
@@ -59,8 +75,58 @@
         {% endfor %}
       </tbody>
     </table>
-    <button type="submit" class="rio-btn rio-btn--primary">Save view spec</button>
   </section>
+
+  <header class="rio-section-head">
+    <p class="rio-section-head__eyebrow">Compositions</p>
+    <h2 class="rio-section-head__title">Merge fields into one cell</h2>
+  </header>
+  <section class="rio-fieldset" aria-label="Compositions">
+    <p class="rio-page-header__lead">
+      Optional. Combine a primary field with secondaries into one cell (e.g. name over email).
+      A field used here is not also shown standalone. Leave <strong>Primary</strong> as
+      “— none —” to disable a slot.
+    </p>
+    {% for slot in comp_slots %}
+    <fieldset class="rio-fieldset" style="margin-block-end:12px">
+      <legend class="rio-section-head__eyebrow">Composition {{ slot.index }}</legend>
+      <label class="rio-form-field">
+        <span>Primary field</span>
+        <select name="comp{{ slot.index }}_primary" class="rio-input">
+          <option value="">— none (disabled) —</option>
+          {% for f in slot.fields %}
+          <option value="{{ f.name }}"{% if f.name == slot.primary %} selected{% endif %}>{{ f.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="rio-form-field">
+        <span>Label (optional)</span>
+        <input type="text" name="comp{{ slot.index }}_label" value="{{ slot.label }}" class="rio-input">
+      </label>
+      <label class="rio-form-field">
+        <span>Style</span>
+        <select name="comp{{ slot.index }}_style" class="rio-input">
+          {% for s in compose_styles %}
+          <option value="{{ s.slug }}"{% if s.slug == slot.style %} selected{% endif %}>{{ s.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="rio-form-field">
+        <span>Secondary fields</span>
+        <div class="rio-form-inline">
+          {% for f in slot.fields %}
+          <label style="display:inline-flex;align-items:center;gap:4px;margin-inline-end:12px">
+            <input type="checkbox" name="comp{{ slot.index }}_sec__{{ f.name }}"{% if f.is_secondary %} checked{% endif %}>
+            <span class="rio-meta">{{ f.name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </fieldset>
+    {% endfor %}
+  </section>
+
+  <button type="submit" class="rio-btn rio-btn--primary">Save view spec</button>
 </form>
 
 <header class="rio-section-head">
