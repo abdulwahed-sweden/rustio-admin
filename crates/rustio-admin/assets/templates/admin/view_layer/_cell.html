@@ -12,7 +12,7 @@
 {%- elif cell.kind == "secondary" -%}
   <span class="av-secondary">{{ cell.value }}</span>
 {%- elif cell.kind == "badge" -%}
-  <span class="badge badge--{{ cell.semantic }}">{{ cell.value }}</span>
+  <span class="av-badge av-badge--{{ cell.semantic }}">{{ cell.value }}</span>
 {%- elif cell.kind == "timestamp" -%}
   <time class="av-ts">{{ cell.value }}</time>
 {%- elif cell.kind == "composed" -%}
