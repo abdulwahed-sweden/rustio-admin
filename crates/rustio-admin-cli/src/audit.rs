@@ -147,7 +147,7 @@ async fn tail(
     // Bind in the same order that the WHERE-clause builder
     // walked the filters. The builder and the binder MUST stay
     // in lock-step; if you add a new filter, add to both.
-    let mut q = sqlx::query(&sql);
+    let mut q = sqlx::query(sqlx::AssertSqlSafe(sql));
     if let Some(uid) = user_id {
         q = q.bind(uid);
     }

@@ -29,7 +29,7 @@ http-body-util = "0.1"
 bytes = "1"
 
 # data
-sqlx = { version = "0.8", default-features = false, features = [
+sqlx = { version = "0.9", default-features = false, features = [
     "runtime-tokio",
     "postgres",
     "chrono",

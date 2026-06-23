@@ -643,7 +643,7 @@ async fn load_max_session_ts(
     // String interpolation here is bound to the function's call sites
     // in this module.
     let sql = format!("SELECT MAX({col}) FROM rustio_sessions WHERE user_id = $1");
-    sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(&sql)
+    sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(sqlx::AssertSqlSafe(sql))
         .bind(user_id)
         .fetch_one(db.pool())
         .await

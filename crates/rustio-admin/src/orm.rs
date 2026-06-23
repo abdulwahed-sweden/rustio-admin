@@ -313,7 +313,9 @@ pub async fn all<M: Model>(db: &Db) -> Result<Vec<M>> {
         M::COLUMNS.join(", "),
         M::TABLE
     );
-    let rows = sqlx::query(&sql).fetch_all(db.pool()).await?;
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .fetch_all(db.pool())
+        .await?;
     rows.iter().map(|r| M::from_row(Row::from_pg(r))).collect()
 }
 
@@ -324,7 +326,7 @@ pub async fn page<M: Model>(db: &Db, limit: i64, offset: i64) -> Result<Vec<M>> 
         M::COLUMNS.join(", "),
         M::TABLE
     );
-    let rows = sqlx::query(&sql)
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(limit)
         .bind(offset)
         .fetch_all(db.pool())
@@ -335,7 +337,9 @@ pub async fn page<M: Model>(db: &Db, limit: i64, offset: i64) -> Result<Vec<M>> 
 // public:
 pub async fn count<M: Model>(db: &Db) -> Result<i64> {
     let sql = format!("SELECT COUNT(*) AS c FROM {}", M::TABLE);
-    let row = sqlx::query(&sql).fetch_one(db.pool()).await?;
+    let row = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .fetch_one(db.pool())
+        .await?;
     row.try_get::<i64, _>("c")
         .map_err(|e| Error::Internal(format!("count: {e}")))
 }
@@ -347,7 +351,10 @@ pub async fn find<M: Model>(db: &Db, id: i64) -> Result<Option<M>> {
         M::COLUMNS.join(", "),
         M::TABLE
     );
-    let row = sqlx::query(&sql).bind(id).fetch_optional(db.pool()).await?;
+    let row = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .bind(id)
+        .fetch_optional(db.pool())
+        .await?;
     match row {
         Some(r) => Ok(Some(M::from_row(Row::from_pg(&r))?)),
         None => Ok(None),
@@ -366,7 +373,7 @@ pub async fn create<M: Model>(db: &Db, model: &M) -> Result<i64> {
         cols,
         placeholders.join(", ")
     );
-    let mut query = sqlx::query(&sql);
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
     for value in model.insert_values() {
         query = bind_value(query, value);
     }
@@ -390,7 +397,7 @@ pub async fn update<M: Model>(db: &Db, id: i64, model: &M) -> Result<()> {
         sets.join(", "),
         M::INSERT_COLUMNS.len() + 1
     );
-    let mut query = sqlx::query(&sql);
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
     for value in model.insert_values() {
         query = bind_value(query, value);
     }
@@ -402,7 +409,10 @@ pub async fn update<M: Model>(db: &Db, id: i64, model: &M) -> Result<()> {
 // public:
 pub async fn delete<M: Model>(db: &Db, id: i64) -> Result<()> {
     let sql = format!("DELETE FROM {} WHERE id = $1", M::TABLE);
-    sqlx::query(&sql).bind(id).execute(db.pool()).await?;
+    sqlx::query(sqlx::AssertSqlSafe(sql))
+        .bind(id)
+        .execute(db.pool())
+        .await?;
     Ok(())
 }
 

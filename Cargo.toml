@@ -17,7 +17,9 @@ exclude = ["examples/clinic", "examples/shop"]
 [workspace.package]
 version = "0.30.0"
 edition = "2021"
-rust-version = "1.88"
+# sqlx 0.9 raises the floor: its own MSRV is Rust 1.94, so the
+# workspace tracks it. Bumping sqlx and this value move together.
+rust-version = "1.94"
 license = "MIT"
 repository = "https://github.com/abdulwahed-sweden/rustio-admin"
 homepage = "https://github.com/abdulwahed-sweden/rustio-admin"

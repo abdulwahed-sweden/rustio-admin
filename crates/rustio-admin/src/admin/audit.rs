@@ -667,7 +667,7 @@ pub async fn recent(
         " ORDER BY a.timestamp DESC, a.id DESC LIMIT ${param_idx}"
     ));
 
-    let mut q = sqlx::query(&sql);
+    let mut q = sqlx::query(sqlx::AssertSqlSafe(sql));
     if let Some(m) = model_filter {
         q = q.bind(m);
     }
