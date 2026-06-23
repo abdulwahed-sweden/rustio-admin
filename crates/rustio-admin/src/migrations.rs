@@ -56,7 +56,7 @@ pub async fn apply_with(db: &Db, dir: impl AsRef<Path>, opts: ApplyOptions) -> R
             if trimmed.is_empty() {
                 continue;
             }
-            sqlx::query(trimmed)
+            sqlx::query(sqlx::AssertSqlSafe(trimmed))
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| Error::Internal(format!("migration {} failed: {e}", file.name)))?;

@@ -1271,7 +1271,9 @@ pub(crate) async fn purge_expired_reset_tokens(db: &Db) -> Result<u64> {
         "DELETE FROM rustio_password_reset_tokens \
           WHERE expires_at < NOW() - INTERVAL '{RESET_TOKEN_RETENTION_DAYS} days'"
     );
-    let result = sqlx::query(&query).execute(db.pool()).await?;
+    let result = sqlx::query(sqlx::AssertSqlSafe(query))
+        .execute(db.pool())
+        .await?;
     Ok(result.rows_affected())
 }
 

@@ -70,17 +70,39 @@ leaves the alpha track.
 ### Changed
 - **Dependency refresh (no behaviour change).** Bumped a tier of non-security,
   non-database dependencies to their latest major versions and re-resolved the
-  lockfile to the newest MSRV-1.88-compatible patch releases. Direct major bumps:
+  lockfile. Direct major bumps:
   `thiserror` 1 → 2, `testcontainers` 0.23 → 0.27 and `testcontainers-modules`
   0.11 → 0.15 (integration harness, behind the `integration-test` feature),
   `toml_edit` 0.22 → 0.25 (Builder), `console` 0.15 → 0.16 and `indicatif` 0.17
   → 0.18 (CLI onboarding output). No source changes were required; fmt, clippy
   `-D warnings`, the full unit/doc suite, and the integration suite all stay
   green. The security-sensitive crypto stack (`argon2`, `sha2`, `sha1`, `hmac`,
-  `aes-gcm`, `rand`) and the Postgres core (`sqlx` 0.8) are intentionally left in
-  place — their major bumps are coupled (shared RustCrypto `digest` trait
-  versions) and touch doctrine subsystems, so they belong in a separate,
-  individually reviewed migration rather than a blanket dependency sweep.
+  `aes-gcm`, `rand`) is intentionally left in place — its major bumps are coupled
+  (shared RustCrypto `digest` trait versions), touch doctrine subsystems, and the
+  upstreams (`argon2 0.6`, `aes-gcm 0.11`) are still release candidates, so they
+  belong in a separate, individually reviewed migration once stable.
+- **`sqlx` upgraded 0.8 → 0.9; MSRV raised Rust 1.88 → 1.94.** sqlx 0.9's own
+  MSRV is Rust 1.94, so the workspace floor moves with it (`Cargo.toml`
+  `rust-version`, the three `dtolnay/rust-toolchain@1.94` pins in CI, and the
+  `getting-started` prerequisite). **This is a breaking change for anyone
+  building rustio-admin on Rust 1.88–1.93.** sqlx 0.9's headline change is the
+  new `SqlSafeStr` guard: `query()`/`query_as()`/`query_scalar()` now accept only
+  `&'static str` or an explicit `AssertSqlSafe(_)` wrapper. The framework's
+  dynamically-assembled SQL — the `ConcreteOps` list builder, the generic CRUD
+  helpers in `orm.rs`, FK hydration / dashboard / dropdown queries in
+  `handlers.rs`, the audit-log filters, the session-timestamp loads, the
+  reset-token purge, the migration runner, and the CLI audit view — is wrapped in
+  `sqlx::AssertSqlSafe` at the 18 call sites that build SQL from validated
+  identifiers (column/table names already checked against `M::COLUMNS` or a
+  fixed allow-list; all user-supplied values stay bound parameters). No behaviour
+  change. No `query!`-style compile-time-checked macros, no `QueryBuilder`, no
+  `sqlx::Type`/`FromRow` derives, and no sqlx migrator are used, so the rest of
+  the 0.9 surface does not apply. Verified against real Postgres: the full
+  `integration-test` suite (emergency/MFA/recovery, 27 tests) plus 444 library
+  unit tests, fmt, and clippy `-D warnings` all pass; the `clinic` and `shop`
+  examples build clean against the upgraded framework.
+
+## [0.30.0] — 2026-06-11
 
 ### Changed
 - **Dark theme re-tuned to a comfortable graphite-grey.** The dark palette moved

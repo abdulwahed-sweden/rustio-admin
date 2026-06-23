@@ -607,7 +607,9 @@ async fn fetch_dashboard_per_model_series(ctx: &AdminCtx) -> HashMap<&'static st
              GROUP BY day ORDER BY day",
             entry.table
         );
-        let rows: Vec<(NaiveDate, i64)> = match sqlx::query_as(&sql).fetch_all(ctx.db.pool()).await
+        let rows: Vec<(NaiveDate, i64)> = match sqlx::query_as(sqlx::AssertSqlSafe(sql))
+            .fetch_all(ctx.db.pool())
+            .await
         {
             Ok(r) => r,
             Err(e) => {
@@ -639,7 +641,7 @@ async fn fetch_dashboard_new_this_week(ctx: &AdminCtx) -> HashMap<&'static str, 
             "SELECT COUNT(*) FROM {} WHERE created_at > NOW() - INTERVAL '7 days'",
             entry.table
         );
-        match sqlx::query_scalar::<_, i64>(&sql)
+        match sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql))
             .fetch_one(ctx.db.pool())
             .await
         {
@@ -1046,17 +1048,18 @@ pub(crate) async fn list_model(
                     tbl = entry.table,
                     lim = DROPDOWN_TEXT_OPTION_CAP,
                 );
-                let values: Vec<String> = sqlx::query_scalar::<_, String>(&distinct_sql)
-                    .fetch_all(ctx.db.pool())
-                    .await
-                    .unwrap_or_else(|e| {
-                        log::warn!(
-                            "dropdown_text distinct query failed for {}.{}: {e}",
-                            entry.admin_name,
-                            f.field
-                        );
-                        Vec::new()
-                    });
+                let values: Vec<String> =
+                    sqlx::query_scalar::<_, String>(sqlx::AssertSqlSafe(distinct_sql))
+                        .fetch_all(ctx.db.pool())
+                        .await
+                        .unwrap_or_else(|e| {
+                            log::warn!(
+                                "dropdown_text distinct query failed for {}.{}: {e}",
+                                entry.admin_name,
+                                f.field
+                            );
+                            Vec::new()
+                        });
                 let options: Vec<render::FilterOptionCtx> = values
                     .into_iter()
                     .map(|v| render::FilterOptionCtx {
@@ -3666,7 +3669,7 @@ async fn hydrate_fk_cells(
             display = display_field,
             table = rel.target_table,
         );
-        let fetched = match sqlx::query_as::<_, (i64, String)>(&sql)
+        let fetched = match sqlx::query_as::<_, (i64, String)>(sqlx::AssertSqlSafe(sql))
             .bind(&ids)
             .fetch_all(db.pool())
             .await

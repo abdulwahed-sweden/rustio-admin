@@ -16,7 +16,8 @@ extra services.
 
 ## Before you start
 
-- **Rust 1.88 or newer** — check with `rustup show`.
+- **Rust 1.94 or newer** — check with `rustup show`. (The floor tracks
+  `sqlx` 0.9's MSRV.)
 - **A reachable PostgreSQL** (RustIO is Postgres-only, by design — no SQLite
   fallback). A native install is fine; or run one in Docker:
 

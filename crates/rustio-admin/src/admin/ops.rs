@@ -203,7 +203,7 @@ where
             // both — the COUNT is fast even on millions of rows when
             // the WHERE is selective.
             let count_sql = format!("SELECT COUNT(*) FROM {}{}", M::TABLE, where_sql);
-            let mut count_q = sqlx::query_scalar::<_, i64>(&count_sql);
+            let mut count_q = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql));
             for b in &where_bindings {
                 count_q = count_q.bind(b);
             }
@@ -237,7 +237,7 @@ where
                 sql.push_str(&format!(" OFFSET ${i}"));
             }
 
-            let mut q = sqlx::query(&sql);
+            let mut q = sqlx::query(sqlx::AssertSqlSafe(sql));
             for b in &where_bindings {
                 q = q.bind(b);
             }
