@@ -3141,19 +3141,29 @@ pub(crate) async fn do_save_view_spec(
     )))
 }
 
+/// Number of composition slots the designer exposes. Server-rendered (no JS),
+/// so the count is fixed; empty slots (no primary field) are ignored. Shared
+/// with `render::view_designer_ctx`, which builds that many slot widgets.
+pub(crate) const COMPOSITION_SLOTS: usize = 3;
+
 /// Pure: build a [`ViewSpec`](crate::view_layer::ViewSpec) from the designer
-/// form. One field per `AdminField` (preserving declaration order); per-field
-/// the form carries `role__<name>`, `priority__<name>`, `filter__<name>`, plus
-/// a single `default_mode`. Unknown/missing values fall back to safe defaults
-/// (Secondary role, index-derived priority, Table mode). `allowed_modes` and
-/// compositions are not yet editable, so the full mode set and an empty
-/// composition list are used.
+/// form. Per field the form carries `role__<name>`, `priority__<name>`,
+/// `filter__<name>`. Layout carries a single `default_mode`, per-mode
+/// `mode_allowed__<slug>` checkboxes (the default mode is always kept), and up
+/// to [`COMPOSITION_SLOTS`] composition slots: `comp<i>_primary` (a field name,
+/// empty disables the slot), `comp<i>_label`, `comp<i>_style`, and
+/// `comp<i>_sec__<name>` checkboxes for the secondary fields. Unknown/missing
+/// values fall back to safe defaults (Secondary role, index-derived priority,
+/// Table mode, Stacked style).
 fn spec_from_form(
     admin_name: &str,
     fields: &[super::types::AdminField],
     form: &crate::http::FormData,
 ) -> crate::view_layer::ViewSpec {
-    use crate::view_layer::{FieldRole, FieldViewSpec, ViewMode, ViewSpec, VIEW_SPEC_VERSION};
+    use crate::view_layer::{
+        CellComposition, ComposeStyle, FieldRole, FieldViewSpec, ViewMode, ViewSpec,
+        VIEW_SPEC_VERSION,
+    };
 
     let mut out_fields = Vec::with_capacity(fields.len());
     let mut default_filters = Vec::new();
@@ -3183,17 +3193,62 @@ fn spec_from_form(
         .and_then(ViewMode::from_slug)
         .unwrap_or(ViewMode::Table);
 
+    // Allowed modes: the checked ones, in canonical order, with the default
+    // mode always included (the switcher must be able to reach it).
+    let all_modes = [
+        ViewMode::Table,
+        ViewMode::List,
+        ViewMode::Cards,
+        ViewMode::Compact,
+    ];
+    let allowed_modes: Vec<ViewMode> = all_modes
+        .iter()
+        .copied()
+        .filter(|m| *m == default_mode || form.bool_flag(&format!("mode_allowed__{}", m.slug())))
+        .collect();
+
+    // Compositions: one per non-empty slot. The primary must be a real field;
+    // secondaries are the checked fields other than the primary.
+    let mut compositions = Vec::new();
+    for slot in 1..=COMPOSITION_SLOTS {
+        let primary = match form
+            .get(&format!("comp{slot}_primary"))
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            Some(p) if fields.iter().any(|f| f.name == p) => p.to_string(),
+            _ => continue,
+        };
+        let style = form
+            .get(&format!("comp{slot}_style"))
+            .and_then(ComposeStyle::from_slug)
+            .unwrap_or(ComposeStyle::Stacked);
+        let label = form
+            .get(&format!("comp{slot}_label"))
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+        let secondary_fields: Vec<String> = fields
+            .iter()
+            .filter(|f| f.name != primary)
+            .filter(|f| form.bool_flag(&format!("comp{slot}_sec__{}", f.name)))
+            .map(|f| f.name.to_string())
+            .collect();
+        compositions.push(CellComposition {
+            id: format!("comp{slot}"),
+            label,
+            style,
+            primary_field: primary,
+            secondary_fields,
+        });
+    }
+
     ViewSpec {
         model: admin_name.to_string(),
         default_mode,
-        allowed_modes: vec![
-            ViewMode::Table,
-            ViewMode::List,
-            ViewMode::Cards,
-            ViewMode::Compact,
-        ],
+        allowed_modes,
         fields: out_fields,
-        compositions: Vec::new(),
+        compositions,
         default_filters,
         version: VIEW_SPEC_VERSION,
     }
@@ -3261,6 +3316,63 @@ mod view_designer_tests {
         assert_eq!(spec.fields[0].priority, 0); // index 0 * 10
     }
 
+    #[test]
+    fn parses_allowed_modes_only_checked_plus_default() {
+        let fields = [field("name", FieldType::String)];
+        let form = FormData::from_urlencoded(
+            "default_mode=cards&mode_allowed__list=on&mode_allowed__cards=on",
+        );
+        let spec = spec_from_form("m", &fields, &form);
+        assert_eq!(spec.default_mode, ViewMode::Cards);
+        assert!(spec.allowed_modes.contains(&ViewMode::List));
+        assert!(spec.allowed_modes.contains(&ViewMode::Cards));
+        assert!(!spec.allowed_modes.contains(&ViewMode::Table));
+        assert!(!spec.allowed_modes.contains(&ViewMode::Compact));
+    }
+
+    #[test]
+    fn default_mode_always_allowed_even_when_unchecked() {
+        let fields = [field("name", FieldType::String)];
+        // default = compact, its checkbox not submitted (disabled in the UI)
+        let form = FormData::from_urlencoded("default_mode=compact&mode_allowed__list=on");
+        let spec = spec_from_form("m", &fields, &form);
+        assert!(spec.allowed_modes.contains(&ViewMode::Compact));
+        assert!(spec.allowed_modes.contains(&ViewMode::List));
+    }
+
+    #[test]
+    fn parses_a_composition_slot_and_ignores_empty_ones() {
+        let fields = [
+            field("full_name", FieldType::String),
+            field("email", FieldType::String),
+            field("status", FieldType::String),
+        ];
+        let form = FormData::from_urlencoded(
+            "default_mode=list\
+             &comp1_primary=full_name&comp1_label=Identity&comp1_style=stacked&comp1_sec__email=on\
+             &comp2_primary=&comp3_primary=",
+        );
+        let spec = spec_from_form("customer", &fields, &form);
+        assert_eq!(spec.compositions.len(), 1, "only slot 1 is populated");
+        let c = &spec.compositions[0];
+        assert_eq!(c.id, "comp1");
+        assert_eq!(c.primary_field, "full_name");
+        assert_eq!(c.label.as_deref(), Some("Identity"));
+        assert_eq!(c.style, crate::view_layer::ComposeStyle::Stacked);
+        assert_eq!(c.secondary_fields, vec!["email".to_string()]);
+        // the primary is never also listed as a secondary
+        assert!(!c.secondary_fields.contains(&"full_name".to_string()));
+    }
+
+    #[test]
+    fn composition_with_unknown_primary_is_dropped() {
+        let fields = [field("name", FieldType::String)];
+        let form =
+            FormData::from_urlencoded("default_mode=table&comp1_primary=ghost&comp1_sec__name=on");
+        let spec = spec_from_form("m", &fields, &form);
+        assert!(spec.compositions.is_empty());
+    }
+
     // Renders the SHIPPED editor template against a realistic context, with a
     // stub base, to catch template-variable typos and prove the role/mode
     // `selected` logic and the preview include-chain work end to end.
@@ -3319,6 +3431,26 @@ mod view_designer_tests {
             context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true },
         ];
 
+        let mode_choices = vec![
+            context! { slug => "table", label => "Table", allowed => false, is_default => false },
+            context! { slug => "list", label => "List", allowed => true, is_default => true },
+            context! { slug => "cards", label => "Cards", allowed => true, is_default => false },
+        ];
+        let compose_styles = vec![
+            context! { slug => "stacked", label => "Stacked" },
+            context! { slug => "badge_inline", label => "Badge Inline" },
+        ];
+        let comp_slots = vec![context! {
+            index => 1,
+            label => "Identity",
+            style => "stacked",
+            primary => "full_name",
+            fields => vec![
+                context! { name => "full_name", label => "Full Name", is_secondary => false },
+                context! { name => "status", label => "Status", is_secondary => true },
+            ],
+        }];
+
         let tmpl = env.get_template("admin/view_designer_model.html").unwrap();
         let html = tmpl
             .render(context! {
@@ -3330,7 +3462,10 @@ mod view_designer_tests {
                 flash => Option::<()>::None,
                 default_mode => "list",
                 mode_options => mode_options,
+                mode_choices => mode_choices,
                 role_options => role_options,
+                compose_styles => compose_styles,
+                comp_slots => comp_slots,
                 fields => fields,
                 preview => Value::from_serialize(&preview),
             })
@@ -3343,6 +3478,13 @@ mod view_designer_tests {
         assert!(html.contains("value=\"primary\" selected"));
         assert!(html.contains("value=\"badge\" selected"));
         assert!(html.contains("value=\"list\" selected"));
+        // allowed-modes checkboxes: default is checked + disabled
+        assert!(html.contains("name=\"mode_allowed__list\""));
+        assert!(html.contains("disabled"));
+        // composition slot: primary select + secondary checkbox pre-filled
+        assert!(html.contains("name=\"comp1_primary\""));
+        assert!(html.contains("value=\"full_name\" selected"));
+        assert!(html.contains("name=\"comp1_sec__status\" checked"));
         // preview rendered through the cell partial chain
         assert!(html.contains("av-primary"));
         assert!(html.contains("Nadim Shahin"));

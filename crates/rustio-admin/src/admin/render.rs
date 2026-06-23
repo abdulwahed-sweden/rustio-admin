@@ -3489,11 +3489,50 @@ pub(crate) struct ViewDesignerCtx {
     /// Current default-mode slug (matched against `mode_options`).
     pub default_mode: String,
     pub mode_options: Vec<SlugLabel>,
+    /// Per-mode checkbox state for the allowed-modes editor.
+    pub mode_choices: Vec<ModeChoiceCtx>,
     pub role_options: Vec<SlugLabel>,
+    /// Style options for the composition slots.
+    pub compose_styles: Vec<SlugLabel>,
+    /// Composition editor slots (fixed count; empty slots disabled).
+    pub comp_slots: Vec<CompSlotCtx>,
     pub fields: Vec<DesignerFieldCtx>,
     /// Live preview produced by the runtime renderer from the effective spec.
     pub preview: crate::view_layer::RenderedView,
     pub flash: Option<FlashCtx>,
+}
+
+/// One mode in the allowed-modes checkbox group.
+#[derive(Serialize)]
+pub(crate) struct ModeChoiceCtx {
+    pub slug: String,
+    pub label: String,
+    pub allowed: bool,
+    /// `true` for the current default mode — its checkbox is forced on and
+    /// disabled (the switcher must always reach the default).
+    pub is_default: bool,
+}
+
+/// One field row inside a composition slot (a secondary-field checkbox).
+#[derive(Serialize)]
+pub(crate) struct CompFieldCtx {
+    pub name: String,
+    pub label: String,
+    pub is_secondary: bool,
+}
+
+/// One composition slot in the designer.
+#[derive(Serialize)]
+pub(crate) struct CompSlotCtx {
+    /// 1-based slot index, used in the form field names (`comp<i>_*`).
+    pub index: usize,
+    pub label: String,
+    /// Current style slug (matched against `compose_styles`).
+    pub style: String,
+    /// Current primary-field name, or empty when the slot is unused.
+    pub primary: String,
+    /// Every model field, flagged if it is a secondary of this composition.
+    pub fields: Vec<CompFieldCtx>,
 }
 
 /// Build the designer index context.
@@ -3607,6 +3646,59 @@ pub(crate) fn view_designer_ctx(
         .collect();
     let preview = crate::view_layer::render_view(spec, spec.default_mode, &rows);
 
+    // Allowed-modes checkboxes: each mode, flagged if currently allowed; the
+    // default mode is forced on.
+    let mode_choices = [
+        crate::view_layer::ViewMode::Table,
+        crate::view_layer::ViewMode::List,
+        crate::view_layer::ViewMode::Cards,
+        crate::view_layer::ViewMode::Compact,
+    ]
+    .iter()
+    .map(|m| ModeChoiceCtx {
+        slug: m.slug().to_string(),
+        label: humanise_field(m.slug()),
+        allowed: spec.allowed_modes.contains(m),
+        is_default: *m == spec.default_mode,
+    })
+    .collect();
+
+    // Composition slots: pre-filled from the saved compositions in slot order.
+    let comp_slots = (1..=super::handlers::COMPOSITION_SLOTS)
+        .map(|index| {
+            let existing = spec.compositions.get(index - 1);
+            CompSlotCtx {
+                index,
+                label: existing.and_then(|c| c.label.clone()).unwrap_or_default(),
+                style: existing
+                    .map(|c| c.style.slug().to_string())
+                    .unwrap_or_else(|| "stacked".to_string()),
+                primary: existing
+                    .map(|c| c.primary_field.clone())
+                    .unwrap_or_default(),
+                fields: entry
+                    .fields
+                    .iter()
+                    .map(|f| CompFieldCtx {
+                        name: f.name.to_string(),
+                        label: humanise_field(f.name),
+                        is_secondary: existing
+                            .map(|c| c.secondary_fields.iter().any(|s| s == f.name))
+                            .unwrap_or(false),
+                    })
+                    .collect(),
+            }
+        })
+        .collect();
+
+    let compose_styles = crate::view_layer::ComposeStyle::all()
+        .iter()
+        .map(|s| SlugLabel {
+            slug: s.slug().to_string(),
+            label: humanise_field(s.slug()),
+        })
+        .collect();
+
     ViewDesignerCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: format!("View designer · {}", entry.display_name),
@@ -3621,7 +3713,10 @@ pub(crate) fn view_designer_ctx(
         is_saved,
         default_mode: spec.default_mode.slug().to_string(),
         mode_options: mode_options(),
+        mode_choices,
         role_options: role_options(),
+        compose_styles,
+        comp_slots,
         fields,
         preview,
         flash,

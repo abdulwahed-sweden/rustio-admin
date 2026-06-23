@@ -68,6 +68,15 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Added
+- **View designer: allowed-modes + compositions editing.** The designer now edits
+  the rest of the `ViewSpec`: an **allowed-modes** checkbox group (which layouts
+  appear in the `?view=` switcher; the default mode is forced on), and up to three
+  **composition slots** that merge a primary field with chosen secondaries into a
+  single cell (with a label and a Stacked / Inline-icon / Badge-inline style). The
+  save handler parses `mode_allowed__<slug>` and `comp<i>_primary|label|style|
+  sec__<name>`; empty or invalid slots are dropped. Adds `ComposeStyle::slug`/
+  `from_slug`/`all`. Server-rendered (no new JS). Verified by form→spec parsing
+  tests and a full editor-template render of the new sections.
 - **Styling for the adaptive card / list / compact layouts.** New token-only CSS
   fragment `components/adaptive-views.css` styles the view-layer render output
   (the `?view=cards|list|compact` modes and the designer preview): a card grid,
