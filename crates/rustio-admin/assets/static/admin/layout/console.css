@@ -201,11 +201,13 @@
 .rio-dtable thead th {
   text-align: start; font-family: var(--rio-font-body); font-size: var(--rio-text-13);
   font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--rio-text-mute); padding: 14px 22px;
+  color: var(--rio-text-mute); padding: 12px 22px;
   background: var(--rio-surface); border-block-end: 1px solid var(--rio-line);
   position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
 }
-.rio-dtable tbody td { padding: 0 22px; block-size: 72px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
+/* Phase-1 readability: tighten the over-tall 72px row to a comfortable,
+   more scannable density (still clears the 2-line monogram product cell). */
+.rio-dtable tbody td { padding: 0 22px; block-size: 56px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
 .rio-dtable tbody tr:last-child td { border-block-end: 0; }
 .rio-dtable tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); position: relative; }
 .rio-dtable tbody tr:hover { background: var(--rio-raised); }

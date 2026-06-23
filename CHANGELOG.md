@@ -67,6 +67,16 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Changed
+- **List/table readability — tighter row density (visual only).** The admin data
+  board's row height drops from an over-tall 72px to a comfortable, more
+  scannable 56px (header padding 14px → 12px to match), so ~50% more rows fit a
+  viewport without crowding. No new tokens (length values only), no markup,
+  context, route, or behaviour change — `components`/`tokens` and the
+  `cascade_lockstep` lock-step are untouched. First increment of the redesign
+  plan in `REDESIGN_AUDIT.md` (Phase 1: presentation-only polish). Verified in
+  light and dark against the `shop` example.
+
 ### Added
 - **View designer: allowed-modes + compositions editing.** The designer now edits
   the rest of the `ViewSpec`: an **allowed-modes** checkbox group (which layouts
