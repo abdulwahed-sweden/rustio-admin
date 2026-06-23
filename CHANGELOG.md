@@ -67,6 +67,31 @@ leaves the alpha track.
 
 ## [Unreleased]
 
+### Added
+- **Adaptive View Layer (`view_layer`) — presentation-only, additive.** A new
+  module that lets a model record *visual importance* (which the schema can't
+  express) once, as a stable, serde-serializable, versioned `ViewSpec`, and
+  render generated tables/lists/cards deterministically from it. Roles
+  (`Primary`/`Secondary`/`Badge`/`Timestamp`/`DetailOnly`/`Hidden`), modes
+  (`Table`/`List`/`Cards`/`Compact`), and cell compositions
+  (`Stacked`/`InlineIcon`/`BadgeInline`) are all explicit on the spec.
+  `infer_view_spec` produces a sensible draft deterministically (no AI, no
+  network) — sensitive names (`password`/`hash`/`pin`/`token`/`secret`/
+  `api_key`/`private_key`/`session`/`reset_token`, substring-matched) and UUIDs
+  become `Hidden`; the first human-readable text becomes `Primary`; enum/bool
+  become filterable badges; audit timestamps and nullable secondary text become
+  `DetailOnly`; FKs stay `Secondary`. **Runtime contract:** rendering reads the
+  *saved* spec and nothing else — inference and the future designer only ever
+  *produce* a spec. The renderer emits typed, `kind`-tagged `RenderedCell`s;
+  templates switch on `cell.kind` and hold no role logic, and `Hidden` values
+  are never read from a row so they cannot reach a context or the HTML (proven
+  by `safety_tests`). Purely additive: when a model has no saved spec, callers
+  fall back to the existing table path unchanged — no search/filter/sort/
+  pagination/action/permission behaviour is touched, and no designer is built
+  yet (future `/admin/dev/view-designer`). Wired as `pub mod view_layer` in
+  `lib.rs`; two additive minijinja partials ship under
+  `assets/templates/admin/view_layer/`.
+
 ### Changed
 - **Dependency refresh (no behaviour change).** Bumped a tier of non-security,
   non-database dependencies to their latest major versions and re-resolved the

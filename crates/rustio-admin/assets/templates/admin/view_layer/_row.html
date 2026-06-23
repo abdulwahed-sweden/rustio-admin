@@ -1,0 +1,11 @@
+{#
+  Adaptive View Layer — one row of cells.
+
+  Iterates the typed cells produced by `view_layer::render_row` and defers each
+  to `_cell.html`. The row template knows nothing about field roles either; it
+  just walks `row.cells` in render order (compositions first, then the
+  priority-sorted simple cells).
+#}
+{%- for cell in row.cells -%}
+  {% include "admin/view_layer/_cell.html" %}
+{%- endfor -%}
