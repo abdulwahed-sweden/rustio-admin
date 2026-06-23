@@ -88,6 +88,11 @@ pub struct CellPart {
 /// Everything a list/table/card template needs for one row.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RenderedRow {
+    /// The record's primary key, when the caller supplied it (via
+    /// [`render_view_with_ids`]) — lets list/card layouts link to the record.
+    /// `None` for previews and other id-less renders.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
     /// The row's cells, in render order.
     pub cells: Vec<RenderedCell>,
 }
@@ -165,7 +170,7 @@ pub fn render_row(spec: &ViewSpec, row: &RowData) -> RenderedRow {
         cells.push(cell);
     }
 
-    RenderedRow { cells }
+    RenderedRow { id: None, cells }
 }
 
 fn render_composition(comp: &CellComposition, row: &RowData) -> RenderedCell {
@@ -190,12 +195,35 @@ fn render_composition(comp: &CellComposition, row: &RowData) -> RenderedCell {
 }
 
 // public:
-/// Render a full page of rows for the resolved mode.
+/// Render a full page of rows for the resolved mode. Rows carry no id (suitable
+/// for previews). Use [`render_view_with_ids`] when records must be clickable.
 pub fn render_view(spec: &ViewSpec, mode: ViewMode, rows: &[RowData]) -> RenderedView {
     RenderedView {
         model: spec.model.clone(),
         mode,
         rows: rows.iter().map(|r| render_row(spec, r)).collect(),
+    }
+}
+
+// public:
+/// Like [`render_view`], but each row carries its record id so list/card
+/// layouts can link to `/admin/<model>/<id>/edit`. Used by the live list page.
+pub fn render_view_with_ids(
+    spec: &ViewSpec,
+    mode: ViewMode,
+    rows: &[(i64, RowData)],
+) -> RenderedView {
+    RenderedView {
+        model: spec.model.clone(),
+        mode,
+        rows: rows
+            .iter()
+            .map(|(id, r)| {
+                let mut row = render_row(spec, r);
+                row.id = Some(*id);
+                row
+            })
+            .collect(),
     }
 }
 
@@ -307,6 +335,29 @@ mod tests {
     fn humanize_handles_snake_case() {
         assert_eq!(humanize("created_at"), "Created At");
         assert_eq!(humanize("full_name"), "Full Name");
+    }
+
+    #[test]
+    fn render_view_with_ids_sets_row_ids_and_still_drops_hidden() {
+        let view = super::render_view_with_ids(
+            &customer_spec(),
+            ViewMode::Cards,
+            &[(7, customer_row()), (9, customer_row())],
+        );
+        assert_eq!(view.rows.len(), 2);
+        assert_eq!(view.rows[0].id, Some(7));
+        assert_eq!(view.rows[1].id, Some(9));
+        // hidden value still never appears in any cell
+        let leaked = view.rows.iter().flat_map(|r| &r.cells).any(|c| match c {
+            RenderedCell::Primary { value, .. }
+            | RenderedCell::Secondary { value, .. }
+            | RenderedCell::Badge { value, .. }
+            | RenderedCell::Timestamp { value, .. } => value.contains("secret"),
+            RenderedCell::Composed { parts, .. } => {
+                parts.iter().any(|p| p.value.contains("secret"))
+            }
+        });
+        assert!(!leaked);
     }
 
     #[test]

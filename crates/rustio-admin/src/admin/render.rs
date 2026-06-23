@@ -921,6 +921,23 @@ pub(crate) struct ListCtx {
     /// operator is looking at.
     pub current_query_string: String,
     pub flash: Option<FlashCtx>,
+    /// Adaptive view-layer render of the page, present only when a saved
+    /// `ViewSpec` exists *and* a non-`table` `?view=` mode is active. When
+    /// `None`, `list.html` renders the legacy table exactly as before.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub adaptive: Option<crate::view_layer::RenderedView>,
+    /// Mode-switcher links (Table / List / Cards / Compact), present only when
+    /// a saved `ViewSpec` exists. Empty → no switcher (default behaviour).
+    pub mode_links: Vec<ModeLink>,
+}
+
+/// One link in the list-page view-mode switcher.
+#[derive(Serialize)]
+pub(crate) struct ModeLink {
+    pub slug: &'static str,
+    pub label: String,
+    pub href: String,
+    pub active: bool,
 }
 
 #[derive(Serialize)]
@@ -2042,7 +2059,71 @@ pub(crate) fn list_ctx(
             .collect(),
         current_query_string,
         flash: None,
+        // Set by the handler after construction when a saved ViewSpec exists.
+        adaptive: None,
+        mode_links: Vec::new(),
     }
+}
+
+/// Preserve the current query string but swap (or add) the `view=` param —
+/// used for the mode-switcher hrefs so changing layout keeps the active
+/// search / filters / sort / page.
+fn set_view_param(admin_name: &str, query: &str, slug: &str) -> String {
+    let mut parts: Vec<String> = query
+        .split('&')
+        .filter(|p| !p.is_empty() && !p.starts_with("view="))
+        .map(str::to_string)
+        .collect();
+    parts.push(format!("view={slug}"));
+    format!("/admin/{}?{}", admin_name, parts.join("&"))
+}
+
+/// Build the adaptive view + mode-switcher links for a list page from a saved
+/// spec. Returns `(None, links)` for `table` mode (the legacy table renders);
+/// `(Some(view), links)` for `list`/`cards`/`compact`. Row values come from
+/// the same `entry.fields`-keyed cells the legacy `ListRowCtx` uses, so every
+/// field the spec renders has a value, and each row carries its id for
+/// click-through. Called by the list handler **before** `list_ctx` consumes
+/// the rows.
+pub(crate) fn adaptive_for_list(
+    admin_name: &str,
+    fields: &[AdminField],
+    spec: &crate::view_layer::ViewSpec,
+    rows: &[ListRow],
+    requested_view: Option<&str>,
+    query: &str,
+) -> (Option<crate::view_layer::RenderedView>, Vec<ModeLink>) {
+    use crate::view_layer::{render_view_with_ids, RowData, ViewMode};
+
+    let mode = spec.resolve_mode(requested_view);
+    let mode_links = spec
+        .allowed_modes
+        .iter()
+        .map(|m| ModeLink {
+            slug: m.slug(),
+            label: humanise_field(m.slug()),
+            href: set_view_param(admin_name, query, m.slug()),
+            active: *m == mode,
+        })
+        .collect();
+
+    let adaptive = if mode == ViewMode::Table {
+        None
+    } else {
+        let data: Vec<(i64, RowData)> = rows
+            .iter()
+            .map(|r| {
+                let mut rd = RowData::new();
+                for (f, val) in fields.iter().zip(r.cells.iter()) {
+                    rd.insert(f.name.to_string(), val.clone());
+                }
+                (r.id, rd)
+            })
+            .collect();
+        Some(render_view_with_ids(spec, mode, &data))
+    };
+
+    (adaptive, mode_links)
 }
 
 /// Pre-bake the sortable-header URL + active-direction marker for one
@@ -4942,5 +5023,218 @@ mod acronym_lockstep_tests {
             "rustio_admin_macros::HUMANISE_ACRONYMS has drifted from \
              admin::render::HUMANISE_ACRONYMS — update both lists together"
         );
+    }
+}
+
+#[cfg(test)]
+mod adaptive_list_tests {
+    use super::adaptive_for_list;
+    use crate::admin::types::{AdminField, FieldType, ListRow};
+    use crate::view_layer::{infer_view_spec_from_fields, ViewMode};
+    use minijinja::{context, Environment, Value};
+
+    fn field(
+        name: &'static str,
+        ft: FieldType,
+        choices: Option<&'static [&'static str]>,
+    ) -> AdminField {
+        AdminField {
+            name,
+            label: name,
+            field_type: ft,
+            editable: true,
+            relation: None,
+            choices,
+        }
+    }
+
+    fn fields() -> Vec<AdminField> {
+        vec![
+            field("id", FieldType::I64, None),
+            field("full_name", FieldType::String, None),
+            field("status", FieldType::String, Some(&["active", "closed"])),
+            field("password_hash", FieldType::String, None),
+        ]
+    }
+
+    fn row() -> ListRow {
+        ListRow {
+            id: 42,
+            cells: vec![
+                "42".into(),
+                "Nadim".into(),
+                "active".into(),
+                "$2b$secret".into(),
+            ],
+            cell_links: vec![None, None, None, None],
+        }
+    }
+
+    #[test]
+    fn table_mode_keeps_legacy_table_but_offers_switcher() {
+        let f = fields();
+        let spec = infer_view_spec_from_fields("customer", &f);
+        let (adaptive, links) = adaptive_for_list("customer", &f, &spec, &[row()], None, "q=x");
+
+        assert!(adaptive.is_none(), "table mode must keep the legacy table");
+        assert!(links.iter().any(|l| l.slug == "table" && l.active));
+        // every switcher href preserves the active query and sets its own view
+        assert!(links
+            .iter()
+            .all(|l| l.href.contains("q=x") && l.href.contains(&format!("view={}", l.slug))));
+    }
+
+    #[test]
+    fn cards_mode_builds_adaptive_with_ids_and_hides_secret() {
+        let f = fields();
+        let spec = infer_view_spec_from_fields("customer", &f);
+        let (adaptive, links) =
+            adaptive_for_list("customer", &f, &spec, &[row()], Some("cards"), "");
+
+        let view = adaptive.expect("adaptive render for cards mode");
+        assert_eq!(view.mode, ViewMode::Cards);
+        assert_eq!(view.rows[0].id, Some(42));
+        assert!(links.iter().any(|l| l.slug == "cards" && l.active));
+
+        let json = serde_json::to_string(&view).unwrap();
+        assert!(json.contains("Nadim"));
+        assert!(
+            !json.contains("secret"),
+            "hidden password_hash leaked: {json}"
+        );
+    }
+
+    #[test]
+    fn adaptive_partial_renders_clickable_rows_without_hidden() {
+        let f = fields();
+        let spec = infer_view_spec_from_fields("customer", &f);
+        let (adaptive, _) = adaptive_for_list("customer", &f, &spec, &[row()], Some("cards"), "");
+        let view = adaptive.unwrap();
+
+        let mut env = Environment::new();
+        env.add_template(
+            "admin/_list_adaptive.html",
+            include_str!("../../assets/templates/admin/_list_adaptive.html"),
+        )
+        .unwrap();
+        env.add_template(
+            "admin/view_layer/_row.html",
+            include_str!("../../assets/templates/admin/view_layer/_row.html"),
+        )
+        .unwrap();
+        env.add_template(
+            "admin/view_layer/_cell.html",
+            include_str!("../../assets/templates/admin/view_layer/_cell.html"),
+        )
+        .unwrap();
+
+        let tmpl = env.get_template("admin/_list_adaptive.html").unwrap();
+        let html = tmpl
+            .render(context! {
+                admin_name => "customer",
+                adaptive => Value::from_serialize(&view),
+            })
+            .unwrap();
+
+        assert!(html.contains("/admin/customer/42/edit"));
+        assert!(html.contains("Nadim"));
+        assert!(
+            !html.contains("secret"),
+            "hidden value reached HTML: {html}"
+        );
+    }
+
+    // Render the REAL admin/list.html through both branches (stub base + icon
+    // stub) to guard (a) the legacy table is unchanged when no spec, and
+    // (b) the adaptive wrapper swaps cleanly when a spec is active.
+    fn render_list_html(ctx: Value) -> String {
+        let mut env = Environment::new();
+        env.add_function(
+            "icon",
+            |_name: String, _kwargs: minijinja::value::Kwargs| -> String { String::new() },
+        );
+        env.add_template("admin/_base.html", "{% block content %}{% endblock %}")
+            .unwrap();
+        for (name, src) in [
+            (
+                "admin/list.html",
+                include_str!("../../assets/templates/admin/list.html") as &str,
+            ),
+            (
+                "admin/_list_adaptive.html",
+                include_str!("../../assets/templates/admin/_list_adaptive.html"),
+            ),
+            (
+                "admin/view_layer/_row.html",
+                include_str!("../../assets/templates/admin/view_layer/_row.html"),
+            ),
+            (
+                "admin/view_layer/_cell.html",
+                include_str!("../../assets/templates/admin/view_layer/_cell.html"),
+            ),
+        ] {
+            env.add_template(name, src).unwrap();
+        }
+        env.get_template("admin/list.html")
+            .unwrap()
+            .render(ctx)
+            .unwrap()
+    }
+
+    #[test]
+    fn list_html_legacy_branch_unchanged_when_no_spec() {
+        let html = render_list_html(context! {
+            admin_name => "customer",
+            display_name => "Customers",
+            singular_name => "Customer",
+            read_only => false,
+            fields => vec![context! { name => "full_name", kind => "text", label => "Full Name", sort_active => "", sort_link => "#" }],
+            // ListRowCtx always carries highlights/links maps (often empty).
+            rows => vec![context! {
+                id => 7,
+                full_name => "Nadim",
+                highlights => std::collections::HashMap::<String, String>::new(),
+                links => std::collections::HashMap::<String, String>::new(),
+            }],
+            total_rows => 1,
+            total_pages => 1,
+        });
+        // legacy table renders with bulk checkbox + edit/delete links
+        assert!(html.contains("rio-dtable"));
+        assert!(html.contains("value=\"7\""));
+        assert!(html.contains("/admin/customer/7/edit"));
+        assert!(html.contains("/admin/customer/7/delete"));
+        // no mode switcher, no adaptive region
+        assert!(!html.contains("rio-view-modes"));
+        assert!(!html.contains("av-list"));
+    }
+
+    #[test]
+    fn list_html_adaptive_branch_swaps_table_for_cards() {
+        let f = fields();
+        let spec = infer_view_spec_from_fields("customer", &f);
+        let (adaptive, links) =
+            adaptive_for_list("customer", &f, &spec, &[row()], Some("cards"), "");
+
+        let html = render_list_html(context! {
+            admin_name => "customer",
+            display_name => "Customers",
+            singular_name => "Customer",
+            read_only => false,
+            rows => vec![context! { id => 42 }], // truthy so the board enters its row branch
+            total_rows => 1,
+            total_pages => 1,
+            adaptive => Value::from_serialize(adaptive.unwrap()),
+            mode_links => Value::from_serialize(&links),
+        });
+        // mode switcher + adaptive region present; clickable record
+        assert!(html.contains("rio-view-modes"));
+        assert!(html.contains("av-list"));
+        assert!(html.contains("/admin/customer/42/edit"));
+        assert!(html.contains("Nadim"));
+        // the legacy table and its bulk form are gone in adaptive mode
+        assert!(!html.contains("rio-dtable"));
+        assert!(!html.contains("rio-bulk-form"));
+        assert!(!html.contains("secret"));
     }
 }

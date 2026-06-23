@@ -1216,6 +1216,33 @@ pub(crate) async fn list_model(
                 Vec::new()
             });
 
+    // Adaptive view layer (opt-in): if a saved ViewSpec exists, build the
+    // mode switcher and — for a non-`table` `?view=` mode — an adaptive render
+    // of this page. The default table path is untouched (adaptive stays None).
+    // A store hiccup logs and falls back to the legacy table. Computed before
+    // `list_ctx` consumes `rows`.
+    let (adaptive, mode_links) = match super::view_specs::load(&ctx.db, entry.admin_name).await {
+        Ok(Some(spec)) => {
+            let view = req.query();
+            render::adaptive_for_list(
+                entry.admin_name,
+                entry.fields,
+                &spec,
+                &page_result.rows,
+                view.get("view"),
+                req.query_string(),
+            )
+        }
+        Ok(None) => (None, Vec::new()),
+        Err(e) => {
+            log::warn!(
+                "view_spec lookup failed for {}: {e} — using legacy table",
+                entry.admin_name
+            );
+            (None, Vec::new())
+        }
+    };
+
     let mut list = render::list_ctx(
         &identity,
         &ctx.admin,
@@ -1233,6 +1260,8 @@ pub(crate) async fn list_model(
         req.query_string().to_string(),
     );
     list.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    list.adaptive = adaptive;
+    list.mode_links = mode_links;
     let body = ctx
         .templates
         .render_for_model(entry.admin_name, "admin/list.html", &list)?;

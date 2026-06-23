@@ -1,0 +1,18 @@
+{#
+  Adaptive list region — rendered in place of the table when a saved ViewSpec
+  and a non-`table` `?view=` mode are active (`ListCtx.adaptive` is Some).
+  Each row links to its record; the cells come from the view layer's typed
+  `RenderedCell`s via the shared `_row.html`/`_cell.html` partials. Hidden
+  fields never reach the context, so they cannot appear here.
+#}
+<div class="av-list av-list--{{ adaptive.mode }}">
+  {% for row in adaptive.rows %}
+  <a class="av-row" href="/admin/{{ admin_name }}/{{ row.id }}/edit">
+    {% include "admin/view_layer/_row.html" %}
+  </a>
+  {% else %}
+  <div class="rio-empty-state">
+    <p class="rio-empty-state__lead">No records to display.</p>
+  </div>
+  {% endfor %}
+</div>

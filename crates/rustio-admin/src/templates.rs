@@ -410,6 +410,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/feature_flags.html"),
     ),
     (
+        "admin/_list_adaptive.html",
+        include_str!("../assets/templates/admin/_list_adaptive.html"),
+    ),
+    (
         "admin/view_designer.html",
         include_str!("../assets/templates/admin/view_designer.html"),
     ),
