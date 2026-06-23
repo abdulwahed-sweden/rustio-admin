@@ -1,0 +1,24 @@
+{#
+  Adaptive View Layer — single cell.
+
+  Renders one `RenderedCell` produced by `view_layer::render`. Templates
+  switch ONLY on `cell.kind` (the serde tag) and hold no role logic of their
+  own: all visual-importance decisions were made when the ViewSpec was saved.
+  Sensitive (`Hidden`) fields never reach this context, so they cannot appear
+  here regardless of the markup below.
+#}
+{%- if cell.kind == "primary" -%}
+  <span class="av-primary">{{ cell.value }}</span>
+{%- elif cell.kind == "secondary" -%}
+  <span class="av-secondary">{{ cell.value }}</span>
+{%- elif cell.kind == "badge" -%}
+  <span class="badge badge--{{ cell.semantic }}">{{ cell.value }}</span>
+{%- elif cell.kind == "timestamp" -%}
+  <time class="av-ts">{{ cell.value }}</time>
+{%- elif cell.kind == "composed" -%}
+  <span class="av-cell av-cell--{{ cell.style }}">
+    {%- for part in cell.parts -%}
+      <span class="av-part{% if part.is_primary %} is-primary{% endif %}">{{ part.value }}</span>
+    {%- endfor -%}
+  </span>
+{%- endif -%}

@@ -32,6 +32,8 @@ pub mod router;
 pub mod server;
 // public:
 pub mod templates;
+// public:
+pub mod view_layer;
 
 // public:
 pub use crate::admin::{
