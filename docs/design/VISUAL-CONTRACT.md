@@ -16,33 +16,38 @@ This contract is the single owner of the concrete visual numbers. Doctrine docs
 (`DESIGN_DOCTRINE.md`, `DESIGN_SYSTEM.md`, …) own *principles and architecture*
 and point here for values — one source of truth per fact. When this contract and
 an older stylesheet/doc disagree, this contract wins. When it is silent, the
-reference screenshot wins. When both are silent, ask.
+archived reference screenshots settle it (§0 — removed from the tree, recoverable
+from git history). When both are silent, ask.
 
 Companion contracts: `TOKENS-EMIT-SPEC.md` owns the dark-aware `tokens.css`
 emission contract for generators; `REMEDIATION_V2.md` records the phased rollout.
 
 ## 0. Reference screenshots
 
-Source of truth lives at `docs/visual-reference/`:
+The reference screenshots that seeded this contract previously lived at
+`docs/visual-reference/` (nine light pages plus a dark mirror). They have been
+**removed from the repository**; the measured token values and section patterns
+in §1 onward are now the standalone source of truth, so this contract no longer
+depends on the image files being present. Recover an image from git history if
+ever needed: `git log --all -- docs/visual-reference/`.
+
+For the record, the nine pages were:
 
 ```
-admin_reset_password.png · feature_flags.png · form.png · group_edit.png
-group_new.png · lock_user.png · password_change.png · user_new.png
-products_list.png
+admin_reset_password · feature_flags · form · group_edit
+group_new · lock_user · password_change · user_new · products_list
 ```
 
-`products_list.png` is the canonical **list/table** reference: the page-header
+`products_list` was the canonical **list/table** reference: the page-header
 Export + Add actions, the toolbar (search · filter · sort · per-page), the bulk
 bar revealed by selecting a row (`N selected` · Clear · Delete selected), and the
-no-zebra table with status pills. Captured with one row selected so the bulk bar
-is visible. (`form.png`, `user_new.png`, etc. cover the form pages; this covers
-the list shape.)
+no-zebra table with status pills, captured with one row selected. (`form`,
+`user_new`, etc. covered the form pages; `products_list` covered the list shape.)
+The same nine pages were mirrored in **dark** — the comfortable graphite-grey
+theme (§12), captured at the same spec (1340px @2×, `[data-theme="dark"]`).
 
-The same nine pages are mirrored in **dark** under `docs/visual-reference/dark/`
-— the comfortable graphite-grey theme (§12), captured at the same spec
-(1340px @2×, `[data-theme="dark"]`).
-
-If a page being changed has no screenshot, match the closest pattern and flag it.
+If a page being changed has no captured reference, match the closest pattern in
+this contract and flag it.
 
 ## 1. Canonical tokens (measured, light theme)
 

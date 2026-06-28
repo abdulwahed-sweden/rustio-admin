@@ -8,6 +8,12 @@ are silent, ask — do not invent).
 This document records the agreed Phase 0 decisions, the execution rules, and the
 ordered, file-by-file remediation plan. It is the reviewable in-repo record of the work.
 
+> **Note (post-rollout):** the `docs/visual-reference/` screenshots that several
+> steps below refer to have since been removed from the repository (recoverable
+> from git history). The mentions are preserved as the historical record of the
+> plan; the measured token values in `VISUAL-CONTRACT.md` are the live source of
+> truth.
+
 ---
 
 ## Phase 0 decisions (locked)
