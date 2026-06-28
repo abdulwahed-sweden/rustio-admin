@@ -8,6 +8,10 @@ Three tiers — **guides** for hands-on use, **reference** for the
 public surface, and **design** for the doctrine that pull requests
 are reviewed against. Everything else lives in **archive**.
 
+For the why behind the project, start with
+[`VISION.md`](VISION.md) — what RustIO is for and what it
+deliberately refuses to become.
+
 ## Guides
 
 User-facing entry points. Read these first.
@@ -19,6 +23,10 @@ User-facing entry points. Read these first.
   library, macros, and CLI crates compose.
 - [`modeladmin.md`](modeladmin.md) — authoring guide for
   `ModelAdmin` (list pages, search, filters, ordering, bulk actions).
+- [`cli.md`](cli.md) — the `rustio-admin` command-line surface:
+  scaffolding, migrations, users/groups/permissions, audit, theme.
+- [`memory.md`](memory.md) — the `rustio-admin memory` project-memory
+  feature that drives `CLOUD.md` and the AI-assistant policy.
 
 ## Reference
 
@@ -44,6 +52,15 @@ not just the diff.
 - [`design/DESIGN_THEME.md`](design/DESIGN_THEME.md) — the build-time
   `rio-theme` engine: brand colors → a WCAG-safe `tokens.css`, and the
   `RUSTIO_TOKENS_CSS` runtime override.
+- [`design/VISUAL-CONTRACT.md`](design/VISUAL-CONTRACT.md) — the
+  canonical Visual Contract (v2.1): the rules a rendered admin must
+  satisfy, with reference screenshots as tie-breakers.
+- [`design/TOKENS-EMIT-SPEC.md`](design/TOKENS-EMIT-SPEC.md) — the
+  emission contract any generator must honour when producing a
+  `tokens.css` for RustIO Admin.
+- [`design/REMEDIATION_V2.md`](design/REMEDIATION_V2.md) — the
+  conformance plan that brought the stylesheet in line with Visual
+  Contract v2.0.
 
 ### Authority and security
 
@@ -104,3 +121,6 @@ not linked from `CLAUDE.md`, the PR template, or source code.
 - [`archive/APIS_AND_DOCS_PLAN.md`](archive/APIS_AND_DOCS_PLAN.md)
   — pre-0.2 APIs / docs page design exercise; never shipped in this
   form.
+- [`archive/REDESIGN_AUDIT.md`](archive/REDESIGN_AUDIT.md) —
+  inspection-only audit of the admin presentation surface; the
+  Phase 1 presentation-only polish it proposed has since shipped.
