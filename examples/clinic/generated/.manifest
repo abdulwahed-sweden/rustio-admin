@@ -1,6 +1,5 @@
 # rustio-design manifest — generated, do not edit
-a36347161bf53e3f8cb9293fd497003a6f4cd204e814d7698d8f37fa72418eb7  rustio.design.toml
+d7c4bb47c241102533a6e89ea361fd56315dce1cf9502b9041254ea01c66fd48  rustio.design.toml
 0d35251ac53e524d3649f02fd4aeb65874d7a50544fc8b30e27c6a34502b85dc  generated/tokens.css
 425b474af0cf99bb0fb922f1dd21f76cc3ae10d25a03dde998dd368e22c6ae9b  generated/wire.env
 0ae117ecd17d4387ef563fc20109697f60599ccc1712fc4705f4fe5480746f7b  generated/README.md
-48c8c7bfddc8f969c53f81d9b72587762fcbb1d9788fd656164baa771c2b7dad  templates/admin/_sidebar.html

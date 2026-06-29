@@ -129,8 +129,8 @@ FROM (VALUES
 -- Completed payments for fulfilled and paid orders.
 INSERT INTO payments (order_id, provider, method, transaction_id, amount, status)
 SELECT o.id,
-       (ARRAY['stripe','paypal','adyen','braintree'])[1 + (o.id % 4)],
-       (ARRAY['card','paypal','apple_pay','google_pay'])[1 + (o.id % 4)],
+       (ARRAY['getswish','klarna','nets','trustly'])[1 + (o.id % 4)],
+       (ARRAY['swish','klarna','card','trustly'])[1 + (o.id % 4)],
        'txn_2026_' || to_char(o.id, 'FM00000'),
        o.total,
        'completed'
@@ -140,8 +140,8 @@ WHERE o.status IN ('paid', 'shipped');
 -- Pending payments for orders still awaiting payment.
 INSERT INTO payments (order_id, provider, method, transaction_id, amount, status)
 SELECT o.id,
-       (ARRAY['stripe','paypal','adyen','braintree'])[1 + (o.id % 4)],
-       (ARRAY['card','paypal','apple_pay','google_pay'])[1 + (o.id % 4)],
+       (ARRAY['getswish','klarna','nets','trustly'])[1 + (o.id % 4)],
+       (ARRAY['swish','klarna','card','trustly'])[1 + (o.id % 4)],
        'txn_2026_' || to_char(o.id, 'FM00000'),
        o.total,
        'pending'
@@ -151,8 +151,8 @@ WHERE o.status = 'pending';
 -- Cancelled orders: alternate refunded / failed so both statuses appear.
 INSERT INTO payments (order_id, provider, method, transaction_id, amount, status)
 SELECT c.id,
-       (ARRAY['stripe','paypal','adyen','braintree'])[1 + (c.id % 4)],
-       (ARRAY['card','paypal','apple_pay','google_pay'])[1 + (c.id % 4)],
+       (ARRAY['getswish','klarna','nets','trustly'])[1 + (c.id % 4)],
+       (ARRAY['swish','klarna','card','trustly'])[1 + (c.id % 4)],
        'txn_2026_' || to_char(c.id, 'FM00000'),
        c.total,
        CASE WHEN c.rn % 2 = 0 THEN 'refunded' ELSE 'failed' END

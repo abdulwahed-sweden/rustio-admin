@@ -25,13 +25,15 @@ architecture = "design/DESIGN_ARCHITECTURE.md"
 decisions    = "design/DESIGN_DECISIONS.md"
 history      = "design/DESIGN_HISTORY.md"
 
-# ── Navigation grouping (D-008) ──
-[navigation]
-Catalogue = "Products, Categories"
-Customers = "Customers"
-Sales     = "Orders, Payments"
-_hidden   = "Order items, Cart items, Product images, Address"
-_out      = "templates/admin/_sidebar.html"
+# ── Navigation grouping: DEFERRED (2026-06-29). D-008 grouped the nav into
+#    Catalogue (Products, Categories) / Customers / Sales (Orders, Payments) and
+#    hid the join/child models, emitting templates/admin/_sidebar.html. The
+#    framework migrated to the dark `.rio-rail` command rail, which auto-builds
+#    grouped nav (Models / Access / Developer) from the model registry; the old
+#    generated `_sidebar.html` used pre-rail `.rio-sidebar` markup and was dropped
+#    (repo commit e3c8c3e). Custom group labels + hiding need a rail-aware
+#    generator + framework support — re-add [navigation] (with `_out`) once that
+#    lands. See design/DESIGN_HISTORY.md (2026-06-29).
 
 # ── Product list view (rustio-design view layer, D-001/D-002) ──
 # Lead with the product name; fold price + stock into one cell, the stock
@@ -149,50 +151,14 @@ fs-display = "2rem"
 #    make it light, so re-assert dark warm-stone text in the chrome scope. ──
 [custom_css]
 rules = """
-/* Light warm-stone sidebar + footer (replaces the old dark-navy remap). */
-.rio-sidebar,
-.rio-footer {
-  --rio-text-strong: #1c1a16;
-  --rio-text:        #46423b;
-  --rio-text-muted:  #6c675e;
-  --rio-text-subtle: #928c81;
-  --rio-surface-2:   #f4f2ee;   /* hover */
-  --rio-surface-3:   #e8f0ee;   /* active — patina tint */
-  --rio-border-soft:   #efede7;
-  --rio-border:        #e7e3db;
-  --rio-border-strong: #d6d1c7;
-  --rio-accent:        #0e6b5b;
-  --rio-accent-hover:  #0b5849;
-  --rio-accent-rgb:    14 107 91;
-  --rio-accent-soft:   #e8f0ee;
-  --rio-accent-border: #bcd8d1;
-}
-
-/* Light topbar (was navy). Dark warm-stone text/controls on a paper surface. */
-.rio-topbar { background: var(--rio-surface); border-bottom-color: var(--rio-border); }
-.rio-topbar-brand { color: #1c1a16; }
-.rio-topbar-identity,
-.rio-topbar-link { color: #6c675e; }
-.rio-topbar-link:hover { color: #1c1a16; }
-.rio-topbar-account__toggle,
-.rio-topbar-account__toggle:hover,
-.rio-dropdown.is-open .rio-topbar-account__toggle {
-  color: #1c1a16;
-  background: #f4f2ee;
-  border: 1px solid #e7e3db;
-}
-.rio-topbar-account__email { color: #46423b; }
-.rio-topbar-bell__badge { background: var(--rio-danger); }
-.rio-sidebar-toggle { color: #46423b; border-color: #e7e3db; }
-.rio-search-trigger {
-  background: #f4f2ee;
-  border-color: #e7e3db;
-  color: #6c675e;
-}
-.rio-search-trigger:hover { background: #eeebe4; }
-.rio-search-trigger__label,
-.rio-search-trigger__icon { color: #6c675e; }
-.rio-search-trigger__kbd { background: #ffffff; border-color: #e7e3db; color: #46423b; }
+/* Chrome remap removed (2026-06-29). The old `.rio-sidebar`/`.rio-footer`/
+   `.rio-topbar*`/`.rio-sidebar-toggle`/`.rio-search-trigger*` overrides re-themed
+   the framework's pre-rail chrome to light warm-stone. The framework has since
+   migrated to the dark `.rio-rail` command rail + `.rio-ws*` workspace header,
+   so those selectors matched nothing and were dead. The Patina palette still
+   ships via the token `:root` block above; the rail is intentionally dark in
+   both themes. Re-add a chrome remap targeting `.rio-rail`/`.rio-ws*` only if a
+   light rail is wanted. See design/DESIGN_HISTORY.md (2026-06-29). */
 
 /* One accent only ("no second hue, ever"): fold the old amber accent2 into the
    Patina family so dashboard/list usages stay on-brand. */

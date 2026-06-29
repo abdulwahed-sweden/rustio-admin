@@ -15,14 +15,14 @@
 
 <div class="rio-board">
   {% if history_entries %}
-  <div style="overflow:auto">
+  <div class="rio-table-scroll">
   <table class="rio-table">
     <thead><tr><th>When</th><th>Action</th><th>Record</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
     <tbody>
       {% for e in history_entries %}
       {% if e.is_new_day %}<tr class="rio-history-date-divider"><th colspan="6" scope="rowgroup">{{ e.date_iso }}</th></tr>{% endif %}
       <tr>
-        <td style="white-space:nowrap;color:var(--rio-text-mute)" title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
+        <td class="rio-hist-when" title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
         <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
         <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
         <td><a class="rio-by" href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}"><span class="rio-avatar">{{ e.user_email | first | upper }}</span>{{ e.user_email }}</a></td>
@@ -41,7 +41,7 @@
           </dl>
           {% endif %}
         </td>
-        <td style="font-family:var(--rio-font-mono);font-size:var(--rio-text-12);color:var(--rio-text-faint)">{{ e.ip_address }}</td>
+        <td class="rio-hist-ip">{{ e.ip_address }}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -68,6 +68,38 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **Unified the chrome on five utility pages — Audit log, API surface, Health,
+  Docs (index + viewer), and Sessions.** They had drifted onto four different
+  page-header patterns (`.rio-masthead-top`, `.rio-page-header`, bespoke
+  `.pgx-head`, bespoke `.docp-head`) and three of them carried per-page inline
+  `<style>` blocks with bespoke `.pgx-*`/`.api-*`/`.docs-*`/`.docp-*` class
+  prefixes. All five now use the one canonical `.rio-crumbs` + `.rio-masthead-top`
+  + `.rio-masthead-desc` header (API surface keeps its action buttons in the
+  `.rio-masthead-cta` slot), and every inline style/`style="…"` attribute moved
+  into the existing `pages/tools.css` / `pages/account.css` fragments under
+  `.rio-`-prefixed names (`.rio-api-*`, `.rio-doc-*`, `.rio-hist-*`,
+  `.rio-sess-revoke`). One hardcoded `#e6edf6` doc-code colour is now the
+  `--rio-on-solid` token. **No new tokens, no markup-behaviour change, no
+  `admin.css`/`routes.rs` concat change** (reused existing fragments, so the
+  `cascade_lockstep` lock-step is untouched).
+- **Brand repalette — rust accent + cool ink neutrals + JetBrains Mono.** The
+  framework's visual identity moves from teal (`#119588`) on warm near-white to a
+  **burnt-copper rust** accent (`--rio-accent #B84318`, hover `#8F3413`) over a
+  **cool blue-grey "ink"** neutral scale on a `#EDF1F5` canvas, matching the
+  `rustio` reference project. Titles are `#0F141A` (cool ink), borders/inputs use
+  the ink-200/ink-300 steps, and status colours retune to the reference set
+  (success `#067647`, warn `#B54708`, danger `#B42318`). Dark theme keeps its
+  graphite surfaces but its accent lifts to a warm coral (`#F2935E`) for AA. The
+  **mono stack now selects JetBrains Mono** (already self-hosted/baked; no new
+  asset) ahead of the system fallbacks. All changes are token-value only — every
+  `--rio-*` name is unchanged, so components/templates are untouched and dark mode
+  re-derives automatically. The Visual Contract (§1/§2) and DESIGN_DOCTRINE /
+  DESIGN_SYSTEM are updated to the new canonical values. **Migration impact:**
+  downstream admins see the new palette/mono after `cargo update`; projects that
+  set `Admin::accent_color("#…")` keep their override.
+- **Small text nudged up (+1px).** The smallest content tier (`--rio-text-12` /
+  `--rio-text-13`: table headers, pills, hints, stat labels) lifts from 14px to
+  **15px** for readability; the ≥14px floor (Visual Contract §2) still holds.
 - **List/table readability — tighter row density (visual only).** The admin data
   board's row height drops from an over-tall 72px to a comfortable, more
   scannable 56px (header padding 14px → 12px to match), so ~50% more rows fit a
@@ -77,7 +109,39 @@ leaves the alpha track.
   plan in `REDESIGN_AUDIT.md` (Phase 1: presentation-only polish). Verified in
   light and dark against the `shop` example.
 
+### Fixed
+- **Primary buttons rendered as links no longer lose their label on hover.**
+  Link-style buttons (e.g. the list page's “＋ Add &lt;model&gt;”, which is an
+  `<a class="rio-btn rio-btn--primary">`) were hit by the global content-link
+  rule `a:hover { color: var(--rio-rust-hover) }` (`base/base.css`), whose
+  `(0,1,1)` specificity outranks the `.rio-btn--primary` `(0,1,0)` class. On
+  hover the white label turned `--rio-rust-hover` while the fill darkened to
+  `--rio-rust-solid-hover` — the same value — so the text vanished into the
+  button. `buttons.css` now pins each variant's label colour on `:hover`/
+  `:active` (specificity `(0,2,0)`, which wins), so buttons own their text
+  colour in every state regardless of being an `<a>`. The same pin is applied
+  to `.rio-action-link` (and its `--danger`/`--muted` modifiers) so a
+  destructive “Delete” text-link stays red on hover instead of drifting to
+  copper. Token-value-free.
+- **Sidebar now highlights the current page.** The command rail's
+  `aria-current="page"` state was never rendered: templates compared against a
+  `nav_active` key that no page context ever set, so the comparison was always
+  false. `BaseContext` gains a `nav_active` field (set via a new
+  `with_nav_active` builder), and every rail-linked page context now sets it —
+  `home` (dashboard), a model's `admin_name` (its list/create/edit/delete and
+  per-object history), `users`/`groups` (the access pages), `history`, `db`, and
+  `view-designer`. New `sidebar_marks_active_nav_item` test guards it. No new
+  tokens; markup/CSS unchanged (the `aria-current` styling already existed).
+
 ### Added
+- **View designer is now reachable from the sidebar.** The Developer section of
+  the command rail (`_sidebar.html`) gains a "View designer" link
+  (`/admin/dev/view-designer`, Developer-gated) next to Database, so the editor
+  is discoverable instead of URL-only. Housekeeping in the same change: removed
+  the orphaned `.rio-sidebar`/`.rio-nav-*`/`.rio-topbar`/`.rio-brand` rules from
+  `components/navigation.css` (dead since the chrome moved to `.rio-rail` /
+  `.rio-ws*`; the live `.rio-brand-word` rule is kept). No new tokens; no visual
+  change to any rendered page.
 - **View designer: allowed-modes + compositions editing.** The designer now edits
   the rest of the `ViewSpec`: an **allowed-modes** checkbox group (which layouts
   appear in the `?view=` switcher; the default mode is forced on), and up to three

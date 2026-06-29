@@ -7,9 +7,19 @@ pub struct Payment {
     pub id: i64,
     pub order_id: i64,
     pub provider: String,
+    // The payment rail used. Codes mirror the `PaymentMethod` catalogue
+    // (`payment_methods.code`) — Sweden-first, plus the global wallets/cards.
+    #[rustio(choices = [
+        "swish", "klarna", "card", "trustly", "bankgiro", "autogiro",
+        "qliro", "walley", "apple_pay", "google_pay", "paypal"
+    ])]
     pub method: String,
     pub transaction_id: String,
     pub amount: Decimal,
+    // Settlement currency. Sweden runs on SEK; constrained to the Nordic
+    // set the shop actually books in.
+    #[rustio(choices = ["SEK", "EUR", "NOK", "DKK", "USD"])]
+    pub currency: String,
     #[rustio(choices = ["pending", "completed", "failed", "refunded"])]
     pub status: String,
 }
@@ -22,14 +32,16 @@ impl ModelAdmin for Payment {
     /// Columns shown in the list-page table. Order matches the
     /// `--field` declaration order.
     fn list_display() -> &'static [&'static str] {
-        &["order_id", "provider", "method", "amount", "status"]
+        &[
+            "order_id", "provider", "method", "amount", "currency", "status",
+        ]
     }
 
     /// Columns whose `=` value is filterable via `?filter_<col>=<v>`
     /// chips above the list page. Strings, enums, and small-cardinality
     /// columns make the most sense here.
     fn list_filter() -> &'static [&'static str] {
-        &["status", "provider", "method"]
+        &["status", "provider", "method", "currency"]
     }
 
     /// Columns that the list-page `?q=...` search box matches with

@@ -10,7 +10,7 @@ Companion to `DESIGN_SESSIONS.md`, `DESIGN_AUDIT.md`, and
 
 > **Status**
 >
-> Token surface stable. The teal accent palette is permanent
+> Token surface stable. The rust accent palette is permanent
 > (canonical values: [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1).
 > Token drift across feature branches
 > is the single biggest source of visual regressions; the
@@ -197,7 +197,7 @@ A project that needs a different accent colour:
 ```rust
 // ✅ Typed override at boot. Emits a single _theme.html style block.
 let admin = Admin::new()
-    .accent_color("#119588");
+    .accent_color("#B84318");
 ```
 
 A project that needs new tokens for its own components:
@@ -386,7 +386,7 @@ stylesheet:
 ```css
 /* ❌ Wrong — silently forks the framework's accent */
 :root {
-  --rio-accent: #119588;
+  --rio-accent: #B84318;
 }
 ```
 
@@ -395,7 +395,7 @@ Two right answers:
 ```rust
 // ✅ Typed override at boot. Emits a single _theme.html style block.
 let admin = Admin::new()
-    .accent_color("#119588");
+    .accent_color("#B84318");
 ```
 
 ```css
@@ -429,13 +429,13 @@ Projects must **not** redefine `--rio-*` variables in CSS.
 
 ## 9. Canonical accent palette
 
-The framework default accent is **teal**. Its canonical value (`--rio-accent`)
+The framework default accent is **rust**. Its canonical value (`--rio-accent`)
 and the hover / focus / ring relatives are owned by
 [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (light) and §12 (the lifted dark
 variant) — one source of truth, not restated here. On dark surfaces the accent
 lifts for AA; the chrome (topbar / sidebar / footer) stays deep-slate in both themes.
 
-The teal identity is permanent — calmer and more operational for long admin
+The rust identity is permanent — calmer and more operational for long admin
 sessions, holding contrast cleanly across the surface ladder. A previous
 terracotta accent was retired well before the contract; do not reintroduce
 red-family accents unless the framework identity changes deliberately. Per-project
@@ -566,7 +566,7 @@ Carry from the design doctrine. Do not re-litigate.
 
 | Decision | Value | Override path |
 |----------|-------|---------------|
-| Accent palette | **Teal** — values owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (light) / §12 (dark). Permanent | `Admin::accent_color("#…")` per project |
+| Accent palette | **Rust** — values owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (light) / §12 (dark). Permanent | `Admin::accent_color("#…")` per project |
 | Retired accent | A prior terracotta/red accent. Do not reintroduce | None — framework identity decision |
 | Typography stack | **Inter** (Latin UI, body + display), SFMono stack (mono), **Tajawal** (Arabic UI), **Noto Naskh Arabic** (Arabic body) — see VISUAL-CONTRACT.md §2 | Project class wrappers may layer; cannot redefine `--rio-font-*` |
 | Size ladder | Owned by VISUAL-CONTRACT.md §2 (16px body, 14px floor, 36px titles) | Project class wrappers; no token redefinition |

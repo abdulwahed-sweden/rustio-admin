@@ -120,6 +120,14 @@ pub(crate) struct BaseContext {
     /// Page handlers that want the badge live on their page chain
     /// `.with_unread_count(n)` after [`BaseContext::new`].
     pub unread_count: i64,
+    /// Key of the sidebar entry that matches the current page, so the
+    /// command rail can mark it `aria-current="page"`. Empty (the
+    /// default) means no rail item is active. Well-known values:
+    /// `"home"`, `"users"`, `"groups"`, `"history"`, `"db"`,
+    /// `"view-designer"`, or a model's `admin_name` for its CRUD pages.
+    /// Page contexts set it via [`Self::with_nav_active`]; `_sidebar.html`
+    /// compares each link against it.
+    pub nav_active: String,
 }
 
 /// Convert an `#rrggbb` (or `rrggbb`) hex string into the
@@ -204,6 +212,7 @@ impl BaseContext {
             theme_border: theme.border.clone(),
             read_only: admin.is_read_only(),
             unread_count: 0,
+            nav_active: String::new(),
         }
     }
 
@@ -216,6 +225,16 @@ impl BaseContext {
     /// `0` and the topbar shows just the bare bell.
     pub(crate) fn with_unread_count(mut self, n: i64) -> Self {
         self.unread_count = n.max(0);
+        self
+    }
+
+    // internal:
+    /// Builder helper — chain after [`Self::new`] to mark which command-rail
+    /// entry is active on this page. The value is matched against each link
+    /// in `_sidebar.html` to render `aria-current="page"`. See [`Self::nav_active`]
+    /// for the well-known keys; pass a model's `admin_name` for its CRUD pages.
+    pub(crate) fn with_nav_active(mut self, key: impl Into<String>) -> Self {
+        self.nav_active = key.into();
         self
     }
 }
@@ -526,7 +545,7 @@ pub(crate) fn dashboard_ctx(
     let activity_sparkline_total = activity_sparkline.iter().map(|p| p.count).sum();
 
     DashboardCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active("home"),
         entries: admin
             .entries()
             .iter()
@@ -1931,7 +1950,7 @@ pub(crate) fn list_ctx(
     let searched_columns: std::collections::HashSet<&str> =
         entry.search_fields.iter().copied().collect();
     ListCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: entry.display_name.to_string(),
         entries: admin
             .entries()
@@ -2498,7 +2517,7 @@ pub(crate) fn form_ctx(
     };
 
     FormCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: match mode {
             "new" => format!("Add {}", entry.singular_name),
             _ => format!("Change {}", entry.singular_name),
@@ -2804,7 +2823,7 @@ pub(crate) fn confirm_delete_ctx(
     csrf_token: String,
 ) -> ConfirmDeleteCtx {
     ConfirmDeleteCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: format!("Delete {}", entry.singular_name),
         entries: admin
             .entries()
@@ -2884,7 +2903,7 @@ pub(crate) fn bulk_confirm_action_ctx(
         .collect::<Vec<_>>()
         .join(",");
     BulkConfirmActionCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: format!("{} — {} {}", action.label, items.len(), entry.display_name),
         entries: admin
             .entries()
@@ -2917,7 +2936,7 @@ pub(crate) fn bulk_confirm_delete_ctx(
         .collect::<Vec<_>>()
         .join(",");
     BulkConfirmDeleteCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: format!("Delete {} {}", items.len(), entry.display_name),
         entries: admin
             .entries()
@@ -3543,7 +3562,7 @@ pub(crate) fn view_designer_index_ctx(
     saved: &std::collections::HashSet<String>,
 ) -> ViewDesignerIndexCtx {
     ViewDesignerIndexCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active("view-designer"),
         page_title: "View designer",
         entries: admin
             .entries()
@@ -3700,7 +3719,7 @@ pub(crate) fn view_designer_ctx(
         .collect();
 
     ViewDesignerCtx {
-        base: BaseContext::new(Some(identity), csrf_token, admin),
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active("view-designer"),
         page_title: format!("View designer · {}", entry.display_name),
         entries: admin
             .entries()
