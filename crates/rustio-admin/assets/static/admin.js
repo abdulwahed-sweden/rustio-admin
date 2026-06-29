@@ -1,7 +1,6 @@
 /* rustio-admin client-side helpers — minimal on purpose.
  *
- *  - Sidebar drawer toggle on mobile. Adds `data-sidebar="open"` to
- *    the .rio-shell so the CSS reveals the off-canvas panel.
+ *  - RustIO Console chrome: theme toggle + collapsible command rail.
  *  - Generic dropdown wiring, bulk-select form helper,
  *    foreign-key autocomplete, global ⌘K search palette.
  *
@@ -9,25 +8,6 @@
  */
 (function () {
   "use strict";
-
-  // ---- Sidebar drawer (mobile) -----------------------------------
-  function initSidebar() {
-    const shell = document.querySelector(".rio-shell");
-    const toggle = document.querySelector("[data-rio-sidebar-toggle]");
-    if (!shell || !toggle) return;
-
-    toggle.addEventListener("click", () => {
-      const open = shell.getAttribute("data-sidebar") === "open";
-      if (open) shell.removeAttribute("data-sidebar");
-      else shell.setAttribute("data-sidebar", "open");
-    });
-
-    // Close drawer when a nav link is clicked.
-    shell.addEventListener("click", (evt) => {
-      const link = evt.target.closest(".rio-sidebar-link");
-      if (link) shell.removeAttribute("data-sidebar");
-    });
-  }
 
   // ---- Generic dropdown wiring ------------------------------------
   // Any `[data-rio-dropdown]` wrapper that contains a
@@ -642,7 +622,6 @@
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initConsole();
-      initSidebar();
       initDropdowns();
       initRowActions();
       initBulkSelect();
@@ -651,7 +630,6 @@
     });
   } else {
     initConsole();
-    initSidebar();
     initDropdowns();
     initRowActions();
     initBulkSelect();
