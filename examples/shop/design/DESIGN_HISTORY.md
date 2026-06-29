@@ -2,7 +2,7 @@
 artifact: DESIGN_HISTORY
 layer: memory
 status: active
-updated: 2026-06-07
+updated: 2026-06-29
 ---
 
 # Design History — the evolution
@@ -10,6 +10,24 @@ updated: 2026-06-07
 > How the shop's design changed over time, and *why*. Reverse-chronological.
 > Token churn lives in git; this is the human-readable arc tying changes to the
 > decisions (`D-NNN`) that drove them.
+
+## 2026-06-29 — Drop the dead chrome remap (framework rail migration)
+
+The Patina adoption (D-010) re-themed the framework's chrome to light warm-stone
+via `custom_css` overrides on `.rio-sidebar` / `.rio-footer` / `.rio-topbar*` /
+`.rio-sidebar-toggle` / `.rio-search-trigger*`. The framework has since migrated
+its chrome to the dark `.rio-rail` command rail and the `.rio-ws*` workspace
+header (the rail is intentionally dark in both themes), so every one of those
+selectors now matches nothing — the overrides were dead.
+
+**Action:** removed the chrome-remap block from `rustio.design.toml`'s
+`[custom_css]` (and regenerated `generated/tokens.css` + the manifest hashes to
+match). The Patina palette, radius, and type still ship via the token `:root`
+block; the one-accent fold (`--rio-accent2*`), tabular figures, and the order/
+payment status colour-coding (D-009, `td.rio-td--text[title=…]` — still emitted
+by the list table) are unaffected. The light-chrome intent (D-010) is **deferred**
+for the rail: re-add a remap targeting `.rio-rail`/`.rio-ws*` if a light rail is
+wanted later.
 
 ## 2026-06-08 — Adopt the RustIO Patina design system (D-010)
 
