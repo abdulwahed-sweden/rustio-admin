@@ -68,6 +68,24 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **Brand repalette — rust accent + cool ink neutrals + JetBrains Mono.** The
+  framework's visual identity moves from teal (`#119588`) on warm near-white to a
+  **burnt-copper rust** accent (`--rio-accent #B84318`, hover `#8F3413`) over a
+  **cool blue-grey "ink"** neutral scale on a `#EDF1F5` canvas, matching the
+  `rustio` reference project. Titles are `#0F141A` (cool ink), borders/inputs use
+  the ink-200/ink-300 steps, and status colours retune to the reference set
+  (success `#067647`, warn `#B54708`, danger `#B42318`). Dark theme keeps its
+  graphite surfaces but its accent lifts to a warm coral (`#F2935E`) for AA. The
+  **mono stack now selects JetBrains Mono** (already self-hosted/baked; no new
+  asset) ahead of the system fallbacks. All changes are token-value only — every
+  `--rio-*` name is unchanged, so components/templates are untouched and dark mode
+  re-derives automatically. The Visual Contract (§1/§2) and DESIGN_DOCTRINE /
+  DESIGN_SYSTEM are updated to the new canonical values. **Migration impact:**
+  downstream admins see the new palette/mono after `cargo update`; projects that
+  set `Admin::accent_color("#…")` keep their override.
+- **Small text nudged up (+1px).** The smallest content tier (`--rio-text-12` /
+  `--rio-text-13`: table headers, pills, hints, stat labels) lifts from 14px to
+  **15px** for readability; the ≥14px floor (Visual Contract §2) still holds.
 - **List/table readability — tighter row density (visual only).** The admin data
   board's row height drops from an over-tall 72px to a comfortable, more
   scannable 56px (header padding 14px → 12px to match), so ~50% more rows fit a

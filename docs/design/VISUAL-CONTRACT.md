@@ -53,32 +53,32 @@ this contract and flag it.
 
 ```css
 :root {
-  /* Surfaces */
-  --rio-bg: #fafcfb;            /* content-area background (barely-warm near-white) */
+  /* Surfaces (cool ink scale) */
+  --rio-bg: #EDF1F5;            /* content-area background (cool blue-grey canvas) */
   --rio-surface: #ffffff;       /* cards, inputs, radio rows, table */
-  --rio-surface-tint: #edf7f8;  /* inline code / kbd chip background */
+  --rio-surface-tint: #EAEEF2;  /* inline code / kbd chip background (ink-100) */
 
   /* Text */
-  --rio-text-strong: #1e293b;   /* titles, labels, table text */
-  --rio-text: #475569;          /* lead paragraphs, descriptions */
-  --rio-text-muted: #64748b;    /* section legends, hints, breadcrumb current */
-  --rio-placeholder: #94a3b8;   /* input placeholder text */
+  --rio-text-strong: #0F141A;   /* titles, labels, table text (ink-900) */
+  --rio-text: #2B343C;          /* lead paragraphs, descriptions (ink-700) */
+  --rio-text-muted: #5F6D78;    /* section legends, hints, breadcrumb current (ink-500) */
+  --rio-placeholder: #8A97A2;   /* input placeholder text (ink-400) */
 
   /* Borders */
-  --rio-border-soft: #e2e8f0;   /* card borders, table dividers, action-bar hairline */
-  --rio-border-input: #94a3b8;  /* input/select/textarea/radio-row borders */
+  --rio-border-soft: #D6DEE5;   /* card borders, table dividers, action-bar hairline (ink-200) */
+  --rio-border-input: #B8C3CC;  /* input/select/textarea/radio-row borders (ink-300) */
 
-  /* Accent — teal */
-  --rio-accent: #119588;
-  --rio-accent-hover: #0e7c72;
-  --rio-accent-focus: #1f8987;                 /* focused-field border */
-  --rio-accent-ring: rgba(17, 149, 136, 0.20); /* outer focus glow */
+  /* Accent — rust (burnt copper) */
+  --rio-accent: #B84318;
+  --rio-accent-hover: #8F3413;
+  --rio-accent-focus: #B84318;                 /* focused-field border */
+  --rio-accent-ring: rgba(184, 67, 24, 0.35); /* outer focus glow */
 
   /* Status */
-  --rio-danger: #dc2626;
-  --rio-danger-hover: #b91c1c;
-  --rio-pill-on-bg: #f1f8f0;    --rio-pill-on-text: #3f9142;   /* "enabled" pill */
-  --rio-pill-off-bg: #eef1f5;   --rio-pill-off-text: #475569;  /* "disabled" pill */
+  --rio-danger: #B42318;
+  --rio-danger-hover: #912018;
+  --rio-pill-on-bg: #ECFDF3;    --rio-pill-on-text: #067647;   /* "enabled" pill */
+  --rio-pill-off-bg: #EAEEF2;   --rio-pill-off-text: #3F4A54;  /* "disabled" pill */
 
   /* Elevation */
   --rio-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
@@ -86,9 +86,10 @@ this contract and flag it.
 }
 ```
 
-Hard rules: the accent is **this teal** (`#119588`), not blue/emerald/a Tailwind
-swatch. Titles are `#1e293b` — not black, not navy. The content background is
-`#fafcfb` — a barely-warm near-white, not gray, not pure white.
+Hard rules: the accent is **this rust** (`#B84318`), a burnt copper — not teal,
+blue, or a Tailwind swatch. Titles are `#0F141A` (cool ink) — not pure black. The
+content background is `#EDF1F5` — a cool blue-grey, not warm, not pure white.
+(Palette adopted from the `rustio` reference project; supersedes the prior teal.)
 
 The runtime token names differ (`--rio-rust*` / `--rio-text-hi` / `--rio-line*`);
 `tokens/compat.css` aliases the contract names. The values above are canonical.
@@ -97,14 +98,14 @@ The runtime token names differ (`--rio-rust*` / `--rio-text-hi` / `--rio-line*`)
 
 ```css
 --rio-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
---rio-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+--rio-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 ```
 
 **Inter** is the single Latin face for body **and** titles (no serif). Per-script
 Arabic fallbacks (Noto Naskh display, Tajawal body/mono) are appended.
 
 ```css
---rio-fs-xs: 0.875rem;       /* 14px — section legends, table headers, kbd */
+--rio-fs-xs: 0.9375rem;      /* 15px — section legends, table headers, kbd (nudged up from 14) */
 --rio-fs-sm: 0.9375rem;      /* 15px — breadcrumbs, hints, pills */
 --rio-fs-md: 1rem;           /* 16px — body, labels, inputs, buttons, table cells */
 --rio-fs-lead: 1.0625rem;    /* 17px — page lead paragraph */
@@ -177,14 +178,14 @@ control heights are forbidden.
 ## 6. Radio rows
 
 Full-width bordered rows, stacked, tappable end-to-end: min-height 52px, s4
-padding, `--rio-border-input` border, 10px radius, 20px teal `accent-color`
+padding, `--rio-border-input` border, 10px radius, 20px rust `accent-color`
 control aligned to the first text line, s3 gap between rows. Primary phrase 700;
 trailing description 400 in `--rio-text`.
 
 ## 7. Checkboxes
 
-18px, **teal `accent-color`** everywhere — including the permission grid (the
-reference grid showing native blue is a known defect, normalize to teal).
+18px, **rust `accent-color`** everywhere — including the permission grid (the
+reference grid showing native blue is a known defect, normalize to rust).
 
 ## 8. Buttons and the action bar
 
@@ -222,7 +223,7 @@ the pill is emitted, not by capitalizing the source string.
 
 ## 11. Known reference defects (normalize, do not copy)
 
-1. `group_edit.png` — permission-grid checkboxes render native blue. Target: teal.
+1. `group_edit.png` — permission-grid checkboxes render native blue. Target: rust.
 2. `form.png` — Cancel wraps to an orphaned second line. Target: one wrapping row.
 3. `admin_reset_password.png` — a radio control is misaligned against the bold line.
    Target: control centered on the first text line.
@@ -256,8 +257,8 @@ Verify each touched page light/LTR against its screenshot, then light/RTL,
 dark/LTR, dark/RTL: header rhythm (§2.1); **section pattern matches its §3 case**
 (legend-on-border for multi-section forms, eyebrow-heading for list/table
 sections, legend-less for single-group create cards); 14px-min cards with the §1
-surfaces; 44px inputs with the teal 4px focus ring; full-width teal radio rows;
-all checkboxes teal; the §8 button/action-bar taxonomy; §9 tables (16px cells,
+surfaces; 44px inputs with the rust 4px focus ring; full-width rust radio rows;
+all checkboxes rust; the §8 button/action-bar taxonomy; §9 tables (16px cells,
 14px/800 headers, no zebra, lowercase §9 pills); inline code chips; **no UI text
 below 14px**; nothing cramped; top bar/sidebar/footer untouched.
 
