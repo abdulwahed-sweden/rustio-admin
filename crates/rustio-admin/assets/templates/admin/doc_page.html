@@ -1,77 +1,23 @@
 {% extends "admin/_base.html" %}
 
-{# Redesigned doc viewer: a branded header + a properly typeset reading
- # column. The rendered markdown (`body_html`) is wrapped in `.docp-prose`,
- # which styles headings, code, tables, blockquotes and lists with the
- # framework tokens (amber via the accent2 fallback). The markdown's own
- # leading <h1> is hidden so the page title isn't shown twice. #}
-{% block extra_head %}
-<style>
-  .docp-head { margin-bottom: var(--rio-s5); }
-  .docp-title { margin-top: var(--rio-s1); font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); letter-spacing: -0.01em; color: var(--rio-text-strong); }
-
-  .docp-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); padding: var(--rio-s6); }
-
-  .docp-prose { max-width: 80ch; color: var(--rio-text); font-size: var(--rio-fs-base); line-height: 1.7; }
-  .docp-prose > :first-child { margin-top: 0; }
-  /* the markdown's own leading title duplicates the page header → drop it */
-  .docp-prose > h1:first-child { display: none; }
-
-  .docp-prose h1 { font-size: var(--rio-fs-h2); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s6) 0 var(--rio-s3); }
-  .docp-prose h2 { font-size: var(--rio-fs-h2); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s6) 0 var(--rio-s3); padding-bottom: var(--rio-s2); border-bottom: 1px solid var(--rio-border-soft); }
-  .docp-prose h3 { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s5) 0 var(--rio-s2); }
-  .docp-prose h4 { font-size: var(--rio-fs-md); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s4) 0 var(--rio-s2); }
-  .docp-prose p { margin: 0 0 var(--rio-s4); }
-  .docp-prose strong { font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
-
-  .docp-prose a { color: var(--rio-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--rio-accent) 35%, transparent); text-underline-offset: 2px; }
-  .docp-prose a:hover { color: var(--rio-accent2-ink, var(--rio-accent)); text-decoration-color: currentColor; }
-
-  .docp-prose ul, .docp-prose ol { margin: 0 0 var(--rio-s4); padding-left: 1.4em; }
-  .docp-prose li { margin: 0.3em 0; }
-  .docp-prose li::marker { color: var(--rio-accent2-ink, var(--rio-text-subtle)); }
-
-  /* inline code */
-  .docp-prose :not(pre) > code { font-family: var(--rio-font-mono); font-size: 0.88em; background: var(--rio-surface-2); color: var(--rio-text-strong); padding: 0.12em 0.42em; border-radius: var(--rio-radius-sm); border: 1px solid var(--rio-border-soft); }
-
-  /* code blocks — dark slab, light text on a solid fill */
-  .docp-prose pre { margin: 0 0 var(--rio-s4); padding: var(--rio-s4) var(--rio-s5); background: var(--rio-surface-chrome); border-radius: var(--rio-radius); overflow-x: auto; }
-  .docp-prose pre code { font-family: var(--rio-font-mono); font-size: 0.86em; line-height: 1.65; color: #e6edf6; }
-
-  /* tables */
-  .docp-prose table { width: 100%; border-collapse: collapse; margin: 0 0 var(--rio-s4); font-size: var(--rio-fs-sm); }
-  .docp-prose thead th { text-align: left; background: var(--rio-surface-2); color: var(--rio-text-muted); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; padding: var(--rio-s2) var(--rio-s3); border-bottom: 1px solid var(--rio-border); }
-  .docp-prose tbody td { padding: var(--rio-s2) var(--rio-s3); border-bottom: 1px solid var(--rio-border-soft); vertical-align: top; }
-  .docp-prose tbody tr:last-child td { border-bottom: 0; }
-
-  /* blockquote — accent rail + soft amber wash */
-  .docp-prose blockquote { margin: 0 0 var(--rio-s4); padding: var(--rio-s3) var(--rio-s4); border-left: 3px solid var(--rio-accent2, var(--rio-accent)); background: var(--rio-accent2-soft, var(--rio-accent-soft)); border-radius: 0 var(--rio-radius-sm) var(--rio-radius-sm) 0; color: var(--rio-text-muted); }
-  .docp-prose blockquote p:last-child { margin-bottom: 0; }
-
-  .docp-prose hr { border: 0; border-top: 1px solid var(--rio-border); margin: var(--rio-s6) 0; }
-  .docp-prose img { max-width: 100%; height: auto; border-radius: var(--rio-radius); }
-
-  .docp-foot { margin-top: var(--rio-s5); }
-  .docp-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--rio-accent2-ink, var(--rio-accent)); font-weight: var(--rio-fw-semibold); font-size: var(--rio-fs-sm); }
-  .docp-back:hover { color: var(--rio-accent2, var(--rio-accent)); }
-</style>
-{% endblock %}
+{# Doc viewer: console masthead + a typeset reading column. The rendered
+ # markdown (`body_html`) is wrapped in `.rio-doc-prose`, styled in
+ # pages/tools.css (headings, code, tables, blockquotes, lists). The
+ # markdown's own leading <h1> is hidden so the title isn't shown twice. #}
 
 {% block content %}
-<header class="docp-head">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <a href="/admin/docs">Framework docs</a> · <span>{{ doc_title }}</span>
-  </nav>
-  <h1 class="docp-title">{{ doc_title }}</h1>
-</header>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/docs">Framework docs</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ doc_title }}</span></nav>
+<div class="rio-masthead-top"><div>
+  <h1>{{ doc_title }}</h1>
+</div></div>
 
-<article class="docp-card">
-  <div class="docp-prose">
+<article class="rio-docpage-card">
+  <div class="rio-doc-prose">
     {{ body_html | safe }}
   </div>
 </article>
 
-<div class="docp-foot">
-  <a class="docp-back" href="/admin/docs">← All framework docs</a>
+<div class="rio-doc-foot">
+  <a class="rio-doc-back" href="/admin/docs">← All framework docs</a>
 </div>
 {% endblock %}

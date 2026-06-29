@@ -68,6 +68,20 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **Unified the chrome on five utility pages — Audit log, API surface, Health,
+  Docs (index + viewer), and Sessions.** They had drifted onto four different
+  page-header patterns (`.rio-masthead-top`, `.rio-page-header`, bespoke
+  `.pgx-head`, bespoke `.docp-head`) and three of them carried per-page inline
+  `<style>` blocks with bespoke `.pgx-*`/`.api-*`/`.docs-*`/`.docp-*` class
+  prefixes. All five now use the one canonical `.rio-crumbs` + `.rio-masthead-top`
+  + `.rio-masthead-desc` header (API surface keeps its action buttons in the
+  `.rio-masthead-cta` slot), and every inline style/`style="…"` attribute moved
+  into the existing `pages/tools.css` / `pages/account.css` fragments under
+  `.rio-`-prefixed names (`.rio-api-*`, `.rio-doc-*`, `.rio-hist-*`,
+  `.rio-sess-revoke`). One hardcoded `#e6edf6` doc-code colour is now the
+  `--rio-on-solid` token. **No new tokens, no markup-behaviour change, no
+  `admin.css`/`routes.rs` concat change** (reused existing fragments, so the
+  `cascade_lockstep` lock-step is untouched).
 - **Brand repalette — rust accent + cool ink neutrals + JetBrains Mono.** The
   framework's visual identity moves from teal (`#119588`) on warm near-white to a
   **burnt-copper rust** accent (`--rio-accent #B84318`, hover `#8F3413`) over a
