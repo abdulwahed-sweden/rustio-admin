@@ -119,7 +119,10 @@ leaves the alpha track.
   `--rio-rust-solid-hover` — the same value — so the text vanished into the
   button. `buttons.css` now pins each variant's label colour on `:hover`/
   `:active` (specificity `(0,2,0)`, which wins), so buttons own their text
-  colour in every state regardless of being an `<a>`. Token-value-free.
+  colour in every state regardless of being an `<a>`. The same pin is applied
+  to `.rio-action-link` (and its `--danger`/`--muted` modifiers) so a
+  destructive “Delete” text-link stays red on hover instead of drifting to
+  copper. Token-value-free.
 - **Sidebar now highlights the current page.** The command rail's
   `aria-current="page"` state was never rendered: templates compared against a
   `nav_active` key that no page context ever set, so the comparison was always
