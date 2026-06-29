@@ -96,6 +96,14 @@ leaves the alpha track.
   light and dark against the `shop` example.
 
 ### Added
+- **View designer is now reachable from the sidebar.** The Developer section of
+  the command rail (`_sidebar.html`) gains a "View designer" link
+  (`/admin/dev/view-designer`, Developer-gated) next to Database, so the editor
+  is discoverable instead of URL-only. Housekeeping in the same change: removed
+  the orphaned `.rio-sidebar`/`.rio-nav-*`/`.rio-topbar`/`.rio-brand` rules from
+  `components/navigation.css` (dead since the chrome moved to `.rio-rail` /
+  `.rio-ws*`; the live `.rio-brand-word` rule is kept). No new tokens; no visual
+  change to any rendered page.
 - **View designer: allowed-modes + compositions editing.** The designer now edits
   the rest of the `ViewSpec`: an **allowed-modes** checkbox group (which layouts
   appear in the `?view=` switcher; the default mode is forced on), and up to three

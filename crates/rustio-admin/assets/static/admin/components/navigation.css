@@ -44,61 +44,10 @@
 .rio-page[aria-current="page"] { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
 .rio-page:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Sidebar */
-.rio-sidebar {
-  inline-size: 256px;
-  flex: none;
-  background: var(--rio-surface);
-  border-inline-end: 1px solid var(--rio-line);
-  display: flex; flex-direction: column;
-}
-.rio-sidebar--collapsed { inline-size: 60px; }
-.rio-nav { display: flex; flex-direction: column; gap: 2px; padding: var(--rio-space-8); }
-.rio-nav-group { display: flex; flex-direction: column; gap: 2px; }
-.rio-nav-group + .rio-nav-group { margin-block-start: var(--rio-space-6); }
-.rio-nav-section { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); letter-spacing: .06em; text-transform: uppercase; color: var(--rio-text-faint); padding: var(--rio-space-12) var(--rio-space-12) var(--rio-space-6); }
-.rio-nav-item {
-  display: flex; align-items: center; gap: var(--rio-space-12);
-  padding: 8px 12px;
-  min-block-size: 40px;
-  font-size: var(--rio-text-14);
-  font-weight: var(--rio-weight-semibold);
-  color: var(--rio-text-mute);
-  border-radius: var(--rio-radius-md);
-  cursor: pointer;
-  text-decoration: none;
-  position: relative;
-  transition: background var(--rio-dur-fast) var(--rio-ease), color var(--rio-dur-fast) var(--rio-ease);
-}
-.rio-nav-item:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
-.rio-nav-item[aria-current="page"] { background: var(--rio-rust-tint); color: var(--rio-rust); }
-/* Active rail — the one place copper marks position. */
-.rio-nav-item[aria-current="page"]::before {
-  content: ""; position: absolute; inset-inline-start: -8px; inset-block: 9px;
-  inline-size: 3px; border-radius: 999px; background: var(--rio-rust);
-}
-.rio-nav-item svg { inline-size: 18px; block-size: 18px; flex: none; }
-.rio-nav-count {
-  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-medium);
-  color: var(--rio-text-faint); font-variant-numeric: lining-nums tabular-nums;
-}
-.rio-nav-item[aria-current="page"] .rio-nav-count { color: var(--rio-rust); }
-.rio-sidebar-foot { padding: var(--rio-space-8); border-block-start: 1px solid var(--rio-line); }
-
-/* Topbar */
-.rio-topbar {
-  block-size: 56px;
-  display: flex; align-items: center; gap: var(--rio-space-16);
-  padding-inline: var(--rio-space-20);
-  background: var(--rio-surface);
-  border-block-end: 1px solid var(--rio-line);
-  position: sticky; inset-block-start: 0; z-index: 10;
-}
-/* Brand zone in the topbar — aligns with the 256px sidebar column. */
-.rio-brand {
-  display: flex; align-items: center; gap: var(--rio-space-8);
-  inline-size: 224px; flex: none;
-}
+/* Brand wordmark — rendered by the auth header and the app footer
+   (`_base.html`). The legacy `.rio-sidebar`/`.rio-nav-*`/`.rio-topbar`/
+   `.rio-brand` rules were removed when the chrome moved to `.rio-rail`
+   (layout/console.css) and `.rio-ws*` (the topbar in `_topbar.html`). */
 .rio-brand-word {
   font-family: var(--rio-font-display); font-weight: var(--rio-weight-bold);
   font-size: var(--rio-text-20); letter-spacing: -0.012em; color: var(--rio-text-hi);
