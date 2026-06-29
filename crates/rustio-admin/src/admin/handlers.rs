@@ -2842,7 +2842,8 @@ pub(crate) async fn show_object_history(
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::ObjectHistoryCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
-            .with_unread_count(unread),
+            .with_unread_count(unread)
+            .with_nav_active(admin_name),
         page_title: format!("History: {} — {}", entry.singular_name, label),
         admin_name: admin_name.to_string(),
         display_name: entry.display_name.to_string(),
@@ -3550,7 +3551,8 @@ pub(crate) async fn show_log_entries(
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::LogEntriesCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
-            .with_unread_count(unread),
+            .with_unread_count(unread)
+            .with_nav_active("history"),
         page_title: "Recent admin actions",
         entries: ctx
             .admin

@@ -209,7 +209,9 @@ pub(crate) async fn show_db_browser(
     by_name.clear();
 
     let view = DbBrowserCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req)).await,
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf_token(req))
+            .await
+            .with_nav_active("db"),
         page_title: "Database",
         entries: ctx
             .admin

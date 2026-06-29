@@ -95,6 +95,17 @@ leaves the alpha track.
   plan in `REDESIGN_AUDIT.md` (Phase 1: presentation-only polish). Verified in
   light and dark against the `shop` example.
 
+### Fixed
+- **Sidebar now highlights the current page.** The command rail's
+  `aria-current="page"` state was never rendered: templates compared against a
+  `nav_active` key that no page context ever set, so the comparison was always
+  false. `BaseContext` gains a `nav_active` field (set via a new
+  `with_nav_active` builder), and every rail-linked page context now sets it —
+  `home` (dashboard), a model's `admin_name` (its list/create/edit/delete and
+  per-object history), `users`/`groups` (the access pages), `history`, `db`, and
+  `view-designer`. New `sidebar_marks_active_nav_item` test guards it. No new
+  tokens; markup/CSS unchanged (the `aria-current` styling already existed).
+
 ### Added
 - **View designer is now reachable from the sidebar.** The Developer section of
   the command rail (`_sidebar.html`) gains a "View designer" link
