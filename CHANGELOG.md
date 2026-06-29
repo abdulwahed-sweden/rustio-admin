@@ -110,6 +110,16 @@ leaves the alpha track.
   light and dark against the `shop` example.
 
 ### Fixed
+- **Primary buttons rendered as links no longer lose their label on hover.**
+  Link-style buttons (e.g. the list page's “＋ Add &lt;model&gt;”, which is an
+  `<a class="rio-btn rio-btn--primary">`) were hit by the global content-link
+  rule `a:hover { color: var(--rio-rust-hover) }` (`base/base.css`), whose
+  `(0,1,1)` specificity outranks the `.rio-btn--primary` `(0,1,0)` class. On
+  hover the white label turned `--rio-rust-hover` while the fill darkened to
+  `--rio-rust-solid-hover` — the same value — so the text vanished into the
+  button. `buttons.css` now pins each variant's label colour on `:hover`/
+  `:active` (specificity `(0,2,0)`, which wins), so buttons own their text
+  colour in every state regardless of being an `<a>`. Token-value-free.
 - **Sidebar now highlights the current page.** The command rail's
   `aria-current="page"` state was never rendered: templates compared against a
   `nav_active` key that no page context ever set, so the comparison was always
