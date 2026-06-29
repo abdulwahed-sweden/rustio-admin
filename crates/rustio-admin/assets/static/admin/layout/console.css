@@ -250,7 +250,8 @@
 .rio-dtable tbody tr:hover .rio-row-actions, .rio-row-actions:focus-within { opacity: 1; }
 
 /* board footer */
-.rio-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); }
+.rio-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-board-foot strong { color: var(--rio-text-hi); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   .rio-row-actions { opacity: 1; }

@@ -11,7 +11,7 @@
   font-weight: var(--rio-weight-semibold);
   color: var(--rio-text-hi);
 }
-.rio-label .rio-req { color: var(--rio-rust); margin-inline-start: 2px; }
+.rio-label .rio-req { color: var(--rio-danger); margin-inline-start: 2px; }
 .rio-help { font-size: var(--rio-text-13); color: var(--rio-text-mute); margin-block-start: 2px; }
 .rio-error { font-size: var(--rio-text-13); color: var(--rio-danger); }
 

@@ -76,6 +76,22 @@ leaves the alpha track.
   `cascade_lockstep` lock-step are untouched. First increment of the redesign
   plan in `REDESIGN_AUDIT.md` (Phase 1: presentation-only polish). Verified in
   light and dark against the `shop` example.
+- **Visual-Contract conformance pass across admin pages (visual only).** A
+  full audit of every admin page against `VISUAL-CONTRACT.md` v2.1, with the
+  token-level fixes applied: removed a stray `.rio-pill` redefinition in
+  `pages/detail.css` that was overriding the canonical §9 status pill
+  (15px/700) globally with a smaller 14px/600 variant — every status pill now
+  renders at contract spec; the required-field asterisk is now `--rio-danger`
+  (red, §4) instead of the copper accent; confirm-dialog cards get the §3
+  card shell on the MFA/password-change confirmation pages (`mfa_disable`,
+  `mfa_regenerate`, `password_change`) and their padding moves to s6 (32px);
+  the list/users/groups board-foot counts drop hardcoded `font-size:13px`
+  inline styles (the only sub-14px content text in linked CSS, §2 floor) in
+  favour of a `.rio-board-foot` rule; and the table boolean / user-active
+  status pills now emit lowercase text (`yes`/`no`, `active`/`inactive`, §9).
+  No new tokens, no markup-structure, route, schema, or behaviour change;
+  `cascade_lockstep` untouched. Remaining audit findings (row-action taxonomy,
+  dense-button sizing) are deferred as contract-level decisions.
 
 ### Added
 - **View designer: allowed-modes + compositions editing.** The designer now edits

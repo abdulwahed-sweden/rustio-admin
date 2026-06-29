@@ -3,7 +3,7 @@
  * ============================================================ */
 
 /* ---- Confirm (delete / bulk delete / admin action) ---- */
-.rio-confirm { padding: var(--rio-space-24); }
+.rio-confirm { padding: var(--rio-space-32); }  /* §3: card padding s6 (32px) */
 .rio-confirm__head { display: flex; gap: var(--rio-space-16); align-items: flex-start; }
 .rio-confirm__icon {
   flex: none;
