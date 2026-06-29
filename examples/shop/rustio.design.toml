@@ -25,13 +25,15 @@ architecture = "design/DESIGN_ARCHITECTURE.md"
 decisions    = "design/DESIGN_DECISIONS.md"
 history      = "design/DESIGN_HISTORY.md"
 
-# ── Navigation grouping (D-008) ──
-[navigation]
-Catalogue = "Products, Categories"
-Customers = "Customers"
-Sales     = "Orders, Payments"
-_hidden   = "Order items, Cart items, Product images, Address"
-_out      = "templates/admin/_sidebar.html"
+# ── Navigation grouping: DEFERRED (2026-06-29). D-008 grouped the nav into
+#    Catalogue (Products, Categories) / Customers / Sales (Orders, Payments) and
+#    hid the join/child models, emitting templates/admin/_sidebar.html. The
+#    framework migrated to the dark `.rio-rail` command rail, which auto-builds
+#    grouped nav (Models / Access / Developer) from the model registry; the old
+#    generated `_sidebar.html` used pre-rail `.rio-sidebar` markup and was dropped
+#    (repo commit e3c8c3e). Custom group labels + hiding need a rail-aware
+#    generator + framework support — re-add [navigation] (with `_out`) once that
+#    lands. See design/DESIGN_HISTORY.md (2026-06-29).
 
 # ── Product list view (rustio-design view layer, D-001/D-002) ──
 # Lead with the product name; fold price + stock into one cell, the stock

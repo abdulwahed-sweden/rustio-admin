@@ -29,6 +29,18 @@ by the list table) are unaffected. The light-chrome intent (D-010) is **deferred
 for the rail: re-add a remap targeting `.rio-rail`/`.rio-ws*` if a light rail is
 wanted later.
 
+Same pass also retired the **navigation grouping (D-008)**: it grouped the nav
+into Catalogue / Customers / Sales and hid the join/child models, emitting
+`templates/admin/_sidebar.html`. That generated override was already dropped
+(repo commit `e3c8c3e`) because it used pre-rail `.rio-sidebar` markup, but the
+`[navigation]` block and the manifest entry for the file were left dangling
+(so `rustio-design check` referenced a missing file). Removed the `[navigation]`
+block from `rustio.design.toml` (kept as a documented deferral) and the
+`_sidebar.html` line from the manifest. The dark `.rio-rail` rail auto-groups nav
+from the registry; custom group labels + hiding are deferred until a rail-aware
+generator lands. `RUSTIO_TEMPLATE_DIR` stays — the product/order/customer
+`list.html` view overrides still use it.
+
 ## 2026-06-08 — Adopt the RustIO Patina design system (D-010)
 
 Re-skinned shop from the navy+amber identity to the official **RustIO Patina**
