@@ -125,7 +125,9 @@ pub(crate) async fn list_users(
         .collect::<Result<Vec<_>>>()?;
 
     let view = UsersListCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("users"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("users"),
         page_title: "Users",
         entries: ctx
             .admin
@@ -213,7 +215,9 @@ pub(crate) async fn show_user_edit(
     let role_str = r.get_string("role")?;
     let is_active_val = r.get_bool("is_active")?;
     let view = UserEditCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("users"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("users"),
         page_title: format!("Edit user #{user_id}"),
         entries: ctx
             .admin
@@ -569,7 +573,9 @@ pub(crate) async fn show_user_view(
         .unwrap_or_else(|| humanize_email(&profile.email));
 
     let view = UserViewCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("users"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("users"),
         page_title: format!("{} — Users", profile.email),
         entries: ctx
             .admin
@@ -945,7 +951,9 @@ pub(crate) async fn show_user_delete(
 
     let email = r.get_string("email")?;
     let view = UserDeleteCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("users"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("users"),
         page_title: format!("Delete user: {email}"),
         entries: ctx
             .admin
@@ -1042,7 +1050,9 @@ pub(crate) async fn list_groups(
     csrf: String,
 ) -> Result<Response> {
     let view = GroupsListCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("groups"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("groups"),
         page_title: "Groups",
         entries: ctx
             .admin
@@ -1231,7 +1241,9 @@ pub(crate) async fn show_group_edit(
     let description_str = r.get_string("description")?;
     let matrix = build_permission_matrix(&all, &current);
     let view = GroupEditCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("groups"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("groups"),
         page_title: format!("Edit group #{group_id}"),
         entries: ctx
             .admin
@@ -1399,7 +1411,9 @@ pub(crate) async fn show_group_delete(
 
     let name = r.get_string("name")?;
     let view = GroupDeleteCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("groups"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("groups"),
         page_title: format!("Delete group: {name}"),
         entries: ctx
             .admin
@@ -1500,7 +1514,9 @@ pub(crate) async fn show_new_user(
     let role: String = "staff".into();
     let editor_rank = identity.role.rank();
     let view = UserNewCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("users"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("users"),
         page_title: "Add user",
         entries: ctx
             .admin
@@ -1652,7 +1668,9 @@ pub(crate) async fn do_new_user(
     );
     render::apply_field_errors(&mut sections, &field_errors);
     let view = UserNewCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("users"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("users"),
         page_title: "Add user",
         entries: ctx
             .admin
@@ -1692,7 +1710,9 @@ pub(crate) async fn show_new_group(
     let name = String::new();
     let description = String::new();
     let view = GroupNewCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("groups"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("groups"),
         page_title: "Add group",
         entries: ctx
             .admin
@@ -1789,7 +1809,9 @@ pub(crate) async fn do_new_group(
     let mut sections = render::group_form_sections(&name, &description);
     render::apply_field_errors(&mut sections, &field_errors);
     let view = GroupNewCtx {
-        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf).await.with_nav_active("groups"),
+        base: base_with_unread(&ctx.db, &ctx.admin, &identity, csrf)
+            .await
+            .with_nav_active("groups"),
         page_title: "Add group",
         entries: ctx
             .admin
