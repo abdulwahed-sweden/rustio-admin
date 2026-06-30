@@ -203,6 +203,31 @@ jobs:
           fi
           echo "OK: workspace and reference example both pin $workspace"
 
+      - name: rustio-draft FIELD_TYPES tracks the builder
+        run: |
+          set -eu
+          # rustio-draft is a standalone workspace (no compile-time dep on the
+          # framework, so it can move to its own repo later). It hand-mirrors the
+          # builder's closed FIELD_TYPES list to build the structured-output enum
+          # it hands the model. This guard keeps the two copies identical — if a
+          # field type is added to the builder, rustio-draft must track it (and
+          # vice versa), or the model could emit a type `import` rejects (or be
+          # denied a type the builder now supports). F5 in docs/RUSTIO_DRAFT_SCOPE.md.
+          extract() {
+            grep -E 'const FIELD_TYPES' "$1" | grep -oE '"[a-z_]+"' | tr -d '"' | paste -sd, -
+          }
+          builder=$(extract crates/rustio-admin-cli/src/builder/draft.rs)
+          draft=$(extract rustio-draft/src/schema.rs)
+          if [ -z "$builder" ] || [ -z "$draft" ]; then
+            echo "::error::FIELD_TYPES guard could not extract both lists (builder='$builder', draft='$draft'). Fix the regex or the const formatting."
+            exit 1
+          fi
+          if [ "$builder" != "$draft" ]; then
+            echo "::error::FIELD_TYPES drift: builder=[$builder] vs rustio-draft=[$draft]. Update rustio-draft/src/schema.rs FIELD_TYPES to match crates/rustio-admin-cli/src/builder/draft.rs (same values, same order)."
+            exit 1
+          fi
+          echo "OK: builder and rustio-draft FIELD_TYPES both = [$builder]"
+
   reference-example:
     name: reference example (clinic)
     runs-on: ubuntu-latest
