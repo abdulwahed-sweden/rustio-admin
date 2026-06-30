@@ -354,6 +354,16 @@ the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
         #[arg(long)]
         force: bool,
     },
+
+    /// Import a schema.json into the Builder draft (deterministic, no AI).
+    ///
+    /// Validates the contract, then records the same `add model` / `add field`
+    /// events so `plan` / `commit` apply it. An external AI assistant (governed
+    /// by `.rustio/ai.toml`) or a human authors the JSON — RustIO runs no AI.
+    Import {
+        /// Path to the schema JSON file.
+        path: std::path::PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -473,6 +483,7 @@ fn main() -> ExitCode {
         Command::Add { action } => builder_add(action),
         Command::Plan => builder_plan(),
         Command::Commit { force } => builder_commit(force),
+        Command::Import { path } => builder_import(&path),
         Command::Docs { open } => docs::print_docs(open),
         Command::Override { name, force, out } => template_override::run(name, force, &out),
         Command::Reload => reload::run(),
@@ -490,6 +501,7 @@ fn main() -> ExitCode {
                 | Command::Add { .. }
                 | Command::Plan
                 | Command::Commit { .. }
+                | Command::Import { .. }
                 | Command::Docs { .. }
                 | Command::Override { .. }
                 | Command::Reload
@@ -632,6 +644,13 @@ fn builder_plan() -> Result<(), String> {
     let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
     let out = builder::cmd::run_plan(&cwd)?;
     print!("{out}");
+    Ok(())
+}
+
+fn builder_import(path: &std::path::Path) -> Result<(), String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let out = builder::cmd::run_import(&cwd, path)?;
+    println!("{out}");
     Ok(())
 }
 

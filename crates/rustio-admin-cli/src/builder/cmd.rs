@@ -376,6 +376,99 @@ pub(crate) fn run_add_field(
     ))
 }
 
+/// `rustio-admin import <schema.json>` -- load a schema document into the
+/// Builder draft. Deterministic and AI-free: it validates the contract, then
+/// records the same `add_model` / `add_field` events `add` would, so `plan` /
+/// `commit` apply it unchanged. An external AI assistant (governed by
+/// `.rustio/ai.toml`) or a human authors the JSON — RustIO runs no AI.
+///
+/// Contract:
+/// ```json
+/// { "project": "optional",
+///   "models": [
+///     { "name": "Invoice", "fields": [
+///       { "name": "amount", "type": "integer", "unique": false } ] } ] }
+/// ```
+/// `type` is one of [`FIELD_TYPES`]. Validation runs over the whole document
+/// before any event is recorded, so a malformed schema records nothing.
+pub(crate) fn run_import(start: &Path, schema_path: &Path) -> Result<String, String> {
+    let raw = std::fs::read_to_string(schema_path)
+        .map_err(|e| format!("could not read {}: {e}", schema_path.display()))?;
+    let doc: serde_json::Value = serde_json::from_str(&raw)
+        .map_err(|e| format!("{}: invalid JSON: {e}", schema_path.display()))?;
+    let models = doc
+        .get("models")
+        .and_then(|m| m.as_array())
+        .ok_or_else(|| "schema must have a top-level \"models\" array".to_string())?;
+    if models.is_empty() {
+        return Err("schema \"models\" is empty — nothing to import".to_string());
+    }
+    // Fail fast if we're not inside a Builder project (before any work).
+    find_project_root(start).map_err(format_lifecycle_err)?;
+
+    // Pass 1 — validate the entire document; record nothing yet.
+    struct ImpModel {
+        name: String,
+        fields: Vec<(String, String, bool)>,
+    }
+    let mut planned: Vec<ImpModel> = Vec::with_capacity(models.len());
+    for (mi, m) in models.iter().enumerate() {
+        let name = m
+            .get("name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("models[{mi}] is missing a string \"name\""))?;
+        validate_model_name(name)?;
+        let mut fields = Vec::new();
+        if let Some(farr) = m.get("fields").and_then(|f| f.as_array()) {
+            for (fi, f) in farr.iter().enumerate() {
+                let fname = f
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("{name}.fields[{fi}] is missing a string \"name\""))?;
+                let fty = f
+                    .get("type")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("{name}.{fname} is missing a string \"type\""))?;
+                validate_field_name(fname)?;
+                if !FIELD_TYPES.contains(&fty) {
+                    return Err(format!(
+                        "{name}.{fname}: type '{fty}' is not in the closed list {FIELD_TYPES:?}"
+                    ));
+                }
+                if is_secret_field_type(fty) {
+                    return Err(format!(
+                        "{name}.{fname}: secret-category type '{fty}' is refused (DESIGN_BUILDER.md §4.2.3)"
+                    ));
+                }
+                let unique = f.get("unique").and_then(|v| v.as_bool()).unwrap_or(false);
+                fields.push((fname.to_string(), fty.to_string(), unique));
+            }
+        }
+        planned.push(ImpModel {
+            name: name.to_string(),
+            fields,
+        });
+    }
+
+    // Pass 2 — apply via the same atomic event path as `add`.
+    let mut n_models = 0usize;
+    let mut n_fields = 0usize;
+    for item in &planned {
+        run_add_model(start, &item.name)?;
+        n_models += 1;
+        for (fname, fty, unique) in &item.fields {
+            run_add_field(start, &item.name, fname, fty, *unique)?;
+            n_fields += 1;
+        }
+    }
+
+    Ok(format!(
+        "Imported {n_models} model(s) and {n_fields} field(s) from {}.\n\
+         Run `rustio-admin plan` to preview, then `rustio-admin commit` to generate code.",
+        schema_path.display()
+    ))
+}
+
 /// `rustio-admin plan` -- print the diff `commit` would apply.
 pub(crate) fn run_plan(start: &Path) -> Result<String, String> {
     let report = lifecycle_plan(start).map_err(format_lifecycle_err)?;
@@ -608,6 +701,58 @@ mod tests {
         run_add_model(&root, "Item").unwrap();
         let err = run_add_field(&root, "Item", "weird", "geography", false).unwrap_err();
         assert!(err.contains("not in the closed MVP type list"), "{err}");
+    }
+
+    #[test]
+    fn import_loads_models_and_fields() {
+        let root = tempdir();
+        bootstrap_project_at(&root);
+        let schema = root.join("schema.json");
+        std::fs::write(
+            &schema,
+            r#"{ "project": "demo", "models": [
+                { "name": "Invoice", "fields": [
+                    { "name": "amount", "type": "integer" },
+                    { "name": "issued_at", "type": "timestamp" },
+                    { "name": "paid", "type": "boolean" } ] },
+                { "name": "Client", "fields": [
+                    { "name": "full_name", "type": "text" } ] } ] }"#,
+        )
+        .unwrap();
+
+        let msg = run_import(&root, &schema).unwrap();
+        assert!(msg.contains("Imported 2 model(s) and 4 field(s)"), "{msg}");
+
+        let draft =
+            crate::builder::replay::replay_from_file(&root.join(".rustio/history.jsonl")).unwrap();
+        let invoice = draft.models.iter().find(|m| m.name == "Invoice").unwrap();
+        assert!(invoice.fields.iter().any(|f| f.name == "amount"));
+        assert!(invoice.fields.iter().any(|f| f.name == "paid"));
+        assert!(draft.models.iter().any(|m| m.name == "Client"));
+    }
+
+    #[test]
+    fn import_rejects_bad_type_and_records_nothing() {
+        let root = tempdir();
+        bootstrap_project_at(&root);
+        let schema = root.join("schema.json");
+        std::fs::write(
+            &schema,
+            r#"{ "models": [ { "name": "X", "fields": [
+                { "name": "f", "type": "geography" } ] } ] }"#,
+        )
+        .unwrap();
+
+        let err = run_import(&root, &schema).unwrap_err();
+        assert!(err.contains("not in the closed list"), "{err}");
+
+        // Validation runs before any event is recorded, so the draft is untouched.
+        let draft =
+            crate::builder::replay::replay_from_file(&root.join(".rustio/history.jsonl")).unwrap();
+        assert!(
+            !draft.models.iter().any(|m| m.name == "X"),
+            "a rejected import must record nothing"
+        );
     }
 
     /// MVP refuses every secret-category field type. Today the

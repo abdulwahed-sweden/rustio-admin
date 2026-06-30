@@ -158,6 +158,17 @@ leaves the alpha track.
   tokens; markup/CSS unchanged (the `aria-current` styling already existed).
 
 ### Added
+- **`schema.json` import (Studio Phase 4 — deterministic genesis).** New
+  `rustio-admin import <schema.json>` loads a schema document into the Builder
+  draft: it validates the whole contract first (a `models` array of
+  `{ name, fields: [{ name, type, unique? }] }`, `type` from the closed
+  `FIELD_TYPES` list), then records the **same** `add_model` / `add_field`
+  events as `add`, so `plan` / `commit` apply it unchanged — a malformed schema
+  records nothing. **No AI, no network, no new dependencies.** Per the project's
+  *RustIO runs no AI* stance, an external assistant (governed by
+  `.rustio/ai.toml`) or a human authors the JSON; RustIO only imports it
+  deterministically. Surfaced on the Schema page's CLI handoff. (A live-LLM
+  genesis tool stays out of the OSS repo — see `DEFERRED.md`.)
 - **Schema review page (Studio Phase 3).** A Developer-gated `/admin/dev/schema`
   page (linked in the rail's Developer section) gives a **read-only** view of the
   registered models as the framework sees them — per-model field tables (name,

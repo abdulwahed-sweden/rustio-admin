@@ -71,6 +71,21 @@ None of these block trying the tool today (see `examples/shop/seeds/viewspec_cus
   wrapper, or the docs state plainly that a per-model list override opts the
   model **out** of the adaptive view layer unless it includes that branch.
 
+## Studio
+
+### 6. Live-LLM genesis ("AI suggests a schema") — out of the OSS repo
+- **Now:** the deterministic half of genesis ships — `rustio-admin import
+  <schema.json>` (Phase 4) loads a schema into the Builder. The *authoring* of
+  that JSON by an AI is done by an **external** assistant (governed by
+  `.rustio/ai.toml`); RustIO itself runs no AI and the CLI has no HTTP/LLM deps.
+- **Why deferred:** a built-in live-LLM call would break the explicit *RustIO
+  runs no AI* stance and add a network client + LLM SDK + API-key handling to a
+  deliberately network-free, dependency-disciplined codebase.
+- **Done looks like:** a *separate* `rustio-forge` / future `rustio-pro` tool
+  (not the OSS runtime or CLI) that turns a natural-language brief into a
+  `schema.json` and hands it to `rustio-admin import` — keeping the OSS layer
+  deterministic and AI-free.
+
 ---
 
 _Add new deferred items above this line. Keep each one: what / why deferred /
