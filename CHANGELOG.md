@@ -158,6 +158,20 @@ leaves the alpha track.
   tokens; markup/CSS unchanged (the `aria-current` styling already existed).
 
 ### Added
+- **Branding page + `theme wizard` (Studio Phase 2).** A Developer-gated
+  `/admin/dev/branding` page (linked in the rail's Developer section) lets you
+  pick a brand colour and **preview it live** — the rust/accent CSS variables
+  are injected into the preview pane only (ephemeral, client-side, never
+  persisted) — then copy the build-time **bake** commands: `rustio-admin theme
+  generate --brand '#hex'`, the `RUSTIO_TOKENS_CSS=…` wiring, and the
+  `Admin::accent_color("#hex")` one-liner. The runtime **never links rio-theme**;
+  baking stays a setup-time CLI step. The CLI gains `rustio-admin theme wizard`,
+  an interactive front door that prompts for a brand colour and defers to the
+  existing `generate` engine (same deterministic rio-theme output + contrast
+  report). New `admin/branding.html` (baked into `EMBEDDED_TEMPLATES`),
+  `branding_ctx`/`show_branding`, a `.rio-brand-*` section in the existing
+  `pages/view-designer.css` fragment, and a progressive `initBranding()` in
+  `admin.js`. No new tokens; no build step; deterministic.
 - **View designer is now reachable from the sidebar.** The Developer section of
   the command rail (`_sidebar.html`) gains a "View designer" link
   (`/admin/dev/view-designer`, Developer-gated) next to Database, so the editor

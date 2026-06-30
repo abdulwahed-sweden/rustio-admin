@@ -3759,6 +3759,42 @@ pub(crate) fn view_designer_ctx(
     }
 }
 
+/// Branding page (`/admin/dev/branding`): live accent preview + a handoff to
+/// the build-time `rustio-admin theme` CLI (the runtime never links rio-theme).
+#[derive(Serialize)]
+pub(crate) struct BrandingCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    /// The current accent hex — a project `accent_color` override, or the
+    /// framework default. Seeds the colour picker and the preview.
+    pub current_accent: String,
+    /// `true` when a baked palette is already active via `RUSTIO_TOKENS_CSS`.
+    pub tokens_active: bool,
+}
+
+/// Build the branding-page context.
+pub(crate) fn branding_ctx(identity: &Identity, admin: &Admin, csrf_token: String) -> BrandingCtx {
+    let current_accent = admin
+        .active_theme()
+        .accent
+        .clone()
+        .unwrap_or_else(|| "#B84318".to_string());
+    BrandingCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active("branding"),
+        page_title: "Branding",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        current_accent,
+        tokens_active: std::env::var("RUSTIO_TOKENS_CSS").is_ok(),
+    }
+}
+
 #[derive(Serialize)]
 pub(crate) struct HealthCtx {
     #[serde(flatten)]

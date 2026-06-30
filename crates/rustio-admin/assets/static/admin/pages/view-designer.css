@@ -107,3 +107,25 @@
 .rio-vd-json__body { margin: 0; padding: var(--rio-space-16); background: var(--rio-surface-chrome); overflow-x: auto; }
 .rio-vd-json__body code { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); line-height: 1.6; color: var(--rio-on-solid); white-space: pre; }
 .rio-vd-json__foot { padding: var(--rio-space-8) var(--rio-space-16); background: var(--rio-surface-chrome); color: var(--rio-success); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); border-block-start: 1px solid rgba(255,255,255,0.08); }
+
+/* ============================================================
+   Branding page (/admin/dev/branding)
+   ============================================================ */
+.rio-brand { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: var(--rio-space-20); align-items: start; margin-block-end: var(--rio-space-24); }
+@media (max-width: 760px) { .rio-brand { grid-template-columns: 1fr; } }
+.rio-brand-controls, .rio-brand-preview {
+  background: var(--rio-surface); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm);
+  padding: var(--rio-space-16);
+}
+.rio-brand-pickrow { display: flex; align-items: center; gap: var(--rio-space-8); margin-block: var(--rio-space-12); }
+.rio-brand-color { inline-size: 48px; block-size: 38px; padding: 0; border: 1px solid var(--rio-line-strong); border-radius: var(--rio-radius-sm); background: none; cursor: pointer; }
+.rio-brand-hex { inline-size: 9rem; }
+.rio-brand-presets { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); }
+.rio-brand-preset { inline-size: 24px; block-size: 24px; padding: 0; border-radius: var(--rio-radius-pill); border: 2px solid var(--rio-surface); box-shadow: 0 0 0 1px var(--rio-line-strong); background: var(--sw); cursor: pointer; transition: transform var(--rio-dur-fast) var(--rio-ease); }
+.rio-brand-preset:hover { transform: scale(1.12); }
+.rio-brand-samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-12); }
+
+.rio-brand-bake { display: flex; flex-direction: column; gap: var(--rio-space-6); }
+.rio-brand-bake .rio-meta { margin-block-start: var(--rio-space-8); }
+.rio-brand-bake .rio-vd-json__body { border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md); }

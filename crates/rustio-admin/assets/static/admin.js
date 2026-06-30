@@ -662,6 +662,71 @@
     });
   }
 
+  // ---- Branding page (/admin/dev/branding) -----------------------
+  // Live, EPHEMERAL accent preview: scopes the rust/accent CSS variables to
+  // the preview pane only (never persists). The real palette is baked at
+  // build time by the `rustio-admin theme` CLI; this page just previews and
+  // mirrors the chosen colour into the copy-paste commands.
+  function initBranding() {
+    const root = document.querySelector("[data-rio-branding]");
+    if (!root) return;
+    const color = root.querySelector("[data-rio-brand-color]");
+    const hex = root.querySelector("[data-rio-brand-hex]");
+    const preview = document.querySelector("[data-rio-brand-preview]");
+    const cmd = document.querySelector("[data-rio-brand-cmd]");
+    const rust = document.querySelector("[data-rio-brand-rust]");
+
+    const clamp = (n) => Math.max(0, Math.min(255, n));
+    const parse = (h) => {
+      const m = /^#?([0-9a-f]{6})$/i.exec((h || "").trim());
+      if (!m) return null;
+      const i = parseInt(m[1], 16);
+      return [(i >> 16) & 255, (i >> 8) & 255, i & 255];
+    };
+    const toHex = (rgb) => "#" + rgb.map((x) => clamp(Math.round(x)).toString(16).padStart(2, "0")).join("");
+    const darken = (rgb, f) => rgb.map((c) => c * (1 - f));
+
+    function apply(h) {
+      const rgb = parse(h);
+      if (!rgb) return;
+      const hh = toHex(rgb);
+      const hov = toHex(darken(rgb, 0.15));
+      const act = toHex(darken(rgb, 0.28));
+      if (preview) {
+        const s = preview.style;
+        s.setProperty("--rio-rust", hh);
+        s.setProperty("--rio-rust-hover", hov);
+        s.setProperty("--rio-rust-solid", hh);
+        s.setProperty("--rio-rust-solid-hover", hov);
+        s.setProperty("--rio-rust-solid-active", act);
+        s.setProperty("--rio-accent", hh);
+        s.setProperty("--rio-rust-tint", `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.10)`);
+        s.setProperty("--rio-rust-tint-2", `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`);
+      }
+      if (cmd) cmd.textContent = `rustio-admin theme generate --brand '${hh}' --out generated/tokens.css`;
+      if (rust) rust.textContent = `Admin::new().accent_color("${hh}")`;
+    }
+    function sync(from) {
+      const rgb = parse(from.value);
+      if (!rgb) return;
+      const hh = toHex(rgb);
+      if (color) color.value = hh;
+      if (hex) hex.value = hh;
+      apply(hh);
+    }
+    if (color) color.addEventListener("input", () => sync(color));
+    if (hex) hex.addEventListener("input", () => { if (parse(hex.value)) sync(hex); });
+    root.querySelectorAll("[data-hex]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const h = btn.getAttribute("data-hex");
+        if (hex) hex.value = h;
+        if (color) color.value = h;
+        apply(h);
+      });
+    });
+    apply((hex && hex.value) || "#B84318");
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initConsole();
@@ -671,6 +736,7 @@
       initFkAutocomplete();
       initSearchPalette();
       initViewDesigner();
+      initBranding();
     });
   } else {
     initConsole();
@@ -680,5 +746,6 @@
     initFkAutocomplete();
     initSearchPalette();
     initViewDesigner();
+    initBranding();
   }
 })();
