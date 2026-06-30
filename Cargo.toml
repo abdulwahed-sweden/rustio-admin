@@ -12,7 +12,10 @@ members = [
 #                     published rustio-admin (CI patches it to HEAD).
 #   examples/shop   — single-crate e-commerce admin; path-deps the
 #                     in-repo framework directly (always builds HEAD).
-exclude = ["examples/clinic", "examples/shop"]
+# rustio-draft is the setup-time genesis tool (calls an LLM). It is
+# DELIBERATELY a standalone workspace, excluded here, so the runtime
+# library/CLI never gain a network/LLM dependency. See docs/RUSTIO_DRAFT_SCOPE.md.
+exclude = ["examples/clinic", "examples/shop", "rustio-draft"]
 
 [workspace.package]
 version = "0.30.0"

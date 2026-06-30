@@ -81,7 +81,7 @@ None of these block trying the tool today (see `examples/shop/seeds/viewspec_cus
 - **Why deferred:** a built-in live-LLM call would break the explicit *RustIO
   runs no AI* stance and add a network client + LLM SDK + API-key handling to a
   deliberately network-free, dependency-disciplined codebase.
-- **Done looks like:** a *separate* `rustio-forge` / future `rustio-pro` tool
+- **Done looks like:** a *separate* `rustio-draft` / future `rustio-pro` tool
   (not the OSS runtime or CLI) that turns a natural-language brief into a
   `schema.json` and hands it to `rustio-admin import` — keeping the OSS layer
   deterministic and AI-free.
