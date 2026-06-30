@@ -16,7 +16,8 @@ pub const DEFAULT_MODEL: &str = "claude-opus-4-8";
 /// System prompt: teach the model the contract and the field-type vocabulary.
 const SYSTEM_PROMPT: &str = "\
 You are a database schema designer for rustio-admin, a Postgres admin framework. \
-Given a short description of an application, design a clean, normalised set of models.
+Given a short description of an application (or an existing schema plus an edit \
+instruction), produce a clean, normalised set of models.
 
 Rules you MUST follow:
 - Use ONLY these field types: text, integer, boolean, timestamp.
@@ -54,6 +55,27 @@ impl DraftClient {
     /// Turn a natural-language brief into a [`SchemaDoc`]. The result is the raw
     /// model proposal — callers MUST still run [`schema::validate`] before use.
     pub async fn generate(&self, brief: &str) -> Result<SchemaDoc> {
+        self.complete(brief.to_string()).await
+    }
+
+    /// Apply an edit instruction to an existing schema and return the COMPLETE
+    /// updated document. The result is the raw model proposal — callers MUST
+    /// still run [`schema::validate`] before use.
+    pub async fn refine(&self, current: &SchemaDoc, instruction: &str) -> Result<SchemaDoc> {
+        let current_json = serde_json::to_string_pretty(current)
+            .context("could not serialize the current schema")?;
+        let user = format!(
+            "Here is the current schema:\n\n```json\n{current_json}\n```\n\n\
+             Apply this change and return the COMPLETE updated schema \
+             (keep everything not mentioned unchanged):\n{instruction}"
+        );
+        self.complete(user).await
+    }
+
+    /// One Messages API round-trip with structured output, returning a parsed
+    /// [`SchemaDoc`]. Shared by [`generate`](Self::generate) and
+    /// [`refine`](Self::refine).
+    async fn complete(&self, user_content: String) -> Result<SchemaDoc> {
         let body = json!({
             "model": self.model,
             "max_tokens": self.max_tokens,
@@ -62,7 +84,7 @@ impl DraftClient {
             "output_config": {
                 "format": { "type": "json_schema", "schema": schema::import_json_schema() }
             },
-            "messages": [ { "role": "user", "content": brief } ]
+            "messages": [ { "role": "user", "content": user_content } ]
         });
 
         let resp = self
