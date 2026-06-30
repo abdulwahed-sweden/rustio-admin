@@ -39,6 +39,7 @@
   <div class="rio-rail-sep" aria-hidden="true"></div>
   <div class="rio-rail-caption">Developer</div>
   <a class="rio-rail-btn" data-label="Database" href="/admin/db"{% if nav_active == "db" %} aria-current="page"{% endif %} aria-label="Database">{{ icon("database") }}<span class="rio-rail-label">Database</span></a>
+  <a class="rio-rail-btn" data-label="Schema" href="/admin/dev/schema"{% if nav_active == "schema" %} aria-current="page"{% endif %} aria-label="Schema">{{ icon("table") }}<span class="rio-rail-label">Schema</span></a>
   <a class="rio-rail-btn" data-label="View designer" href="/admin/dev/view-designer"{% if nav_active == "view-designer" %} aria-current="page"{% endif %} aria-label="View designer">{{ icon("sliders") }}<span class="rio-rail-label">View designer</span></a>
   <a class="rio-rail-btn" data-label="Branding" href="/admin/dev/branding"{% if nav_active == "branding" %} aria-current="page"{% endif %} aria-label="Branding">{{ icon("pencil") }}<span class="rio-rail-label">Branding</span></a>
   {% endif %}

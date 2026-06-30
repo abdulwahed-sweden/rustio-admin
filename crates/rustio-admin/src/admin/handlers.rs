@@ -3037,6 +3037,21 @@ pub(crate) async fn do_toggle_feature_flag(
 
 // ---- View designer (/admin/dev/view-designer) ------------------------------
 
+/// The Schema review page: a read-only view of the registered models and
+/// their fields (as the framework sees them), with a handoff to the build-time
+/// `builder` CLI. The runtime only reads its own model registry; schema
+/// changes (add model/field, plan, commit) are a setup-time CLI step.
+pub(crate) async fn show_schema(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let mut view = render::schema_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/schema.html", &view)?;
+    Ok(Response::html(body))
+}
+
 /// The Branding page: pick a brand colour, preview it live (client-side, via
 /// CSS-variable injection — ephemeral), and copy the build-time CLI command +
 /// `RUSTIO_TOKENS_CSS` wiring to bake it. The runtime never links `rio-theme`;
