@@ -158,6 +158,16 @@ leaves the alpha track.
   tokens; markup/CSS unchanged (the `aria-current` styling already existed).
 
 ### Added
+- **Schema review page (Studio Phase 3).** A Developer-gated `/admin/dev/schema`
+  page (linked in the rail's Developer section) gives a **read-only** view of the
+  registered models as the framework sees them — per-model field tables (name,
+  type, nullable, relation target) plus a models/fields/relations stat strip —
+  built purely from the live `AdminEntry`/`AdminField` registry. Schema *edits*
+  are a build-time `builder` CLI step (`add model` / `add field` / `plan` /
+  `commit`), surfaced as a copy-paste handoff; the runtime never generates code.
+  New `admin/schema.html` (baked into `EMBEDDED_TEMPLATES`), `schema_ctx`/
+  `show_schema`, reusing existing card/table/terminal styles. No new tokens, no
+  new CSS fragment, deterministic.
 - **Branding page + `theme wizard` (Studio Phase 2).** A Developer-gated
   `/admin/dev/branding` page (linked in the rail's Developer section) lets you
   pick a brand colour and **preview it live** — the rust/accent CSS variables

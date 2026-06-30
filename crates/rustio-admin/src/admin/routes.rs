@@ -1010,6 +1010,20 @@ pub fn register_admin_routes(
         }
     });
 
+    // Schema — Developer-only read-only review of the model registry at
+    // `/admin/dev/schema`, with a handoff to the build-time `builder` CLI. The
+    // runtime only reads its own registry; authoring (add/plan/commit) is the CLI.
+    let c = ctx.clone();
+    let router = router.get("/admin/dev/schema", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_schema(&c, ident, &req).await,
+            }
+        }
+    });
+
     // Notifications — per-operator list page. Any signed-in
     // operator sees their own notifications (filtered by user_id
     // in the handler), so the gate is just Staff. The topbar

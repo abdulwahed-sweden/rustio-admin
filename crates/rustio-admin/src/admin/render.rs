@@ -3759,6 +3759,104 @@ pub(crate) fn view_designer_ctx(
     }
 }
 
+/// One field row on the Schema review page.
+#[derive(Serialize)]
+pub(crate) struct SchemaFieldCtx {
+    pub name: String,
+    pub type_label: String,
+    pub nullable: bool,
+    /// `Some(target_model)` when the field is a relation.
+    pub relation_target: Option<String>,
+}
+
+/// One model card on the Schema review page.
+#[derive(Serialize)]
+pub(crate) struct SchemaModelCtx {
+    pub admin_name: &'static str,
+    pub display_name: &'static str,
+    pub field_count: usize,
+    pub fields: Vec<SchemaFieldCtx>,
+}
+
+/// Schema review page (`/admin/dev/schema`): a read-only view of the model
+/// registry as the framework sees it, with a handoff to the build-time
+/// `builder` CLI (the runtime never generates code).
+#[derive(Serialize)]
+pub(crate) struct SchemaCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    pub models: Vec<SchemaModelCtx>,
+    pub total_models: usize,
+    pub total_fields: usize,
+    pub total_relations: usize,
+}
+
+/// Readable type label for an `AdminField` (relation / enum / scalar).
+fn schema_type_label(field: &AdminField) -> String {
+    if field.relation.is_some() {
+        return "relation".to_string();
+    }
+    if field.choices.is_some() {
+        return "enum".to_string();
+    }
+    match field.field_type {
+        FieldType::Bool => "boolean",
+        FieldType::DateTime | FieldType::OptionalDateTime => "datetime",
+        FieldType::Date => "date",
+        FieldType::Time => "time",
+        FieldType::Email => "email",
+        FieldType::Phone => "phone",
+        FieldType::I32 | FieldType::I64 | FieldType::OptionalI64 => "integer",
+        FieldType::F64 => "float",
+        FieldType::Decimal => "decimal",
+        FieldType::Uuid => "uuid",
+        FieldType::FilePath | FieldType::OptionalFilePath => "file",
+        _ => "text",
+    }
+    .to_string()
+}
+
+/// Build the Schema review context from the live model registry.
+pub(crate) fn schema_ctx(identity: &Identity, admin: &Admin, csrf_token: String) -> SchemaCtx {
+    let entries: Vec<&AdminEntry> = admin.entries().iter().filter(|e| !e.core).collect();
+    let mut total_fields = 0usize;
+    let mut total_relations = 0usize;
+    let mut models = Vec::with_capacity(entries.len());
+    for e in &entries {
+        let mut fields = Vec::with_capacity(e.fields.len());
+        for f in e.fields {
+            if f.relation.is_some() {
+                total_relations += 1;
+            }
+            fields.push(SchemaFieldCtx {
+                name: f.name.to_string(),
+                type_label: schema_type_label(f),
+                nullable: f.field_type.nullable(),
+                relation_target: f.relation.as_ref().map(|r| r.target_model.to_string()),
+            });
+        }
+        total_fields += fields.len();
+        models.push(SchemaModelCtx {
+            admin_name: e.admin_name,
+            display_name: e.display_name,
+            field_count: fields.len(),
+            fields,
+        });
+    }
+
+    SchemaCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active("schema"),
+        page_title: "Schema",
+        entries: entries.iter().map(|e| SidebarEntry::from(*e)).collect(),
+        total_models: entries.len(),
+        models,
+        total_fields,
+        total_relations,
+    }
+}
+
 /// Branding page (`/admin/dev/branding`): live accent preview + a handoff to
 /// the build-time `rustio-admin theme` CLI (the runtime never links rio-theme).
 #[derive(Serialize)]
