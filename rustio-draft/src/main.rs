@@ -2,6 +2,8 @@
 //!
 //! F1: `rustio-draft new "<brief>"` → write a validated `schema.json`, then
 //! print the deterministic next steps (`rustio-admin import` / `plan` / `commit`).
+//! F2: `--apply` shells out to `rustio-admin import` + `plan` and stops for
+//! review — it never runs `commit`.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -9,7 +11,7 @@ use std::process::ExitCode;
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 
-use rustio_draft::{schema, DraftClient, DEFAULT_MODEL};
+use rustio_draft::{resolve_rustio_admin_bin, schema, DraftClient, DEFAULT_MODEL};
 
 /// Setup-time genesis: a brief in, a rustio-admin schema.json out. Never runs at
 /// runtime; the runtime and CLI contain no AI.
@@ -38,6 +40,14 @@ enum Command {
         /// Overwrite the output file if it already exists.
         #[arg(long)]
         force: bool,
+        /// After writing, shell out to `rustio-admin import` + `plan` (stops for
+        /// review — never runs `commit`). Run this inside a Builder project.
+        #[arg(long)]
+        apply: bool,
+        /// Path/name of the `rustio-admin` binary for --apply (default:
+        /// $RUSTIO_ADMIN_BIN or `rustio-admin` on PATH).
+        #[arg(long)]
+        rustio_admin: Option<String>,
     },
 }
 
@@ -60,17 +70,43 @@ async fn run() -> Result<()> {
             model,
             max_tokens,
             force,
-        } => new(brief, out, model, max_tokens, force).await,
+            apply,
+            rustio_admin,
+        } => {
+            new(NewArgs {
+                brief,
+                out,
+                model,
+                max_tokens,
+                force,
+                apply,
+                rustio_admin,
+            })
+            .await
+        }
     }
 }
 
-async fn new(
+struct NewArgs {
     brief: String,
     out: PathBuf,
     model: String,
     max_tokens: u32,
     force: bool,
-) -> Result<()> {
+    apply: bool,
+    rustio_admin: Option<String>,
+}
+
+async fn new(args: NewArgs) -> Result<()> {
+    let NewArgs {
+        brief,
+        out,
+        model,
+        max_tokens,
+        force,
+        apply,
+        rustio_admin,
+    } = args;
     if out.exists() && !force {
         bail!(
             "{} already exists; pass --force to overwrite",
@@ -108,9 +144,41 @@ async fn new(
         "Wrote {} — {model_count} model(s), {field_count} field(s).",
         out.display()
     );
-    eprintln!("\nReview it, then apply deterministically:");
-    eprintln!("    rustio-admin import {}", out.display());
-    eprintln!("    rustio-admin plan      # preview (read-only)");
-    eprintln!("    rustio-admin commit    # apply atomically");
+
+    let out_str = out.display().to_string();
+    if apply {
+        // Hand off to the deterministic half. We import + plan and STOP — the
+        // human reviews the plan and runs `commit`. rustio-draft never commits.
+        let bin = resolve_rustio_admin_bin(rustio_admin.as_deref());
+        eprintln!("\nApplying with `{bin}` (import + plan; will not commit)…\n");
+        run_step(&bin, &["import", &out_str])?;
+        run_step(&bin, &["plan"])?;
+        eprintln!("\nReviewed the plan above? Apply it with:");
+        eprintln!("    {bin} commit");
+    } else {
+        eprintln!("\nReview it, then apply deterministically:");
+        eprintln!("    rustio-admin import {out_str}");
+        eprintln!("    rustio-admin plan      # preview (read-only)");
+        eprintln!("    rustio-admin commit    # apply atomically");
+    }
+    Ok(())
+}
+
+/// Run one `rustio-admin <args>` step, streaming its output to this terminal,
+/// and fail loudly if the binary is missing or the step exits non-zero.
+fn run_step(bin: &str, args: &[&str]) -> Result<()> {
+    let pretty = format!("{bin} {}", args.join(" "));
+    let status = std::process::Command::new(bin)
+        .args(args)
+        .status()
+        .with_context(|| {
+            format!(
+                "could not run `{pretty}` — is rustio-admin installed and on PATH? \
+             (set --rustio-admin or RUSTIO_ADMIN_BIN)"
+            )
+        })?;
+    if !status.success() {
+        bail!("`{pretty}` failed (exit {})", status.code().unwrap_or(-1));
+    }
     Ok(())
 }

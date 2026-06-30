@@ -23,7 +23,18 @@ cargo run -- new "a booking system for a salon: clients, staff, appointments"
 ```
 
 Flags: `--out <path>` (default `schema.json`), `--model <id>` (default
-`claude-opus-4-8`), `--max-tokens <n>` (default 8000), `--force` (overwrite).
+`claude-opus-4-8`), `--max-tokens <n>` (default 8000), `--force` (overwrite),
+`--apply` (after writing, run `rustio-admin import` + `plan` and stop for review;
+never commits), `--rustio-admin <path>` (binary for `--apply`; default
+`$RUSTIO_ADMIN_BIN` or `rustio-admin` on PATH).
+
+With `--apply` (run inside a Builder project):
+
+```sh
+rustio-draft new "a blog with posts and comments" --apply
+# writes schema.json → rustio-admin import schema.json → rustio-admin plan
+# then stops; review the plan and run: rustio-admin commit
+```
 
 ## How it works
 
@@ -36,6 +47,6 @@ Flags: `--out <path>` (default `schema.json`), `--model <id>` (default
 
 ## Status
 
-Phase **F1** (the engine). Field types are limited to the builder's MVP set
-(`text`, `integer`, `boolean`, `timestamp`); relations are modelled as plain
-`integer` `*_id` fields. See the scope doc for F2–F5.
+Phases **F1** (engine) + **F2** (`--apply` chain). Field types are limited to the
+builder's MVP set (`text`, `integer`, `boolean`, `timestamp`); relations are
+modelled as plain `integer` `*_id` fields. See the scope doc for F3–F5.
