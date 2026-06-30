@@ -68,6 +68,16 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **Adaptive view layer — polished card layout.** The `?view=cards` mode
+  (`components/adaptive-views.css`, `.av-list--cards` scope only) was a flat
+  single-column stack: title, each secondary, and each badge on its own line.
+  Cards now compose from the same flat cells via flex line-control — the title
+  leads, the secondaries read as one inline meta line (`provider · country`,
+  joined by a `·`), and the badges group together right after it. Columns widen
+  to 300px and cards size to their content (`align-items: start`) so nothing
+  stretches or strands a badge. Token-only — no new tokens, no markup change
+  (the deterministic partials are untouched), and `list`/`compact` modes are
+  unaffected.
 - **Unified the chrome on five utility pages — Audit log, API surface, Health,
   Docs (index + viewer), and Sessions.** They had drifted onto four different
   page-header patterns (`.rio-masthead-top`, `.rio-page-header`, bespoke
