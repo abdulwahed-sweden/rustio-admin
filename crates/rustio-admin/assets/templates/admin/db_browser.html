@@ -1,14 +1,13 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>Database</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Database</span></nav>
+<div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">
+  <p class="rio-masthead-desc">
     Read-only schema explorer for the <code>public</code> schema. Row counts are the planner's
-    estimate (<code>pg_class.reltuples</code>) — accurate after an <code>ANALYZE</code>,
-    approximate otherwise.
+    estimate (<code>pg_class.reltuples</code>) — accurate after an <code>ANALYZE</code>, approximate otherwise.
   </p>
-</header>
+</div></div>
 
 <section class="rio-card rio-db-summary">
   <dl class="rio-db-stats">
