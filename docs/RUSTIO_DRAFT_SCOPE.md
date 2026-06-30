@@ -132,7 +132,12 @@ Grounded in the current Claude API reference, not memory.
 2. **F2 — apply chain.** `--apply` to run `import` + `plan` and stop for review.
 3. **F3 — refinement loop.** `rustio-draft refine schema.json "add a status enum
    to Appointment"` — feed the current schema + instruction back for an edit.
-4. **F4 — web wizard.** The editable-cards Studio front-end over the same engine.
+4. **F4 — web wizard (done).** `rustio-draft serve` launches a localhost-only
+   studio (axum): brief → editable model/field cards → refine → download/save
+   `schema.json`. Same engine behind a small JSON API; the API key stays
+   server-side (the browser only sees schema JSON). `/api/field-types` feeds the
+   type dropdowns from `FIELD_TYPES`, and `/api/save` validates with the same
+   rules as `import` before writing.
 5. **F5 — no FIELD_TYPES drift (done).** rustio-draft hand-mirrors the builder's
    closed `FIELD_TYPES` and a CI guard ("rustio-draft FIELD_TYPES tracks the
    builder") fails the build if the two lists ever differ. A drift guard rather

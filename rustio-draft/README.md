@@ -44,6 +44,16 @@ rustio-draft refine schema.json "add a published boolean to Post"
 # schema.json. Use --out other.json to write elsewhere.
 ```
 
+Or use the **studio** — a localhost web UI to draft, edit cards, refine, and
+download/save:
+
+```sh
+rustio-draft serve            # → http://127.0.0.1:8787  (--port / --out to change)
+```
+
+The studio runs on localhost only and the API key stays in the server process —
+the browser only ever sees schema JSON.
+
 ## How it works
 
 1. Sends the brief to the Claude Messages API with **structured outputs** — a
@@ -55,7 +65,7 @@ rustio-draft refine schema.json "add a published boolean to Post"
 
 ## Status
 
-Phases **F1** (engine) + **F2** (`--apply` chain) + **F3** (`refine`). Field types
-are limited to the builder's MVP set (`text`, `integer`, `boolean`, `timestamp`);
-relations are modelled as plain `integer` `*_id` fields. See the scope doc for
-F4–F5.
+Phases **F1** (engine) + **F2** (`--apply` chain) + **F3** (`refine`) + **F4**
+(`serve` studio) + **F5** (CI drift guard on `FIELD_TYPES`). Field types are
+limited to the builder's MVP set (`text`, `integer`, `boolean`, `timestamp`);
+relations are modelled as plain `integer` `*_id` fields. See the scope doc.

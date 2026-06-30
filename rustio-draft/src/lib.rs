@@ -9,6 +9,7 @@
 
 pub mod client;
 pub mod schema;
+pub mod server;
 
 pub use client::{DraftClient, DEFAULT_MODEL};
 pub use schema::{validate, SchemaDoc, SchemaField, SchemaModel, FIELD_TYPES};

@@ -23,7 +23,10 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
+# Local-only web wizard (`rustio-draft serve`). Bound to 127.0.0.1; the API key
+# stays server-side. Like the rest of this crate's deps, it never reaches runtime.
+axum = "0.8"
