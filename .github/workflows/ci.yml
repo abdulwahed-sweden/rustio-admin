@@ -262,3 +262,34 @@ jobs:
           cargo fmt --all --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo build --workspace
+
+  draft-tool:
+    name: draft tool (rustio-draft)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.94
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rustio-draft
+
+      # `rustio-draft` is the setup-time genesis tool and the ONLY crate that
+      # calls an LLM. It is its own standalone workspace, excluded from the
+      # framework so the runtime never gains a network/LLM dependency — which
+      # means the main `build` job (`--workspace`) does not cover it. This job
+      # does. Tests are offline (the live API path is unit-tested with mock
+      # responses), so no API key is needed here.
+      - name: fmt + clippy + build + test
+        working-directory: rustio-draft
+        run: |
+          set -eu
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo build --workspace --all-targets
+          cargo test --workspace --all-targets
