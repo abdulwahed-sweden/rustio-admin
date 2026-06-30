@@ -203,31 +203,6 @@ jobs:
           fi
           echo "OK: workspace and reference example both pin $workspace"
 
-      - name: rustio-draft FIELD_TYPES tracks the builder
-        run: |
-          set -eu
-          # rustio-draft is a standalone workspace (no compile-time dep on the
-          # framework, so it can move to its own repo later). It hand-mirrors the
-          # builder's closed FIELD_TYPES list to build the structured-output enum
-          # it hands the model. This guard keeps the two copies identical — if a
-          # field type is added to the builder, rustio-draft must track it (and
-          # vice versa), or the model could emit a type `import` rejects (or be
-          # denied a type the builder now supports). F5 in docs/RUSTIO_DRAFT_SCOPE.md.
-          extract() {
-            grep -E 'const FIELD_TYPES' "$1" | grep -oE '"[a-z_]+"' | tr -d '"' | paste -sd, -
-          }
-          builder=$(extract crates/rustio-admin-cli/src/builder/draft.rs)
-          draft=$(extract rustio-draft/src/schema.rs)
-          if [ -z "$builder" ] || [ -z "$draft" ]; then
-            echo "::error::FIELD_TYPES guard could not extract both lists (builder='$builder', draft='$draft'). Fix the regex or the const formatting."
-            exit 1
-          fi
-          if [ "$builder" != "$draft" ]; then
-            echo "::error::FIELD_TYPES drift: builder=[$builder] vs rustio-draft=[$draft]. Update rustio-draft/src/schema.rs FIELD_TYPES to match crates/rustio-admin-cli/src/builder/draft.rs (same values, same order)."
-            exit 1
-          fi
-          echo "OK: builder and rustio-draft FIELD_TYPES both = [$builder]"
-
   reference-example:
     name: reference example (clinic)
     runs-on: ubuntu-latest
@@ -287,34 +262,3 @@ jobs:
           cargo fmt --all --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo build --workspace
-
-  draft-tool:
-    name: draft tool (rustio-draft)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.94
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rustio-draft
-
-      # `rustio-draft` is the setup-time genesis tool and the ONLY crate that
-      # calls an LLM. It is its own standalone workspace, excluded from the
-      # framework so the runtime never gains a network/LLM dependency — which
-      # means the main `build` job (`--workspace`) does not cover it. This job
-      # does. Tests are offline (the live API path is unit-tested with mock
-      # responses), so no API key is needed here.
-      - name: fmt + clippy + build + test
-        working-directory: rustio-draft
-        run: |
-          set -eu
-          cargo fmt --all --check
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo build --workspace --all-targets
-          cargo test --workspace --all-targets

@@ -73,18 +73,18 @@ None of these block trying the tool today (see `examples/shop/seeds/viewspec_cus
 
 ## Studio
 
-### 6. Live-LLM genesis ("AI suggests a schema") — out of the OSS repo
-- **Now:** the deterministic half of genesis ships — `rustio-admin import
-  <schema.json>` (Phase 4) loads a schema into the Builder. The *authoring* of
-  that JSON by an AI is done by an **external** assistant (governed by
-  `.rustio/ai.toml`); RustIO itself runs no AI and the CLI has no HTTP/LLM deps.
-- **Why deferred:** a built-in live-LLM call would break the explicit *RustIO
-  runs no AI* stance and add a network client + LLM SDK + API-key handling to a
-  deliberately network-free, dependency-disciplined codebase.
-- **Done looks like:** a *separate* `rustio-draft` / future `rustio-pro` tool
-  (not the OSS runtime or CLI) that turns a natural-language brief into a
-  `schema.json` and hands it to `rustio-admin import` — keeping the OSS layer
-  deterministic and AI-free.
+### 6. Live-LLM genesis ("AI suggests a schema") — out of the OSS repo ✅ RESOLVED
+- **Resolved:** built as **`rustio-draft`** and now lives in its own repo:
+  <https://github.com/abdulwahed-sweden/rustio-draft>. It turns a brief into a
+  `schema.json` via Claude (F1), `--apply`-chains to `rustio-admin import`/`plan`
+  (F2), refines an existing schema (F3), offers a local studio (F4), and pins its
+  `FIELD_TYPES` to the builder's (F5). The OSS runtime + CLI stayed deterministic
+  and AI-free throughout: `rustio-draft` *authors* a schema; `rustio-admin`
+  *applies* it. Design: `docs/RUSTIO_DRAFT_SCOPE.md`.
+- **Cross-repo note:** when the builder's `FIELD_TYPES`
+  (`crates/rustio-admin-cli/src/builder/draft.rs`) gains a type, update the
+  matching list in the rustio-draft repo (`src/schema.rs`) — the in-tree CI
+  guard left with the code.
 
 ---
 
