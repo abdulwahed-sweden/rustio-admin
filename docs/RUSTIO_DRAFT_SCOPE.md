@@ -1,6 +1,9 @@
-# rustio-draft — Scope (proposal)
+# rustio-draft — Scope
 
-**Status:** proposal / not built. Tracks DEFERRED.md item 6.
+**Status:** built (F1–F5) and **relocated to its own repo** —
+<https://github.com/abdulwahed-sweden/rustio-draft>. This doc stays here as the
+design record (DEFERRED.md item 6); the `rustio-draft/` directory was removed
+from this monorepo once the standalone repo had its own CI.
 **One line:** a *separate* setup-time tool that turns a natural-language brief into a `schema.json`, which `rustio-admin import` then applies deterministically.
 
 `rustio-draft` is the **only** place in the ecosystem that calls an LLM. It lives
