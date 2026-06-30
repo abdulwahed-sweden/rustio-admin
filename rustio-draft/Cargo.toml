@@ -1,0 +1,29 @@
+# rustio-draft — standalone workspace (its own Cargo.lock).
+# It is NOT a member of the framework workspace: this is the one place in the
+# ecosystem that calls an LLM, so its network/LLM dependencies must never reach
+# the runtime crate. See ../docs/RUSTIO_DRAFT_SCOPE.md.
+[workspace]
+
+[package]
+name = "rustio-draft"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Setup-time genesis: turn a natural-language brief into a rustio-admin schema.json via Claude. Never runs at runtime."
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "rustio_draft"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rustio-draft"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
