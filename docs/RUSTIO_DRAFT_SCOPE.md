@@ -133,9 +133,13 @@ Grounded in the current Claude API reference, not memory.
 3. **F3 — refinement loop.** `rustio-draft refine schema.json "add a status enum
    to Appointment"` — feed the current schema + instruction back for an edit.
 4. **F4 — web wizard.** The editable-cards Studio front-end over the same engine.
-5. **F5 — richer contract.** Track `FIELD_TYPES` as the builder grows
-   (relations, enums); the `enum` in the structured-output schema is generated
-   from the live list so they never drift.
+5. **F5 — no FIELD_TYPES drift (done).** rustio-draft hand-mirrors the builder's
+   closed `FIELD_TYPES` and a CI guard ("rustio-draft FIELD_TYPES tracks the
+   builder") fails the build if the two lists ever differ. A drift guard rather
+   than a shared crate / compile-time dep was chosen deliberately: it keeps
+   rustio-draft a standalone workspace (zero coupling, relocatable to its own
+   repo later) while still guaranteeing the two halves agree as the builder
+   grows (relations, enums, …).
 
 ## 7. Non-goals
 
@@ -149,8 +153,9 @@ Grounded in the current Claude API reference, not memory.
 
 - Shell out to the `rustio-admin` binary vs. depend on the CLI crate's import
   function. (Lean: shell out.)
-- Whether `FIELD_TYPES` is hand-mirrored in the structured-output schema or
-  exported from `rustio-admin-cli` as a small public const for rustio-draft to read.
+- ~~Whether `FIELD_TYPES` is hand-mirrored or exported from the CLI crate.~~
+  Resolved (F5): hand-mirrored + a CI drift guard, to keep rustio-draft a
+  standalone, relocatable workspace.
 - Repo placement: separate repo vs. excluded sibling workspace.
 - Provider-agnostic later? (MVP is Claude-only; the contract makes swapping the
   author trivial since the artifact is just JSON.)

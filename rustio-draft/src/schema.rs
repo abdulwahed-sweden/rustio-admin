@@ -9,10 +9,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-/// Closed list of field types the builder's MVP supports. Kept in lock-step with
-/// `FIELD_TYPES` in `crates/rustio-admin-cli/src/builder/draft.rs`. F5 will
-/// export this from the CLI crate so the two can never drift; until then this is
-/// a hand-mirror and the test below guards the JSON-Schema enum against it.
+/// Closed list of field types the builder's MVP supports. Hand-mirrors
+/// `FIELD_TYPES` in `crates/rustio-admin-cli/src/builder/draft.rs` — kept here
+/// (rather than imported) so this crate stays a standalone workspace with no
+/// compile-time dependency on the framework. A CI guard ("rustio-draft
+/// FIELD_TYPES tracks the builder") fails the build if the two lists drift, so
+/// the structured-output enum the model receives can never accept a type
+/// `import` rejects. The test below additionally pins the JSON-Schema enum to
+/// this const. (F5 in `docs/RUSTIO_DRAFT_SCOPE.md`.)
 pub const FIELD_TYPES: &[&str] = &["text", "integer", "boolean", "timestamp"];
 
 /// A schema document: an optional project name and one or more models.
