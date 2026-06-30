@@ -60,6 +60,10 @@
 rustio-admin add field Invoice amount decimal
 rustio-admin plan      # preview the changes (read-only)
 rustio-admin commit    # apply atomically</code></pre>
+    <p class="rio-meta">…or import a whole schema at once (an external AI assistant or a human can author the JSON — RustIO runs no AI):</p>
+    <pre class="rio-vd-json__body"><code>rustio-admin import schema.json   # records add_model / add_field events
+rustio-admin plan
+rustio-admin commit</code></pre>
     <p class="rio-meta">Start a fresh Builder project: <code>rustio-admin builder new my-project</code> · contract: <code>docs/design/DESIGN_BUILDER.md</code></p>
   </div>
 </section>
