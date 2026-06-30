@@ -149,6 +149,10 @@
 .rio-usermenu-item--danger { color: var(--rio-danger); }
 .rio-usermenu-item--danger svg { color: var(--rio-danger); }
 .rio-usermenu-item--danger:hover { background: var(--rio-danger-tint); color: var(--rio-danger); }
+/* "Sign out" is a POST form (logout is POST + CSRF-protected); make its button
+   read exactly like the other menu items. */
+.rio-usermenu-form { margin: 0; }
+button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; cursor: pointer; font-family: inherit; text-align: start; }
 
 /* Scroll body */
 .rio-ws-body { flex: 1; overflow: auto; display: flex; flex-direction: column; }
