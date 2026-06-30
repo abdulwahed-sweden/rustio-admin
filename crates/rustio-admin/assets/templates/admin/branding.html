@@ -1,0 +1,68 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Branding</span></nav>
+<div class="rio-masthead-top">
+  <div>
+    <h1>Branding</h1>
+    <p class="rio-masthead-desc">
+      Pick a brand colour and preview it live, then bake it with the CLI.
+      <span class="rio-vd-flag">deterministic · no AI at runtime</span>
+    </p>
+  </div>
+</div>
+
+{% if tokens_active %}
+<div class="rio-alert rio-alert--info" role="status">A baked palette is currently active via <code>RUSTIO_TOKENS_CSS</code>. Re-bake (below) and restart to change it.</div>
+{% endif %}
+
+<div class="rio-brand" data-rio-branding>
+  <section class="rio-brand-controls">
+    <header class="rio-vd-fields__head">
+      <h2 class="rio-vd-fields__title">Brand colour</h2>
+      <span class="rio-meta">live, ephemeral preview</span>
+    </header>
+    <div class="rio-brand-pickrow">
+      <input type="color" value="{{ current_accent }}" class="rio-brand-color" data-rio-brand-color aria-label="Brand colour">
+      <input type="text" value="{{ current_accent }}" class="rio-input rio-input--mono rio-brand-hex" data-rio-brand-hex aria-label="Brand colour hex" spellcheck="false">
+    </div>
+    <div class="rio-brand-presets">
+      <span class="rio-meta">Presets</span>
+      <button type="button" class="rio-brand-preset" data-hex="#B84318" title="Rust (default)" style="--sw:#B84318"></button>
+      <button type="button" class="rio-brand-preset" data-hex="#0F6890" title="Ocean" style="--sw:#0F6890"></button>
+      <button type="button" class="rio-brand-preset" data-hex="#2E7D5B" title="Forest" style="--sw:#2E7D5B"></button>
+      <button type="button" class="rio-brand-preset" data-hex="#C9572E" title="Sunset" style="--sw:#C9572E"></button>
+      <button type="button" class="rio-brand-preset" data-hex="#0E6B5B" title="Patina" style="--sw:#0E6B5B"></button>
+      <button type="button" class="rio-brand-preset" data-hex="#1A1A1A" title="Monochrome" style="--sw:#1A1A1A"></button>
+    </div>
+  </section>
+
+  <section class="rio-brand-preview" data-rio-brand-preview aria-label="Preview">
+    <header class="rio-vd-preview__head">
+      <span class="rio-vd-preview__title">Live preview</span>
+      <span class="rio-vd-flag rio-vd-flag--quiet">approximate · the CLI computes contrast-safe shades</span>
+    </header>
+    <div class="rio-brand-samples">
+      <button type="button" class="rio-btn rio-btn--primary rio-btn--md">Primary action</button>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--md">Secondary</button>
+      <a class="rio-link" href="#" onclick="return false">A text link</a>
+      <span class="rio-vd-badge">Accent badge</span>
+    </div>
+  </section>
+</div>
+
+<section class="rio-vd-fields" aria-label="Bake">
+  <header class="rio-vd-fields__head">
+    <h2 class="rio-vd-fields__title">Bake it — build-time</h2>
+    <span class="rio-meta">rio-theme computes contrast-safe shades; the runtime never runs AI or links rio-theme</span>
+  </header>
+  <div class="rio-brand-bake">
+    <p class="rio-meta">1 — Generate a <code>tokens.css</code> from your brand colour:</p>
+    <pre class="rio-vd-json__body"><code data-rio-brand-cmd>rustio-admin theme generate --brand '{{ current_accent }}' --out generated/tokens.css</code></pre>
+    <p class="rio-meta">…or interactively: <code>rustio-admin theme wizard</code></p>
+    <p class="rio-meta">2 — Serve it (the running admin appends it after the baked CSS — restart to apply):</p>
+    <pre class="rio-vd-json__body"><code>RUSTIO_TOKENS_CSS=generated/tokens.css cargo run</code></pre>
+    <p class="rio-meta">Quick code-level accent (no <code>tokens.css</code>):</p>
+    <pre class="rio-vd-json__body"><code data-rio-brand-rust>Admin::new().accent_color("{{ current_accent }}")</code></pre>
+  </div>
+</section>
+{% endblock %}

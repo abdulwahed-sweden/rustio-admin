@@ -1,47 +1,59 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <a href="/admin/dev/view-designer">View designer</a> · <span>{{ display_name }}</span>
-  </nav>
-  <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">
-    {% if is_saved %}Editing the saved spec.{% else %}Editing an inferred draft — nothing is saved until you click Save.{% endif %}
-    Assign each field a role, ordering, and filter, then preview and save.
-  </p>
-</header>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/dev/view-designer">View designer</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ display_name }}</span></nav>
+<div class="rio-masthead-top">
+  <div>
+    <h1>Composition editor</h1>
+    <p class="rio-masthead-desc">
+      Define how {{ display_name }} renders — the editor only produces a <code>ViewSpec</code>.
+      <span class="rio-vd-flag">deterministic · no AI at runtime</span>
+    </p>
+  </div>
+  <div class="rio-masthead-cta">
+    <span class="rio-vd-chip">Primary developer</span>
+    <button type="submit" form="vdform" class="rio-btn rio-btn--primary rio-btn--md">Save ViewSpec</button>
+  </div>
+</div>
 
-{% if flash %}
-<div class="rio-notice rio-notice--{{ flash.kind }}">{{ flash.message }}</div>
-{% endif %}
+{% if flash %}<div class="rio-alert rio-alert--{{ flash.kind }}" role="status">{{ flash.message }}</div>{% endif %}
 
-<form method="post" action="/admin/dev/view-designer/{{ admin_name }}/save" class="rio-form">
+{# ---- Live preview (server-rendered through the runtime render core) ---- #}
+<section class="rio-vd-preview" aria-label="Live preview">
+  <header class="rio-vd-preview__head">
+    <span class="rio-vd-preview__title">Live preview <span class="rio-meta">· {{ preview.mode }} mode</span></span>
+    <span class="rio-vd-flag rio-vd-flag--quiet">deterministic · no AI</span>
+  </header>
+  <div class="rio-vd-filters">
+    <span class="rio-vd-filters__label">Filters</span>
+    {% for f in fields %}{% if f.filterable %}<span class="rio-vd-chip rio-vd-chip--filter">{{ f.label }}</span>{% endif %}{% endfor %}
+  </div>
+  <div class="rio-vd-canvas">
+    <div class="av-list av-list--{{ preview.mode }}">
+      {% for row in preview.rows %}
+      <div class="av-row">{% include "admin/view_layer/_row.html" %}</div>
+      {% else %}
+      <div class="rio-empty-state"><p class="rio-empty-state__lead">No preview rows.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+  <p class="rio-vd-note">Reflects the last <strong>saved</strong> state — save to refresh the preview.</p>
+</section>
+
+<form id="vdform" method="post" action="/admin/dev/view-designer/{{ admin_name }}/save" data-rio-vd>
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 
-  <header class="rio-section-head">
-    <p class="rio-section-head__eyebrow">Layout</p>
-    <h2 class="rio-section-head__title">Default mode</h2>
-  </header>
-  <section class="rio-fieldset" aria-label="Default mode">
-    <label class="rio-form-field">
-      <span>Mode shown when no <code>?view=</code> is requested</span>
+  {# ---- Modes ---- #}
+  <section class="rio-vd-modes" aria-label="Modes">
+    <label class="rio-vd-mode-default">
+      <span>Default mode</span>
       <select name="default_mode" class="rio-input">
-        {% for opt in mode_options %}
-        <option value="{{ opt.slug }}"{% if opt.slug == default_mode %} selected{% endif %}>{{ opt.label }}</option>
-        {% endfor %}
+        {% for opt in mode_options %}<option value="{{ opt.slug }}"{% if opt.slug == default_mode %} selected{% endif %}>{{ opt.label }}</option>{% endfor %}
       </select>
     </label>
-  </section>
-
-  <header class="rio-section-head">
-    <p class="rio-section-head__eyebrow">Layout</p>
-    <h2 class="rio-section-head__title">Modes in the switcher</h2>
-  </header>
-  <section class="rio-fieldset" aria-label="Allowed modes">
-    <p class="rio-page-header__lead">Which layouts appear in the <code>?view=</code> switcher. The default mode is always available.</p>
-    <div class="rio-form-inline">
+    <div class="rio-vd-allowed">
+      <span class="rio-vd-allowed__label">In the switcher</span>
       {% for m in mode_choices %}
-      <label style="display:inline-flex;align-items:center;gap:6px;margin-inline-end:16px">
+      <label class="rio-vd-allowed__opt">
         <input type="checkbox" name="mode_allowed__{{ m.slug }}"{% if m.allowed %} checked{% endif %}{% if m.is_default %} disabled{% endif %}>
         <span>{{ m.label }}{% if m.is_default %} (default){% endif %}</span>
       </label>
@@ -49,54 +61,55 @@
     </div>
   </section>
 
-  <header class="rio-section-head">
-    <p class="rio-section-head__eyebrow">Fields</p>
-    <h2 class="rio-section-head__title">Roles &amp; ordering</h2>
-  </header>
-  <section class="rio-fieldset" aria-label="Fields">
-    <table class="rio-table">
-      <thead>
-        <tr><th>Field</th><th>Role</th><th>Priority</th><th>Filterable</th></tr>
-      </thead>
-      <tbody>
-        {% for field in fields %}
-        <tr>
-          <td><code>{{ field.name }}</code> <span class="rio-meta">{{ field.label }}</span></td>
-          <td>
-            <select name="role__{{ field.name }}" class="rio-input">
-              {% for opt in role_options %}
-              <option value="{{ opt.slug }}"{% if opt.slug == field.role %} selected{% endif %}>{{ opt.label }}</option>
-              {% endfor %}
-            </select>
-          </td>
-          <td><input type="number" name="priority__{{ field.name }}" value="{{ field.priority }}" class="rio-input rio-input--mono" style="width:6rem"></td>
-          <td><input type="checkbox" name="filter__{{ field.name }}"{% if field.filterable %} checked{% endif %}></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {# ---- Fields as rows ---- #}
+  <section class="rio-vd-fields" aria-label="Fields">
+    <header class="rio-vd-fields__head">
+      <h2 class="rio-vd-fields__title">Fields</h2>
+      <span class="rio-meta">Set a role · toggle filter · reorder</span>
+    </header>
+    <ul class="rio-vd-rows">
+      {% for field in fields %}
+      <li class="rio-vd-row" data-rio-vd-row>
+        <span class="rio-vd-grip" aria-hidden="true"></span>
+        <span class="rio-vd-dot rio-vd-dot--{{ field.role }}" data-rio-vd-dot></span>
+        <span class="rio-vd-name">
+          <code>{{ field.name }}</code>
+          <span class="rio-meta">{{ field.label }}</span>
+          {% if field.composed %}<span class="rio-vd-badge">Composed</span>{% endif %}
+        </span>
+        <span class="rio-vd-controls">
+          <select name="role__{{ field.name }}" class="rio-input rio-vd-role" data-rio-vd-role aria-label="Role for {{ field.name }}">
+            {% for opt in role_options %}<option value="{{ opt.slug }}"{% if opt.slug == field.role %} selected{% endif %}>{{ opt.label }}</option>{% endfor %}
+          </select>
+          <label class="rio-vd-toggle" title="Show a filter control for this field">
+            <input type="checkbox" name="filter__{{ field.name }}"{% if field.filterable %} checked{% endif %}>
+            <span class="rio-vd-toggle__face">Filter</span>
+          </label>
+          <input type="number" name="priority__{{ field.name }}" value="{{ field.priority }}" class="rio-input rio-input--mono rio-vd-prio" data-rio-vd-priority aria-label="Order for {{ field.name }}">
+          <span class="rio-vd-reorder">
+            <button type="button" class="rio-iconbtn rio-iconbtn--sm" data-rio-vd-up aria-label="Move up">↑</button>
+            <button type="button" class="rio-iconbtn rio-iconbtn--sm" data-rio-vd-down aria-label="Move down">↓</button>
+          </span>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
   </section>
 
-  <header class="rio-section-head">
-    <p class="rio-section-head__eyebrow">Compositions</p>
-    <h2 class="rio-section-head__title">Merge fields into one cell</h2>
-  </header>
-  <section class="rio-fieldset" aria-label="Compositions">
-    <p class="rio-page-header__lead">
-      Optional. Combine a primary field with secondaries into one cell (e.g. name over email).
-      A field used here is not also shown standalone. Leave <strong>Primary</strong> as
-      “— none —” to disable a slot.
-    </p>
+  {# ---- Compositions (merge fields into one cell) ---- #}
+  <section class="rio-vd-comp" aria-label="Compositions">
+    <header class="rio-vd-fields__head">
+      <h2 class="rio-vd-fields__title">Merge fields into one cell</h2>
+      <span class="rio-meta">Optional — combine a primary with secondaries (e.g. name over email)</span>
+    </header>
     {% for slot in comp_slots %}
-    <fieldset class="rio-fieldset" style="margin-block-end:12px">
-      <legend class="rio-section-head__eyebrow">Composition {{ slot.index }}</legend>
+    <fieldset class="rio-vd-slot">
+      <legend>Composition {{ slot.index }}</legend>
       <label class="rio-form-field">
         <span>Primary field</span>
         <select name="comp{{ slot.index }}_primary" class="rio-input">
           <option value="">— none (disabled) —</option>
-          {% for f in slot.fields %}
-          <option value="{{ f.name }}"{% if f.name == slot.primary %} selected{% endif %}>{{ f.label }}</option>
-          {% endfor %}
+          {% for f in slot.fields %}<option value="{{ f.name }}"{% if f.name == slot.primary %} selected{% endif %}>{{ f.label }}</option>{% endfor %}
         </select>
       </label>
       <label class="rio-form-field">
@@ -106,19 +119,14 @@
       <label class="rio-form-field">
         <span>Style</span>
         <select name="comp{{ slot.index }}_style" class="rio-input">
-          {% for s in compose_styles %}
-          <option value="{{ s.slug }}"{% if s.slug == slot.style %} selected{% endif %}>{{ s.label }}</option>
-          {% endfor %}
+          {% for s in compose_styles %}<option value="{{ s.slug }}"{% if s.slug == slot.style %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
         </select>
       </label>
       <div class="rio-form-field">
         <span>Secondary fields</span>
-        <div class="rio-form-inline">
+        <div class="rio-vd-secs">
           {% for f in slot.fields %}
-          <label style="display:inline-flex;align-items:center;gap:4px;margin-inline-end:12px">
-            <input type="checkbox" name="comp{{ slot.index }}_sec__{{ f.name }}"{% if f.is_secondary %} checked{% endif %}>
-            <span class="rio-meta">{{ f.name }}</span>
-          </label>
+          <label class="rio-vd-sec"><input type="checkbox" name="comp{{ slot.index }}_sec__{{ f.name }}"{% if f.is_secondary %} checked{% endif %}> <span class="rio-meta">{{ f.name }}</span></label>
           {% endfor %}
         </div>
       </div>
@@ -126,22 +134,17 @@
     {% endfor %}
   </section>
 
-  <button type="submit" class="rio-btn rio-btn--primary">Save view spec</button>
+  <div class="rio-vd-save"><button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Save ViewSpec</button></div>
 </form>
 
-<header class="rio-section-head">
-  <p class="rio-section-head__eyebrow">Preview</p>
-  <h2 class="rio-section-head__title">Live render ({{ preview.mode }})</h2>
-</header>
-<section class="rio-fieldset" aria-label="Preview">
-  <p class="rio-page-header__lead">
-    Rendered by the runtime renderer from the spec above, using placeholder rows.
-    Reflects the last <strong>saved</strong> state — save to update the preview.
-  </p>
-  <div class="av-preview">
-    {% for row in preview.rows %}
-    <div class="av-preview-row">{% include "admin/view_layer/_row.html" %}</div>
-    {% endfor %}
-  </div>
+{# ---- Generated ViewSpec (the single source of truth) ---- #}
+<section class="rio-vd-json" aria-label="Generated ViewSpec">
+  <header class="rio-vd-json__bar">
+    <span class="rio-vd-json__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="rio-vd-json__name">{{ admin_name }}.viewspec.json</span>
+    <span class="rio-vd-json__hint">generated from the editor above</span>
+  </header>
+  <pre class="rio-vd-json__body"><code>{{ spec_json }}</code></pre>
+  <footer class="rio-vd-json__foot">{% if is_saved %}Saved{% else %}Draft — not yet saved{% endif %} · Ready.</footer>
 </section>
 {% endblock %}

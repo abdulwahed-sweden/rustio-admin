@@ -422,6 +422,10 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/view_designer_model.html"),
     ),
     (
+        "admin/branding.html",
+        include_str!("../assets/templates/admin/branding.html"),
+    ),
+    (
         "admin/view_layer/_cell.html",
         include_str!("../assets/templates/admin/view_layer/_cell.html"),
     ),

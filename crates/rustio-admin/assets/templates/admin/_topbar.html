@@ -40,7 +40,10 @@
         <a class="rio-usermenu-item" href="/admin/password_change" role="menuitem">{{ icon("key") }} Change password</a>
         <a class="rio-usermenu-item" href="/admin/account/mfa/enroll" role="menuitem">{{ icon("users") }} Two-factor authentication</a>
         <div class="rio-usermenu-sep" aria-hidden="true"></div>
-        <a class="rio-usermenu-item rio-usermenu-item--danger" href="/admin/logout" role="menuitem">{{ icon("log-out") }} Sign out</a>
+        <form method="post" action="/admin/logout" class="rio-usermenu-form">
+          <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+          <button type="submit" class="rio-usermenu-item rio-usermenu-item--danger" role="menuitem">{{ icon("log-out") }} Sign out</button>
+        </form>
       </div>
     </div>
     {% endif %}

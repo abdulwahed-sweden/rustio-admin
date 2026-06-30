@@ -66,25 +66,64 @@
 /* Cards: a responsive grid; each row becomes a card with cells stacked. */
 .av-list--cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--rio-space-16);
+  /* size each card to its content instead of stretching to the row's tallest,
+     so short cards don't trail empty space */
+  align-items: start;
 }
 .av-list--cards .av-row {
-  flex-direction: column;
-  align-items: stretch;
+  /* Row-wrap composes the flat cells into a card with no markup change: the
+     title and each secondary take a full line; consecutive badges (auto width)
+     fall onto one shared row. */
+  flex-flow: row wrap;
+  align-items: center;
+  align-content: flex-start;
   gap: var(--rio-space-6);
-  padding: var(--rio-space-16);
+  padding: var(--rio-space-20);
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
   border-radius: var(--rio-radius-lg);
   box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
   transition: box-shadow var(--rio-dur-fast) var(--rio-ease),
-    border-color var(--rio-dur-fast) var(--rio-ease);
+    border-color var(--rio-dur-fast) var(--rio-ease),
+    transform var(--rio-dur-fast) var(--rio-ease);
 }
 .av-list--cards .av-row:hover {
   background: var(--rio-surface);
   border-color: var(--rio-rust);
   box-shadow: var(--rio-shadow-md);
+  transform: translateY(-1px);
+}
+/* Card cell composition — pure flex-line control over the flat cells:
+   title on its own line, then an inline meta line ("provider · country")
+   with the badges pushed to the row's end. */
+.av-list--cards .av-primary {
+  flex: 0 0 100%;
+  margin-block-end: var(--rio-space-2);
+  line-height: 1.3;
+}
+.av-list--cards .av-secondary,
+.av-list--cards .av-ts {
+  flex: 0 0 auto;
+}
+/* Dot separator between consecutive inline meta cells. */
+.av-list--cards .av-secondary + .av-secondary::before,
+.av-list--cards .av-ts + .av-secondary::before,
+.av-list--cards .av-secondary + .av-ts::before {
+  content: "·";
+  margin-inline-end: var(--rio-space-4);
+  color: var(--rio-text-faint);
+}
+.av-list--cards .av-badge {
+  flex: 0 0 auto;
+}
+/* A clear gap sets the badge group apart from the meta on the same line;
+   they stay grouped (no right-push) so a narrow card never strands one badge. */
+.av-list--cards .av-primary + .av-badge,
+.av-list--cards .av-secondary + .av-badge,
+.av-list--cards .av-ts + .av-badge {
+  margin-inline-start: var(--rio-space-12);
 }
 
 /* List: divided rows, primary leads, the rest trail. */

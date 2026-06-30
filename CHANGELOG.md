@@ -68,6 +68,30 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **View designer — Composition editor (Studio Phase 1).** The per-model
+  `/admin/dev/view-designer/<model>` page is reworked from a plain form into a
+  row-based editor: a live preview on top (with filter chips, server-rendered
+  through the runtime render core), one card per field (drag grip, role-coloured
+  dot, role dropdown, a Filter toggle, priority + up/down reorder arrows, a
+  "Composed" badge), the compositions slots, and a read-only generated-`ViewSpec`
+  panel showing the saved JSON. Reordering rewrites the existing `priority__<f>`
+  inputs from row order via a small progressive `initViewDesigner()` in
+  `admin.js` — with JS off the native role/filter/priority controls still work,
+  and the **save contract is unchanged** (`role__`/`priority__`/`filter__`/
+  `mode_allowed__`/`comp*`). New `pages/view-designer.css` fragment (token-only,
+  added to the `admin.css` ↔ `routes.rs` lock-step); the editor still only
+  *produces* a `ViewSpec` and the preview reuses the deterministic renderer — no
+  AI, no client-side data rendering.
+- **Adaptive view layer — polished card layout.** The `?view=cards` mode
+  (`components/adaptive-views.css`, `.av-list--cards` scope only) was a flat
+  single-column stack: title, each secondary, and each badge on its own line.
+  Cards now compose from the same flat cells via flex line-control — the title
+  leads, the secondaries read as one inline meta line (`provider · country`,
+  joined by a `·`), and the badges group together right after it. Columns widen
+  to 300px and cards size to their content (`align-items: start`) so nothing
+  stretches or strands a badge. Token-only — no new tokens, no markup change
+  (the deterministic partials are untouched), and `list`/`compact` modes are
+  unaffected.
 - **Unified the chrome on five utility pages — Audit log, API surface, Health,
   Docs (index + viewer), and Sessions.** They had drifted onto four different
   page-header patterns (`.rio-masthead-top`, `.rio-page-header`, bespoke
@@ -134,6 +158,20 @@ leaves the alpha track.
   tokens; markup/CSS unchanged (the `aria-current` styling already existed).
 
 ### Added
+- **Branding page + `theme wizard` (Studio Phase 2).** A Developer-gated
+  `/admin/dev/branding` page (linked in the rail's Developer section) lets you
+  pick a brand colour and **preview it live** — the rust/accent CSS variables
+  are injected into the preview pane only (ephemeral, client-side, never
+  persisted) — then copy the build-time **bake** commands: `rustio-admin theme
+  generate --brand '#hex'`, the `RUSTIO_TOKENS_CSS=…` wiring, and the
+  `Admin::accent_color("#hex")` one-liner. The runtime **never links rio-theme**;
+  baking stays a setup-time CLI step. The CLI gains `rustio-admin theme wizard`,
+  an interactive front door that prompts for a brand colour and defers to the
+  existing `generate` engine (same deterministic rio-theme output + contrast
+  report). New `admin/branding.html` (baked into `EMBEDDED_TEMPLATES`),
+  `branding_ctx`/`show_branding`, a `.rio-brand-*` section in the existing
+  `pages/view-designer.css` fragment, and a progressive `initBranding()` in
+  `admin.js`. No new tokens; no build step; deterministic.
 - **View designer is now reachable from the sidebar.** The Developer section of
   the command rail (`_sidebar.html`) gains a "View designer" link
   (`/admin/dev/view-designer`, Developer-gated) next to Database, so the editor

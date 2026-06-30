@@ -3491,6 +3491,10 @@ pub(crate) struct DesignerFieldCtx {
     pub role: String,
     pub priority: i32,
     pub filterable: bool,
+    /// `true` when the field participates in a composition (as primary or
+    /// secondary) — the row shows a "Composed" badge and the field is rendered
+    /// inside that cell rather than standalone.
+    pub composed: bool,
 }
 
 /// The per-model designer editor: editable field rows plus a live preview
@@ -3518,6 +3522,10 @@ pub(crate) struct ViewDesignerCtx {
     pub fields: Vec<DesignerFieldCtx>,
     /// Live preview produced by the runtime renderer from the effective spec.
     pub preview: crate::view_layer::RenderedView,
+    /// The effective spec serialized as pretty JSON — shown read-only in the
+    /// "generated ViewSpec" panel so the developer sees the single source of
+    /// truth the runtime will read back.
+    pub spec_json: String,
     pub flash: Option<FlashCtx>,
 }
 
@@ -3638,6 +3646,13 @@ pub(crate) fn view_designer_ctx(
     is_saved: bool,
     flash: Option<FlashCtx>,
 ) -> ViewDesignerCtx {
+    // Field names consumed by any composition — used to flag "Composed" rows.
+    let composed_fields: std::collections::HashSet<&str> = spec
+        .compositions
+        .iter()
+        .flat_map(|c| c.all_fields())
+        .collect();
+
     let fields = spec
         .fields
         .iter()
@@ -3650,6 +3665,7 @@ pub(crate) fn view_designer_ctx(
             role: f.role.slug().to_string(),
             priority: f.priority,
             filterable: f.filterable,
+            composed: composed_fields.contains(f.field_name.as_str()),
         })
         .collect();
 
@@ -3738,7 +3754,44 @@ pub(crate) fn view_designer_ctx(
         comp_slots,
         fields,
         preview,
+        spec_json: serde_json::to_string_pretty(spec).unwrap_or_default(),
         flash,
+    }
+}
+
+/// Branding page (`/admin/dev/branding`): live accent preview + a handoff to
+/// the build-time `rustio-admin theme` CLI (the runtime never links rio-theme).
+#[derive(Serialize)]
+pub(crate) struct BrandingCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    /// The current accent hex — a project `accent_color` override, or the
+    /// framework default. Seeds the colour picker and the preview.
+    pub current_accent: String,
+    /// `true` when a baked palette is already active via `RUSTIO_TOKENS_CSS`.
+    pub tokens_active: bool,
+}
+
+/// Build the branding-page context.
+pub(crate) fn branding_ctx(identity: &Identity, admin: &Admin, csrf_token: String) -> BrandingCtx {
+    let current_accent = admin
+        .active_theme()
+        .accent
+        .clone()
+        .unwrap_or_else(|| "#B84318".to_string());
+    BrandingCtx {
+        base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active("branding"),
+        page_title: "Branding",
+        entries: admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(SidebarEntry::from)
+            .collect(),
+        current_accent,
+        tokens_active: std::env::var("RUSTIO_TOKENS_CSS").is_ok(),
     }
 }
 

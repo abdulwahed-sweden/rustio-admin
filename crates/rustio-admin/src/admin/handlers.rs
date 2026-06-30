@@ -3037,6 +3037,21 @@ pub(crate) async fn do_toggle_feature_flag(
 
 // ---- View designer (/admin/dev/view-designer) ------------------------------
 
+/// The Branding page: pick a brand colour, preview it live (client-side, via
+/// CSS-variable injection — ephemeral), and copy the build-time CLI command +
+/// `RUSTIO_TOKENS_CSS` wiring to bake it. The runtime never links `rio-theme`;
+/// baking is a setup-time step (`rustio-admin theme generate|wizard`).
+pub(crate) async fn show_branding(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let mut view = render::branding_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/branding.html", &view)?;
+    Ok(Response::html(body))
+}
+
 /// Index: list every project model so a developer can pick one to design.
 pub(crate) async fn show_view_designer(
     ctx: &AdminCtx,
@@ -3428,8 +3443,8 @@ mod view_designer_tests {
             context! { slug => "list", label => "List" },
         ];
         let fields = vec![
-            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false },
-            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true },
+            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false, composed => true },
+            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true, composed => false },
         ];
 
         let mode_choices = vec![
@@ -3469,6 +3484,7 @@ mod view_designer_tests {
                 comp_slots => comp_slots,
                 fields => fields,
                 preview => Value::from_serialize(&preview),
+                spec_json => "{\n  \"model\": \"customer\"\n}",
             })
             .unwrap();
 

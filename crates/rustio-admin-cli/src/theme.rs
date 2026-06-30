@@ -44,6 +44,15 @@ pub(crate) enum Action {
         #[arg(long = "out", default_value = "tokens.css")]
         out: PathBuf,
     },
+    /// Interactive branding wizard: prompt for a brand colour, then run the
+    /// same deterministic engine as `generate` and print the contrast report
+    /// plus the `RUSTIO_TOKENS_CSS` wiring. The in-admin Branding page
+    /// (`/admin/dev/branding`) hands off to this.
+    Wizard {
+        /// Destination path for the emitted CSS.
+        #[arg(long = "out", default_value = "tokens.css")]
+        out: PathBuf,
+    },
 }
 
 /// One curated preset. Field comments mirror `AdminTheme`'s field
@@ -112,7 +121,31 @@ pub(crate) fn run(action: Action) -> Result<(), String> {
         }
         Action::Show { name } => print_show(&name),
         Action::Generate { brand, out } => run_generate(&brand, &out),
+        Action::Wizard { out } => run_wizard(&out),
     }
+}
+
+/// Prompt for one brand colour on stdin, then defer to [`run_generate`]
+/// (blank input falls through to the safe default). Same engine, same
+/// output — this is just a friendlier front door to `generate`.
+fn run_wizard(out: &std::path::Path) -> Result<(), String> {
+    use std::io::Write;
+    println!("rio-theme branding wizard");
+    println!("Enter a brand colour in #rrggbb form, or leave blank for the safe default.");
+    print!("Brand colour: ");
+    std::io::stdout().flush().ok();
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .map_err(|e| format!("could not read input: {e}"))?;
+    let trimmed = line.trim();
+    let brand: Vec<String> = if trimmed.is_empty() {
+        Vec::new()
+    } else {
+        vec![trimmed.to_string()]
+    };
+    println!();
+    run_generate(&brand, out)
 }
 
 fn run_generate(brand: &[String], out: &std::path::Path) -> Result<(), String> {
