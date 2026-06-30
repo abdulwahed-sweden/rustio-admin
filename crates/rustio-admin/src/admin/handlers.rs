@@ -3428,8 +3428,8 @@ mod view_designer_tests {
             context! { slug => "list", label => "List" },
         ];
         let fields = vec![
-            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false },
-            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true },
+            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false, composed => true },
+            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true, composed => false },
         ];
 
         let mode_choices = vec![
@@ -3469,6 +3469,7 @@ mod view_designer_tests {
                 comp_slots => comp_slots,
                 fields => fields,
                 preview => Value::from_serialize(&preview),
+                spec_json => "{\n  \"model\": \"customer\"\n}",
             })
             .unwrap();
 

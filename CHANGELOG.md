@@ -68,6 +68,20 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **View designer — Composition editor (Studio Phase 1).** The per-model
+  `/admin/dev/view-designer/<model>` page is reworked from a plain form into a
+  row-based editor: a live preview on top (with filter chips, server-rendered
+  through the runtime render core), one card per field (drag grip, role-coloured
+  dot, role dropdown, a Filter toggle, priority + up/down reorder arrows, a
+  "Composed" badge), the compositions slots, and a read-only generated-`ViewSpec`
+  panel showing the saved JSON. Reordering rewrites the existing `priority__<f>`
+  inputs from row order via a small progressive `initViewDesigner()` in
+  `admin.js` — with JS off the native role/filter/priority controls still work,
+  and the **save contract is unchanged** (`role__`/`priority__`/`filter__`/
+  `mode_allowed__`/`comp*`). New `pages/view-designer.css` fragment (token-only,
+  added to the `admin.css` ↔ `routes.rs` lock-step); the editor still only
+  *produces* a `ViewSpec` and the preview reuses the deterministic renderer — no
+  AI, no client-side data rendering.
 - **Adaptive view layer — polished card layout.** The `?view=cards` mode
   (`components/adaptive-views.css`, `.av-list--cards` scope only) was a flat
   single-column stack: title, each secondary, and each badge on its own line.

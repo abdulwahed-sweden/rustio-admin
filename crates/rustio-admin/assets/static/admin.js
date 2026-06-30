@@ -619,6 +619,49 @@
     }
   }
 
+  // ---- View designer (Composition editor) ------------------------
+  // Progressive enhancement for /admin/dev/view-designer/<model>: the
+  // up/down arrows reorder field rows and rewrite the per-field priority
+  // inputs (0,10,20,…) from DOM order; the role dot tracks the role select.
+  // With JS off the page still works — the role/filter/priority inputs are
+  // all native form controls the save handler reads directly.
+  function initViewDesigner() {
+    const form = document.querySelector("[data-rio-vd]");
+    if (!form) return;
+    const list = form.querySelector(".rio-vd-rows");
+    if (!list) return;
+
+    function renumber() {
+      Array.from(list.querySelectorAll("[data-rio-vd-row]")).forEach((row, i) => {
+        const prio = row.querySelector("[data-rio-vd-priority]");
+        if (prio) prio.value = String(i * 10);
+      });
+    }
+
+    list.addEventListener("click", (e) => {
+      const up = e.target.closest("[data-rio-vd-up]");
+      const down = e.target.closest("[data-rio-vd-down]");
+      if (!up && !down) return;
+      e.preventDefault();
+      const row = e.target.closest("[data-rio-vd-row]");
+      if (!row) return;
+      if (up && row.previousElementSibling) {
+        list.insertBefore(row, row.previousElementSibling);
+      } else if (down && row.nextElementSibling) {
+        list.insertBefore(row.nextElementSibling, row);
+      }
+      renumber();
+    });
+
+    list.addEventListener("change", (e) => {
+      const sel = e.target.closest("[data-rio-vd-role]");
+      if (!sel) return;
+      const row = sel.closest("[data-rio-vd-row]");
+      const dot = row && row.querySelector("[data-rio-vd-dot]");
+      if (dot) dot.className = "rio-vd-dot rio-vd-dot--" + sel.value;
+    });
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initConsole();
@@ -627,6 +670,7 @@
       initBulkSelect();
       initFkAutocomplete();
       initSearchPalette();
+      initViewDesigner();
     });
   } else {
     initConsole();
@@ -635,5 +679,6 @@
     initBulkSelect();
     initFkAutocomplete();
     initSearchPalette();
+    initViewDesigner();
   }
 })();
