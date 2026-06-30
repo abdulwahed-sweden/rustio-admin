@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rustio-draft studio</title>
+<style>
+  :root { --ink:#1c1a16; --muted:#6c675e; --line:#e2ddd3; --bg:#faf9f6; --card:#fff;
+          --accent:#9a4a23; --accent-d:#7d3a18; --ok:#2f7d4f; --err:#ae382c; --radius:10px; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+         color:var(--ink); background:var(--bg); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); background:var(--card); }
+  header h1 { margin:0; font-size:18px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  main { max-width:980px; margin:0 auto; padding:24px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+           padding:16px; margin-bottom:18px; }
+  label { display:block; font-weight:600; font-size:13px; margin-bottom:6px; }
+  textarea, input[type=text], select { width:100%; padding:8px 10px; border:1px solid var(--line);
+           border-radius:8px; font:inherit; background:#fff; }
+  textarea { resize:vertical; min-height:64px; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .row > * { min-width:0; }
+  button { font:inherit; font-weight:600; border:1px solid var(--line); background:#fff; color:var(--ink);
+           border-radius:8px; padding:8px 14px; cursor:pointer; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.primary:hover { background:var(--accent-d); color:#fff; }
+  button.icon { padding:4px 9px; line-height:1; }
+  button:disabled { opacity:.5; cursor:default; }
+  .models { display:grid; gap:14px; }
+  .model { border:1px solid var(--line); border-radius:var(--radius); padding:14px; }
+  .model__head { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .model__head input { font-weight:700; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:12px; color:var(--muted); font-weight:600; padding:2px 6px; }
+  td { padding:3px 6px; vertical-align:middle; }
+  td.name { width:46%; } td.type { width:30%; } td.uniq { width:12%; text-align:center; } td.del { width:12%; text-align:right; }
+  .meta { color:var(--muted); font-size:13px; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  pre { background:#1c1a16; color:#e9e4d8; padding:14px; border-radius:8px; overflow:auto;
+        font:13px/1.5 ui-monospace,Menlo,monospace; max-height:340px; }
+  .status { font-size:13px; }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); }
+  .status ul { margin:6px 0 0; padding-left:18px; }
+  .spacer { flex:1; }
+  .hint { color:var(--muted); font-size:12px; margin-top:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>rustio-draft studio</h1>
+  <p>Describe an app → review &amp; edit the schema → download or save <code>schema.json</code>, then <code>rustio-admin import</code>. The API key stays on the server.</p>
+</header>
+<main>
+  <section class="panel">
+    <label for="brief">Brief</label>
+    <textarea id="brief" placeholder="a booking system for a salon: clients, staff, appointments"></textarea>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="model" placeholder="model (optional, e.g. claude-opus-4-8)" style="max-width:320px">
+      <button class="primary" id="gen">Generate</button>
+      <span class="spacer"></span>
+      <span class="status" id="genStatus"></span>
+    </div>
+  </section>
+
+  <section class="panel" id="editor" hidden>
+    <div class="actions" style="margin-bottom:12px">
+      <strong>Schema</strong>
+      <span class="meta" id="counts"></span>
+      <span class="spacer"></span>
+      <button id="addModel">+ model</button>
+    </div>
+    <div class="models" id="models"></div>
+
+    <div class="row" style="margin-top:14px">
+      <input type="text" id="instruction" placeholder="refine: e.g. add a published boolean to Post">
+      <button id="refine">Refine</button>
+    </div>
+    <div class="hint">Refine sends your <em>current edited</em> schema plus the instruction.</div>
+  </section>
+
+  <section class="panel" id="outPanel" hidden>
+    <div class="actions" style="margin-bottom:10px">
+      <button class="primary" id="save">Save to server file</button>
+      <button id="download">Download schema.json</button>
+      <button id="copy">Copy JSON</button>
+      <span class="spacer"></span>
+      <span class="status" id="saveStatus"></span>
+    </div>
+    <pre id="preview"></pre>
+  </section>
+</main>
+
+<script>
+let TYPES = ["text", "integer", "boolean", "timestamp"];
+let schema = { models: [] };
+
+const $ = (id) => document.getElementById(id);
+
+async function loadTypes() {
+  try { const r = await fetch("/api/field-types"); if (r.ok) TYPES = await r.json(); } catch (_) {}
+}
+
+function setStatus(el, msg, kind) {
+  el.className = "status" + (kind ? " " + kind : "");
+  el.textContent = msg || "";
+}
+
+async function postJSON(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data.error || ("HTTP " + r.status)); e.problems = data.problems; throw e; }
+  return data;
+}
+
+function refreshPreview() {
+  const models = schema.models.length;
+  const fields = schema.models.reduce((n, m) => n + (m.fields ? m.fields.length : 0), 0);
+  $("counts").textContent = models + " model(s), " + fields + " field(s)";
+  $("preview").textContent = JSON.stringify(schema, null, 2);
+}
+
+function render() {
+  const host = $("models");
+  host.innerHTML = "";
+  schema.models.forEach((m, mi) => host.appendChild(modelCard(m, mi)));
+  $("editor").hidden = false;
+  $("outPanel").hidden = false;
+  refreshPreview();
+}
+
+function modelCard(m, mi) {
+  const card = document.createElement("div");
+  card.className = "model";
+
+  const head = document.createElement("div");
+  head.className = "model__head";
+  const name = document.createElement("input");
+  name.type = "text"; name.value = m.name || ""; name.placeholder = "ModelName";
+  name.oninput = () => { m.name = name.value; refreshPreview(); };
+  const del = document.createElement("button");
+  del.className = "icon"; del.textContent = "✕ model"; del.title = "Remove model";
+  del.onclick = () => { schema.models.splice(mi, 1); render(); };
+  head.append(name, del);
+
+  const table = document.createElement("table");
+  table.innerHTML = "<thead><tr><th>Field</th><th>Type</th><th>Unique</th><th></th></tr></thead>";
+  const tbody = document.createElement("tbody");
+  (m.fields || []).forEach((f, fi) => tbody.appendChild(fieldRow(m, f, fi)));
+  table.appendChild(tbody);
+
+  const addF = document.createElement("button");
+  addF.className = "icon"; addF.textContent = "+ field"; addF.style.marginTop = "8px";
+  addF.onclick = () => { (m.fields ||= []).push({ name: "", type: TYPES[0] }); render(); };
+
+  card.append(head, table, addF);
+  return card;
+}
+
+function fieldRow(m, f, fi) {
+  const tr = document.createElement("tr");
+
+  const tdName = document.createElement("td"); tdName.className = "name";
+  const name = document.createElement("input");
+  name.type = "text"; name.value = f.name || ""; name.placeholder = "field_name";
+  name.oninput = () => { f.name = name.value; refreshPreview(); };
+  tdName.appendChild(name);
+
+  const tdType = document.createElement("td"); tdType.className = "type";
+  const sel = document.createElement("select");
+  TYPES.forEach((t) => { const o = document.createElement("option"); o.value = t; o.textContent = t; sel.appendChild(o); });
+  sel.value = TYPES.includes(f.type) ? f.type : TYPES[0];
+  f.type = sel.value;
+  sel.onchange = () => { f.type = sel.value; refreshPreview(); };
+  tdType.appendChild(sel);
+
+  const tdUniq = document.createElement("td"); tdUniq.className = "uniq";
+  const uniq = document.createElement("input");
+  uniq.type = "checkbox"; uniq.checked = !!f.unique;
+  uniq.onchange = () => { if (uniq.checked) f.unique = true; else delete f.unique; refreshPreview(); };
+  tdUniq.appendChild(uniq);
+
+  const tdDel = document.createElement("td"); tdDel.className = "del";
+  const del = document.createElement("button");
+  del.className = "icon"; del.textContent = "✕";
+  del.onclick = () => { m.fields.splice(fi, 1); render(); };
+  tdDel.appendChild(del);
+
+  tr.append(tdName, tdType, tdUniq, tdDel);
+  return tr;
+}
+
+$("gen").onclick = async () => {
+  const brief = $("brief").value.trim();
+  if (!brief) { setStatus($("genStatus"), "enter a brief first", "err"); return; }
+  $("gen").disabled = true; setStatus($("genStatus"), "designing…");
+  try {
+    const model = $("model").value.trim() || undefined;
+    const data = await postJSON("/api/generate", { brief, model });
+    schema = data.schema; render();
+    setStatus($("genStatus"), "done", "ok");
+  } catch (e) { setStatus($("genStatus"), e.message, "err"); }
+  finally { $("gen").disabled = false; }
+};
+
+$("refine").onclick = async () => {
+  const instruction = $("instruction").value.trim();
+  if (!instruction) { setStatus($("saveStatus"), "enter an instruction", "err"); return; }
+  $("refine").disabled = true; setStatus($("genStatus"), "refining…");
+  try {
+    const model = $("model").value.trim() || undefined;
+    const data = await postJSON("/api/refine", { schema, instruction, model });
+    schema = data.schema; $("instruction").value = ""; render();
+    setStatus($("genStatus"), "refined", "ok");
+  } catch (e) { setStatus($("genStatus"), e.message, "err"); }
+  finally { $("refine").disabled = false; }
+};
+
+$("addModel").onclick = () => { schema.models.push({ name: "", fields: [] }); render(); };
+
+$("save").onclick = async () => {
+  setStatus($("saveStatus"), "saving…");
+  try {
+    const data = await postJSON("/api/save", { schema });
+    setStatus($("saveStatus"), "saved → " + data.path, "ok");
+  } catch (e) {
+    setStatus($("saveStatus"), e.message, "err");
+    if (e.problems && e.problems.length) {
+      const ul = document.createElement("ul");
+      e.problems.forEach((p) => { const li = document.createElement("li"); li.textContent = p; ul.appendChild(li); });
+      $("saveStatus").appendChild(ul);
+    }
+  }
+};
+
+$("download").onclick = () => {
+  const blob = new Blob([JSON.stringify(schema, null, 2) + "\n"], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "schema.json"; a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(JSON.stringify(schema, null, 2)); setStatus($("saveStatus"), "copied", "ok"); }
+  catch (_) { setStatus($("saveStatus"), "copy failed", "err"); }
+};
+
+loadTypes();
+</script>
+</body>
+</html>

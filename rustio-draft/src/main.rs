@@ -54,6 +54,17 @@ enum Command {
         #[command(flatten)]
         apply: ApplyOpts,
     },
+    /// Launch the local studio (a localhost web UI) to draft + edit a schema.
+    Serve {
+        /// Port to bind on localhost.
+        #[arg(long, default_value_t = 8787)]
+        port: u16,
+        /// File the studio's "Save" button writes to.
+        #[arg(long, default_value = "schema.json")]
+        out: PathBuf,
+        #[command(flatten)]
+        gen: GenOpts,
+    },
 }
 
 /// Model knobs shared by `new` and `refine`.
@@ -107,6 +118,9 @@ async fn run() -> Result<()> {
             gen,
             apply,
         } => refine(path, instruction, out, gen, apply).await,
+        Command::Serve { port, out, gen } => {
+            rustio_draft::server::run(api_key()?, gen.model, gen.max_tokens, out, port).await
+        }
     }
 }
 
