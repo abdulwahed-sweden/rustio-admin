@@ -36,6 +36,14 @@ rustio-draft new "a blog with posts and comments" --apply
 # then stops; review the plan and run: rustio-admin commit
 ```
 
+Refine an existing schema (edits in place by default; `--apply` works here too):
+
+```sh
+rustio-draft refine schema.json "add a published boolean to Post"
+# re-runs the model with the current schema + your instruction, then rewrites
+# schema.json. Use --out other.json to write elsewhere.
+```
+
 ## How it works
 
 1. Sends the brief to the Claude Messages API with **structured outputs** — a
@@ -47,6 +55,7 @@ rustio-draft new "a blog with posts and comments" --apply
 
 ## Status
 
-Phases **F1** (engine) + **F2** (`--apply` chain). Field types are limited to the
-builder's MVP set (`text`, `integer`, `boolean`, `timestamp`); relations are
-modelled as plain `integer` `*_id` fields. See the scope doc for F3–F5.
+Phases **F1** (engine) + **F2** (`--apply` chain) + **F3** (`refine`). Field types
+are limited to the builder's MVP set (`text`, `integer`, `boolean`, `timestamp`);
+relations are modelled as plain `integer` `*_id` fields. See the scope doc for
+F4–F5.
