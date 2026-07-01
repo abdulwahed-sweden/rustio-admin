@@ -19,6 +19,9 @@ User-facing entry points. Read these first.
 - [`getting-started.md`](getting-started.md) — from an empty
   directory to a running admin with your own model: install, create a
   project, add a model, sign in.
+- [`tutorial-rustio-draft.md`](tutorial-rustio-draft.md) — beginner
+  walkthrough: describe an app in one sentence, let **rustio-draft** draft a
+  `schema.json`, then `import → plan → commit` it into a running admin.
 - [`architecture.md`](architecture.md) — module map and how the
   library, macros, and CLI crates compose.
 - [`modeladmin.md`](modeladmin.md) — authoring guide for
