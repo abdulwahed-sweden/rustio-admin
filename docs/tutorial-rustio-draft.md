@@ -336,7 +336,9 @@ framework never runs AI on its own.
 
 | Symptom | Fix |
 |---|---|
+| Not sure your key works? | Run `rustio-draft doctor` — it checks the key (and lists your models) without spending any tokens. |
 | `ANTHROPIC_API_KEY is not set` | `export ANTHROPIC_API_KEY=sk-ant-...` before `rustio-draft`. |
+| `API key is invalid or revoked (401)` | Wrong/expired key — get a fresh one and re-`export` it; confirm with `rustio-draft doctor`. |
 | `rustio-admin import` not found | Install the newest CLI from source (see [Install](#install-the-two-tools)). |
 | `type '…' is not in the closed list` | Use only `text`, `integer`, `boolean`, `timestamp`. |
 | Can't connect to Postgres | Check `DATABASE_URL` and that Postgres is running (`docker ps`). |
