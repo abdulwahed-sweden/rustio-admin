@@ -365,6 +365,10 @@ MIT — see [`LICENSE`](./LICENSE).
 
 ## Sponsor RustIO
 
+> Build systems quickly.
+> Evolve them safely.
+> Stay in control.
+
 RustIO is developed and maintained independently — no company, investors, or
 outside funding behind it. Sponsorship is early backing for open Rust
 infrastructure, not a personal donation. It funds the open-source work and keeps
