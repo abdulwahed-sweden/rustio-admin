@@ -363,45 +363,34 @@ The two are different in scope — this project (`rustio-admin`) targets Postgre
 MIT — see [`LICENSE`](./LICENSE).
 
 
-## Support RustIO
+## Sponsor RustIO
 
-RustIO is an independent open-source project built and maintained over countless evenings, weekends, experiments, failures, lessons, and improvements.
+> Build systems quickly.
+> Evolve them safely.
+> Stay in control.
 
-Its mission is simple:
+RustIO is developed and maintained independently — no company, investors, or
+outside funding behind it. Sponsorship is early backing for open Rust
+infrastructure, not a personal donation. It funds the open-source work and keeps
+the core free and inspectable.
 
-**Build systems quickly.
-Evolve them safely.
-Stay in control.**
+**What sponsorship funds**
 
-In a world where software changes faster than ever — and where AI can generate code in seconds — RustIO is built around a simple belief:
+- Documentation, guides, and onboarding.
+- Realistic examples and reference verticals.
+- Testing, review, and long-term maintenance of the security-sensitive
+  authority, session, and audit surfaces.
+- Schema-driven admin generation and developer experience.
 
-You should never have to choose between speed and control.
+**Who it's for.** Rust developers, technical teams, and small companies building
+internal tools, admin panels, and workflow/dispatch software who want a safe,
+PostgreSQL-first foundation instead of an expensive SaaS stack.
 
-You should be able to move fast, benefit from modern tools, embrace AI where it helps, and still understand, maintain, and own your system years later.
+RustIO stays free and MIT-licensed regardless of sponsorship. A separate,
+open-core commercial layer (the `rustio-pro` line — hosted option, vertical
+packs, support) funds sustained work without gating the core; see
+[`docs/commercial-model.md`](./docs/commercial-model.md).
 
-There is no company behind RustIO.
-
-No investors.
-
-No external funding.
-
-Every improvement — documentation, testing, tooling, reviews, maintenance, and long-term development — is funded by the time invested in the project itself.
-
-If RustIO has saved you time, helped your team, improved your work, or simply resonates with the way you believe software should be built, you can support its continued development.
-
-Your support helps fund:
-
-* Documentation and learning resources
-* Testing and quality improvements
-* Tooling and developer experience
-* Long-term maintenance and sustainability
-
-Support is appreciated, but never expected.
-
-RustIO will remain free and MIT-licensed regardless.
-
-Thank you for being part of the journey.
-
-**Ethereum · Polygon · Arbitrum · Base (ERC-20)**
-
-`0x3011BfD673a9D09f9761203A7fFCca757Af22587`
+→ **[Sponsor on GitHub](https://github.com/sponsors/abdulwahed-sweden)** · tiers
+in [`SPONSORS.md`](./SPONSORS.md) · details in
+[`docs/sponsorship.md`](./docs/sponsorship.md).
