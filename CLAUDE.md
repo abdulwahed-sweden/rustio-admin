@@ -10,7 +10,7 @@ Project README: `README.md`. Architecture map: `docs/architecture.md`. Design co
 
 ## Common commands
 
-Workspace pins `rust-version = "1.88"` (MSRV), `edition = "2021"`, and a single workspace `version` (currently `0.30.0`) in the root `Cargo.toml`. There is no `rust-toolchain.toml` — use a stable toolchain ≥ 1.88.
+Workspace pins `rust-version = "1.94"` (MSRV), `edition = "2021"`, and a single workspace `version` (currently `0.31.0`) in the root `Cargo.toml`. There is no `rust-toolchain.toml` — use a stable toolchain ≥ 1.94.
 
 CI runs with `RUSTFLAGS="-D warnings"` — clippy/build/test all fail on any warning. Match that locally.
 
