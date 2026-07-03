@@ -19,17 +19,18 @@ to any of them advances the shared version.
 
 ## Current public version
 
-- The current published version is **0.30.0** (all four crates).
-- `main` may contain unreleased work committed after the `v0.30.0` tag. When it
+- The current published version is **0.31.0** (all four crates; released 2026-07-03).
+- `main` may contain unreleased work committed after the `v0.31.0` tag. When it
   does, the code on `main` is ahead of the last published/tagged version even
   though the declared version has not yet been bumped.
 
-## Next intended version
+## Latest release
 
-- The next intended version is **0.31.0**.
-- Reason: significant feature work plus breaking dependency/MSRV changes since
-  `0.30.0` (in a `0.x` line, breaking changes advance the minor).
-- Do **not** use a patch (`0.30.1`) for this delta — it is not a patch-level change.
+- **0.31.0** shipped 2026-07-03: a breaking dependency/MSRV bump (sqlx 0.9,
+  MSRV 1.94) plus significant feature work. In a `0.x` line, breaking changes
+  advance the **minor** (`0.30 → 0.31`), which is why this was not a patch.
+- The next version is chosen when the next batch of work lands; the crypto
+  migration (argon2/aes-gcm) is the notable deferred item.
 
 ## Semantic versioning
 

@@ -41,7 +41,7 @@ route, auth, permission, or migration change to existing models.
   `docs/commercial-model.md`, `docs/verticals.md`, `.github/FUNDING.yml`), and an
   elevated positioning pass across the README and sponsorship docs.
 
-*Prepared ahead of the tag and release — not yet published to crates.io.*
+*Released 2026-07-03 — tag `v0.31.0`, GitHub Release, and published to crates.io.*
 
 
 ## Releases at a glance
