@@ -6,6 +6,27 @@ the project adheres to [SemVer](https://semver.org/) once it
 leaves the alpha track.
 
 
+## Unreleased
+
+Work on `main` after `v0.30.0`, in preparation for the next release
+(**0.31.0** intended — not yet cut; see [`RELEASING.md`](./RELEASING.md) and
+[`docs/versioning.md`](./docs/versioning.md)). This section is a running
+placeholder, not final release notes.
+
+- Docs: project status and versioning maps (`docs/project-status.md`,
+  `docs/versioning.md`) clarifying the active `rustio-admin` line vs. the earlier
+  `rustio-core` line, the separate `rustio-draft` companion, and the reserved
+  `rustio-pro-*` direction.
+- Docs: `rustio-draft` integration docs updated to note it lives in its own
+  repository.
+- Sponsorship foundation (already merged): `SPONSORS.md`, `docs/sponsorship.md`,
+  `docs/commercial-model.md`, `docs/verticals.md`, `.github/FUNDING.yml`.
+
+*(The substantive code work landed on `main` since `v0.30.0` — e.g. the
+dependency/MSRV updates and admin/view-layer features — will be summarized here
+when `0.31.0` is cut.)*
+
+
 ## Releases at a glance
 
 | Version   | Date       | Headline                                                                          |

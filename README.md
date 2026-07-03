@@ -357,6 +357,10 @@ As of v0.22.0 the binary published by this project is named **`rustio-admin`**, 
 
 The two are different in scope — this project (`rustio-admin`) targets Postgres-only admin panels with a narrow, doctrine-governed surface; the sibling project layers an admin UI, an ORM, and a guided schema-evolution wizard over a strict typed core with SQLite. Same name prefix, different goals.
 
+**Install target.** The crate to install is **`rustio-admin-cli`** (`cargo install rustio-admin-cli`), which provides the **`rustio-admin`** binary. Do **not** `cargo install rustio` — that crate name is unrelated and is not this project.
+
+For how the active `rustio-admin` line relates to the earlier `rustio-core` line, the separate `rustio-draft` companion, and the reserved `rustio-pro-*` crates, see [`docs/project-status.md`](./docs/project-status.md) and [`docs/versioning.md`](./docs/versioning.md). Release steps live in [`RELEASING.md`](./RELEASING.md).
+
 
 ## License
 
