@@ -1,5 +1,11 @@
 # Tutorial: from a sentence to a running admin (with rustio-draft)
 
+> **Note:** `rustio-draft` now lives in its own repository
+> ([abdulwahed-sweden/rustio-draft](https://github.com/abdulwahed-sweden/rustio-draft)).
+> It is a separate, setup-time companion tool — not part of the `rustio-admin`
+> workspace and not a runtime dependency. This document describes how it
+> integrates with `rustio-admin`. See [`project-status.md`](./project-status.md).
+
 A beginner-friendly, start-to-finish walkthrough. You will describe an app in
 one plain-English sentence, turn that into real Rust models, and open a working
 admin panel in your browser — step by step, with the exact commands and what you
