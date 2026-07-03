@@ -1,47 +1,46 @@
 # Sponsor RustIO
 
-**Fund open Rust infrastructure for safer business systems.**
+**Fund open Rust infrastructure for serious business systems.**
 
-RustIO (`rustio-admin`) is an independent, MIT-licensed Rust project: a
-Postgres-first admin engine for building serious operational software — admin
-panels, workflows, dispatch and booking backends, audit trails, and internal
-business tools. It is safe by construction, single-binary, and designed to stay
-auditable for years.
+RustIO (`rustio-admin`) is a **Rust-first business-system engine** — the
+operational foundation companies build on when simple admin screens and
+conventional web stacks are no longer enough. It is independent and
+MIT-licensed, safe by construction, single-binary, and designed to stay
+fast and auditable as a business grows.
 
-Sponsorship is not a donation. It is early backing for open infrastructure that
-small companies, technical teams, and independent developers can build real
-systems on — without renting an expensive SaaS stack.
+Sponsoring RustIO is **backing critical open-source infrastructure**, not
+donating to a hobby project. You are helping build the kind of foundation that
+healthcare, housing, logistics, education, and field-operations software need —
+so companies stop rebuilding the same fragile foundation over and over.
 
 RustIO stays free and MIT-licensed regardless of sponsorship.
 
 ---
 
-## Why sponsor
+## Why this matters
 
-I am building RustIO: a Rust-first admin and business systems engine for
-developers who want correctness, speed, and operational clarity without the
-usual SaaS bloat.
+RustIO was born from a real market problem. A fast-growing housing platform in
+the Swedish market — serving well over a million customers — began to crack
+under its own success. Not because of its engineers, but because the foundation
+it was built on was never designed to be a heavy-duty operational engine. As
+data grows and operational pressure rises, conventional stacks show their
+limits: slower performance, climbing infrastructure cost, fragile changes, and
+constant firefighting.
 
-RustIO focuses on schema-driven admin systems, PostgreSQL-first business
-applications, safe Rust with a strict zero-`unsafe` policy, audit-friendly
-workflows, and real vertical applications such as clinic and shop admins today,
-with logistics, dispatch, booking, and school systems on the roadmap.
+That story is not unique — it is the default outcome across the industry. The
+waste is enormous: teams rebuild the same operational foundation, hit the same
+wall, and firefight the same failures. **RustIO exists to break that cycle** —
+one open, memory-safe, auditable engine that serious businesses can build on and
+evolve for years.
 
-Your sponsorship helps continue building public Rust infrastructure —
-documentation, examples, and production-grade patterns that small companies and
-independent developers can actually use.
-
-RustIO is not a toy CRUD demo. It is an effort to make serious business software
-simpler, safer, and faster to build.
-
-If you believe Rust should be used beyond low-level systems — in real business
-operations, admin panels, dispatch engines, and workflow software — your support
-helps push this forward.
+Your sponsorship supports the development of that engine: a Rust-first system
+foundation for serious business software — the kind companies need when admin
+screens and first-generation stacks are no longer enough.
 
 ## What sponsorship funds
 
 - Documentation, guides, and onboarding for the open core.
-- Realistic examples and reference verticals.
+- Realistic examples and reference verticals across critical sectors.
 - Testing, review time, and long-term maintenance of the security-sensitive
   authority/session/audit surfaces.
 - Schema-driven admin generation and developer experience.
@@ -52,9 +51,11 @@ funds the open-source work there, in roughly the order documented in
 
 ## Who it's for
 
-Rust developers, CTOs, SaaS founders, open-source supporters, small companies
-(including Swedish and EU teams) tired of expensive SaaS tools, and
-security- and performance-focused engineers who care about digital sovereignty.
+CTOs and technical founders scaling past a first-generation stack, engineering
+teams building operational software that has to last, small companies (including
+Swedish and EU teams) tired of expensive SaaS lock-in, and open-source and
+digital-sovereignty supporters who want this kind of foundation to exist and
+stay open.
 
 ---
 

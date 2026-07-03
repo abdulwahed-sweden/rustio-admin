@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  Postgres-first administrative framework for Rust applications.
+  A Rust-first business-system engine — the operational foundation for serious software.
 </p>
 
 <p align="center">
@@ -22,22 +22,50 @@
 
 ## What is RustIO?
 
-RustIO (`rustio-admin`) is an **administrative framework for Rust**, backed
-by Postgres — the Rust answer to "Django Admin." You describe your data as
-plain Rust structs; RustIO gives you the admin panel *and* the things real
-admin tools run on underneath: authentication, sessions, password recovery,
-role-based access, and a complete audit trail.
+RustIO (`rustio-admin`) is a **Rust-first business-system engine** — the
+operational foundation you build serious software on: admin panels, workflows,
+dispatch and booking backends, audit trails, and the internal tools a real
+business runs on. It is not a throwaway dashboard or one more CRUD screen; it is
+the layer *underneath* those things, engineered to stay fast, safe, and
+understandable as a company grows.
 
-**What makes it different.** Most admin tools treat CRUD as the product and
-bolt on auth, recovery, and audit afterward. RustIO inverts that.
-*Authority* — who may do what, how sessions end, how access is recovered,
-what gets recorded — is **designed as one system, not assembled from
-separate parts**, and governed by checked-in contract documents. The CRUD is
-the easy layer on top.
+**The problem it solves.** RustIO was born from a real market problem, not from
+a wish to build another admin panel. A fast-growing housing platform in the
+Swedish market — serving well over a million customers — began to crack under
+its own success. Not because of its engineers, but because the foundation it was
+built on was never designed to be a heavy-duty operational engine. As data
+grows, workflows multiply, and operational pressure rises, conventional web
+stacks start to show their limits: slower performance, climbing infrastructure
+cost, fragile changes, and constant firefighting. The problem was never the
+team — it was a weak foundation.
 
-**Who it's for.** Rust teams that want a trustworthy internal admin without
-wiring auth + sessions + recovery + audit together from separate crates —
-and without a frontend build step.
+RustIO exists for exactly that moment: **when a business outgrows its first
+system and needs a foundation that won't collapse under its own growth** — one
+built for speed, memory safety, structural correctness, and long-term evolution.
+
+**From idea to a safe foundation.** The workflow is deliberately simple:
+
+> **Idea → Draft schema → Validate → Human review → Safe operational foundation.**
+
+You describe what you need; the [`rustio-draft`](https://github.com/abdulwahed-sweden/rustio-draft)
+companion drafts a `schema.json`; RustIO validates it against strict, checked-in
+rules; a human reviews and approves the change; and you are left with a
+foundation you can keep evolving for years. *AI drafts. RustIO validates. Diff
+protects. Human approves.*
+
+**What makes it different.** Most admin tools treat CRUD as the product and bolt
+on auth, recovery, and audit afterward. RustIO inverts that. *Authority* — who
+may do what, how sessions end, how access is recovered, what gets recorded — is
+**designed as one system, not assembled from separate parts**, and governed by
+checked-in contract documents. The CRUD is the easy layer on top. (In Django
+terms, it is "the Rust answer to Django Admin" — but built for operations that
+have to last.)
+
+**Who it's for.** Teams building operational software that has to survive
+growth: internal admin, workflow and dispatch backends, and business systems
+that outgrew a first-generation stack. You get a trustworthy core without wiring
+auth + sessions + recovery + audit together from separate crates — and without a
+frontend build step.
 
 Postgres only. No build step. Single binary deployment.
 
