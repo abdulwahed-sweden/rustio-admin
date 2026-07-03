@@ -8,29 +8,47 @@ leaves the alpha track.
 
 ## Unreleased
 
-Work on `main` after `v0.30.0`, in preparation for the next release
-(**0.31.0** intended — not yet cut; see [`RELEASING.md`](./RELEASING.md) and
-[`docs/versioning.md`](./docs/versioning.md)). This section is a running
-placeholder, not final release notes.
+*Nothing yet — work for the next release lands here.*
 
-- Docs: project status and versioning maps (`docs/project-status.md`,
-  `docs/versioning.md`) clarifying the active `rustio-admin` line vs. the earlier
-  `rustio-core` line, the separate `rustio-draft` companion, and the reserved
-  `rustio-pro-*` direction.
-- Docs: `rustio-draft` integration docs updated to note it lives in its own
-  repository.
-- Sponsorship foundation (already merged): `SPONSORS.md`, `docs/sponsorship.md`,
-  `docs/commercial-model.md`, `docs/verticals.md`, `.github/FUNDING.yml`.
 
-*(The substantive code work landed on `main` since `v0.30.0` — e.g. the
-dependency/MSRV updates and admin/view-layer features — will be summarized here
-when `0.31.0` is cut.)*
+## 0.31.0 — 2026-07-03
+
+Rolls up roughly three weeks of work on `main` since `v0.30.0`.
+
+### Audit
+
+Dependency and toolchain floor moved: **sqlx 0.8 → 0.9**, which raises the
+**MSRV from 1.88 to 1.94**. The security-sensitive crypto stack (argon2,
+aes-gcm, sha2, sha1, hmac, rand) is **unchanged** this cycle — that migration
+stays deferred until argon2/aes-gcm ship stable (tracked separately). No schema,
+route, auth, permission, or migration change to existing models.
+
+### Features
+
+- Adaptive, deterministic **view layer** for models, a **View designer**
+  (`/admin/dev/view-designer`), and the first **Studio** phases: in-admin
+  branding + theme wizard, a row-based composition editor, a read-only schema
+  review page, and deterministic `schema.json` import.
+- `examples/shop`: Swedish-first payment methods and a framework repalette to a
+  rust accent + JetBrains Mono. Sign-out is now a POST form (not a GET link).
+
+### Companion & docs
+
+- **`rustio-draft`** (natural-language brief → `schema.json`) was built (F1–F5)
+  and **relocated to its own repository**; the integration docs remain here.
+- New project docs (`docs/project-status.md`, `docs/versioning.md`), a
+  professional sponsorship foundation (`SPONSORS.md`, `docs/sponsorship.md`,
+  `docs/commercial-model.md`, `docs/verticals.md`, `.github/FUNDING.yml`), and an
+  elevated positioning pass across the README and sponsorship docs.
+
+*Prepared ahead of the tag and release — not yet published to crates.io.*
 
 
 ## Releases at a glance
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.31.0** | 2026-07-03 | **Adaptive view layer + Studio, sqlx 0.9 / MSRV 1.94, `rustio-draft` split out, docs & sponsorship.** Rolls up ~3 weeks on `main` since 0.30.0. **Breaking:** sqlx 0.8 → 0.9 raises the **MSRV to 1.94**; the crypto stack is untouched (that migration stays deferred). Adds an adaptive, deterministic **view layer**, a **View designer** (`/admin/dev/view-designer`), and the first **Studio** phases (branding/theme wizard, composition editor, read-only schema review, deterministic `schema.json` import). `examples/shop` gains Swedish-first payment methods and a rust-accent + JetBrains Mono repalette; sign-out becomes a POST form. The **`rustio-draft`** companion (brief → schema) was built and **moved to its own repo**. Documentation: new `project-status` / `versioning` maps, a professional sponsorship foundation, and an elevated positioning pass. No schema / route / auth / permission / migration change to existing models. |
 | **0.30.0** | 2026-06-11 | **Admin polish — comfortable dark theme, working ⌘K search, cleaner lists & forms.** The dark theme is re-tuned off near-black slate to a **comfortable graphite-grey** (`--rio-bg #22272e`) with clear surface steps and visible dividers, so elements separate logically and long sessions stay easy on the eyes. The top-bar **search now works**: the `⌘K` palette (grouped, keyboard-navigable, backed by `/admin/_search`) was implemented in JS but never given markup — now wired up. List pages **hide the `id` column** by default (the row links to the record; an explicit `list_display` keeps it). The page **footer goes full-width** with content aligned to the page column. A **subtle elevation pass** (darker hairline + softer surface shadows) lifts every card / panel / table off the near-white background, and the bespoke "console" pages (dashboard, lists, users/groups, sessions, audit, db browser) are brought to full Visual-Contract conformance — Inter labels everywhere, no grey header bands, `·` breadcrumbs, teal permission grid, §9 text-link row actions, and inline related sections now spaced cleanly from the action bar. The `docs/visual-reference/` set is refreshed and **mirrored in dark** under `docs/visual-reference/dark/`. Top bar / sidebar / footer chrome stays frozen; no schema, route, auth, permission, or migration change. |
 | **0.29.0** | 2026-06-10 | **Admin Visual Contract conformance — Inter + slate + teal, dark theme, font cleanup.** The admin content area is brought to pixel conformance with the Visual Contract (`docs/design/VISUAL-CONTRACT.md`, v2.1): **Inter** for body and titles, a slate neutral ladder, the teal `#119588` accent, a `#fafcfb` background, 44px controls with a 4px teal focus ring, the three §3 section patterns (legend-on-border / eyebrow / legend-less by page shape), the §8.2 action bar, and no-zebra tables with lowercase status pills — in **light and dark** (token-driven, no per-component dark CSS) and **LTR + RTL** (logical properties + legend/eyebrow letter-spacing neutralization). Retired the unused baked font faces (Spectral, Hanken Grotesk, Geist, Geist Mono): their `@font-face` / woff2 / `include_bytes!` / routes are gone, those `/static/fonts/*.woff2` now **404**, the binary is ~340 KB smaller, and `LICENSE.txt` maps 1:1 to the shipped faces (+ JetBrains Mono OFL). The build-time `rio-theme` emitter now produces dual-block dark-aware `tokens.css` (`DarkPolicy`: auto / light-only / explicit), and the runtime logs a startup WARN on a light-only `RUSTIO_TOKENS_CSS` override. Ships a ten-image visual reference set under `docs/visual-reference/`, plus a doctrine-doc refresh that points all token values at the contract. Two builtin labels change ("Old password" → "Current password"; create-form "Password" → "Temporary password"). **Top bar / sidebar / footer frozen; no functional, schema, route, auth, permission, or migration change.** |
 | **0.28.0** | 2026-06-08 | **One declaration per model.** `#[derive(RustioAdmin)]` now also emits the `orm::Model` impl (`TABLE` / `COLUMNS` / `INSERT_COLUMNS` / `id` / `from_row` / `insert_values`) from the same field walk it already runs to build `AdminModel` — the hand-written ORM glue that had to be kept in sync with the struct by hand is gone. Two struct-level escape hatches cover what the walk can't infer: `#[rustio(table = "…")]` (SQL table name differs from the auto slug) and `#[rustio(extra_columns = ["…"])]` (generated/virtual columns like a `tsvector`). **Breaking:** existing hand-written `impl Model` blocks must be deleted — they now collide with the derive. Runtime deps (`chrono` / `rust_decimal` / `uuid` / `sqlx`, plus the `Decimal` / `DateTime` / `Utc` / `NaiveDate` / `NaiveTime` / `Uuid` aliases) are re-exported from `rustio_admin`, so a model crate can depend on `rustio-admin` alone; the scaffold's `Cargo.toml` drops its direct `chrono` / `uuid` / `rust_decimal` / `sqlx` lines. |
