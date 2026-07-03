@@ -60,6 +60,48 @@ industry-specific packs are the planned commercial side. Honest status:
 
 Full list and status: [`verticals.md`](./verticals.md).
 
+## Companion tool — `rustio-draft` (open-core split)
+
+`rustio-draft` is the setup-time companion: a natural-language brief →
+`schema.json` for `rustio-admin` (it may call Claude to draft; RustIO Admin
+applies the result deterministically via `import` → `plan` → `commit`). It lives
+in its **own public, MIT-licensed repository**
+([abdulwahed-sweden/rustio-draft](https://github.com/abdulwahed-sweden/rustio-draft),
+`v0.1.0`) and is **not** published to crates.io.
+
+The same open-core discipline applies: the free core stays genuinely useful on
+its own — a crippled free tier would kill the adoption a paid tier depends on.
+Paid value is **scale, teams, convenience, and curated content**, never
+"unlock the basics."
+
+**Free core (public, MIT — `rustio-draft`)**
+
+- `new` (single brief → `schema.json`), bring-your-own `ANTHROPIC_API_KEY`.
+- The full safety pipeline: `generate → validate → diff → protect → human review`.
+- `doctor`, basic `refine`, and a basic local Studio (`serve`).
+
+**Planned commercial (`rustio-pro-draft`, private / hosted)**
+
+- **Studio Pro** — multi-model visual designer, saved projects, themes, richer editing.
+- **Managed / no-key mode** — a hosted endpoint so users don't need their own LLM key (metered).
+- **Vertical template packs** — curated industry briefs (clinic, booking, logistics, school…), aligned with the vertical packs above.
+- **Team / enterprise** — draft audit log, policy (allowed field types, naming conventions), private template libraries, SSO, CI/batch drafting.
+- Priority support / SLAs.
+
+**Mechanism.** Keep `rustio-draft` as the free core. Put every paid feature in a
+**separate private repo** — `rustio-pro-draft`, under the reserved `rustio-pro-*`
+family (never inside the open core) — and/or a **hosted Studio / managed API**
+that sells access and convenience rather than code. A hosted service is the
+easier thing to protect, since MIT code can always be forked.
+
+> **Honest caveat.** MIT is a one-way door for shipped versions: code already
+> released under MIT (including `rustio-draft` `v0.1.0`) stays free and forkable.
+> The clean model is therefore *free core stays MIT/public; every paid feature
+> lives only in the private pro repo or the hosted service* — and the free/paid
+> line is decided up front, not retro-restricted later.
+>
+> Status: a sketch / reserved direction. Nothing paid ships today.
+
 ## Why open-core here
 
 The core's value is that it stays legible, auditable, and owned by the people
