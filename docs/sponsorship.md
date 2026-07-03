@@ -12,29 +12,38 @@ RustIO is, and will remain, MIT-licensed. Sponsorship funds the open-source work
 
 ## What RustIO is
 
-`rustio-admin` is a Rust-first admin engine: a schema-driven operational backend
-for building serious internal business systems on PostgreSQL. It generates admin
-surfaces from plain Rust structs and treats the parts real admin tools run on —
-authentication, sessions, recovery, role-based access, and a complete audit
-trail — as one designed system rather than bolted-on parts.
+`rustio-admin` is a **Rust-first business-system engine** — a schema-driven
+operational foundation for building serious business software on PostgreSQL. It
+generates admin surfaces from plain Rust structs and treats the parts real
+systems run on — authentication, sessions, recovery, role-based access, and a
+complete audit trail — as one designed system rather than bolted-on parts.
 
 It is deliberately narrow: Postgres-only, single-binary, no build step. It is
-**not** a general-purpose web framework and does not try to be. It is a
-foundation for vertical business applications — clinic and shop admins today,
-with logistics, dispatch, booking, and school systems on the roadmap.
+**not** a general-purpose web framework and does not try to be. It is the
+foundation layer *beneath* operational software — a base for vertical business
+applications across sectors (clinic and shop admins ship as examples today, with
+logistics, dispatch, booking, and school systems on the roadmap).
 
 ## Why sponsor
 
-Most operational software is either hand-rolled from scratch or rented as an
-expensive SaaS stack. RustIO is a third option: an open, auditable engine you
-run yourself, cheaper to operate and easier to keep control of over the years.
+RustIO was born from a real market problem. A fast-growing housing platform in
+the Swedish market — serving well over a million customers — began to crack
+under its own success, because the foundation it was built on was never designed
+to be a heavy-duty operational engine. That failure is not unique: across the
+industry, teams rebuild the same operational foundation and hit the same wall.
 
-Supporting it is early backing for that infrastructure — not a personal donation.
+Most operational software is either hand-rolled from scratch or rented as an
+expensive SaaS stack. RustIO is a third option: an open, auditable engine you run
+yourself, cheaper to operate and easier to keep control of as it grows.
+Sponsoring it is backing that infrastructure — not a personal donation — and it
+reduces the enormous, repeated waste of companies rebuilding foundations that
+were never built to last.
+
 It is worth supporting if you:
 
 - build internal tools, admin panels, or workflow/dispatch software in Rust;
 - want safe-by-construction, PostgreSQL-first business systems;
-- are a small company or team tired of SaaS lock-in and per-seat pricing;
+- are a company or team scaling past a first-generation stack, or tired of SaaS lock-in;
 - care about performance, auditability, and EU/open-source digital sovereignty.
 
 ## What sponsorship funds
