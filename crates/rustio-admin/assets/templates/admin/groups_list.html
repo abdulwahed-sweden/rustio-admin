@@ -34,7 +34,7 @@
     </tbody>
   </table>
   </div>
-  <div class="rio-board-foot"><span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ groups|length }}</strong> group{% if groups|length != 1 %}s{% endif %}</span></div>
+  <div class="rio-board-foot"><span>Showing <strong>{{ groups|length }}</strong> group{% if groups|length != 1 %}s{% endif %}</span></div>
   {% else %}
   <div class="rio-empty">
     {{ icon("key") }}

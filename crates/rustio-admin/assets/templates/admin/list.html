@@ -199,7 +199,7 @@
           {% if loop.first %}
             <a class="rio-cell-primary" href="/admin/{{ admin_name }}/{{ row.id }}/edit">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value=row.id) }}{% endif %}</a>
           {% elif f.kind == "checkbox" %}
-            <span class="rio-pill rio-pill--{% if row[f.name] %}on{% else %}off{% endif %}">{% if row[f.name] %}Yes{% else %}No{% endif %}</span>
+            <span class="rio-pill rio-pill--{% if row[f.name] %}on{% else %}off{% endif %}">{% if row[f.name] %}yes{% else %}no{% endif %}</span>
           {% elif row.links[f.name] %}
             <a class="rio-prod-name" href="{{ row.links[f.name] }}">{% if row.highlights[f.name] %}{{ row.highlights[f.name]|safe }}{% else %}{{ row[f.name]|default(value='') }}{% endif %}</a>
           {% elif row.highlights[f.name] %}
@@ -224,7 +224,7 @@
   </div>
   {% endif %}
   <div class="rio-board-foot">
-    <span style="font-size:13px;color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ rows|length }}</strong> of <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_rows }}</strong> {{ display_name|lower }}</span>
+    <span>Showing <strong>{{ rows|length }}</strong> of <strong>{{ total_rows }}</strong> {{ display_name|lower }}</span>
     {% if total_pages > 1 %}
     <nav class="rio-pagination" aria-label="Pagination">
       {% if prev_page_link %}<a class="rio-page" href="{{ prev_page_link }}" aria-label="Previous">{{ icon("arrow-left") }}</a>{% endif %}

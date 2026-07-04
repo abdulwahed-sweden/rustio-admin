@@ -56,8 +56,9 @@
 .rio-timeline-item--delete { border-inline-start-color: var(--rio-danger); }
 .rio-timeline-item--update { border-inline-start-color: var(--rio-rust); }
 
-/* ---- Badge pill ---- */
-.rio-pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: var(--rio-radius-pill); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold); background: var(--rio-sunken); color: var(--rio-text-mute); }
-.rio-pill--badge-warning { background: var(--rio-warn-tint); color: var(--rio-warn); }
+/* Status pills are owned canonically by components/data.css (§9: 15px / 700 /
+   0.25rem 0.75rem). The neutral grey badge formerly defined here is .rio-pill--neutral
+   there; --badge-warning lives there too. No local redefinition — it would override
+   the contract pill globally (loads after data.css). */
 
 .rio-form-inline { display: inline; }
