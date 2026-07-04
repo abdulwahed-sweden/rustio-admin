@@ -72,13 +72,15 @@ Postgres only. No build step. Single binary deployment.
 
 ## 30-second example
 
-An admin surface is one derive, one impl, one register call.
+An admin surface is one derive, one impl, one register call. The
+`#[derive(RustioAdmin)]` macro also emits the `Model` glue (`TABLE`,
+`COLUMNS`, `from_row`, `insert_values`) from the struct's fields — there is
+no hand-written ORM boilerplate to keep in sync.
 
 ```rust
 #[derive(RustioAdmin)]
 pub struct Post { pub id: i64, pub title: String, /* … */ }
 
-impl Model      for Post { /* TABLE, COLUMNS, from_row, insert_values */ }
 impl ModelAdmin for Post {}                  // accept every default
 
 let admin  = Admin::new().model::<Post>();
