@@ -139,7 +139,7 @@ The canonical chrome layout. Used by the footer at 0.11.0; the
 intended template for the bulk-action confirmation bar and any
 future operational strip.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────┐
 │   identity                navigation              context   │
 ├────────────────────────────────────────────────────────────┤

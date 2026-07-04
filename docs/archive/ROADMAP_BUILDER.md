@@ -46,7 +46,7 @@
 
 ---
 
-# Part 1 — The Interactive Project Compiler (Builder)
+## Part 1 — The Interactive Project Compiler (Builder)
 
 ## 0. The fundamental reframe
 
@@ -195,7 +195,7 @@ answer from Rails/Django is "you cannot edit generated code"; the
 realistic answer is "you absolutely will". So we draw the line
 explicitly:
 
-```
+```text
 src/
 ├── _generated/           ← regenerated on every commit. DO NOT EDIT.
 │   ├── models/
@@ -232,7 +232,7 @@ new layer.**
 The append-only migration contract is already declared in the
 framework. The Builder must extend it without weakening it.
 
-```
+```text
 migrations/
 ├── 0001_initial.sql              ← created on first `rustio commit`
 ├── 0002_add_appointment.sql      ← created when a model was added later
@@ -329,7 +329,7 @@ parallel ones**.
 
 ---
 
-# Part 2 — The Advisory AI Layer
+## Part 2 — The Advisory AI Layer
 
 ## 10. The one sentence that governs everything
 
@@ -368,7 +368,7 @@ compatible with regulated environments.
 
 ## 12. The four layers
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  Advisory Layer                                         │
 │    Claude / local LLM / domain expert plugin            │
@@ -475,7 +475,7 @@ rustio review <id> --amend             # open in $EDITOR to tweak before accepti
 
 Interactive review shows a colored diff:
 
-```
+```text
 proposal 01HW8K3F — claude-sonnet-4-6 — 2026-05-15 10:34
 
 ┌─ add_field  Product.sku                                    ┐
@@ -591,7 +591,7 @@ practical payoff. When the developer types
 `rustio add field Patient phone text`, the advisor infers semantic
 context from the field name:
 
-```
+```text
 field name: "phone"
 inferred semantic: PhoneNumber
 
@@ -714,7 +714,7 @@ The same Claude Code agent the developer is using to *write* their
 application can also invoke `rustio suggest` / `rustio review` as
 part of its workflow:
 
-```
+```text
 [Claude Code agent session]
 > Let's add a new Order model to the POS project
 $ rustio suggest fields Order
@@ -757,7 +757,7 @@ Every word is enforced by the architecture above, not by policy.
 
 ---
 
-# Part 3 — Sequenced roadmap
+## Part 3 — Sequenced roadmap
 
 | Version | Surface | AI involvement |
 |---|---|---|
@@ -781,7 +781,7 @@ feature that compliance teams will accept on day one. Claude is the
 
 ---
 
-# Part 4 — Open decisions
+## Part 4 — Open decisions
 
 These shape downstream work and need answers before implementation
 begins.

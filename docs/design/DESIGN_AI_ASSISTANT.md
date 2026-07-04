@@ -153,7 +153,7 @@ text (no files written) so a developer can act on the suggestion by hand.
 
 Every AI-touched change moves through a small, visible set of states:
 
-```
+```text
 Suggested  →  Reviewed  →  Approved  →  Applied
                                     ↘  Rejected
 ```
@@ -255,7 +255,7 @@ exclusive with `--by`) switches on DB-backed identity + audit mirroring
 
 ### 6.1 `rustio ai status` — reference output
 
-```
+```text
 AI Assistant: Claude Code
 Policy:       .rustio/ai.toml   (approver: administrator)
 
@@ -296,7 +296,7 @@ Developer approves → Framework applies.**
 
 ### 7.1 Create a new model — Allowed
 
-```
+```text
 Developer: "Add a Customer model with name, email, signup date."
 
 AI:        Suggested #41
@@ -312,7 +312,7 @@ is still a draft (§7.2 applies it).
 
 ### 7.2 Modify a database table — Needs approval
 
-```
+```text
 Developer: "Add a phone column to Customer."
 
 AI:        Suggested #42
@@ -329,7 +329,7 @@ Nothing reaches the database before authenticated approval.
 
 ### 7.3 Change permissions — Blocked
 
-```
+```text
 Developer: "Let the editor role delete users."
 
 AI:        This is a security setting. I cannot make this change.

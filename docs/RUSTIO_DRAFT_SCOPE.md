@@ -33,7 +33,7 @@ tested (Phase 4). rustio-draft only has to fill in the JSON.
 
 ## 2. Architecture
 
-```
+```text
    natural-language brief
    "a booking system for a salon: clients, staff, appointments"
             │

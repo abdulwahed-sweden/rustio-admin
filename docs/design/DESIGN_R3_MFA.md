@@ -212,7 +212,7 @@ and the audit emission.
 The user provisions a TOTP secret, scans the QR code, verifies
 the first code, and receives backup codes.
 
-```
+```text
    user GET /admin/account/mfa/enroll
                        │
                        ▼
@@ -278,7 +278,7 @@ After password verification, MFA-enrolled users are challenged
 on a dedicated page before the session promotes to
 `mfa_verified`.
 
-```
+```text
    user POST /admin/login (success on password)
         │
         ▼
@@ -338,7 +338,7 @@ on `/admin/mfa/verify` invalidates it.
 The user disables MFA from their account page. Re-auth requires
 both factors.
 
-```
+```text
    user GET /admin/account/mfa/disable
                        │
                        ▼
@@ -384,7 +384,7 @@ Backup codes are tried as a fallback when the user does not have
 their authenticator. The verification path in §4.2 wraps both
 TOTP and backup-code attempts.
 
-```
+```text
    user submits XXXX-XXXX on /admin/mfa/verify
                        │
                        ▼
@@ -434,7 +434,7 @@ the `mfa_last_used_step` replay rule.
 The user generates a new batch. The old batch is destroyed
 atomically.
 
-```
+```text
    user POST /admin/account/mfa/regenerate-codes
                        │
                        ▼
@@ -729,7 +729,7 @@ R3 chains:
 single file because R3 carries non-trivial cryptographic
 helpers that warrant separation.
 
-```
+```text
 crates/rustio-admin/src/auth/mfa/
   mod.rs         — public surface re-exports + outcome enums
   totp.rs        — RFC 6238 hand-rolled implementation

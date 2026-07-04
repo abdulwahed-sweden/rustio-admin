@@ -23,7 +23,7 @@ Normally *you* write those models by hand. **rustio-draft** is an optional
 helper: you give it a sentence, and it writes a `schema.json` for you (using
 Claude). Then rustio-admin turns that JSON into real code — **deterministically**.
 
-```
+```text
    "a blog with posts and comments"        (your sentence)
                 │
                 ▼
@@ -114,7 +114,7 @@ cd blog
 
 **You get:**
 
-```
+```text
 blog/
 ├── Cargo.toml            # pins rustio-admin + tokio + chrono
 ├── src/main.rs           # a placeholder (we replace it in Step 4)
@@ -132,7 +132,7 @@ rustio-draft new "a blog: posts have a title, a body, a published flag, and a pu
 
 **You should see** it print the schema and write `schema.json`:
 
-```
+```text
 Designing a schema with claude-opus-4-8…
 Wrote schema.json — 2 model(s), 7 field(s).
 
@@ -198,7 +198,7 @@ rustio-admin commit               # actually generate the code + migration
 
 **`plan`** shows you exactly what `commit` will create:
 
-```
+```text
 Plan:
   + create    src/_generated/mod.rs
   + create    src/_generated/admin.rs
@@ -210,7 +210,7 @@ Plan:
 
 **`commit`** writes them:
 
-```
+```text
 Committed 6 file(s) …
 ```
 

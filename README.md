@@ -69,7 +69,6 @@ frontend build step.
 
 Postgres only. No build step. Single binary deployment.
 
-
 ## 30-second example
 
 An admin surface is one derive, one impl, one register call. The
@@ -98,7 +97,6 @@ impl ModelAdmin for Post {
     fn ordering()      -> &'static [&'static str] { &["-created_at"] }
 }
 ```
-
 
 ## Why RustIO exists
 
@@ -132,7 +130,6 @@ engineering attention. The rest stays intentionally simple.
 The framework surface stays intentionally narrow so the
 security-sensitive paths remain reviewable.
 
-
 ## Core principles
 
 The invariants the framework refuses to break.
@@ -149,7 +146,6 @@ The invariants the framework refuses to break.
 
 > **No plaintext at rest**
 > Argon2id for passwords. SHA-256 for session and reset tokens.
-
 
 ## What's in the box
 
@@ -236,7 +232,6 @@ The surface is grouped into these concerns.
 Most projects use a subset. The framework does not require
 adopting all of it.
 
-
 ## Install
 
 The library and the CLI ship as separate crates.
@@ -252,7 +247,6 @@ chrono = { version = "0.4", features = ["serde"] }
 cargo install rustio-admin-cli      # provides the `rustio-admin` binary
 ```
 
-
 ## Documentation
 
 Full documentation index: [`docs/README.md`](./docs/README.md).
@@ -263,7 +257,6 @@ Full documentation index: [`docs/README.md`](./docs/README.md).
 | [`docs/design/`](./docs/design/)           | Long-form design contracts — one file per security-sensitive subsystem. |
 | [`docs/public-api.md`](./docs/public-api.md) | Enumerated public API surface (generated; descriptive, not normative). |
 | [`docs/archive/`](./docs/archive/)         | Historical and superseded planning material.                   |
-
 
 ## Reading paths
 
@@ -294,7 +287,6 @@ Where to start depends on the work.
 → [`docs/architecture.md`](./docs/architecture.md)
 → [`STRATEGIC_RESET_PLAN.md`](./docs/archive/STRATEGIC_RESET_PLAN.md)
 → [`CHANGELOG.md`](./CHANGELOG.md)
-
 
 ## Doctrine documents
 
@@ -341,7 +333,6 @@ subordinate to code: subordinate, append-only, human-ratified (ships in
 
 Each document is the source of truth for its surface.
 
-
 ## Workspace layout
 
 Four crates ship together. The split keeps proc-macros, the
@@ -359,7 +350,6 @@ cargo build --workspace
 cargo test  --workspace
 ```
 
-
 ## Non-goals
 
 RustIO is intentionally narrow in scope.
@@ -373,11 +363,9 @@ RustIO is intentionally narrow in scope.
 - Not multi-database. Postgres only, by design.
 - Not schema-contract-driven.
 
-
 ## CLI
 
 See [`docs/cli.md`](docs/cli.md) for the full command reference.
-
 
 ## Naming — what about `rustio`?
 
@@ -391,11 +379,9 @@ The two are different in scope — this project (`rustio-admin`) targets Postgre
 
 For how the active `rustio-admin` line relates to the earlier `rustio-core` line, the separate `rustio-draft` companion, and the reserved `rustio-pro-*` crates, see [`docs/project-status.md`](./docs/project-status.md) and [`docs/versioning.md`](./docs/versioning.md). Release steps live in [`RELEASING.md`](./RELEASING.md).
 
-
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).
-
 
 ## Sponsor RustIO
 

@@ -43,7 +43,7 @@ rustio-admin new clinic             # at "Project type", choose 2) clinic
 
 The wizard asks three short questions and writes a matching `.env`:
 
-```
+```text
 Step 2 of 3 · Project type
   clinic and blog come with example models you can run right away;
   the rest start clean.
@@ -70,7 +70,7 @@ cargo run                           # first build takes a few minutes; later run
 Open **<http://127.0.0.1:8000/admin>**, sign in, and you have a working
 clinic:
 
-```
+```text
 Patients (3)              Appointments (3)
   Sarah Ahmed               Sarah Ahmed · Annual checkup · scheduled
   John Okoro                John Okoro  · Follow-up      · scheduled
@@ -118,7 +118,7 @@ the wizard and writes `.env.example` instead.
 
 The `custom` scaffold is neutral — no demo models, nothing to delete later:
 
-```
+```text
 shop/
 ├── Cargo.toml
 ├── .env                    # written by the wizard (.env.example for startproject)
@@ -173,7 +173,7 @@ rustio-admin startapp product \
 
 **Creates** a `Product` with three columns:
 
-```
+```text
 Product
 ├── name       str        (TEXT)
 ├── price      decimal    (NUMERIC)
@@ -182,7 +182,7 @@ Product
 
 **Generates**, and tells you exactly what to wire:
 
-```
+```text
 ✓ src/product.rs                       the Rust model (+ admin defaults)
 ✓ migrations/0001_create_products.sql  the table
 
@@ -221,7 +221,7 @@ create, edit, search, delete — permission-seeded (`view_product`,
 `--field <name>:<type>` accepts a closed vocabulary, so model and migration
 always line up:
 
-```
+```text
 str   text   int   bigint   float   decimal   bool
 timestamp   date   time   uuid   email   phone   json
 fk:<Model>            a foreign key — renders as a link to the related row

@@ -234,7 +234,7 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
 
 ## 7. Source layout
 
-```
+```text
 crates/rustio-admin/assets/static/admin/
 ├── admin.css            ← contributor-facing @import manifest
 ├── tokens/              ← single source of truth for the visual scale

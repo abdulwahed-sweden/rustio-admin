@@ -123,7 +123,7 @@ source.
 
 ### 2.3 Layout
 
-```
+```text
 <project root>/
 ├── CLOUD.md                       # generated human view (committed, do-not-edit banner)
 └── .rustio/memory/
@@ -206,7 +206,7 @@ frontmatter (a boring, off-the-shelf parser, no bespoke format). This
 refines an encoding detail only; it touches **no invariant** (CLAUDE.md:
 "don't add dependencies unless they clearly earn their place").
 
-```
+```text
 +++
 id = "01J9Z…"                # ULID; also the filename
 type = "rejected"            # see §3.2
@@ -268,7 +268,7 @@ operation that rewrites an existing entry file. It replaces the prohibited
 **body** with a recorded marker, leaving the frontmatter (id, type, date,
 `correlation_id`) intact so the *act* stays bounded and attributable:
 
-```
+```text
 > [content removed: class=token · 2026-06-02 · by=amir@team · audit=0190…]
 ```
 
@@ -332,7 +332,7 @@ proliferation is visible and reviewable.
 Memory-write **is an AI capability** and flows through the existing
 pipeline unchanged (`DESIGN_AI_ASSISTANT.md` §4):
 
-```
+```text
 Suggested  →  Reviewed  →  Approved  →  Applied
                                     ↘  Rejected
 ```

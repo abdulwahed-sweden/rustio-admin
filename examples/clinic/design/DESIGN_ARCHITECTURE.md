@@ -21,7 +21,7 @@ patient. Three business capabilities (Rust crates) group the four tables:
 - **Scheduling** — `Appointment` (booked visits)
 - **Billing** — `Invoice` (money owed)
 
-```
+```text
 Patient (hub)
   ├─ Vitals        (patient_id → patients.id, ON DELETE CASCADE)
   ├─ Appointment   (patient_id → patients.id, ON DELETE CASCADE)

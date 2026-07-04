@@ -218,7 +218,7 @@ the locked page copy returned to the user.
 
 ### 4.1 Overview
 
-```
+```text
                                  ┌──────────────────────────────────┐
                                  │                                  │
             email submitted      ▼                                  │
@@ -1115,7 +1115,7 @@ question) checks: if `mailer` is `None` (still defaulted to
 `LogMailer`) and `recovery_policy.boot_guard_strict() == true`,
 refuse to boot with a clear error:
 
-```
+```text
 configuration error: production deployment must register a real mailer
 via Admin::mailer(Arc::new(MyProjectMailer::new(...))). The default
 LogMailer is only suitable for dev / CI / testing — recovery emails
@@ -1575,7 +1575,7 @@ correction), #12 (sweeper). `cargo clippy --workspace
 After commit 12, the pre-publish gate runs in full per
 `working_style.md`:
 
-```
+```bash
 cargo fmt --all
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings

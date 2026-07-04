@@ -33,7 +33,7 @@ ever needed: `git log --all -- docs/visual-reference/`.
 
 For the record, the nine pages were:
 
-```
+```text
 admin_reset_password · feature_flags · form · group_edit
 group_new · lock_user · password_change · user_new · products_list
 ```

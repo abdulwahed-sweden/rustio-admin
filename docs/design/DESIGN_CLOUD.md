@@ -214,7 +214,7 @@ proposal→approval→record lifecycle already defined in
 names. Writing a memory entry is an AI **capability** in that system, and
 it moves through the same states:
 
-```
+```text
 Suggested  →  Reviewed  →  Approved  →  Applied
                                     ↘  Rejected
 ```

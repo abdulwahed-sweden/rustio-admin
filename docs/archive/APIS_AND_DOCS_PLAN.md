@@ -349,7 +349,7 @@ footnotes / math later, swap to `comrak` in a minor.
 
 ## 5. Dependencies + ordering
 
-```
+```text
 Phase A (read API)
    ↓
 Phase B (mutating API) — depends on A's serialize.rs
