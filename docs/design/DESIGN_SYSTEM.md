@@ -172,7 +172,7 @@ read but never redefine.
 
 ### 4.1 The three layers
 
-```
+```text
 Framework tokens (admin.css)        ← single source of truth
     │                                  --rio-accent, --rio-fs-*, --rio-s*, …
     │
@@ -357,7 +357,7 @@ source of truth for the framework's design tokens. Three
 canonical sections live there, each marked with a banner
 comment so a diff in those blocks is visually loud:
 
-```
+```text
 === Tokens — colors ===
 === Tokens — typography ===
 === Tokens — spacing ===

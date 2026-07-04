@@ -4,7 +4,7 @@ Module map — read this before contributing or filing a structural bug. The ful
 
 ## Workspace
 
-```
+```text
 rustio-admin/
 ├── crates/
 │   ├── rustio-admin/          ← the library (everything project code consumes)
@@ -99,7 +99,7 @@ Located under `crates/rustio-admin/assets/static/admin/`. Hand-written, **no bui
 
 The CSS is a **Primer/Carbon-style multi-file architecture**, concatenated into one bundle served at `/static/admin.css`:
 
-```
+```text
 tokens/ → base/ → layout/ → components/ → pages/ → print/
 ```
 
@@ -161,7 +161,7 @@ Everything else (`ConcreteOps`, `AdminOps`, `ListOpts`, `BaseContext`, …) is `
 
 The full list lives in [§8 of the strategic reset plan](./archive/STRATEGIC_RESET_PLAN.md#8-strict-architectural-rules). CI enforces **rule #1** (no Tier 2 features) with a `git grep` guard on every PR (scoped to source/TOML, excluding `crates/*/assets/`):
 
-```
+```bash
 forbidden='HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel'
 ```
 

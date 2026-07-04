@@ -33,7 +33,7 @@ The framework's job is **the admin panel and the auth/permissions/templates that
 
 ### Architectural boundaries
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │  IN SCOPE — Tier 1 (this repo)                  │
 │  ─────────────────────────────                  │
@@ -247,7 +247,7 @@ Per-subsystem decision matrix. **Total LOC budget: ≤8,000 for the lib crate** 
 
 ### Directory layout
 
-```
+```text
 rustio-admin/
 ├── Cargo.toml                           workspace
 ├── README.md

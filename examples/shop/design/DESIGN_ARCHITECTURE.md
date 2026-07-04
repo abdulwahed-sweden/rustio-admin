@@ -29,7 +29,7 @@ Nine models group into three operator-facing domains:
 
 ## Navigation Structure
 
-```
+```text
 Dashboard
 Catalogue
   ├─ Products

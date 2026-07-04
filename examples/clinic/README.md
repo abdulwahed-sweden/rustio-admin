@@ -7,7 +7,7 @@ point. (For the *why*, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).)
 
 ## What each folder is
 
-```
+```text
 clinic-admin/
 ├── Cargo.toml          the workspace (lists the crates)
 ├── .env.example        copy to .env, set DATABASE_URL, then run

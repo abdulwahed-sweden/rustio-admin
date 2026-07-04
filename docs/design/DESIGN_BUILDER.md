@@ -447,7 +447,7 @@ SchemaHash, and per-file event emission.
 
 ### 5.1 Directory boundary
 
-```
+```text
 src/
 ├── _generated/           ← generator territory. Regenerated on every commit.
 │   ├── models/

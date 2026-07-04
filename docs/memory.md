@@ -88,7 +88,7 @@ place — that belongs in code or a design doc.
 Every change to memory runs through the same **propose → approve → apply**
 pipeline that `rustio-admin ai` uses — one governance path, no exceptions:
 
-```
+```text
 remember / supersede / redact   →   approve (a human)   →   apply
         (proposes)                                       (writes the entry,
                                                           re-renders CLOUD.md)
@@ -104,7 +104,7 @@ the moment a human ratifies it.
 
 ### Where things live
 
-```
+```text
 your-project/
 ├── CLOUD.md                     ← generated, human-readable; do not hand-edit
 └── .rustio/memory/

@@ -97,7 +97,7 @@ delete`). Every emergency operation has the same envelope:
 
 ### 3.1 `rustio-admin user reset-password`
 
-```
+```bash
 rustio-admin user reset-password --email <e> --reason "<text>" [--temp-password <p>] [--yes]
 ```
 
@@ -112,7 +112,7 @@ never lands in a log, an audit row, or any other DB column.
 
 ### 3.2 `rustio-admin user unlock`
 
-```
+```bash
 rustio-admin user unlock --email <e> --reason "<text>" [--yes]
 ```
 
@@ -123,7 +123,7 @@ event. Writes `EmergencyRecovery` with `metadata.cli_operation
 
 ### 3.3 `rustio-admin user disable-mfa`
 
-```
+```bash
 rustio-admin user disable-mfa --email <e> --reason "<text>" [--yes]
 ```
 
@@ -146,7 +146,7 @@ login. Proceed?")
 
 ### 3.4 `rustio-admin user promote`
 
-```
+```bash
 rustio-admin user promote --email <e> --to-role <role> --reason "<text>" [--yes]
 ```
 
@@ -164,7 +164,7 @@ demote-from-administrator operation.
 
 ### 3.5 `rustio-admin user emergency-access`
 
-```
+```bash
 rustio-admin user emergency-access --email <e> --reason "<text>" [--ttl-minutes <n>] [--yes]
 ```
 
@@ -190,7 +190,7 @@ holds the plaintext.
 Every emergency command prints a red ANSI banner before the
 mutation lands. The banner format is locked:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │  ⚠  EMERGENCY OPERATION — RUSTIO ADMIN CLI                   │
 ├──────────────────────────────────────────────────────────────┤

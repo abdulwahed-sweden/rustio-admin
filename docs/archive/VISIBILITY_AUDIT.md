@@ -148,7 +148,7 @@ The `rustio_admin_actions.model_name` column is supposed to be (in practice) the
 
 **Live evidence from lursystem's DB right now:**
 
-```
+```text
   model_name  | count
 --------------+-------
  rustio_users |     9
@@ -165,7 +165,7 @@ Both 404 against the real admin slug `users`. **Every History-page user-row link
 
 `_sidebar.html` contains:
 
-```
+```html
 {% if entries %}                          ← dynamic Models loop (project models)
   <h3>Models</h3>
   {% for entry in entries %}
@@ -221,7 +221,7 @@ Lursystem wires the correct chain because the maintainer read DESIGN_AUDIT. A sc
 
 Generated `.env.example.tmpl`:
 
-```
+```text
 DATABASE_URL=postgres://...
 RUSTIO_TEMPLATE_DIR=templates
 RUST_LOG=info

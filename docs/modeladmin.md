@@ -36,7 +36,7 @@ impl ModelAdmin for Article {
 
 `/admin/articles` now renders:
 
-```
+```text
 Articles                              search: title, body   [ + Add article ]
   Status ▾   Author ▾                 ← filter chips
 
