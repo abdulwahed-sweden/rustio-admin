@@ -134,7 +134,7 @@ conventions owned by Case 4.
 
 `surface_fitness(color)` scores how well a color carries large surfaces:
 
-```
+```text
 contrast_score  =  ln(contrast_ratio(white, color)).max(0)   // log-shaped: 7.0 doesn't dwarf 4.5
 lightness_penalty = (l − 0.55)²                               // distance from a comfortable mid-tone
 chroma_penalty    = ((c − 0.10).max(0))² · 4                 // vivid colors tire the eye at scale

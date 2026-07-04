@@ -2842,7 +2842,8 @@ pub(crate) async fn show_object_history(
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::ObjectHistoryCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
-            .with_unread_count(unread),
+            .with_unread_count(unread)
+            .with_nav_active(admin_name),
         page_title: format!("History: {} — {}", entry.singular_name, label),
         admin_name: admin_name.to_string(),
         display_name: entry.display_name.to_string(),
@@ -3035,6 +3036,36 @@ pub(crate) async fn do_toggle_feature_flag(
 }
 
 // ---- View designer (/admin/dev/view-designer) ------------------------------
+
+/// The Schema review page: a read-only view of the registered models and
+/// their fields (as the framework sees them), with a handoff to the build-time
+/// `builder` CLI. The runtime only reads its own model registry; schema
+/// changes (add model/field, plan, commit) are a setup-time CLI step.
+pub(crate) async fn show_schema(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let mut view = render::schema_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/schema.html", &view)?;
+    Ok(Response::html(body))
+}
+
+/// The Branding page: pick a brand colour, preview it live (client-side, via
+/// CSS-variable injection — ephemeral), and copy the build-time CLI command +
+/// `RUSTIO_TOKENS_CSS` wiring to bake it. The runtime never links `rio-theme`;
+/// baking is a setup-time step (`rustio-admin theme generate|wizard`).
+pub(crate) async fn show_branding(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: &Request,
+) -> Result<Response> {
+    let mut view = render::branding_ctx(&identity, &ctx.admin, csrf_token(req));
+    view.base.unread_count = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let body = ctx.templates.render("admin/branding.html", &view)?;
+    Ok(Response::html(body))
+}
 
 /// Index: list every project model so a developer can pick one to design.
 pub(crate) async fn show_view_designer(
@@ -3427,8 +3458,8 @@ mod view_designer_tests {
             context! { slug => "list", label => "List" },
         ];
         let fields = vec![
-            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false },
-            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true },
+            context! { name => "full_name", label => "Full Name", role => "primary", priority => 0, filterable => false, composed => true },
+            context! { name => "status", label => "Status", role => "badge", priority => 10, filterable => true, composed => false },
         ];
 
         let mode_choices = vec![
@@ -3468,6 +3499,7 @@ mod view_designer_tests {
                 comp_slots => comp_slots,
                 fields => fields,
                 preview => Value::from_serialize(&preview),
+                spec_json => "{\n  \"model\": \"customer\"\n}",
             })
             .unwrap();
 
@@ -3550,7 +3582,8 @@ pub(crate) async fn show_log_entries(
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::LogEntriesCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
-            .with_unread_count(unread),
+            .with_unread_count(unread)
+            .with_nav_active("history"),
         page_title: "Recent admin actions",
         entries: ctx
             .admin

@@ -70,6 +70,7 @@
 @import url("pages/detail.css");
 @import url("pages/account.css");
 @import url("pages/tools.css");
+@import url("pages/view-designer.css");
 
 /* ---- Print — drop chrome, keep ink. */
 @import url("print/print.css");

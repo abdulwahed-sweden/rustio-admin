@@ -422,6 +422,14 @@ const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         include_str!("../assets/templates/admin/view_designer_model.html"),
     ),
     (
+        "admin/branding.html",
+        include_str!("../assets/templates/admin/branding.html"),
+    ),
+    (
+        "admin/schema.html",
+        include_str!("../assets/templates/admin/schema.html"),
+    ),
+    (
         "admin/view_layer/_cell.html",
         include_str!("../assets/templates/admin/view_layer/_cell.html"),
     ),
@@ -685,6 +693,61 @@ mod tests {
                 assert!(!msg.contains("not found"), "{name} failed to load: {msg}");
             }
         }
+    }
+
+    /// The command rail marks exactly the current page's entry with
+    /// `aria-current="page"`, driven by the `nav_active` key the page
+    /// contexts set via `BaseContext::with_nav_active`. Guards against the
+    /// rail silently losing its active-state highlighting again (the key
+    /// was unset for a long time, so the comparison was always false).
+    #[test]
+    fn sidebar_marks_active_nav_item() {
+        let t = Templates::new(None).unwrap();
+        let render_with = |active: &str| {
+            t.render(
+                "admin/_sidebar.html",
+                &minijinja::context! {
+                    app_name => "Test Admin",
+                    nav_active => active,
+                    identity => minijinja::context! { is_admin => true, is_developer => true },
+                    entries => vec![
+                        minijinja::context! { admin_name => "customer", display_name => "Customers" },
+                    ],
+                },
+            )
+            .unwrap()
+        };
+
+        // A built-in section key (Users) highlights its own link and nothing else.
+        let users = render_with("users");
+        assert!(
+            users.contains(r#"href="/admin/users" aria-current="page""#),
+            "Users link should be active when nav_active=users"
+        );
+        assert_eq!(
+            users.matches(r#"aria-current="page""#).count(),
+            1,
+            "exactly one rail item is active"
+        );
+
+        // A model's admin_name highlights that model's link.
+        let model = render_with("customer");
+        assert!(
+            model.contains(r#"href="/admin/customer" aria-current="page""#),
+            "model link should be active when nav_active matches its admin_name"
+        );
+
+        // The new developer entry highlights when active and is always present.
+        let designer = render_with("view-designer");
+        assert!(designer.contains(r#"href="/admin/dev/view-designer""#));
+        assert!(
+            designer.contains(r#"href="/admin/dev/view-designer" aria-current="page""#),
+            "View designer link should be active when nav_active=view-designer"
+        );
+
+        // An unrelated key leaves the rail with no active item.
+        let none = render_with("");
+        assert_eq!(none.matches(r#"aria-current="page""#).count(), 0);
     }
 
     /// Regression gate for the 0.7.0 → 0.7.1 fix.

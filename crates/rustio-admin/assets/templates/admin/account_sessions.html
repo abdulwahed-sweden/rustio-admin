@@ -26,9 +26,9 @@
       {% if s.is_current %}
       <span class="rio-sess-note">This session — use &ldquo;Sign out everywhere&rdquo; below to revoke it.</span>
       {% else %}
-      <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline" style="margin-inline-start:auto">
+      <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline rio-sess-revoke">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-        <button type="submit" class="rio-btn rio-btn--secondary rio-btn--sm" style="color:var(--rio-danger)">{{ icon("trash") }} Revoke</button>
+        <button type="submit" class="rio-btn rio-btn--secondary rio-btn--sm">{{ icon("trash") }} Revoke</button>
       </form>
       {% endif %}
     </div>

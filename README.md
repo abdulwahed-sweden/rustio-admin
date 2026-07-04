@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  Postgres-first administrative framework for Rust applications.
+  A Rust-first business-system engine — the operational foundation for serious software.
 </p>
 
 <p align="center">
@@ -22,35 +22,64 @@
 
 ## What is RustIO?
 
-RustIO (`rustio-admin`) is an **administrative framework for Rust**, backed
-by Postgres — the Rust answer to "Django Admin." You describe your data as
-plain Rust structs; RustIO gives you the admin panel *and* the things real
-admin tools run on underneath: authentication, sessions, password recovery,
-role-based access, and a complete audit trail.
+RustIO (`rustio-admin`) is a **Rust-first business-system engine** — the
+operational foundation you build serious software on: admin panels, workflows,
+dispatch and booking backends, audit trails, and the internal tools a real
+business runs on. It is not a throwaway dashboard or one more CRUD screen; it is
+the layer *underneath* those things, engineered to stay fast, safe, and
+understandable as a company grows.
 
-**What makes it different.** Most admin tools treat CRUD as the product and
-bolt on auth, recovery, and audit afterward. RustIO inverts that.
-*Authority* — who may do what, how sessions end, how access is recovered,
-what gets recorded — is **designed as one system, not assembled from
-separate parts**, and governed by checked-in contract documents. The CRUD is
-the easy layer on top.
+**The problem it solves.** RustIO was born from a real market problem, not from
+a wish to build another admin panel. A fast-growing housing platform in the
+Swedish market — serving well over a million customers — began to crack under
+its own success. Not because of its engineers, but because the foundation it was
+built on was never designed to be a heavy-duty operational engine. As data
+grows, workflows multiply, and operational pressure rises, conventional web
+stacks start to show their limits: slower performance, climbing infrastructure
+cost, fragile changes, and constant firefighting. The problem was never the
+team — it was a weak foundation.
 
-**Who it's for.** Rust teams that want a trustworthy internal admin without
-wiring auth + sessions + recovery + audit together from separate crates —
-and without a frontend build step.
+RustIO exists for exactly that moment: **when a business outgrows its first
+system and needs a foundation that won't collapse under its own growth** — one
+built for speed, memory safety, structural correctness, and long-term evolution.
+
+**From idea to a safe foundation.** The workflow is deliberately simple:
+
+> **Idea → Draft schema → Validate → Human review → Safe operational foundation.**
+
+You describe what you need; the [`rustio-draft`](https://github.com/abdulwahed-sweden/rustio-draft)
+companion drafts a `schema.json`; RustIO validates it against strict, checked-in
+rules; a human reviews and approves the change; and you are left with a
+foundation you can keep evolving for years. *AI drafts. RustIO validates. Diff
+protects. Human approves.*
+
+**What makes it different.** Most admin tools treat CRUD as the product and bolt
+on auth, recovery, and audit afterward. RustIO inverts that. *Authority* — who
+may do what, how sessions end, how access is recovered, what gets recorded — is
+**designed as one system, not assembled from separate parts**, and governed by
+checked-in contract documents. The CRUD is the easy layer on top. (In Django
+terms, it is "the Rust answer to Django Admin" — but built for operations that
+have to last.)
+
+**Who it's for.** Teams building operational software that has to survive
+growth: internal admin, workflow and dispatch backends, and business systems
+that outgrew a first-generation stack. You get a trustworthy core without wiring
+auth + sessions + recovery + audit together from separate crates — and without a
+frontend build step.
 
 Postgres only. No build step. Single binary deployment.
 
-
 ## 30-second example
 
-An admin surface is one derive, one impl, one register call.
+An admin surface is one derive, one impl, one register call. The
+`#[derive(RustioAdmin)]` macro also emits the `Model` glue (`TABLE`,
+`COLUMNS`, `from_row`, `insert_values`) from the struct's fields — there is
+no hand-written ORM boilerplate to keep in sync.
 
 ```rust
 #[derive(RustioAdmin)]
 pub struct Post { pub id: i64, pub title: String, /* … */ }
 
-impl Model      for Post { /* TABLE, COLUMNS, from_row, insert_values */ }
 impl ModelAdmin for Post {}                  // accept every default
 
 let admin  = Admin::new().model::<Post>();
@@ -68,7 +97,6 @@ impl ModelAdmin for Post {
     fn ordering()      -> &'static [&'static str] { &["-created_at"] }
 }
 ```
-
 
 ## Why RustIO exists
 
@@ -102,7 +130,6 @@ engineering attention. The rest stays intentionally simple.
 The framework surface stays intentionally narrow so the
 security-sensitive paths remain reviewable.
 
-
 ## Core principles
 
 The invariants the framework refuses to break.
@@ -119,7 +146,6 @@ The invariants the framework refuses to break.
 
 > **No plaintext at rest**
 > Argon2id for passwords. SHA-256 for session and reset tokens.
-
 
 ## What's in the box
 
@@ -206,14 +232,13 @@ The surface is grouped into these concerns.
 Most projects use a subset. The framework does not require
 adopting all of it.
 
-
 ## Install
 
 The library and the CLI ship as separate crates.
 
 ```toml
 [dependencies]
-rustio-admin = "0.30.0"
+rustio-admin = "0.31.0"
 tokio  = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = { version = "0.4", features = ["serde"] }
 ```
@@ -221,7 +246,6 @@ chrono = { version = "0.4", features = ["serde"] }
 ```sh
 cargo install rustio-admin-cli      # provides the `rustio-admin` binary
 ```
-
 
 ## Documentation
 
@@ -233,7 +257,6 @@ Full documentation index: [`docs/README.md`](./docs/README.md).
 | [`docs/design/`](./docs/design/)           | Long-form design contracts — one file per security-sensitive subsystem. |
 | [`docs/public-api.md`](./docs/public-api.md) | Enumerated public API surface (generated; descriptive, not normative). |
 | [`docs/archive/`](./docs/archive/)         | Historical and superseded planning material.                   |
-
 
 ## Reading paths
 
@@ -264,7 +287,6 @@ Where to start depends on the work.
 → [`docs/architecture.md`](./docs/architecture.md)
 → [`STRATEGIC_RESET_PLAN.md`](./docs/archive/STRATEGIC_RESET_PLAN.md)
 → [`CHANGELOG.md`](./CHANGELOG.md)
-
 
 ## Doctrine documents
 
@@ -311,7 +333,6 @@ subordinate to code: subordinate, append-only, human-ratified (ships in
 
 Each document is the source of truth for its surface.
 
-
 ## Workspace layout
 
 Four crates ship together. The split keeps proc-macros, the
@@ -329,7 +350,6 @@ cargo build --workspace
 cargo test  --workspace
 ```
 
-
 ## Non-goals
 
 RustIO is intentionally narrow in scope.
@@ -343,11 +363,9 @@ RustIO is intentionally narrow in scope.
 - Not multi-database. Postgres only, by design.
 - Not schema-contract-driven.
 
-
 ## CLI
 
 See [`docs/cli.md`](docs/cli.md) for the full command reference.
-
 
 ## Naming — what about `rustio`?
 
@@ -357,51 +375,42 @@ As of v0.22.0 the binary published by this project is named **`rustio-admin`**, 
 
 The two are different in scope — this project (`rustio-admin`) targets Postgres-only admin panels with a narrow, doctrine-governed surface; the sibling project layers an admin UI, an ORM, and a guided schema-evolution wizard over a strict typed core with SQLite. Same name prefix, different goals.
 
+**Install target.** The crate to install is **`rustio-admin-cli`** (`cargo install rustio-admin-cli`), which provides the **`rustio-admin`** binary. Do **not** `cargo install rustio` — that crate name is unrelated and is not this project.
+
+For how the active `rustio-admin` line relates to the earlier `rustio-core` line, the separate `rustio-draft` companion, and the reserved `rustio-pro-*` crates, see [`docs/project-status.md`](./docs/project-status.md) and [`docs/versioning.md`](./docs/versioning.md). Release steps live in [`RELEASING.md`](./RELEASING.md).
 
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).
 
+## Sponsor RustIO
 
-## Support RustIO
+> Build systems quickly.
+> Evolve them safely.
+> Stay in control.
 
-RustIO is an independent open-source project built and maintained over countless evenings, weekends, experiments, failures, lessons, and improvements.
+RustIO is developed and maintained independently — no company, investors, or
+outside funding behind it. Sponsorship is early backing for open Rust
+infrastructure, not a personal donation. It funds the open-source work and keeps
+the core free and inspectable.
 
-Its mission is simple:
+**What sponsorship funds**
 
-**Build systems quickly.
-Evolve them safely.
-Stay in control.**
+- Documentation, guides, and onboarding.
+- Realistic examples and reference verticals.
+- Testing, review, and long-term maintenance of the security-sensitive
+  authority, session, and audit surfaces.
+- Schema-driven admin generation and developer experience.
 
-In a world where software changes faster than ever — and where AI can generate code in seconds — RustIO is built around a simple belief:
+**Who it's for.** Rust developers, technical teams, and small companies building
+internal tools, admin panels, and workflow/dispatch software who want a safe,
+PostgreSQL-first foundation instead of an expensive SaaS stack.
 
-You should never have to choose between speed and control.
+RustIO stays free and MIT-licensed regardless of sponsorship. A separate,
+open-core commercial layer (the `rustio-pro` line — hosted option, vertical
+packs, support) funds sustained work without gating the core; see
+[`docs/commercial-model.md`](./docs/commercial-model.md).
 
-You should be able to move fast, benefit from modern tools, embrace AI where it helps, and still understand, maintain, and own your system years later.
-
-There is no company behind RustIO.
-
-No investors.
-
-No external funding.
-
-Every improvement — documentation, testing, tooling, reviews, maintenance, and long-term development — is funded by the time invested in the project itself.
-
-If RustIO has saved you time, helped your team, improved your work, or simply resonates with the way you believe software should be built, you can support its continued development.
-
-Your support helps fund:
-
-* Documentation and learning resources
-* Testing and quality improvements
-* Tooling and developer experience
-* Long-term maintenance and sustainability
-
-Support is appreciated, but never expected.
-
-RustIO will remain free and MIT-licensed regardless.
-
-Thank you for being part of the journey.
-
-**Ethereum · Polygon · Arbitrum · Base (ERC-20)**
-
-`0x3011BfD673a9D09f9761203A7fFCca757Af22587`
+→ **[Sponsor on GitHub](https://github.com/sponsors/abdulwahed-sweden)** · tiers
+in [`SPONSORS.md`](./SPONSORS.md) · details in
+[`docs/sponsorship.md`](./docs/sponsorship.md).

@@ -216,7 +216,7 @@ the guards that must pass, and the audit emission.
 The admin issues a reset via email mode (mailer-delivered link)
 or temp_pw mode (single-disclosure temp password).
 
-```
+```text
                                 ┌────────────┐
    admin GET                    │            │
    /users/:id/reset-password    │            │
@@ -286,7 +286,7 @@ gives them a working path even when the mailer isn't wired.
 The admin locks an account for a specified duration with a
 reason. The unlock route reverses the lock.
 
-```
+```text
    admin POST /users/:id/lock              admin POST /users/:id/unlock
    (reason)                                (reason)
         │                                          │
@@ -325,7 +325,7 @@ the column is never NULL while locked. NULL = unlocked.
 A user with five failed logins inside a ten-minute window is
 soft-locked for fifteen minutes.
 
-```
+```text
                 ┌──────────────────┐
    POST         │                  │
    /admin/login │   Login flow     │
@@ -388,7 +388,7 @@ A user whose `must_change_password` flag is `TRUE` is redirected
 to the interstitial on every admin route except the locked
 whitelist.
 
-```
+```text
    user POST /admin/login (success)
         │
         ▼
@@ -441,7 +441,7 @@ the flag set are forced through.
 Destructive admin routes require a session whose `elevated_until`
 is in the future. The re-auth flow stamps the column.
 
-```
+```text
    admin clicks /admin/users/:id/reset-password
                           │
                           ▼
@@ -1228,7 +1228,7 @@ reset), #17 (route registration). `cargo clippy --workspace
 After commit 17 the pre-publish gate ran in full per
 `working_style.md`:
 
-```
+```bash
 cargo fmt --all
 cargo test --workspace
 cargo test --workspace --features integration-test  # testcontainers suite

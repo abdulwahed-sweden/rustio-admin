@@ -35,14 +35,15 @@ text         = "#0f172a"   # slate-900
 text-muted   = "#475569"   # slate-600
 border       = "#e2e8f0"   # slate-200
 
-# ── Navigation grouping (Tier 1 — grouping only; role-scoping needs later
-#    framework support). Vitals is reached via a patient, so it is hidden. ──
-[navigation]
-Patients   = "Patients"
-Scheduling = "Appointments"
-Billing    = "Invoices"
-_hidden    = "Vitals"
-_out       = "templates/admin/_sidebar.html"
+# ── Navigation grouping: DEFERRED (2026-06-29). The framework migrated its
+#    sidebar to the dark `.rio-rail` command rail, which already auto-builds
+#    grouped nav (Models / Access / Developer) from the model registry. The
+#    previously generated `templates/admin/_sidebar.html` emitted pre-rail
+#    `.rio-sidebar` markup that no longer matches any CSS, so it was dropped
+#    and the clinic now uses the framework's embedded rail. Custom group
+#    labels (Patients/Scheduling/Billing) and hiding Vitals need a rail-aware
+#    generator + framework support — re-add the [navigation] block (with
+#    `_out`) once that lands. See design/DESIGN_HISTORY.md (2026-06-29).
 
 # ── Safe visual seam (Tier 1). custom_css is validated (no @import / remote
 #    url / markup). Status pills, USD money formatting, and per-column PII

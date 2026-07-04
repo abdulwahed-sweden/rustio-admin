@@ -6,10 +6,49 @@ the project adheres to [SemVer](https://semver.org/) once it
 leaves the alpha track.
 
 
+## Unreleased
+
+*Nothing yet — work for the next release lands here.*
+
+
+## 0.31.0 — 2026-07-03
+
+Rolls up roughly three weeks of work on `main` since `v0.30.0`.
+
+### Audit
+
+Dependency and toolchain floor moved: **sqlx 0.8 → 0.9**, which raises the
+**MSRV from 1.88 to 1.94**. The security-sensitive crypto stack (argon2,
+aes-gcm, sha2, sha1, hmac, rand) is **unchanged** this cycle — that migration
+stays deferred until argon2/aes-gcm ship stable (tracked separately). No schema,
+route, auth, permission, or migration change to existing models.
+
+### Features
+
+- Adaptive, deterministic **view layer** for models, a **View designer**
+  (`/admin/dev/view-designer`), and the first **Studio** phases: in-admin
+  branding + theme wizard, a row-based composition editor, a read-only schema
+  review page, and deterministic `schema.json` import.
+- `examples/shop`: Swedish-first payment methods and a framework repalette to a
+  rust accent + JetBrains Mono. Sign-out is now a POST form (not a GET link).
+
+### Companion & docs
+
+- **`rustio-draft`** (natural-language brief → `schema.json`) was built (F1–F5)
+  and **relocated to its own repository**; the integration docs remain here.
+- New project docs (`docs/project-status.md`, `docs/versioning.md`), a
+  professional sponsorship foundation (`SPONSORS.md`, `docs/sponsorship.md`,
+  `docs/commercial-model.md`, `docs/verticals.md`, `.github/FUNDING.yml`), and an
+  elevated positioning pass across the README and sponsorship docs.
+
+*Released 2026-07-03 — tag `v0.31.0`, GitHub Release, and published to crates.io.*
+
+
 ## Releases at a glance
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.31.0** | 2026-07-03 | **Adaptive view layer + Studio, sqlx 0.9 / MSRV 1.94, `rustio-draft` split out, docs & sponsorship.** Rolls up ~3 weeks on `main` since 0.30.0. **Breaking:** sqlx 0.8 → 0.9 raises the **MSRV to 1.94**; the crypto stack is untouched (that migration stays deferred). Adds an adaptive, deterministic **view layer**, a **View designer** (`/admin/dev/view-designer`), and the first **Studio** phases (branding/theme wizard, composition editor, read-only schema review, deterministic `schema.json` import). `examples/shop` gains Swedish-first payment methods and a rust-accent + JetBrains Mono repalette; sign-out becomes a POST form. The **`rustio-draft`** companion (brief → schema) was built and **moved to its own repo**. Documentation: new `project-status` / `versioning` maps, a professional sponsorship foundation, and an elevated positioning pass. No schema / route / auth / permission / migration change to existing models. |
 | **0.30.0** | 2026-06-11 | **Admin polish — comfortable dark theme, working ⌘K search, cleaner lists & forms.** The dark theme is re-tuned off near-black slate to a **comfortable graphite-grey** (`--rio-bg #22272e`) with clear surface steps and visible dividers, so elements separate logically and long sessions stay easy on the eyes. The top-bar **search now works**: the `⌘K` palette (grouped, keyboard-navigable, backed by `/admin/_search`) was implemented in JS but never given markup — now wired up. List pages **hide the `id` column** by default (the row links to the record; an explicit `list_display` keeps it). The page **footer goes full-width** with content aligned to the page column. A **subtle elevation pass** (darker hairline + softer surface shadows) lifts every card / panel / table off the near-white background, and the bespoke "console" pages (dashboard, lists, users/groups, sessions, audit, db browser) are brought to full Visual-Contract conformance — Inter labels everywhere, no grey header bands, `·` breadcrumbs, teal permission grid, §9 text-link row actions, and inline related sections now spaced cleanly from the action bar. The `docs/visual-reference/` set is refreshed and **mirrored in dark** under `docs/visual-reference/dark/`. Top bar / sidebar / footer chrome stays frozen; no schema, route, auth, permission, or migration change. |
 | **0.29.0** | 2026-06-10 | **Admin Visual Contract conformance — Inter + slate + teal, dark theme, font cleanup.** The admin content area is brought to pixel conformance with the Visual Contract (`docs/design/VISUAL-CONTRACT.md`, v2.1): **Inter** for body and titles, a slate neutral ladder, the teal `#119588` accent, a `#fafcfb` background, 44px controls with a 4px teal focus ring, the three §3 section patterns (legend-on-border / eyebrow / legend-less by page shape), the §8.2 action bar, and no-zebra tables with lowercase status pills — in **light and dark** (token-driven, no per-component dark CSS) and **LTR + RTL** (logical properties + legend/eyebrow letter-spacing neutralization). Retired the unused baked font faces (Spectral, Hanken Grotesk, Geist, Geist Mono): their `@font-face` / woff2 / `include_bytes!` / routes are gone, those `/static/fonts/*.woff2` now **404**, the binary is ~340 KB smaller, and `LICENSE.txt` maps 1:1 to the shipped faces (+ JetBrains Mono OFL). The build-time `rio-theme` emitter now produces dual-block dark-aware `tokens.css` (`DarkPolicy`: auto / light-only / explicit), and the runtime logs a startup WARN on a light-only `RUSTIO_TOKENS_CSS` override. Ships a ten-image visual reference set under `docs/visual-reference/`, plus a doctrine-doc refresh that points all token values at the contract. Two builtin labels change ("Old password" → "Current password"; create-form "Password" → "Temporary password"). **Top bar / sidebar / footer frozen; no functional, schema, route, auth, permission, or migration change.** |
 | **0.28.0** | 2026-06-08 | **One declaration per model.** `#[derive(RustioAdmin)]` now also emits the `orm::Model` impl (`TABLE` / `COLUMNS` / `INSERT_COLUMNS` / `id` / `from_row` / `insert_values`) from the same field walk it already runs to build `AdminModel` — the hand-written ORM glue that had to be kept in sync with the struct by hand is gone. Two struct-level escape hatches cover what the walk can't infer: `#[rustio(table = "…")]` (SQL table name differs from the auto slug) and `#[rustio(extra_columns = ["…"])]` (generated/virtual columns like a `tsvector`). **Breaking:** existing hand-written `impl Model` blocks must be deleted — they now collide with the derive. Runtime deps (`chrono` / `rust_decimal` / `uuid` / `sqlx`, plus the `Decimal` / `DateTime` / `Utc` / `NaiveDate` / `NaiveTime` / `Uuid` aliases) are re-exported from `rustio_admin`, so a model crate can depend on `rustio-admin` alone; the scaffold's `Cargo.toml` drops its direct `chrono` / `uuid` / `rust_decimal` / `sqlx` lines. |
@@ -68,6 +107,62 @@ leaves the alpha track.
 ## [Unreleased]
 
 ### Changed
+- **View designer — Composition editor (Studio Phase 1).** The per-model
+  `/admin/dev/view-designer/<model>` page is reworked from a plain form into a
+  row-based editor: a live preview on top (with filter chips, server-rendered
+  through the runtime render core), one card per field (drag grip, role-coloured
+  dot, role dropdown, a Filter toggle, priority + up/down reorder arrows, a
+  "Composed" badge), the compositions slots, and a read-only generated-`ViewSpec`
+  panel showing the saved JSON. Reordering rewrites the existing `priority__<f>`
+  inputs from row order via a small progressive `initViewDesigner()` in
+  `admin.js` — with JS off the native role/filter/priority controls still work,
+  and the **save contract is unchanged** (`role__`/`priority__`/`filter__`/
+  `mode_allowed__`/`comp*`). New `pages/view-designer.css` fragment (token-only,
+  added to the `admin.css` ↔ `routes.rs` lock-step); the editor still only
+  *produces* a `ViewSpec` and the preview reuses the deterministic renderer — no
+  AI, no client-side data rendering.
+- **Adaptive view layer — polished card layout.** The `?view=cards` mode
+  (`components/adaptive-views.css`, `.av-list--cards` scope only) was a flat
+  single-column stack: title, each secondary, and each badge on its own line.
+  Cards now compose from the same flat cells via flex line-control — the title
+  leads, the secondaries read as one inline meta line (`provider · country`,
+  joined by a `·`), and the badges group together right after it. Columns widen
+  to 300px and cards size to their content (`align-items: start`) so nothing
+  stretches or strands a badge. Token-only — no new tokens, no markup change
+  (the deterministic partials are untouched), and `list`/`compact` modes are
+  unaffected.
+- **Unified the chrome on five utility pages — Audit log, API surface, Health,
+  Docs (index + viewer), and Sessions.** They had drifted onto four different
+  page-header patterns (`.rio-masthead-top`, `.rio-page-header`, bespoke
+  `.pgx-head`, bespoke `.docp-head`) and three of them carried per-page inline
+  `<style>` blocks with bespoke `.pgx-*`/`.api-*`/`.docs-*`/`.docp-*` class
+  prefixes. All five now use the one canonical `.rio-crumbs` + `.rio-masthead-top`
+  + `.rio-masthead-desc` header (API surface keeps its action buttons in the
+  `.rio-masthead-cta` slot), and every inline style/`style="…"` attribute moved
+  into the existing `pages/tools.css` / `pages/account.css` fragments under
+  `.rio-`-prefixed names (`.rio-api-*`, `.rio-doc-*`, `.rio-hist-*`,
+  `.rio-sess-revoke`). One hardcoded `#e6edf6` doc-code colour is now the
+  `--rio-on-solid` token. **No new tokens, no markup-behaviour change, no
+  `admin.css`/`routes.rs` concat change** (reused existing fragments, so the
+  `cascade_lockstep` lock-step is untouched).
+- **Brand repalette — rust accent + cool ink neutrals + JetBrains Mono.** The
+  framework's visual identity moves from teal (`#119588`) on warm near-white to a
+  **burnt-copper rust** accent (`--rio-accent #B84318`, hover `#8F3413`) over a
+  **cool blue-grey "ink"** neutral scale on a `#EDF1F5` canvas, matching the
+  `rustio` reference project. Titles are `#0F141A` (cool ink), borders/inputs use
+  the ink-200/ink-300 steps, and status colours retune to the reference set
+  (success `#067647`, warn `#B54708`, danger `#B42318`). Dark theme keeps its
+  graphite surfaces but its accent lifts to a warm coral (`#F2935E`) for AA. The
+  **mono stack now selects JetBrains Mono** (already self-hosted/baked; no new
+  asset) ahead of the system fallbacks. All changes are token-value only — every
+  `--rio-*` name is unchanged, so components/templates are untouched and dark mode
+  re-derives automatically. The Visual Contract (§1/§2) and DESIGN_DOCTRINE /
+  DESIGN_SYSTEM are updated to the new canonical values. **Migration impact:**
+  downstream admins see the new palette/mono after `cargo update`; projects that
+  set `Admin::accent_color("#…")` keep their override.
+- **Small text nudged up (+1px).** The smallest content tier (`--rio-text-12` /
+  `--rio-text-13`: table headers, pills, hints, stat labels) lifts from 14px to
+  **15px** for readability; the ≥14px floor (Visual Contract §2) still holds.
 - **List/table readability — tighter row density (visual only).** The admin data
   board's row height drops from an over-tall 72px to a comfortable, more
   scannable 56px (header padding 14px → 12px to match), so ~50% more rows fit a
@@ -93,7 +188,74 @@ leaves the alpha track.
   `cascade_lockstep` untouched. Remaining audit findings (row-action taxonomy,
   dense-button sizing) are deferred as contract-level decisions.
 
+### Fixed
+- **Primary buttons rendered as links no longer lose their label on hover.**
+  Link-style buttons (e.g. the list page's “＋ Add &lt;model&gt;”, which is an
+  `<a class="rio-btn rio-btn--primary">`) were hit by the global content-link
+  rule `a:hover { color: var(--rio-rust-hover) }` (`base/base.css`), whose
+  `(0,1,1)` specificity outranks the `.rio-btn--primary` `(0,1,0)` class. On
+  hover the white label turned `--rio-rust-hover` while the fill darkened to
+  `--rio-rust-solid-hover` — the same value — so the text vanished into the
+  button. `buttons.css` now pins each variant's label colour on `:hover`/
+  `:active` (specificity `(0,2,0)`, which wins), so buttons own their text
+  colour in every state regardless of being an `<a>`. The same pin is applied
+  to `.rio-action-link` (and its `--danger`/`--muted` modifiers) so a
+  destructive “Delete” text-link stays red on hover instead of drifting to
+  copper. Token-value-free.
+- **Sidebar now highlights the current page.** The command rail's
+  `aria-current="page"` state was never rendered: templates compared against a
+  `nav_active` key that no page context ever set, so the comparison was always
+  false. `BaseContext` gains a `nav_active` field (set via a new
+  `with_nav_active` builder), and every rail-linked page context now sets it —
+  `home` (dashboard), a model's `admin_name` (its list/create/edit/delete and
+  per-object history), `users`/`groups` (the access pages), `history`, `db`, and
+  `view-designer`. New `sidebar_marks_active_nav_item` test guards it. No new
+  tokens; markup/CSS unchanged (the `aria-current` styling already existed).
+
 ### Added
+- **`schema.json` import (Studio Phase 4 — deterministic genesis).** New
+  `rustio-admin import <schema.json>` loads a schema document into the Builder
+  draft: it validates the whole contract first (a `models` array of
+  `{ name, fields: [{ name, type, unique? }] }`, `type` from the closed
+  `FIELD_TYPES` list), then records the **same** `add_model` / `add_field`
+  events as `add`, so `plan` / `commit` apply it unchanged — a malformed schema
+  records nothing. **No AI, no network, no new dependencies.** Per the project's
+  *RustIO runs no AI* stance, an external assistant (governed by
+  `.rustio/ai.toml`) or a human authors the JSON; RustIO only imports it
+  deterministically. Surfaced on the Schema page's CLI handoff. (A live-LLM
+  genesis tool stays out of the OSS repo — see `DEFERRED.md`.)
+- **Schema review page (Studio Phase 3).** A Developer-gated `/admin/dev/schema`
+  page (linked in the rail's Developer section) gives a **read-only** view of the
+  registered models as the framework sees them — per-model field tables (name,
+  type, nullable, relation target) plus a models/fields/relations stat strip —
+  built purely from the live `AdminEntry`/`AdminField` registry. Schema *edits*
+  are a build-time `builder` CLI step (`add model` / `add field` / `plan` /
+  `commit`), surfaced as a copy-paste handoff; the runtime never generates code.
+  New `admin/schema.html` (baked into `EMBEDDED_TEMPLATES`), `schema_ctx`/
+  `show_schema`, reusing existing card/table/terminal styles. No new tokens, no
+  new CSS fragment, deterministic.
+- **Branding page + `theme wizard` (Studio Phase 2).** A Developer-gated
+  `/admin/dev/branding` page (linked in the rail's Developer section) lets you
+  pick a brand colour and **preview it live** — the rust/accent CSS variables
+  are injected into the preview pane only (ephemeral, client-side, never
+  persisted) — then copy the build-time **bake** commands: `rustio-admin theme
+  generate --brand '#hex'`, the `RUSTIO_TOKENS_CSS=…` wiring, and the
+  `Admin::accent_color("#hex")` one-liner. The runtime **never links rio-theme**;
+  baking stays a setup-time CLI step. The CLI gains `rustio-admin theme wizard`,
+  an interactive front door that prompts for a brand colour and defers to the
+  existing `generate` engine (same deterministic rio-theme output + contrast
+  report). New `admin/branding.html` (baked into `EMBEDDED_TEMPLATES`),
+  `branding_ctx`/`show_branding`, a `.rio-brand-*` section in the existing
+  `pages/view-designer.css` fragment, and a progressive `initBranding()` in
+  `admin.js`. No new tokens; no build step; deterministic.
+- **View designer is now reachable from the sidebar.** The Developer section of
+  the command rail (`_sidebar.html`) gains a "View designer" link
+  (`/admin/dev/view-designer`, Developer-gated) next to Database, so the editor
+  is discoverable instead of URL-only. Housekeeping in the same change: removed
+  the orphaned `.rio-sidebar`/`.rio-nav-*`/`.rio-topbar`/`.rio-brand` rules from
+  `components/navigation.css` (dead since the chrome moved to `.rio-rail` /
+  `.rio-ws*`; the live `.rio-brand-word` rule is kept). No new tokens; no visual
+  change to any rendered page.
 - **View designer: allowed-modes + compositions editing.** The designer now edits
   the rest of the `ViewSpec`: an **allowed-modes** checkbox group (which layouts
   appear in the `?view=` switcher; the default mode is forced on), and up to three

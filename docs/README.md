@@ -19,6 +19,10 @@ User-facing entry points. Read these first.
 - [`getting-started.md`](getting-started.md) — from an empty
   directory to a running admin with your own model: install, create a
   project, add a model, sign in.
+- [`tutorial-rustio-draft.md`](tutorial-rustio-draft.md) — beginner
+  walkthrough: describe an app in one sentence, let **rustio-draft** draft a
+  `schema.json`, then `import → plan → commit` it into a running admin.
+  (**rustio-draft** is a separate companion project in its own repo.)
 - [`architecture.md`](architecture.md) — module map and how the
   library, macros, and CLI crates compose.
 - [`modeladmin.md`](modeladmin.md) — authoring guide for
@@ -27,6 +31,16 @@ User-facing entry points. Read these first.
   scaffolding, migrations, users/groups/permissions, audit, theme.
 - [`memory.md`](memory.md) — the `rustio-admin memory` project-memory
   feature that drives `CLOUD.md` and the AI-assistant policy.
+
+## Project
+
+Which RustIO line to use, how it's versioned, and how releases are cut.
+
+- [`project-status.md`](project-status.md) — what to use today; the active
+  `rustio-admin` line vs. the earlier `rustio-core` line, the separate
+  `rustio-draft` companion, and the reserved `rustio-pro-*` direction.
+- [`versioning.md`](versioning.md) — unified workspace versions, tags, and
+  crates.io publish order. Release steps: [`RELEASING.md`](../RELEASING.md).
 
 ## Reference
 

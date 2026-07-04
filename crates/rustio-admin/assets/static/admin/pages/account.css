@@ -73,3 +73,6 @@
 .rio-sess-foot { margin-block-start: var(--rio-space-16); padding-block-start: var(--rio-space-16); border-block-start: 1px solid var(--rio-line); display: flex; align-items: center; }
 .rio-sess-note { color: var(--rio-text-faint); font-size: var(--rio-text-14); }
 .rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); margin-block-start: var(--rio-space-20); max-inline-size: 920px; }
+/* Per-session revoke — pushed to the row's end, danger-tinted label. */
+.rio-sess-revoke { margin-inline-start: auto; }
+.rio-sess-revoke .rio-btn { color: var(--rio-danger); }

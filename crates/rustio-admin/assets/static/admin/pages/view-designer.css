@@ -1,0 +1,148 @@
+/* ============================================================
+   RustIO — View designer (Composition editor)
+   The /admin/dev/view-designer/<model> editor: live preview, the
+   per-field row editor, the compositions slots, and the generated
+   ViewSpec panel. Token-only; the editor only *produces* a ViewSpec
+   (the preview is server-rendered through the runtime render core).
+   ============================================================ */
+
+/* ---- Determinism flag + role chip ---- */
+.rio-vd-flag {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-inline-start: var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  color: var(--rio-success);
+  background: var(--rio-success-tint);
+  padding: 2px 8px; border-radius: var(--rio-radius-pill);
+}
+.rio-vd-flag::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 999px; background: var(--rio-success); }
+.rio-vd-flag--quiet { background: transparent; color: var(--rio-text-faint); margin: 0; }
+.rio-vd-flag--quiet::before { background: var(--rio-success); }
+.rio-vd-chip {
+  display: inline-flex; align-items: center;
+  font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
+  color: var(--rio-text-mute); background: var(--rio-sunken);
+  border: 1px solid var(--rio-line); padding: 3px 10px; border-radius: var(--rio-radius-pill);
+}
+.rio-vd-chip--filter { background: var(--rio-surface); }
+
+/* ---- Live preview ---- */
+.rio-vd-preview {
+  background: var(--rio-surface); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm);
+  padding: var(--rio-space-16); margin-block-end: var(--rio-space-20);
+}
+.rio-vd-preview__head { display: flex; align-items: center; justify-content: space-between; gap: var(--rio-space-12); margin-block-end: var(--rio-space-12); }
+.rio-vd-preview__title { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-vd-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-6); margin-block-end: var(--rio-space-12); }
+.rio-vd-filters__label { font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: .05em; color: var(--rio-text-faint); margin-inline-end: var(--rio-space-4); }
+.rio-vd-canvas { background: var(--rio-bg); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md); padding: var(--rio-space-16); }
+.rio-vd-note { margin: var(--rio-space-12) 0 0; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+
+/* ---- Modes strip ---- */
+.rio-vd-modes { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--rio-space-24); margin-block-end: var(--rio-space-20); }
+.rio-vd-mode-default { display: flex; flex-direction: column; gap: var(--rio-space-6); }
+.rio-vd-mode-default > span { font-size: var(--rio-text-13); font-weight: var(--rio-weight-medium); color: var(--rio-text-hi); }
+.rio-vd-mode-default .rio-input { inline-size: 12rem; }
+.rio-vd-allowed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-12); }
+.rio-vd-allowed__label { font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: .05em; color: var(--rio-text-faint); }
+.rio-vd-allowed__opt { display: inline-flex; align-items: center; gap: 6px; font-size: var(--rio-text-14); color: var(--rio-text); }
+
+/* ---- Fields section + rows ---- */
+.rio-vd-fields, .rio-vd-comp { margin-block-end: var(--rio-space-20); }
+.rio-vd-fields__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--rio-space-12); margin-block-end: var(--rio-space-12); }
+.rio-vd-fields__title { margin: 0; font-family: var(--rio-font-display); font-size: var(--rio-text-20); color: var(--rio-text-hi); }
+.rio-vd-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-8); }
+.rio-vd-row {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  background: var(--rio-surface); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md); padding: var(--rio-space-12) var(--rio-space-16);
+  box-shadow: var(--rio-shadow-sm);
+}
+.rio-vd-grip { inline-size: 10px; block-size: 16px; flex: none; cursor: grab;
+  background-image: radial-gradient(var(--rio-text-faint) 1px, transparent 1px);
+  background-size: 4px 4px; opacity: .6; }
+.rio-vd-dot { inline-size: 9px; block-size: 9px; flex: none; border-radius: 999px; background: var(--rio-text-faint); }
+.rio-vd-dot--primary    { background: var(--rio-rust); }
+.rio-vd-dot--secondary  { background: var(--rio-text-mute); }
+.rio-vd-dot--badge      { background: var(--rio-success); }
+.rio-vd-dot--timestamp  { background: var(--rio-warn); }
+.rio-vd-dot--detail_only{ background: var(--rio-text-faint); }
+.rio-vd-dot--hidden     { background: var(--rio-danger); }
+.rio-vd-name { flex: 1 1 auto; min-inline-size: 0; display: flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
+.rio-vd-name code { font-family: var(--rio-font-mono); font-size: var(--rio-text-14); color: var(--rio-text-hi); }
+.rio-vd-badge { font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); background: var(--rio-rust-tint); border-radius: var(--rio-radius-sm); padding: 1px 8px; }
+.rio-vd-controls { display: flex; align-items: center; gap: var(--rio-space-8); flex: none; }
+.rio-vd-role { inline-size: 8.5rem; }
+
+/* Filter toggle pill (native checkbox hidden, face styled) */
+.rio-vd-toggle { position: relative; display: inline-flex; }
+.rio-vd-toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.rio-vd-toggle__face {
+  font-size: var(--rio-text-13); color: var(--rio-text-mute);
+  background: var(--rio-surface); border: 1px solid var(--rio-line-strong);
+  padding: 4px 12px; border-radius: var(--rio-radius-pill); user-select: none;
+}
+.rio-vd-toggle input:checked + .rio-vd-toggle__face { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
+.rio-vd-toggle input:focus-visible + .rio-vd-toggle__face { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+
+.rio-vd-prio { inline-size: 4rem; text-align: center; }
+.rio-vd-reorder { display: inline-flex; flex-direction: column; gap: 2px; }
+
+/* ---- Compositions ---- */
+.rio-vd-slot { border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md); padding: var(--rio-space-16); margin-block-end: var(--rio-space-12); }
+.rio-vd-slot legend { font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: .05em; color: var(--rio-text-faint); padding-inline: var(--rio-space-6); }
+.rio-vd-secs { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); }
+.rio-vd-sec { display: inline-flex; align-items: center; gap: 4px; }
+
+.rio-vd-save { margin-block-end: var(--rio-space-24); }
+
+/* ---- Generated ViewSpec panel (terminal slab) ---- */
+.rio-vd-json { border-radius: var(--rio-radius-lg); overflow: hidden; border: 1px solid var(--rio-line); }
+.rio-vd-json__bar { display: flex; align-items: center; gap: var(--rio-space-12); padding: var(--rio-space-8) var(--rio-space-16); background: var(--rio-surface-chrome); border-block-end: 1px solid rgba(255,255,255,0.08); }
+.rio-vd-json__dots { display: inline-flex; gap: 6px; }
+.rio-vd-json__dots i { inline-size: 10px; block-size: 10px; border-radius: 999px; background: rgba(255,255,255,0.25); }
+.rio-vd-json__name { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-on-solid); }
+.rio-vd-json__hint { margin-inline-start: auto; font-size: var(--rio-text-12); color: rgba(255,255,255,0.45); }
+.rio-vd-json__body { margin: 0; padding: var(--rio-space-16); background: var(--rio-surface-chrome); overflow-x: auto; }
+.rio-vd-json__body code { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); line-height: 1.6; color: var(--rio-on-solid); white-space: pre; }
+.rio-vd-json__foot { padding: var(--rio-space-8) var(--rio-space-16); background: var(--rio-surface-chrome); color: var(--rio-success); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); border-block-start: 1px solid rgba(255,255,255,0.08); }
+
+/* ============================================================
+   Branding page (/admin/dev/branding)
+   ============================================================ */
+.rio-brand { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: var(--rio-space-20); align-items: start; margin-block-end: var(--rio-space-24); }
+@media (max-width: 760px) { .rio-brand { grid-template-columns: 1fr; } }
+.rio-brand-controls, .rio-brand-preview {
+  background: var(--rio-surface); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm);
+  padding: var(--rio-space-16);
+}
+.rio-brand-pickrow { display: flex; align-items: center; gap: var(--rio-space-8); margin-block: var(--rio-space-12); }
+.rio-brand-color { inline-size: 48px; block-size: 38px; padding: 0; border: 1px solid var(--rio-line-strong); border-radius: var(--rio-radius-sm); background: none; cursor: pointer; }
+.rio-brand-hex { inline-size: 9rem; }
+.rio-brand-presets { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); }
+.rio-brand-preset { inline-size: 24px; block-size: 24px; padding: 0; border-radius: var(--rio-radius-pill); border: 2px solid var(--rio-surface); box-shadow: 0 0 0 1px var(--rio-line-strong); background: var(--sw); cursor: pointer; transition: transform var(--rio-dur-fast) var(--rio-ease); }
+.rio-brand-preset:hover { transform: scale(1.12); }
+.rio-brand-samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-12); }
+
+.rio-brand-bake { display: flex; flex-direction: column; gap: var(--rio-space-6); }
+.rio-brand-bake .rio-meta { margin-block-start: var(--rio-space-8); }
+.rio-brand-bake .rio-vd-json__body { border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md); }
+
+/* ============================================================
+   View-designer index — model picker
+   ============================================================ */
+.rio-vd-picker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-8); max-inline-size: 720px; }
+.rio-vd-pick {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  background: var(--rio-surface); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md); padding: var(--rio-space-12) var(--rio-space-16);
+  box-shadow: var(--rio-shadow-sm);
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), box-shadow var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-vd-pick:hover { border-color: var(--rio-rust); box-shadow: var(--rio-shadow-md); }
+.rio-vd-pick__main { flex: 1 1 auto; min-inline-size: 0; display: flex; align-items: baseline; gap: var(--rio-space-8); text-decoration: none; }
+.rio-vd-pick__name { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-vd-pick:hover .rio-vd-pick__name { color: var(--rio-rust); }
+.rio-vd-pick__slug { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }

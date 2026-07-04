@@ -100,7 +100,7 @@ updated: 2026-06-07
      entities in the sidebar; junction/secondary models reached inline through
      their parent (still reachable by URL), not listed in nav.
 - **Decision:** option 3. Target sidebar:
-  ```
+  ```text
   Dashboard
   Catalogue   → Products · Categories
   Customers   → Customers

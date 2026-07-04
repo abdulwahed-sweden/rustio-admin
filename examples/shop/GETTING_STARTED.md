@@ -51,7 +51,7 @@ Nine models, already seeded with demo data (30 products, 40 orders, 20
 customers). The foreign keys are wired into the admin as **inlines**, so
 related rows show up right on the parent's edit page:
 
-```
+```text
 Customer ──< Order ──< OrderItem >── Product ──< ProductImage
    │           │
    └─< Address └─< Payment
@@ -107,7 +107,7 @@ fn inlines() -> &'static [Inline] {
 
 ## 5. Where everything lives
 
-```
+```text
 src/main.rs        app wiring: models registered, routes, middleware
 src/<model>.rs     one file per model (struct + Model + ModelAdmin)
 migrations/*.sql   schema, applied in numeric order (append-only)

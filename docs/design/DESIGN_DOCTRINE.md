@@ -47,7 +47,7 @@ Three rules:
 3. **New token = CHANGELOG entry.** Tokens are public API; a new `--rio-*` token
    ships under a "Tokens" CHANGELOG note so branches can't drift the palette.
 
-The brand accent is **teal** — its canonical value (`--rio-accent`) lives in
+The brand accent is **rust** — its canonical value (`--rio-accent`) lives in
 [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1, not restated here. It is reserved
 for affordances — primary buttons, focus rings, active state, links — and **never
 flood-filled across page chrome**; surfaces stay neutral so the accent keeps its
@@ -182,14 +182,14 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
    hover — **no zebra striping**, no accent-tinted overlay. Cards layer with
    borders, not glow.
 2. **Reserve the accent for affordances.** Anything the user can act on
-   may wear teal; anything that's just content stays neutral. If
-   everything is teal, nothing is.
+   may wear the rust accent; anything that's just content stays neutral.
+   If everything is accented, nothing is.
 3. **Mobile-first, three breakpoints.** `< 768 px` collapses the sidebar
    off-canvas behind a hamburger; `≥ 768 px` pins it; `≥ 1280 px` widens
    it to 260 px and caps `.rio-main` at 1280 px so a 4 K monitor doesn't
    stretch a table row across the user's whole field of view.
 4. **One canonical accent across every admin page.** Projects override
-   exactly one teal value to rebrand.
+   exactly one rust value to rebrand.
 5. **Reuse before invention.** The `.rio-dropdown` machinery is generic
    on purpose: filters, sort menus, per-page pickers, and future column
    togglers all live on top of it. Don't bake a one-off floating panel
@@ -234,7 +234,7 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
 
 ## 7. Source layout
 
-```
+```text
 crates/rustio-admin/assets/static/admin/
 ├── admin.css            ← contributor-facing @import manifest
 ├── tokens/              ← single source of truth for the visual scale

@@ -16,6 +16,7 @@ mod customer;
 mod order;
 mod order_item;
 mod payment;
+mod payment_method;
 mod product;
 mod product_image;
 
@@ -27,6 +28,7 @@ use customer::Customer;
 use order::Order;
 use order_item::OrderItem;
 use payment::Payment;
+use payment_method::PaymentMethod;
 use product::Product;
 use product_image::ProductImage;
 
@@ -70,7 +72,8 @@ async fn main() -> Result<()> {
         .model::<Address>()
         .model::<ProductImage>()
         .model::<CartItem>()
-        .model::<Payment>();
+        .model::<Payment>()
+        .model::<PaymentMethod>();
 
     admin.seed_permissions(&db).await?;
 
@@ -142,7 +145,7 @@ async fn render_home(db: &Db) -> String {
                   WHERE n.nspname = 'public' AND c.relkind = 'r' \
                     AND c.relname IN ('products', 'categories', 'customers', 'orders', \
                                       'order_items', 'addresses', 'product_images', \
-                                      'cart_items', 'payments')) AS models";
+                                      'cart_items', 'payments', 'payment_methods')) AS models";
 
     if let Ok(row) = sqlx::query(query).fetch_one(db.pool()).await {
         db_name = row.try_get::<String, _>("db").unwrap_or(db_name);

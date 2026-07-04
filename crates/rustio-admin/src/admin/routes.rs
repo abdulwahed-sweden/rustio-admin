@@ -111,6 +111,8 @@ const ADMIN_CSS: &str = concat!(
     "\n",
     include_str!("../../assets/static/admin/pages/tools.css"),
     "\n",
+    include_str!("../../assets/static/admin/pages/view-designer.css"),
+    "\n",
     // ---- print ------------------------------------------------
     include_str!("../../assets/static/admin/print/print.css"),
 );
@@ -989,6 +991,35 @@ pub fn register_admin_routes(
             match role_guard(&c, &req, Role::Developer).await? {
                 Guard::Redirect(r) => Ok(r),
                 Guard::Allow(ident) => handlers::do_save_view_spec(&c, ident, req).await,
+            }
+        }
+    });
+
+    // Branding — Developer-only accent preview + build-time handoff at
+    // `/admin/dev/branding`. Previews an accent client-side (ephemeral) and
+    // shows the `rustio-admin theme` command + RUSTIO_TOKENS_CSS wiring that
+    // bakes it. The runtime never links rio-theme; baking is setup-time.
+    let c = ctx.clone();
+    let router = router.get("/admin/dev/branding", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_branding(&c, ident, &req).await,
+            }
+        }
+    });
+
+    // Schema — Developer-only read-only review of the model registry at
+    // `/admin/dev/schema`, with a handoff to the build-time `builder` CLI. The
+    // runtime only reads its own registry; authoring (add/plan/commit) is the CLI.
+    let c = ctx.clone();
+    let router = router.get("/admin/dev/schema", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Developer).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::show_schema(&c, ident, &req).await,
             }
         }
     });

@@ -288,7 +288,7 @@ diverge from it.
 
 Target repository layout end of Phase 1:
 
-```
+```text
 rustio-admin/
 ├── crates/
 │   ├── rustio-admin/                ← framework
@@ -320,7 +320,7 @@ rustio-admin/
 
 Project-local layout (scaffolded by `rustio startproject foo` end of Phase 3):
 
-```
+```text
 foo/
 ├── src/
 ├── migrations/

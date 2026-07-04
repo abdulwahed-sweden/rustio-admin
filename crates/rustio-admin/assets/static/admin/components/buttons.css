@@ -80,6 +80,22 @@
 .rio-btn--danger:hover { background: var(--rio-danger-hover); }
 .rio-btn--danger:active { background: var(--rio-danger-hover); }
 
+/* A button rendered as <a> must keep its OWN label colour while hovered.
+   The global content-link rule `a:hover { color: var(--rio-rust-hover) }`
+   (base/base.css) has specificity (0,1,1) and outranks a single
+   `.rio-btn--*` class (0,1,0), so without these state-pinned rules a primary
+   button's white label collapses into its darkened hover fill — both resolve
+   to --rio-rust-hover — and the text appears to vanish. (0,2,0) wins. */
+.rio-btn--primary:hover,
+.rio-btn--primary:active { color: var(--rio-on-solid); }
+.rio-btn--danger:hover,
+.rio-btn--danger:active { color: #fff; }
+.rio-btn--secondary:hover,
+.rio-btn--secondary:active { color: var(--rio-text-hi); }
+.rio-btn--ghost:hover,
+.rio-btn--ghost:active { color: var(--rio-text-hi); }
+.rio-btn--subtle:active { color: var(--rio-text-hi); }
+
 /* Text-style actions (contract §8.1): a destructive SECONDARY action is a red
    text link with an icon — never a solid red button beside Save. Templates wire
    these up in Phase 5; the styles are defined here. */
@@ -102,6 +118,13 @@
 .rio-action-link svg { inline-size: 1em; block-size: 1em; flex: none; }
 .rio-action-link--danger { color: var(--rio-danger); }   /* "Delete", "Delete group" */
 .rio-action-link--muted  { color: var(--rio-text-hi); }  /* "History" */
+/* Pin the hover colour for the same reason as the buttons above: the global
+   `a:hover` recolour (base.css) outranks a single class, so without these a
+   destructive "Delete" link would drift from red to copper on hover. Each
+   `(0,2,0)` rule wins; the underline-on-hover above still applies. */
+.rio-action-link:hover { color: var(--rio-text-hi); }
+.rio-action-link--danger:hover { color: var(--rio-danger); }
+.rio-action-link--muted:hover { color: var(--rio-text-hi); }
 
 /* Disabled */
 .rio-btn:disabled,

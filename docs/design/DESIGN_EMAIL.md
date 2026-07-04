@@ -176,7 +176,7 @@ The reference layout, top to bottom. Future email types adapt
 this skeleton; novel sections require an extension to this
 document first.
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │  Library Circulation                                         │
 │  ACCOUNT SECURITY NOTIFICATION                               │
@@ -272,7 +272,7 @@ passes them through `StoredUser::greeting_name()` and
 
 ### 5.1 Greeting
 
-```
+```text
 display_name → first_name → email-local-part → "there"
 ```
 

@@ -21,7 +21,7 @@
      handles any language a developer types — Latin uses Inter, Arabic falls
      through per glyph (the @font-face unicode-ranges keep them off Latin). */
   --rio-font-display: "Inter", "Noto Naskh Arabic", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --rio-font-mono:    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Tajawal", monospace;
+  --rio-font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Tajawal", monospace;
   --rio-font-body:    "Inter", "Tajawal", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* --- Type scale (px) ---
@@ -29,8 +29,8 @@
   /* Operator-comfort scale: body sits at 16px, the reading sizes lift to
      match, and the large end opens back up. Judged by appearance, not the
      token name — every value here is the px it actually renders. */
-  --rio-text-12: 0.875rem;    /* 14 — contract 14px floor (was 13; no content text < 14px) */
-  --rio-text-13: 0.875rem;    /* 14 — fine print */
+  --rio-text-12: 0.9375rem;   /* 15 — small text nudged up (+1px) for readability */
+  --rio-text-13: 0.9375rem;   /* 15 — fine print, nudged up to match */
   --rio-text-14: 1rem;        /* 16 — product base (body, inputs, tables) */
   --rio-text-15: 1rem;        /* 16 */
   --rio-text-17: 1.09375rem;  /* 17.5 — sidebar nav */

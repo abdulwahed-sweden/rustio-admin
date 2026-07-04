@@ -1,0 +1,70 @@
+{% extends "admin/_base.html" %}
+{% block content %}
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Schema</span></nav>
+<div class="rio-masthead-top"><div>
+  <h1>Schema</h1>
+  <p class="rio-masthead-desc">
+    Your models as the framework sees them — the contract that drives the admin and the view layer.
+    Read-only here; author changes with the <code>builder</code> CLI below.
+    <span class="rio-vd-flag">deterministic · no AI at runtime</span>
+  </p>
+</div></div>
+
+<section class="rio-card rio-db-summary">
+  <dl class="rio-db-stats">
+    <div class="rio-db-stat"><dt>Models</dt><dd>{{ total_models }}</dd></div>
+    <div class="rio-db-stat"><dt>Fields</dt><dd>{{ total_fields }}</dd></div>
+    <div class="rio-db-stat"><dt>Relations</dt><dd>{{ total_relations }}</dd></div>
+  </dl>
+</section>
+
+{% if models %}
+{% for m in models %}
+<section class="rio-card rio-db-table">
+  <header class="rio-db-table__header">
+    <h2>{{ m.display_name }} <code>{{ m.admin_name }}</code></h2>
+    <span class="rio-meta">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
+  </header>
+  <table class="rio-table">
+    <thead><tr><th>Field</th><th>Type</th><th>Nullable</th><th>Relation</th></tr></thead>
+    <tbody>
+      {% for f in m.fields %}
+      <tr>
+        <td><code>{{ f.name }}</code></td>
+        <td>{{ f.type_label }}</td>
+        <td>{% if f.nullable %}YES{% else %}NO{% endif %}</td>
+        <td>{% if f.relation_target %}→ <code>{{ f.relation_target }}</code>{% else %}<span class="rio-meta">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+{% else %}
+<section class="rio-card rio-card--quiet">
+  <div class="rio-empty-state">
+    <h3 class="rio-empty-state__title">No models registered</h3>
+    <p class="rio-empty-state__lead">Author models with the <code>builder</code> CLI (below).</p>
+  </div>
+</section>
+{% endif %}
+
+<section class="rio-vd-fields" aria-label="Edit the schema">
+  <header class="rio-vd-fields__head">
+    <h2 class="rio-vd-fields__title">Edit the schema — build-time</h2>
+    <span class="rio-meta">network-free, atomic; the runtime never generates code</span>
+  </header>
+  <div class="rio-brand-bake">
+    <p class="rio-meta">Add a model and a field, preview, then commit:</p>
+    <pre class="rio-vd-json__body"><code>rustio-admin add model Invoice
+rustio-admin add field Invoice amount decimal
+rustio-admin plan      # preview the changes (read-only)
+rustio-admin commit    # apply atomically</code></pre>
+    <p class="rio-meta">…or import a whole schema at once (an external AI assistant or a human can author the JSON — RustIO runs no AI):</p>
+    <pre class="rio-vd-json__body"><code>rustio-admin import schema.json   # records add_model / add_field events
+rustio-admin plan
+rustio-admin commit</code></pre>
+    <p class="rio-meta">Start a fresh Builder project: <code>rustio-admin builder new my-project</code> · contract: <code>docs/design/DESIGN_BUILDER.md</code></p>
+  </div>
+</section>
+{% endblock %}

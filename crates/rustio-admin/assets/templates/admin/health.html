@@ -1,13 +1,10 @@
 {% extends "admin/_base.html" %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
+<div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">
-    Same probes the <code>rustio-admin doctor</code> CLI runs, exposed
-    on the admin chrome. Reload to re-run.
-  </p>
-</header>
+  <p class="rio-masthead-desc">Same probes the <code>rustio-admin doctor</code> CLI runs, exposed on the admin chrome. Reload to re-run.</p>
+</div></div>
 
 <section class="rio-card rio-health">
   <header class="rio-health__summary">

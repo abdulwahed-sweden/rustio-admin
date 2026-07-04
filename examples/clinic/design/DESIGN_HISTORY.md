@@ -2,12 +2,32 @@
 artifact: DESIGN_HISTORY
 layer: memory
 status: active
-updated: 2026-06-07
+updated: 2026-06-29
 ---
 
 # Design History — the evolution (Clinic)
 
 > How the clinic's design understanding evolved, and why. Reverse-chronological.
+
+## 2026-06-29 — Navigation grouping deferred (framework chrome migration)
+
+The framework migrated its sidebar to the dark `.rio-rail` command rail (repo
+commit `5990349`), which already auto-builds grouped navigation (Models / Access
+/ Developer) from the model registry. The clinic's Tier-1 `[navigation]` layer
+(D-05) had generated `templates/admin/_sidebar.html` with the older
+`.rio-sidebar` markup; after the migration those classes no longer resolve to
+any CSS, so the override rendered as an unstyled bullet list inside a layout
+that expects the rail — the intended chrome no longer appeared.
+
+**Action:** dropped the generated `_sidebar.html`, removed the `[navigation]`
+block's active generation from `rustio.design.toml` (kept as a documented
+deferral comment), and stopped setting `RUSTIO_TEMPLATE_DIR` in `.env` /
+`.env.example` so the clinic serves the framework's embedded rail. The emerald
+palette and Tier-1 `custom_css` are unaffected — they ship via
+`generated/tokens.css` (`RUSTIO_TOKENS_CSS`), whose selectors target current
+classes. Custom group labels (Patients/Scheduling/Billing) and hiding Vitals
+are **deferred** until a rail-aware generator + framework support land; re-add
+`[navigation]` (with `_out`) then.
 
 ## 2026-06-07 — v1 design direction + Tier 1 slice (D-05)
 
