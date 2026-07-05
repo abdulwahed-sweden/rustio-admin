@@ -14,6 +14,7 @@
   <a href="https://crates.io/crates/rustio-admin"><img alt="rustio-admin on crates.io" src="https://img.shields.io/crates/v/rustio-admin.svg?label=rustio-admin"></a>
   <a href="https://crates.io/crates/rustio-admin-cli"><img alt="rustio-admin-cli on crates.io" src="https://img.shields.io/crates/v/rustio-admin-cli.svg?label=rustio-admin-cli"></a>
   <a href="https://docs.rs/rustio-admin"><img alt="docs.rs" src="https://img.shields.io/docsrs/rustio-admin"></a>
+  <a href="https://abdulwahed-sweden.github.io/rustio-admin/"><img alt="Documentation site" src="https://img.shields.io/badge/docs-site-2563eb"></a>
   <a href="https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/crates/l/rustio-admin.svg"></a>
 </p>
@@ -248,6 +249,8 @@ cargo install rustio-admin-cli      # provides the `rustio-admin` binary
 ```
 
 ## Documentation
+
+**Read the docs online: [abdulwahed-sweden.github.io/rustio-admin](https://abdulwahed-sweden.github.io/rustio-admin/)** — the full guides and design contracts, rendered from `docs/`.
 
 Full documentation index: [`docs/README.md`](./docs/README.md).
 
