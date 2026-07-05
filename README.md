@@ -280,6 +280,7 @@ Where to start depends on the work.
 → [`DESIGN_R2_ORGANISATIONAL.md`](./docs/design/DESIGN_R2_ORGANISATIONAL.md)
 
 **Evaluating it for a real system**
+→ [Why refusal-first?](./docs/why-refusal-first.md) — why strict-by-default makes you faster
 → [What RustIO stops out of the box](./docs/security.md) — the shipping defaults, honestly bounded
 → [Request lifecycle diagram](./docs/architecture.md#request-lifecycle)
 

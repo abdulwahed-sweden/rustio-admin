@@ -306,6 +306,9 @@ migration runner — the framework ships all of it.
   `rustio-admin ai status` set what it may do here (Allowed / Needs approval /
   Blocked) — changes are proposed, approved, and applied as explicit steps.
   RustIO runs no AI itself; it governs the one you bring.
+- **Wonder why it says "no" by default?** — [Why
+  refusal-first?](./why-refusal-first.md) explains why strict-by-default makes
+  you faster, and how to grant explicitly when you mean to.
 - **See what you're protected from** — [What RustIO stops out of the
   box](./security.md) lists the shipping security defaults (CSRF, refusal-first
   permissions, rate limiting, hashed-at-rest credentials, audit) — and, just as
