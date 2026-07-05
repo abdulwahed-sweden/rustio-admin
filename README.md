@@ -30,6 +30,9 @@ business runs on. It is not a throwaway dashboard or one more CRUD screen; it is
 the layer *underneath* those things, engineered to stay fast, safe, and
 understandable as a company grows.
 
+> **What it stands for:** read [**the RustIO Admin Manifesto**](./MANIFESTO.md) —
+> what the project is, what it refuses to be, and why AI is kept on a leash.
+
 **The problem it solves.** RustIO was born from a real market problem, not from
 a wish to build another admin panel. A fast-growing housing platform in the
 Swedish market — serving well over a million customers — began to crack under
