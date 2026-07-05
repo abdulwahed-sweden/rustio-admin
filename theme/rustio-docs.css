@@ -1,0 +1,137 @@
+/* ============================================================
+   RustIO — Documentation typography baseline
+   ------------------------------------------------------------
+   Hand-written, applied ONLY to the published docs site
+   (mdBook → GitHub Pages). The admin runtime CSS
+   (assets/static/admin/**) is a separate, Visual-Contract-
+   governed product surface and is NOT touched by this file.
+
+   Enterprise legibility standard for long-session reading:
+     · Body ...... 18px  / line-height 1.7   (16px min, 18px preferred)
+     · H1 ........ 34px  / weight 600
+     · H2 ........ 26px  / weight 600
+     · H3 ........ 20px  / weight 500
+     · H4 ........ 18px  / weight 600
+     · Code ...... 15px  (mono)
+     · Small ..... 14px  (captions / alerts / footnotes)
+
+   ABSOLUTE RULE: nothing in the docs renders below 14px.
+   The zero-specificity :where() backstop at the bottom of this
+   file enforces that floor for any element not sized above.
+   ============================================================ */
+
+:root {
+  --docs-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, Helvetica, Arial, sans-serif;
+  --docs-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo,
+                    Consolas, "Liberation Mono", monospace;
+
+  /* Strict type scale (px — judged by what renders, not the name) */
+  --docs-size-body:  18px;
+  --docs-size-h1:    34px;
+  --docs-size-h2:    26px;
+  --docs-size-h3:    20px;
+  --docs-size-h4:    18px;
+  --docs-size-code:  15px;
+  --docs-size-small: 14px;   /* hard floor */
+
+  --docs-lh-body:    1.7;
+  --docs-lh-heading: 1.25;
+
+  --docs-measure:    46rem;  /* comfortable reading column */
+}
+
+/* Keep the rem base at the browser default (16px); the scale is in px. */
+html { font-size: 100%; }
+
+/* ── Body copy ─────────────────────────────────────────────── */
+.content {
+  font-family: var(--docs-font-body);
+}
+.content main {
+  max-width: var(--docs-measure);
+  margin-inline: auto;
+}
+.content p,
+.content li,
+.content dd,
+.content dt,
+.content td,
+.content th {
+  font-size: var(--docs-size-body);
+  line-height: var(--docs-lh-body);
+}
+.content table {
+  font-size: var(--docs-size-body);
+}
+
+/* ── Headings — clear, enforced hierarchy ──────────────────── */
+.content h1 {
+  font-size: var(--docs-size-h1);
+  font-weight: 600;
+  line-height: var(--docs-lh-heading);
+  letter-spacing: -0.02em;
+}
+.content h2 {
+  font-size: var(--docs-size-h2);
+  font-weight: 600;
+  line-height: var(--docs-lh-heading);
+  letter-spacing: -0.01em;
+}
+.content h3 {
+  font-size: var(--docs-size-h3);
+  font-weight: 500;
+  line-height: 1.35;
+}
+.content h4 {
+  font-size: var(--docs-size-h4);
+  font-weight: 600;
+}
+.content h5,
+.content h6 {
+  font-size: var(--docs-size-body);
+  font-weight: 600;
+}
+
+/* ── Code / monospace ──────────────────────────────────────── */
+.content code,
+.content pre,
+.content pre code,
+.content kbd,
+.content samp {
+  font-family: var(--docs-font-mono);
+  font-size: var(--docs-size-code);
+}
+.content pre code {
+  line-height: 1.55;
+}
+
+/* ── Small text: captions, alerts, footnotes — strict 14px ──── */
+.content small,
+.content figcaption,
+.content sup,
+.content sub,
+.content .footnote-definition,
+.content .footnote-definition p {
+  font-size: var(--docs-size-small);
+}
+
+/* ── Sidebar / chrome — the nav respects the floor too ─────── */
+.sidebar,
+.sidebar .chapter,
+.chapter li a,
+.menu-title {
+  font-size: var(--docs-size-small);
+}
+.chapter li a {
+  line-height: 1.5;
+}
+
+/* ── ABSOLUTE FLOOR ────────────────────────────────────────────
+   Zero-specificity backstop: every explicit rule above wins over
+   this, and any element NOT sized above still cannot drop below
+   14px. `1em` = the element's inherited size, so larger contexts
+   are preserved; only sub-14px values are clamped up. */
+:where(.content, .sidebar, .menu-bar, .nav-chapters, .mobile-nav-chrome) :where(*) {
+  font-size: max(14px, 1em);
+}
