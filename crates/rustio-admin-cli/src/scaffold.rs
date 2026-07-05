@@ -116,6 +116,37 @@ const CLINIC_EXTRAS: &[(&str, &str)] = &[
     ),
 ];
 
+/// `translation-agency` preset -- the canonical worked domain (see the
+/// translation-agency Quick Start). `Translator` + `Task` models with a
+/// status state machine, a foreign key, and seeded migrations, so the
+/// developer reaches a working, non-empty dispatch admin without
+/// hand-editing a single file.
+const TRANSLATION_AGENCY_OVERRIDES: &[(&str, &str)] = &[(
+    "src/main.rs",
+    include_str!("../templates/project_translation_agency/src/main.rs.tmpl"),
+)];
+
+const TRANSLATION_AGENCY_EXTRAS: &[(&str, &str)] = &[
+    (
+        "src/translator.rs",
+        include_str!("../templates/project_translation_agency/src/translator.rs.tmpl"),
+    ),
+    (
+        "src/task.rs",
+        include_str!("../templates/project_translation_agency/src/task.rs.tmpl"),
+    ),
+    (
+        "migrations/0001_create_translators.sql",
+        include_str!(
+            "../templates/project_translation_agency/migrations/0001_create_translators.sql"
+        ),
+    ),
+    (
+        "migrations/0002_create_tasks.sql",
+        include_str!("../templates/project_translation_agency/migrations/0002_create_tasks.sql"),
+    ),
+];
+
 /// A slice of `(relative_target_path, template_body)` pairs — the
 /// shape of every template table in this module.
 type TemplateSet = &'static [(&'static str, &'static str)];
@@ -127,6 +158,7 @@ type TemplateSet = &'static [(&'static str, &'static str)];
 /// wrote (not counted); `extras` are net-new files (counted).
 fn preset_layers(preset: &str) -> Option<(TemplateSet, TemplateSet)> {
     match preset {
+        "translation-agency" => Some((TRANSLATION_AGENCY_OVERRIDES, TRANSLATION_AGENCY_EXTRAS)),
         "blog" => Some((BLOG_OVERRIDES, BLOG_EXTRAS)),
         "clinic" => Some((CLINIC_OVERRIDES, CLINIC_EXTRAS)),
         _ => None,
@@ -159,9 +191,8 @@ fn humanise_name(name: &str) -> String {
 /// blog-flavoured.
 fn type_phrase(project_type: &str) -> &'static str {
     match project_type {
+        "translation-agency" => "Translation agency project initialized.",
         "clinic" => "Clinic project initialized.",
-        "school" => "School management project initialized.",
-        "inventory" => "Inventory project initialized.",
         "blog" => "Blog project initialized.",
         _ => "Custom RustIO project initialized.",
     }
@@ -169,7 +200,7 @@ fn type_phrase(project_type: &str) -> &'static str {
 
 /// Valid preset names, surfaced verbatim in the error path so
 /// `--preset foo` reports the closed list of choices.
-const VALID_PRESETS: &[&str] = &["minimal", "blog", "clinic"];
+const VALID_PRESETS: &[&str] = &["minimal", "translation-agency", "blog", "clinic"];
 
 /// One-line comment appended to the `rustio-admin migrate apply` step
 /// in the Next-steps block. Content presets ship migrations and say
@@ -177,6 +208,7 @@ const VALID_PRESETS: &[&str] = &["minimal", "blog", "clinic"];
 /// `startapp` for the first one.
 fn migrate_hint(preset: &str) -> &'static str {
     match preset {
+        "translation-agency" => "creates the translators + tasks tables (with example rows)",
         "blog" => "creates the posts + comments tables",
         "clinic" => "creates the patients + appointments tables (with example rows)",
         _ => "no project migrations yet (`rustio-admin startapp <name>` adds the first)",
@@ -971,6 +1003,20 @@ mod tests {
         }
     }
 
+    #[allow(clippy::const_is_empty)]
+    #[test]
+    fn translation_agency_preset_templates_are_non_empty() {
+        for (rel, body) in TRANSLATION_AGENCY_OVERRIDES
+            .iter()
+            .chain(TRANSLATION_AGENCY_EXTRAS.iter())
+        {
+            assert!(
+                !body.is_empty(),
+                "translation-agency template {rel} is empty"
+            );
+        }
+    }
+
     #[test]
     fn project_rejects_unknown_preset_with_valid_list_in_message() {
         let dir = unique_tempdir();
@@ -1041,6 +1087,63 @@ mod tests {
         );
     }
 
+    /// The `translation-agency` preset must produce a real dispatch admin —
+    /// `Translator` and `Task` models, both migrations, and a `main.rs` that
+    /// registers both — matching the translation-agency Quick Start.
+    #[test]
+    fn project_translation_agency_wires_models_and_seeded_migrations() {
+        let dir = unique_tempdir();
+        project_in(&dir, "agency", "translation-agency", "translation-agency")
+            .expect("translation-agency should scaffold");
+        let root = dir.join("agency");
+
+        for f in [
+            "src/translator.rs",
+            "src/task.rs",
+            "migrations/0001_create_translators.sql",
+            "migrations/0002_create_tasks.sql",
+        ] {
+            assert!(
+                root.join(f).exists(),
+                "translation-agency preset must write {f}"
+            );
+        }
+
+        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+        assert!(
+            main.contains("mod translator;"),
+            "main.rs must declare translator module"
+        );
+        assert!(
+            main.contains("mod task;"),
+            "main.rs must declare task module"
+        );
+        assert!(
+            main.contains(".model::<Translator>()"),
+            "main.rs must register Translator: {main}"
+        );
+        assert!(
+            main.contains(".model::<Task>()"),
+            "main.rs must register Task"
+        );
+        assert!(
+            main.contains(".app_name(\"Agency\")"),
+            "app_name must be the humanised project name: {main}"
+        );
+        assert!(!main.contains("{{"), "no placeholder may survive: {main}");
+
+        // The tasks migration FKs to translators and CHECK-constrains status.
+        let tasks = fs::read_to_string(root.join("migrations/0002_create_tasks.sql")).unwrap();
+        assert!(
+            tasks.contains("REFERENCES translators(id)"),
+            "tasks must FK to translators"
+        );
+        assert!(
+            tasks.contains("CHECK"),
+            "tasks status must be CHECK-constrained"
+        );
+    }
+
     /// PR 1.5: the minimal scaffold is neutral — no `post.rs`, no
     /// `0001_create_posts.sql`, no Post registration in main.rs.
     /// A clinic / school / inventory project must stop feeling
@@ -1107,9 +1210,11 @@ mod tests {
     fn homepage_substitutes_type_phrase_per_project_type() {
         let cases = [
             ("custom", "Custom RustIO project initialized."),
+            (
+                "translation-agency",
+                "Translation agency project initialized.",
+            ),
             ("clinic", "Clinic project initialized."),
-            ("school", "School management project initialized."),
-            ("inventory", "Inventory project initialized."),
             ("blog", "Blog project initialized."),
             // Unknown type falls back to custom — neutral, never wrong.
             ("unrecognised", "Custom RustIO project initialized."),
@@ -1194,8 +1299,15 @@ mod tests {
     #[test]
     fn project_with_db_also_writes_env_example_for_team_sharing() {
         let dir = unique_tempdir();
-        project_with_db_in(&dir, "school", "minimal", "school_dev", "school").unwrap();
-        let root = dir.join("school");
+        project_with_db_in(
+            &dir,
+            "agency",
+            "minimal",
+            "agency_dev",
+            "translation-agency",
+        )
+        .unwrap();
+        let root = dir.join("agency");
         assert!(
             root.join(".env").exists(),
             ".env (wizard-generated) must exist"
@@ -1216,8 +1328,8 @@ mod tests {
         // Homepage carries the chosen project type's phrase.
         let html = fs::read_to_string(root.join("templates/home.html")).unwrap();
         assert!(
-            html.contains("School management project initialized."),
-            "homepage should reflect school type: {html}"
+            html.contains("Translation agency project initialized."),
+            "homepage should reflect translation-agency type: {html}"
         );
     }
 

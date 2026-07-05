@@ -107,6 +107,18 @@ route, auth, permission, or migration change to existing models.
 ## [Unreleased]
 
 ### Changed
+- **CLI: `translation-agency` scaffold preset; the empty `school`/`inventory`
+  project types are dropped.** `rustio-admin new` (choose *translation-agency*)
+  and `startproject --preset translation-agency` now scaffold a working dispatch
+  admin — `Translator` + `Task` models (status `choice` + `CHECK`, a
+  `translator_id` foreign key), seeded migrations, and a pre-wired `src/main.rs`
+  — matching the translation-agency Quick Start and the runnable
+  `examples/translation-agency`, so a developer reaches a non-empty admin
+  without editing a file. The wizard's project-type list becomes
+  `custom · translation-agency · clinic · blog`; the `school` and `inventory`
+  types (which shipped *empty* scaffolds that promised models they never
+  delivered) are removed, honouring `DESIGN_ONBOARDING.md`'s
+  disposable-and-honest rule. `custom` / `clinic` / `blog` are unchanged.
 - **View designer — Composition editor (Studio Phase 1).** The per-model
   `/admin/dev/view-designer/<model>` page is reworked from a plain form into a
   row-based editor: a live preview on top (with filter chips, server-rendered

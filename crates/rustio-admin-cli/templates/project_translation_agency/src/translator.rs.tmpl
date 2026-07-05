@@ -1,0 +1,40 @@
+//! `Translator` model — a freelancer with the languages they cover.
+//!
+//! - `#[derive(RustioAdmin)]` produces the `AdminModel` impl that drives every
+//!   list / form / cell rendering, AND the `impl Model` ORM contract (table,
+//!   columns, row decoder, insert binder) — both from the struct fields, so
+//!   there is nothing to keep in sync by hand. `#[rustio(table = "…")]` pins
+//!   the SQL table name.
+//! - `impl ModelAdmin for Translator { … }` opts into Django-style
+//!   customisation. Override only the methods you care about.
+//!
+//! Rename, extend, or delete this freely — it is your project's code.
+
+use rustio_admin::{ModelAdmin, RustioAdmin};
+
+#[derive(RustioAdmin)]
+#[rustio(table = "translators")]
+pub struct Translator {
+    pub id: i64,
+    pub name: String,
+    pub email: String,
+    /// Free text to keep it simple, e.g. `"en, ar, sv"`. A real system would
+    /// model this as its own table and a join — `fk:` handles that.
+    pub languages: String,
+    pub active: bool,
+}
+
+impl ModelAdmin for Translator {
+    fn list_display() -> &'static [&'static str] {
+        &["name", "email", "languages", "active"]
+    }
+    fn list_filter() -> &'static [&'static str] {
+        &["active"]
+    }
+    fn search_fields() -> &'static [&'static str] {
+        &["name", "email", "languages"]
+    }
+    fn ordering() -> &'static [&'static str] {
+        &["name"]
+    }
+}
