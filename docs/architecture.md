@@ -236,7 +236,7 @@ Other rules:
 - **No second runtime.** `ConcreteOps<M>` is the runtime — no bridges, no schema-driven sibling.
 - **No build step.** Templates and CSS/JS are hand-written and baked via `include_str!`; `rio-theme` runs at build/CLI time, never at runtime.
 - **No magic.** Macros emit obvious code; `cargo expand` shows the full picture.
-- **Audit by default.** Every authority mutation emits a typed `AuditEvent` with a correlation ID (`design/DESIGN_AUDIT.md`).
+- **Audit-by-default.** Every authority mutation emits a typed `AuditEvent` with a correlation ID (`design/DESIGN_AUDIT.md`).
 - **Session invalidation has a single writer** (`auth::sessions::invalidate_sessions` — Doctrine 22).
 - **No plaintext at rest.** Argon2id for passwords; SHA-256 for session and reset tokens.
 - **Uniform outward responses** on login and recovery surfaces — every failure mode collapses to one response shape (`design/DESIGN_RECOVERY.md`).

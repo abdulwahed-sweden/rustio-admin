@@ -154,9 +154,9 @@ logic you write.** What RustIO *does* enforce here is a different, equally
 important refusal: **who is even allowed to assign a task.** A user without the
 `change_task` permission is rejected before the request reaches the database.
 
-> **Two kinds of "no":** RustIO refuses the *unauthorised actor* (authority);
-> you refuse the *wrong translator* (domain). Keep them separate and both stay
-> simple.
+> **The "two kinds of no":** RustIO refuses the *unauthorized actor*
+> (authority); you refuse the *wrong translator* (domain). Keep them separate
+> and both stay simple.
 
 **3 · The translator accepts, then goes quiet as the deadline nears.**
 → *Shared.* The `choice` field guarantees `status` is always one of your five
