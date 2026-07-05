@@ -262,3 +262,31 @@ jobs:
           cargo fmt --all --check
           cargo clippy --workspace --all-targets -- -D warnings
           cargo build --workspace
+
+  example-translation-agency:
+    name: example (translation-agency)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.94
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/translation-agency
+
+      # `examples/translation-agency` is a single-crate interpreter-dispatch
+      # admin example. Like examples/shop it path-deps the in-repo framework
+      # directly, so it builds against HEAD — a breaking framework change
+      # trips THIS job.
+      - name: fmt + clippy + build (against framework HEAD)
+        working-directory: examples/translation-agency
+        run: |
+          set -eu
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo build --workspace

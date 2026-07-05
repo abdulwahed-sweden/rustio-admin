@@ -1,0 +1,5 @@
+/target
+.env
+
+# Cargo.lock IS committed for this example (it's a binary / app) so builds
+# are reproducible — same as examples/shop and examples/clinic.

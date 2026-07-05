@@ -112,7 +112,7 @@ rustio-admin startapp task \
   --field word_count:int \
   --field deadline:date \
   --field status:choice:available,in_progress,review,completed,reassigned \
-  --field translator:fk:Translator
+  --field translator_id:fk:Translator
 ```
 
 Paste its three `// rustio:` lines into `src/main.rs` as before
@@ -128,8 +128,12 @@ Your pages are live:
 - **<http://127.0.0.1:8000/admin/translators>**
 - **<http://127.0.0.1:8000/admin/tasks>**
 
-List, create, edit, search, delete — and the `translator` column links straight
-to the assigned person, not a raw id.
+List, create, edit, search, delete — and the `translator_id` column links
+straight to the assigned person, not a raw id.
+
+> A ready-to-run version of everything below lives at
+> [`examples/translation-agency/`](../examples/translation-agency/) — compiled,
+> tested, and seeded with example rows.
 
 ---
 
