@@ -291,6 +291,11 @@ migration runner — the framework ships all of it.
 
 ## Where to go next
 
+- **See a full worked domain** — [Quick Start: a translation-agency
+  admin](./quickstart-translation-agency.md) builds translators, translation
+  tasks with a status state, and an automatic audit trail — and draws a clear
+  line between what RustIO enforces (authority, permissions, audit) and what you
+  write (the matching rule, the legal transitions).
 - **Customise the look** — `Admin::accent_color("#…")`,
   `Admin::site_branding(…)`, or generate a full palette with
   `rustio-admin theme generate --brand "#…"`.
