@@ -21,6 +21,12 @@
 
 ---
 
+<p align="center">
+  <img src="docs/assets/admin-dashboard.png" alt="The admin RustIO generates — dashboard, models, audit log, and permissions" width="820">
+</p>
+
+<p align="center"><sub>The admin RustIO generates from your Rust structs — dashboard, models, an audit log of every authority change, and users &amp; permissions. <em>(Shown: the <a href="./examples/shop"><code>shop</code></a> example.)</em></sub></p>
+
 ## What is RustIO?
 
 RustIO (`rustio-admin`) is **Django Admin for Rust** — a Postgres-first admin
