@@ -95,11 +95,11 @@ no hand-written ORM boilerplate to keep in sync.
 
 ```rust
 #[derive(RustioAdmin)]
-pub struct Post { pub id: i64, pub title: String, /* … */ }
+pub struct Task { pub id: i64, pub title: String, /* … */ }
 
-impl ModelAdmin for Post {}                  // accept every default
+impl ModelAdmin for Task {}                  // accept every default
 
-let admin  = Admin::new().model::<Post>();
+let admin  = Admin::new().model::<Task>();
 let router = register_admin_routes(Router::new(), admin, db, templates);
 Server::new(router, addr).run().await?;
 ```
@@ -107,11 +107,11 @@ Server::new(router, addr).run().await?;
 A model that wants more control fills in the `ModelAdmin` body:
 
 ```rust
-impl ModelAdmin for Post {
-    fn list_display()  -> &'static [&'static str] { &["title", "published", "created_at"] }
-    fn list_filter()   -> &'static [&'static str] { &["published"] }
-    fn search_fields() -> &'static [&'static str] { &["title", "body"] }
-    fn ordering()      -> &'static [&'static str] { &["-created_at"] }
+impl ModelAdmin for Task {
+    fn list_display()  -> &'static [&'static str] { &["title", "target_lang", "deadline", "status"] }
+    fn list_filter()   -> &'static [&'static str] { &["status", "target_lang"] }
+    fn search_fields() -> &'static [&'static str] { &["title", "source_lang"] }
+    fn ordering()      -> &'static [&'static str] { &["-id"] }
 }
 ```
 
@@ -303,6 +303,7 @@ Where to start depends on the work.
 **Building on the published crate**
 → Install above
 → [`docs/modeladmin.md`](./docs/modeladmin.md)
+→ [`examples/translation-agency/`](./examples/translation-agency/) — the canonical worked example (matches the Quick Start)
 → [`examples/clinic/`](./examples/clinic/) — multi-crate reference project
 → [`examples/shop/`](./examples/shop/) — single-crate e-commerce admin, also a
   standalone project: **[abdulwahed-sweden/shop](https://github.com/abdulwahed-sweden/shop)**
