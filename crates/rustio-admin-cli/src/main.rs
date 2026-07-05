@@ -132,10 +132,11 @@ enum Command {
         /// Name of the project -- also the cargo crate name. Letters,
         /// digits, '-', and '_' only.
         name: String,
-        /// Project preset: `minimal` (default -- neutral scaffold,
-        /// no domain models) or `blog` (adds `Post` + `Comment`
-        /// with their migrations). Unknown presets error out with
-        /// the valid list.
+        /// Project preset: `minimal` (default -- neutral scaffold, no
+        /// domain models), `translation-agency` (`Translator` + `Task`),
+        /// `clinic` (`Patient` + `Appointment`), or `blog` (`Post` +
+        /// `Comment`) -- each content preset ships models + seeded
+        /// migrations. Unknown presets error out with the valid list.
         #[arg(long, default_value = "minimal")]
         preset: String,
     },
@@ -596,14 +597,14 @@ fn dispatch_new(
     }
     if wizard::should_run(no_interactive) {
         let input = wizard::run(name.as_deref())?;
-        // project_type drives preset selection. `blog` and `clinic`
-        // each have a real content preset (models + migrations +
-        // pre-wired main.rs) so the developer reaches a working,
-        // non-empty admin without hand-editing a file. Every other
-        // type (custom / school / inventory) still gets the neutral
-        // minimal scaffold and a project-type-aware homepage.
-        // `DESIGN_ONBOARDING.md` §6.
+        // project_type drives preset selection. `translation-agency`,
+        // `blog`, and `clinic` each have a real content preset (models +
+        // migrations + pre-wired main.rs) so the developer reaches a
+        // working, non-empty admin without hand-editing a file. The
+        // `custom` type gets the neutral minimal scaffold and a
+        // project-type-aware homepage. `DESIGN_ONBOARDING.md` §6.
         let resolved_preset = match input.project_type.as_str() {
+            "translation-agency" => "translation-agency",
             "blog" => "blog",
             "clinic" => "clinic",
             _ => "minimal",

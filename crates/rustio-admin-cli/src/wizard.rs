@@ -29,7 +29,7 @@ use crate::style;
 /// Curated project types from `DESIGN_ONBOARDING.md` §6. Order is
 /// the order shown to the user; `custom` is the default and is
 /// listed first.
-pub(crate) const PROJECT_TYPES: &[&str] = &["custom", "clinic", "school", "inventory", "blog"];
+pub(crate) const PROJECT_TYPES: &[&str] = &["custom", "translation-agency", "clinic", "blog"];
 
 /// Brief Postgres install hint printed before the database-name
 /// prompt. Text-only -- `DESIGN_ONBOARDING.md` §4 forbids the CLI
@@ -170,6 +170,7 @@ fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
 /// not deliver. Keep in lock-step with `scaffold::preset_layers`.
 fn project_type_hint(t: &str) -> &'static str {
     match t {
+        "translation-agency" => "example models — translators, tasks",
         "clinic" => "example models — patients, appointments",
         "blog" => "example models — posts, comments",
         _ => "clean slate (no models yet)",

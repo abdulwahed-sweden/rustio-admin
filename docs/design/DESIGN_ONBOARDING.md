@@ -217,10 +217,13 @@ the wrong tool."
   documented as a starter, and easy to remove.
 - A school project should feel like a school project on first
   open. A clinic project should feel like a clinic project.
-- The set of project types is curated and small (for example:
-  `school`, `clinic`, `inventory`, `blog`, `custom`). The
+- The set of project types is curated and small (today:
+  `custom`, `translation-agency`, `clinic`, `blog`). The
   `custom` choice yields no starter model, which is the correct
-  default for users who know what they want.
+  default for users who know what they want. A type is only
+  offered once its content preset actually ships models — an
+  empty stub that promises "school" and delivers nothing violates
+  the disposable-and-honest rule above.
 
 ---
 
