@@ -34,19 +34,21 @@ is not a throwaway dashboard or one more CRUD screen; it is the layer
 > **What it stands for:** read [**the RustIO Admin Manifesto**](./MANIFESTO.md) —
 > what the project is, what it refuses to be, and why AI is kept on a leash.
 
-**The problem it solves.** RustIO was born from a real market problem, not from
-a wish to build another admin panel. A fast-growing housing platform in the
-Swedish market — serving well over a million customers — began to crack under
-its own success. Not because of its engineers, but because the foundation it was
-built on was never designed to be a heavy-duty operational engine. As data
-grows, workflows multiply, and operational pressure rises, conventional web
-stacks start to show their limits: slower performance, climbing infrastructure
-cost, fragile changes, and constant firefighting. The problem was never the
-team — it was a weak foundation.
+**The problem it solves.** RustIO was born from a real one, not from a wish to
+build another admin panel. A fast-growing housing platform in the Swedish
+market — serving well over a million customers — began to crack under its own
+success. Not because of its engineers, but because the foundation it was built
+on had grown piecemeal: authority, permissions, and audit were bolted on along
+the way rather than designed in. As data grows and workflows multiply, that kind
+of foundation gets harder to change safely — permissions sprawl, the audit trail
+has gaps, and no one is quite sure why the system is the way it is — until the
+only option left is a rewrite. The problem was never the team; it was a
+foundation that couldn't stay answerable as it grew.
 
 RustIO exists for exactly that moment: **when a business outgrows its first
-system and needs a foundation that won't collapse under its own growth** — one
-built for speed, memory safety, structural correctness, and long-term evolution.
+system and needs one it can keep understanding, changing, and owning for
+years** — with authority, permissions, recovery, and audit governed by design
+instead of bolted on afterward.
 
 **From idea to a safe foundation.** The workflow is deliberately simple:
 
@@ -57,6 +59,10 @@ companion drafts a `schema.json`; RustIO validates it against strict, checked-in
 rules; a human reviews and approves the change; and you are left with a
 foundation you can keep evolving for years. *AI drafts. RustIO validates. Diff
 protects. Human approves.*
+
+> The `rustio-draft` step is optional. You can define models directly with the
+> CLI — that's the path the [Quick Start](./docs/quickstart-translation-agency.md)
+> takes.
 
 **What makes it different.** Most admin tools treat CRUD as the product and bolt
 on auth, recovery, and audit afterward. RustIO inverts that. *Authority* — who

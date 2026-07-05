@@ -28,9 +28,10 @@ logistics, dispatch, booking, and school systems on the roadmap).
 
 RustIO was born from a real market problem. A fast-growing housing platform in
 the Swedish market — serving well over a million customers — began to crack
-under its own success, because the foundation it was built on was never designed
-to be a heavy-duty operational engine. That failure is not unique: across the
-industry, teams rebuild the same operational foundation and hit the same wall.
+under its own success, because authority, permissions, and audit had been bolted
+onto its foundation piecemeal rather than designed in. That failure is not
+unique: across the industry, teams rebuild the same operational foundation and
+hit the same wall.
 
 Most operational software is either hand-rolled from scratch or rented as an
 expensive SaaS stack. RustIO is a third option: an open, auditable engine you run
