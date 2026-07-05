@@ -2,6 +2,69 @@
 
 Module map — read this before contributing or filing a structural bug. The full design rationale lives in [`STRATEGIC_RESET_PLAN.md`](./archive/STRATEGIC_RESET_PLAN.md); security-sensitive subsystems each have a contract under [`design/`](./design/).
 
+## Request lifecycle
+
+One picture of how a request travels from the socket to a durable audit row.
+It is the mental model behind everything else in this document: middleware
+runs in a fixed order, an **authority gate refuses unauthorized requests
+before they reach the database**, and every authority mutation is **recorded
+by default**.
+
+```text
+        HTTP request  (browser / API client)
+             │
+             ▼
+     ┌────────────────────┐
+     │  Server (hyper)    │   src/server.rs
+     │  Router  :param    │   src/router.rs
+     └─────────┬──────────┘
+               │
+     ┌─────────▼───────────────────────┐
+     │  Middleware chain — fixed order  │   src/middleware/
+     │    1. logger                     │
+     │    2. correlation_id  → UUID v7  │   stamped BEFORE csrf, so even a
+     │    3. security_headers           │   rejected request is traceable
+     │    4. csrf_protect               │
+     └─────────┬────────────────────────┘
+               │
+     ┌─────────▼────────────────────────┐
+     │  Authority gate        auth/*     │
+     │    session → Identity → Role      │
+     │    permission check (60 s cache)  │
+     └────┬───────────────────────┬──────┘
+   authorized               NOT authorized
+          │                       │
+          ▼                       ▼
+   ┌──────────────┐        ┌─────────────────────┐
+   │  Handler     │        │  REFUSED → 403       │  ← refusal-first:
+   │  ConcreteOps │        │  before the database │    rejected before it
+   │  CRUD        │        └─────────────────────┘    ever reaches Postgres
+   └──────┬───────┘
+          │ mutation
+          ▼
+   ┌──────────────┐
+   │  orm / sqlx  │ ─────▶  PostgreSQL
+   │  Error maps  │        constraint violation → 409
+   └──────┬───────┘
+          │ on any authority mutation
+          ▼
+   ┌──────────────────────────────────────┐
+   │  audit::emit → rustio_admin_actions   │  ← audit-by-default: who, when,
+   │   (correlation_id, session_id,        │    on what basis — you wrote no
+   │    redacted summary)                  │    logging code
+   └──────────────────┬───────────────────┘
+                      ▼
+                   Response
+```
+
+Two of these boxes are the **"two kinds of no"** from the
+[translation-agency Quick Start](./quickstart-translation-agency.md): the
+**authority gate** refuses the *unauthorized actor* (framework), while a
+*domain rule* like "this translator can't do Arabic" is refused by **your**
+handler code. The audit row is written for you either way. The middleware
+ordering is a contract — see [`design/DESIGN_AUDIT.md`](./design/DESIGN_AUDIT.md)
+§4.
+
 ## Workspace
 
 ```text
