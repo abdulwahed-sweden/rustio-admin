@@ -278,6 +278,10 @@ Where to start depends on the work.
 → [`DESIGN_RECOVERY.md`](./docs/design/DESIGN_RECOVERY.md)
 → [`DESIGN_R2_ORGANISATIONAL.md`](./docs/design/DESIGN_R2_ORGANISATIONAL.md)
 
+**Evaluating it for a real system**
+→ [What RustIO stops out of the box](./docs/security.md) — the shipping defaults, honestly bounded
+→ [Request lifecycle diagram](./docs/architecture.md#request-lifecycle)
+
 **Auditing authority boundaries**
 → [`DESIGN_AUDIT.md`](./docs/design/DESIGN_AUDIT.md)
 → [`DESIGN_SESSIONS.md`](./docs/design/DESIGN_SESSIONS.md)
