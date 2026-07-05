@@ -31,5 +31,3 @@ target/
 .env
 .env.*
 !.env.example
-# mdBook documentation build output (published to Pages, not committed)
-/book
