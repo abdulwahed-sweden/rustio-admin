@@ -31,7 +31,7 @@ cargo run                            # applies migrations, then serves
 In another shell, create your login (the CLI is the `rustio-admin` binary):
 
 ```sh
-rustio-admin-cli user create --email coordinator@agency.local --role administrator
+rustio-admin user create --email coordinator@agency.local --role administrator
 ```
 
 Then open **<http://127.0.0.1:8000/admin>**, sign in, and you have a working

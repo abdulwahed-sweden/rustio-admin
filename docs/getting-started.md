@@ -3,9 +3,9 @@
 From nothing to a **running admin panel** — login, roles, and an audit trail
 — in about ten minutes. Two ways in:
 
-- **See it work now** — scaffold a ready-made clinic and sign in to something
-  real, having written no code.
-- **Build your own** — describe your data as a Rust struct and watch RustIO
+- **See it work now** — run the bundled **translation-agency** example and sign
+  in to a real, seeded admin, having written no code.
+- **Build your own** — describe your data as Rust structs and watch RustIO
   render the admin.
 
 RustIO (`rustio-admin`) is Postgres-first: you describe your data as Rust
@@ -29,52 +29,37 @@ You do **not** need Node, a bundler, or any frontend toolchain.
 
 ---
 
-## See it work now — the clinic example
+## See it work now — the translation-agency example
 
-The fastest way to understand RustIO is to run a real admin. The `new`
-wizard's **Clinic** type scaffolds a working clinic — `Patient` and
-`Appointment` models, already registered, with example rows — so the first
-thing you do is sign in to something real.
-
-```sh
-cargo install rustio-admin-cli      # installs the `rustio-admin` binary
-rustio-admin new clinic             # at "Project type", choose 2) clinic
-```
-
-The wizard asks three short questions and writes a matching `.env`:
-
-```text
-Step 2 of 3 · Project type
-  clinic and blog come with example models you can run right away;
-  the rest start clean.
-
-    1  custom      clean slate (no models yet)
-    2  clinic      example models — patients, appointments
-    3  school      clean slate (no models yet)
-    4  inventory   clean slate (no models yet)
-    5  blog        example models — posts, comments
-
-  › Type [1]: 2
-```
-
-Then follow the steps it prints (the database name is the one it shows you):
+The fastest way to understand RustIO is to run a real admin. The repository
+ships a **translation-agency** example — `Translator` and `Task` models, already
+registered, with example rows — so the first thing you do is sign in to
+something real.
 
 ```sh
-cd clinic
-createdb clinic_dev
-rustio-admin migrate apply          # creates patients + appointments (with example rows)
-rustio-admin user create --email admin@clinic.local --role administrator
-cargo run                           # first build takes a few minutes; later runs are fast
+git clone https://github.com/abdulwahed-sweden/rustio-admin
+cd rustio-admin/examples/translation-agency
+cp .env.example .env                # defaults are fine for local Postgres
+createdb translation_agency_dev
+cargo run                           # applies migrations + seeds, then serves
+```
+
+In another shell, install the CLI and create your login (run it from the same
+example directory so it reads that `.env`):
+
+```sh
+cargo install rustio-admin-cli      # provides the `rustio-admin` binary
+rustio-admin user create --email coordinator@agency.local --role administrator
 ```
 
 Open **<http://127.0.0.1:8000/admin>**, sign in, and you have a working
-clinic:
+dispatch admin:
 
 ```text
-Patients (3)              Appointments (3)
-  Sarah Ahmed               Sarah Ahmed · Annual checkup · scheduled
-  John Okoro                John Okoro  · Follow-up      · scheduled
-  Maria Lopez               Maria Lopez · Lab results    · completed
+Translators (3)           Tasks (3)
+  Amina Hassan              Medical discharge summary · ar · in_progress
+  Pierre Dubois             Rental contract           · en · review
+  Sven Karlsson             Court hearing transcript  · en · available
 ```
 
 List, create, edit, search, delete — plus the login you just used and an
@@ -87,19 +72,19 @@ the whole idea. The rest of this guide shows how to build your own.
 
 Before you build one yourself, the shape — so each step makes sense:
 
-- You write a **Rust struct** for each thing you manage (a `Product`, an
-  `Invoice`), plus a **SQL migration** that creates its table.
+- You write a **Rust struct** for each thing you manage (a `Translator`, a
+  `Task`), plus a **SQL migration** that creates its table.
 - Three small pieces turn that struct into admin pages:
   - `#[derive(RustioAdmin)]` — generates the list / create / edit / delete UI.
   - `impl Model` — the contract with Postgres (table, columns, row mapping).
     The CLI writes this for you.
   - `impl ModelAdmin` — optional customisation (columns shown, what's
     searchable, ordering). Empty `{}` accepts sensible defaults.
-- You **register** each model by hand — `Admin::new().model::<Product>()`. The
-  sidebar matches your source; nothing is auto-discovered behind your back.
+- You **register** each model by hand — `Admin::new().model::<Translator>()`.
+  The sidebar matches your source; nothing is auto-discovered behind your back.
 
-The `clinic` preset above did all of this for you. Below you do it yourself,
-one command at a time.
+The translation-agency example above ships all of this; below you build the
+same models yourself, one command at a time.
 
 ---
 
@@ -108,18 +93,18 @@ one command at a time.
 ### 1. Create a clean-slate project
 
 ```sh
-rustio-admin new shop               # at "Project type", choose 1) custom
-cd shop
+rustio-admin new agency             # at "Project type", choose 1) custom
+cd agency
 ```
 
 `new` runs a short, calm wizard (project name → type → database), then writes
-a matching `.env`. Scripting or in CI? `rustio-admin startproject shop` skips
+a matching `.env`. Scripting or in CI? `rustio-admin startproject agency` skips
 the wizard and writes `.env.example` instead.
 
 The `custom` scaffold is neutral — no demo models, nothing to delete later:
 
 ```text
-shop/
+agency/
 ├── Cargo.toml
 ├── .env                    # written by the wizard (.env.example for startproject)
 ├── .gitignore
@@ -134,7 +119,7 @@ shop/
 ### 2. Point it at your database
 
 ```sh
-createdb shop_dev           # the database name the wizard showed you
+createdb agency_dev         # the database name the wizard showed you
 ```
 
 > RustIO reads `DATABASE_URL` from `.env` in the project directory. The
@@ -144,7 +129,7 @@ createdb shop_dev           # the database name the wizard showed you
 
 ```sh
 rustio-admin migrate apply  # a brand-new custom project has no model migrations yet — expected
-rustio-admin user create --email admin@shop.local --role administrator
+rustio-admin user create --email coordinator@agency.local --role administrator
 cargo run
 ```
 
@@ -165,56 +150,62 @@ This is the loop you repeat for every kind of thing you manage. One command
 scaffolds the model and its migration:
 
 ```sh
-rustio-admin startapp product \
+rustio-admin startapp translator \
   --field name:str \
-  --field price:decimal \
-  --field in_stock:bool
+  --field email:email \
+  --field languages:str \
+  --field active:bool
 ```
 
-**Creates** a `Product` with three columns:
+**Creates** a `Translator` with four columns:
 
 ```text
-Product
-├── name       str        (TEXT)
-├── price      decimal    (NUMERIC)
-└── in_stock   bool       (BOOLEAN)
+Translator
+├── name        str        (TEXT)
+├── email       email      (TEXT, format-validated)
+├── languages   str        (TEXT)
+└── active      bool       (BOOLEAN)
 ```
 
 **Generates**, and tells you exactly what to wire:
 
 ```text
-✓ src/product.rs                       the Rust model (+ admin defaults)
-✓ migrations/0001_create_products.sql  the table
+✓ src/translator.rs                       the Rust model (+ admin defaults)
+✓ migrations/0001_create_translators.sql  the table
 
   …plus an admin page, search, and per-model permissions at boot.
 
 3 edits in src/main.rs
-  under  // rustio: modules  add  mod product;
-  under  // rustio: imports   add  use product::Product;
-  under  // rustio: models    add  .model::<Product>()
+  under  // rustio: modules  add  mod translator;
+  under  // rustio: imports   add  use translator::Translator;
+  under  // rustio: models    add  .model::<Translator>()
 ```
 
 **`startapp` never edits `main.rs` — you stay the author.** Paste each line
 under its matching `// rustio:` marker:
 
 ```rust
-mod product;                         // under `// rustio: modules`
-use product::Product;                // under `// rustio: imports`
+mod translator;                      // under `// rustio: modules`
+use translator::Translator;          // under `// rustio: imports`
 
 let admin = Admin::new()
-    .model::<Product>();             // under `// rustio: models`
+    .model::<Translator>();          // under `// rustio: models`
 ```
 
 Then apply the migration and re-run:
 
 ```sh
-rustio-admin migrate apply           # creates the `products` table
+rustio-admin migrate apply           # creates the `translators` table
 cargo run
 ```
 
-Your pages are live at **<http://127.0.0.1:8000/admin/products>** — list,
-create, edit, search, delete — permission-seeded (`view_product`,
-`add_product`, `change_product`, `delete_product`) at boot.
+Your pages are live at **<http://127.0.0.1:8000/admin/translators>** — list,
+create, edit, search, delete — permission-seeded (`view_translator`,
+`add_translator`, `change_translator`, `delete_translator`) at boot.
+
+To add the second model — a translation `Task` with a status and a foreign key
+to the translator — follow the same loop, or see the full walkthrough in the
+[translation-agency Quick Start](./quickstart-translation-agency.md).
 
 ### Field types — and the best reference
 
@@ -247,14 +238,14 @@ rustio-admin startapp --help         # examples, every field type, relations, ch
 
 ### Customising a model
 
-The generated `impl ModelAdmin for Product {}` accepts every default. Fill it
-in to shape the pages — the Django-style hooks:
+The generated `impl ModelAdmin for Translator {}` accepts every default. Fill
+it in to shape the pages — the Django-style hooks:
 
 ```rust
-impl ModelAdmin for Product {
-    fn list_display()  -> &'static [&'static str] { &["name", "price", "in_stock"] }
-    fn search_fields() -> &'static [&'static str] { &["name"] }
-    fn list_filter()   -> &'static [&'static str] { &["in_stock"] }
+impl ModelAdmin for Translator {
+    fn list_display()  -> &'static [&'static str] { &["name", "email", "languages", "active"] }
+    fn search_fields() -> &'static [&'static str] { &["name", "email", "languages"] }
+    fn list_filter()   -> &'static [&'static str] { &["active"] }
     fn ordering()      -> &'static [&'static str] { &["name"] }
 }
 ```
@@ -322,7 +313,7 @@ migration runner — the framework ships all of it.
 ## If you remember nothing else
 
 ```sh
-rustio-admin new <name>          # pick "clinic" to see real models now, or "custom" for a clean slate
+rustio-admin new <name>          # scaffold a clean-slate project (choose "custom")
 cd <name> && createdb <name>_dev
 rustio-admin migrate apply
 rustio-admin user create --email admin@<name>.local --role administrator

@@ -3,7 +3,7 @@
 `ModelAdmin` is the customisation surface for every model registered via `Admin::new().model::<M>()`. Every method on the trait has a default body, so the minimum you need is:
 
 ```rust
-impl ModelAdmin for Post {}            // accept every default
+impl ModelAdmin for Task {}            // accept every default
 ```
 
 Override only what you care about; the rest inherit framework defaults.
@@ -11,39 +11,39 @@ Override only what you care about; the rest inherit framework defaults.
 ## A worked example
 
 One model, the four hooks most projects reach for, and exactly what each one
-produces. Say you scaffolded an `Article`:
+produces. Say you scaffolded a `Task`:
 
 ```sh
-rustio-admin startapp article \
+rustio-admin startapp task \
   --field title:str \
-  --field body:text \
-  --field author:str \
-  --field status:choice:draft,published,archived \
-  --field published_at:timestamp
+  --field source_lang:str \
+  --field target_lang:str \
+  --field deadline:date \
+  --field status:choice:available,in_progress,review,completed,reassigned
 ```
 
 `startapp` writes the struct and `impl Model` for you. You add the
 customisation:
 
 ```rust
-impl ModelAdmin for Article {
-    fn list_display()  -> &'static [&'static str] { &["title", "author", "status", "published_at"] }
-    fn list_filter()   -> &'static [&'static str] { &["status", "author"] }
-    fn search_fields() -> &'static [&'static str] { &["title", "body"] }
-    fn ordering()      -> &'static [&'static str] { &["-published_at"] }
+impl ModelAdmin for Task {
+    fn list_display()  -> &'static [&'static str] { &["title", "target_lang", "status", "deadline"] }
+    fn list_filter()   -> &'static [&'static str] { &["status", "target_lang"] }
+    fn search_fields() -> &'static [&'static str] { &["title", "source_lang"] }
+    fn ordering()      -> &'static [&'static str] { &["-deadline"] }
 }
 ```
 
-`/admin/articles` now renders:
+`/admin/tasks` now renders:
 
 ```text
-Articles                              search: title, body   [ + Add article ]
-  Status ▾   Author ▾                 ← filter chips
+Tasks                                 search: title, source_lang   [ + Add task ]
+  Status ▾   Target lang ▾            ← filter chips
 
-  TITLE                  AUTHOR        STATUS      PUBLISHED AT
-  Launch announcement    Sarah Ahmed   published   2026-05-30      ← newest first
-  Q2 roadmap             John Okoro    draft       2026-05-28
-  Migration notes        Maria Lopez   archived    2026-05-21
+  TITLE                       TARGET LANG   STATUS        DEADLINE
+  Court hearing transcript    en            available     2026-07-15   ← newest first
+  Medical discharge summary   ar            in_progress   2026-07-10
+  Rental contract             en            review        2026-07-08
 ```
 
 Line by line, that came from:
@@ -51,9 +51,9 @@ Line by line, that came from:
 | Hook | What it did here |
 |---|---|
 | `list_display` | the four columns, in that order (`id` is always a link to the edit form, listed or not) |
-| `list_filter` | the **Status ▾** / **Author ▾** chips — `status` is a `choice`, so a dropdown of its values; `author` a dropdown of distinct values |
-| `search_fields` | the search box scans `title` + `body` (`?q=` → ILIKE) |
-| `ordering` | `-published_at` → newest first |
+| `list_filter` | the **Status ▾** / **Target lang ▾** chips — `status` is a `choice`, so a dropdown of its values; `target_lang` a dropdown of distinct values |
+| `search_fields` | the search box scans `title` + `source_lang` (`?q=` → ILIKE) |
+| `ordering` | `-deadline` → newest first |
 
 Everything else — read-only fields, validation, child rows (`inlines`), form
 sections (`fieldsets`), bulk actions — is opt-in, and each is shown on its own
