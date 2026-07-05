@@ -266,9 +266,9 @@ cargo install rustio-admin-cli      # provides the `rustio-admin` binary
 
 ## Documentation
 
-**Read the docs online: [abdulwahed-sweden.github.io/rustio-admin](https://abdulwahed-sweden.github.io/rustio-admin/)** — the full guides and design contracts, rendered from `docs/`.
+The **canonical, always-current** docs live in [`docs/`](./docs/) — index: [`docs/README.md`](./docs/README.md). Read them here on GitHub; they are the source of truth.
 
-Full documentation index: [`docs/README.md`](./docs/README.md).
+There's also a [**designed docs site**](https://abdulwahed-sweden.github.io/rustio-admin/) online — a presentation of the same material that is regenerated periodically, so it can lag `docs/`. When they differ, `docs/` wins.
 
 | Path                                       | Contents                                                       |
 |--------------------------------------------|----------------------------------------------------------------|
