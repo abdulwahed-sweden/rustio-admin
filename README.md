@@ -22,10 +22,10 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/admin-dashboard.png" alt="The admin RustIO generates — dashboard, models, audit log, and permissions" width="820">
+  <img src="docs/assets/admin-tasks.png" alt="The translation-agency admin — a Tasks list with status, deadlines, and the assigned translator" width="860">
 </p>
 
-<p align="center"><sub>The admin RustIO generates from your Rust structs — dashboard, models, an audit log of every authority change, and users &amp; permissions. <em>(Shown: the <a href="./examples/shop"><code>shop</code></a> example.)</em></sub></p>
+<p align="center"><sub>A real model list RustIO generates from a Rust struct — search, filter, sort, export, status, and a foreign key to the assigned translator. <em>(The <a href="./examples/translation-agency"><code>translation-agency</code></a> example, built in the <a href="./docs/quickstart-translation-agency.md">Quick Start</a>.)</em></sub></p>
 
 ## What is RustIO?
 
