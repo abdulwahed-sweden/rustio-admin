@@ -1,0 +1,26 @@
+# mdBook configuration for the RustIO documentation site.
+#
+# This is a PUBLISH pipeline, not a runtime build step: it renders the
+# canonical Markdown under `docs/` into the static site deployed to GitHub
+# Pages. The framework runtime still ships with no bundler and no build step
+# (see CLAUDE.md "No build step"). Markdown in `docs/` remains the source of
+# truth; this file and `docs/SUMMARY.md` only describe how it is published.
+
+[book]
+title       = "RustIO — Documentation"
+authors     = ["Abdulwahed Mansour"]
+description = "Postgres-first administrative framework for Rust."
+src         = "docs"
+language    = "en"
+
+[output.html]
+default-theme         = "light"
+preferred-dark-theme  = "navy"
+additional-css        = ["theme/rustio-docs.css"]
+git-repository-url     = "https://github.com/abdulwahed-sweden/rustio-admin"
+edit-url-template      = "https://github.com/abdulwahed-sweden/rustio-admin/edit/main/{path}"
+no-section-label       = true
+
+[output.html.fold]
+enable = true
+level  = 1
