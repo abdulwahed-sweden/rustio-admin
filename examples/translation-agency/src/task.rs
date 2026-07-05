@@ -46,7 +46,7 @@ impl ModelAdmin for Task {
     }
 
     // A domain rule — **your** code, not the framework's. RustIO refuses
-    // the unauthorised actor; you refuse the wrong data. A translation must
+    // the unauthorized actor; you refuse the wrong data. A translation must
     // have a positive word count; the language-match / availability rule
     // ("this translator can't do Arabic") would live here too. See
     // docs/security.md — "What this does not do" — for the boundary.
