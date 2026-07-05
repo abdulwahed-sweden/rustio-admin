@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  A Rust-first business-system engine — the operational foundation for serious software.
+  Django Admin for Rust — with authentication, permissions, recovery, and audit built into the core.
 </p>
 
 <p align="center">
@@ -23,12 +23,13 @@
 
 ## What is RustIO?
 
-RustIO (`rustio-admin`) is a **Rust-first business-system engine** — the
-operational foundation you build serious software on: admin panels, workflows,
-dispatch and booking backends, audit trails, and the internal tools a real
-business runs on. It is not a throwaway dashboard or one more CRUD screen; it is
-the layer *underneath* those things, engineered to stay fast, safe, and
-understandable as a company grows.
+RustIO (`rustio-admin`) is **Django Admin for Rust** — a Postgres-first admin
+framework where authentication, permissions, recovery, and audit are **built
+into the core, not bolted on**. You describe your data as Rust structs; RustIO
+renders the admin panel and carries the authority layer underneath — the login,
+the roles, the recovery, and the audit trail that real internal tools run on. It
+is not a throwaway dashboard or one more CRUD screen; it is the layer
+*underneath* those things, built to stay understandable as a company grows.
 
 > **What it stands for:** read [**the RustIO Admin Manifesto**](./MANIFESTO.md) —
 > what the project is, what it refuses to be, and why AI is kept on a leash.
