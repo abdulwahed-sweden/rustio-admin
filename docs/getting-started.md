@@ -306,6 +306,10 @@ migration runner — the framework ships all of it.
   `rustio-admin ai status` set what it may do here (Allowed / Needs approval /
   Blocked) — changes are proposed, approved, and applied as explicit steps.
   RustIO runs no AI itself; it governs the one you bring.
+- **See what you're protected from** — [What RustIO stops out of the
+  box](./security.md) lists the shipping security defaults (CSRF, refusal-first
+  permissions, rate limiting, hashed-at-rest credentials, audit) — and, just as
+  honestly, what it does *not* do for you.
 - **Understand the internals** — [`architecture.md`](./architecture.md) maps
   which module owns what; the [`design/`](./design/) contracts govern the
   security-sensitive surfaces.
