@@ -303,9 +303,9 @@ Where to start depends on the work.
 **Building on the published crate**
 → Install above
 → [`docs/modeladmin.md`](./docs/modeladmin.md)
-→ [`examples/translation-agency/`](./examples/translation-agency/) — the canonical worked example (matches the Quick Start)
-→ [`examples/clinic/`](./examples/clinic/) — multi-crate reference project
-→ [`examples/shop/`](./examples/shop/) — single-crate e-commerce admin, also a
+→ [`examples/translation-agency/`](./examples/translation-agency/) — **start here**: the canonical worked example, one crate, matches the Quick Start (also a `rustio-admin new` preset)
+→ [`examples/clinic/`](./examples/clinic/) — the **reference multi-crate architecture** for larger projects (a `-core` foundation crate, one crate per capability, a server crate)
+→ [`examples/shop/`](./examples/shop/) — a fuller single-crate e-commerce admin, also a
   standalone project: **[abdulwahed-sweden/shop](https://github.com/abdulwahed-sweden/shop)**
   ([`v0.1.0`](https://github.com/abdulwahed-sweden/shop/releases/tag/v0.1.0), on rustio-admin 0.27.6)
 

@@ -76,7 +76,9 @@ rustio-admin/
 │   │                            users, `theme`, `ai` assistant permissions, builder)
 │   └── rio-theme/             ← build-time theme engine (brand colors → tokens.css)
 └── examples/
-    └── clinic/                ← canonical end-to-end consumer of the library
+    ├── translation-agency/    ← canonical worked example (Translator + Task; learn from this)
+    ├── clinic/                ← reference multi-crate architecture (larger projects)
+    └── shop/                  ← fuller single-crate e-commerce admin
 ```
 
 The `ai` surface (`crates/rustio-admin-cli/src/ai.rs`) is a permissions / approval / audit layer over external AI coding assistants — see [`design/DESIGN_AI_ASSISTANT.md`](./design/DESIGN_AI_ASSISTANT.md). It is offline by default; its `--as <email>` path authenticates an approver and mirrors decisions into `rustio_admin_actions` via three typed `AuditEvent` variants (`ai_proposal_approved` / `_rejected` / `_applied`).
