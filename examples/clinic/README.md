@@ -1,9 +1,14 @@
-# Clinic — the canonical RustIO Admin project
+# Clinic — the reference multi-crate architecture
 
-This is the reference shape every RustIO Admin project keeps for its
+This is the reference shape a RustIO Admin project keeps for its
 whole life: **one workspace, capabilities as crates**. A 5-model project
 and a 500-model project have the *same* layout — that consistency is the
 point. (For the *why*, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).)
+
+> **New to RustIO?** Learn the basics with the single-crate
+> [`translation-agency`](../translation-agency) example and the
+> [Quick Start](../../docs/quickstart-translation-agency.md) first — then come
+> here when you're ready to structure a larger project into capability crates.
 
 ## What each folder is
 
