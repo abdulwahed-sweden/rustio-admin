@@ -5,15 +5,16 @@ systems built on the `rustio-admin` engine, not generic CRUD demos.
 
 ## The foundation problem is universal
 
-Most operational software across critical sectors is built on stacks that were
-never designed to become heavy-duty engines. As data grows, workflows expand,
-and operational pressure rises, the same failure repeats: slower performance,
-climbing infrastructure cost, fragile changes, and constant firefighting. The
-problem is rarely the team — it is a weak foundation, rebuilt from scratch again
-and again.
+Most operational software across critical sectors is built on stacks where
+authority, permissions, and audit were bolted on rather than designed in. As
+data grows and workflows expand, the same failure repeats: changes get fragile,
+the audit trail has gaps, and no one is quite sure why the system is the way it
+is. The problem is rarely the team — it is a foundation that couldn't stay
+answerable as it grew, rebuilt from scratch again and again.
 
-RustIO exists to be the reliable operational foundation these sectors can build
-on and evolve for years. The domains that hit this problem hardest include:
+RustIO exists to be a foundation these sectors can build on and keep
+understanding, changing, and owning for years. The domains that hit this problem
+hardest include:
 
 - **Healthcare systems** — patients, records, scheduling, audit-heavy workflows.
 - **Education platforms** — students, staff, enrolment, records.
