@@ -16,7 +16,7 @@ language    = "en"
 [output.html]
 default-theme         = "light"
 preferred-dark-theme  = "light"
-additional-css        = ["theme/rustio-docs.css"]
+additional-css        = ["theme/rustio-docs.v2.css"]
 git-repository-url     = "https://github.com/abdulwahed-sweden/rustio-admin"
 edit-url-template      = "https://github.com/abdulwahed-sweden/rustio-admin/edit/main/{path}"
 no-section-label       = true

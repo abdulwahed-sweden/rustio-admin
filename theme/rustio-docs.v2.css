@@ -89,6 +89,11 @@ body {
   display: none !important;
 }
 
+/* Slim brand accent along the top of the page. */
+.menu-bar {
+  border-top: 3px solid var(--accent);
+}
+
 /* ============================================================
    2 · LAYOUT — wider, more comfortable page
    Default mdBook caps content at 750px, which reads cramped on
