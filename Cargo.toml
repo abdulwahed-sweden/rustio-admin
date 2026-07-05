@@ -12,7 +12,9 @@ members = [
 #                     published rustio-admin (CI patches it to HEAD).
 #   examples/shop   — single-crate e-commerce admin; path-deps the
 #                     in-repo framework directly (always builds HEAD).
-exclude = ["examples/clinic", "examples/shop"]
+#   examples/translation-agency — single-crate interpreter-dispatch admin;
+#                     path-deps the in-repo framework (always builds HEAD).
+exclude = ["examples/clinic", "examples/shop", "examples/translation-agency"]
 
 [workspace.package]
 version = "0.31.0"

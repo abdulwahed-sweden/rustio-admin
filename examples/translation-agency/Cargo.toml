@@ -1,0 +1,23 @@
+[package]
+name = "translation-agency"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Path-deps the in-repo framework, so it always builds against the current
+# source (HEAD) — same as examples/shop. A real downstream project would
+# instead write `rustio-admin = "0.31"`.
+#
+# Model files depend on `rustio-admin` ALONE — field types (`NaiveDate`,
+# `Decimal`, …) and the derive macro's generated code resolve through the
+# framework's re-exports, so `chrono` / `sqlx` are not declared here.
+rustio-admin = { path = "../../crates/rustio-admin" }
+tokio        = { version = "1", features = ["macros", "rt-multi-thread"] }
+dotenvy      = "0.15"
+env_logger   = "0.11"
+log          = "0.4"
+
+# Standalone workspace (own Cargo.lock); excluded from the framework
+# workspace in the repo-root Cargo.toml, exactly like examples/shop.
+[workspace]
