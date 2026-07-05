@@ -271,6 +271,7 @@ Where to start depends on the work.
 **New to the framework**
 → 30-second example above
 → [`docs/getting-started.md`](./docs/getting-started.md)
+→ [Quick Start: a translation-agency admin](./docs/quickstart-translation-agency.md) — a full worked domain
 → [`DESIGN_SYSTEM.md`](./docs/design/DESIGN_SYSTEM.md)
 
 **Working on authentication or recovery**
