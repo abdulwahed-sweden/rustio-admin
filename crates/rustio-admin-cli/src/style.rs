@@ -207,6 +207,9 @@ pub(crate) fn welcome_banner() -> String {
 /// True when output is going to an interactive human (a TTY, not CI).
 /// The contextual "Next" pointers a command prints after it runs are
 /// guidance for a person mid-flow — scripts and CI runs stay quiet.
+// The post-command "Next" pointers are printed only by `db` verbs
+// (`migrate`, `user create`); silence dead-code in the lightweight binary.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 pub(crate) fn is_interactive() -> bool {
     std::io::stdout().is_terminal() && std::env::var_os("CI").is_none()
 }
@@ -216,6 +219,7 @@ pub(crate) fn is_interactive() -> bool {
 /// annotation on a dim line beneath it. The shared shape behind the
 /// post-command guidance so `migrate`, `user create`, and the scaffold
 /// all point forward the same way.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 pub(crate) fn next_step(what: &str, steps: &[(String, String)]) {
     println!();
     println!("  {}", heading(&format!("Next — {what}:")));

@@ -36,19 +36,33 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+// Database & authority verbs — gated behind the `db` feature. Each opens a
+// Postgres connection (via `db()` below), so the whole set is compiled out
+// of the lightweight default build. `proposal` is the shared data model for
+// `ai`/`memory` and is only reachable from them.
+#[cfg(feature = "db")]
 mod ai;
 mod app_fields;
+#[cfg(feature = "db")]
 mod audit;
 mod builder;
 mod docs;
+#[cfg(feature = "db")]
 mod doctor;
+#[cfg(feature = "db")]
 mod doctor_email;
+#[cfg(feature = "db")]
 mod emergency_ui;
+#[cfg(feature = "db")]
 mod group;
+#[cfg(feature = "db")]
 mod memory;
+#[cfg(feature = "db")]
 mod migrate;
+#[cfg(feature = "db")]
 mod perm;
 mod progress;
+#[cfg(feature = "db")]
 mod proposal;
 mod reload;
 mod scaffold;
@@ -57,6 +71,7 @@ mod template_override;
 mod test_init;
 mod theme;
 mod ui;
+#[cfg(feature = "db")]
 mod user;
 mod wizard;
 
@@ -188,31 +203,37 @@ the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
         no_interactive: bool,
     },
     /// Apply / inspect SQL migrations from a directory.
+    #[cfg(feature = "db")]
     Migrate {
         #[command(subcommand)]
         action: migrate::Action,
     },
     /// User management.
+    #[cfg(feature = "db")]
     User {
         #[command(subcommand)]
         action: user::Action,
     },
     /// Group management.
+    #[cfg(feature = "db")]
     Group {
         #[command(subcommand)]
         action: group::Action,
     },
     /// Permission management.
+    #[cfg(feature = "db")]
     Perm {
         #[command(subcommand)]
         action: perm::Action,
     },
     /// Inspect the audit trail (rustio_admin_actions). Read-only.
+    #[cfg(feature = "db")]
     Audit {
         #[command(subcommand)]
         action: audit::Action,
     },
     /// Diagnose the local environment.
+    #[cfg(feature = "db")]
     Doctor {
         #[command(subcommand)]
         action: Option<DoctorAction>,
@@ -252,6 +273,11 @@ the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
     /// approval / Blocked) by reading `.rustio/ai.toml`; `init` writes a
     /// default policy. Offline and read-only — no AI is contacted, no
     /// database is opened. See `docs/design/DESIGN_AI_ASSISTANT.md`.
+    ///
+    /// A `db` verb: the `approve`/`reject`/`apply --as <email>` paths
+    /// authenticate against Postgres and mirror the decision into
+    /// `rustio_admin_actions`, so the whole verb ships in the `db` build.
+    #[cfg(feature = "db")]
     Ai {
         #[command(subcommand)]
         action: ai::Action,
@@ -264,6 +290,11 @@ the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
     /// checks the view is fresh and the entries are well-formed. Offline
     /// and read-only — no AI, no database. See
     /// `docs/design/DESIGN_CLOUD.md` and `DESIGN_CLOUD_IMPL.md`.
+    ///
+    /// A `db` verb: like `ai`, the approve/reject `--as <email>` paths
+    /// authenticate and mirror to the audit trail, so it ships in the
+    /// `db` build.
+    #[cfg(feature = "db")]
     Memory {
         #[command(subcommand)]
         action: memory::Action,
@@ -365,6 +396,17 @@ the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
         /// Path to the schema JSON file.
         path: std::path::PathBuf,
     },
+
+    /// Catch-all for the `db`-only verbs in the lightweight build.
+    ///
+    /// This build was installed without the `db` feature, so `migrate`,
+    /// `user`, `group`, `perm`, `audit`, `doctor`, `ai`, and `memory` are
+    /// not compiled in. clap routes any of those (and any other unknown
+    /// subcommand) here so [`db_feature_unavailable`] can print a precise
+    /// reinstall hint instead of clap's terse "unrecognized subcommand".
+    #[cfg(not(feature = "db"))]
+    #[command(external_subcommand)]
+    DbVerb(Vec<String>),
 }
 
 #[derive(Subcommand)]
@@ -403,6 +445,7 @@ enum BuilderAddAction {
     },
 }
 
+#[cfg(feature = "db")]
 #[derive(Subcommand)]
 enum DoctorAction {
     /// SMTP self-validation. Reads `SMTP_*` + `MAIL_FROM` (or
@@ -490,9 +533,23 @@ fn main() -> ExitCode {
         Command::Reload => reload::run(),
         Command::TestInit { force, out } => test_init::run(force, &out),
         Command::Theme { action } => theme::run(action),
+
+        // `ai` / `memory` manage their own tokio runtime internally (only
+        // their `--as <email>` paths open a connection), so they dispatch
+        // synchronously here rather than inside the shared `tokio_run`.
+        #[cfg(feature = "db")]
         Command::Ai { action } => ai::run(action),
+        #[cfg(feature = "db")]
         Command::Memory { action } => memory::run(action),
+
+        // In the lightweight build, every `db` verb (and any unknown
+        // subcommand) is captured by `DbVerb` and answered with a
+        // reinstall hint.
+        #[cfg(not(feature = "db"))]
+        Command::DbVerb(args) => db_feature_unavailable(&args),
+
         // Everything else opens a Postgres connection.
+        #[cfg(feature = "db")]
         other => tokio_run(async {
             match other {
                 Command::New { .. }
@@ -663,6 +720,38 @@ fn builder_commit(force: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// The database & authority verbs that live behind the `db` feature.
+/// Used in the lightweight build to tell "you need the `db` build" apart
+/// from a genuine typo of a light verb.
+#[cfg(not(feature = "db"))]
+const DB_VERBS: &[&str] = &[
+    "migrate", "user", "group", "perm", "audit", "doctor", "ai", "memory",
+];
+
+/// Answer an unrecognized subcommand in the lightweight build. If it is a
+/// known `db` verb, explain that this install lacks database support and
+/// how to get it (four-part onboarding shape). Otherwise it's a real typo —
+/// defer to clap's own "unrecognized subcommand" error so its suggestions
+/// still fire. `args` is the raw external-subcommand capture; its first
+/// element is the verb the user typed.
+#[cfg(not(feature = "db"))]
+fn db_feature_unavailable(args: &[String]) -> Result<(), String> {
+    let verb = args.first().map(String::as_str).unwrap_or("<command>");
+    if DB_VERBS.contains(&verb) {
+        return Err(ui::db_feature_required(verb).format());
+    }
+    // Not a db verb — let clap render the standard unknown-subcommand
+    // error (with its "did you mean …" hint) and exit, exactly as it
+    // would in the full build.
+    let mut cmd = <Cli as clap::CommandFactory>::command();
+    let err = cmd.error(
+        clap::error::ErrorKind::InvalidSubcommand,
+        format!("unrecognized subcommand '{verb}'"),
+    );
+    err.exit();
+}
+
+#[cfg(feature = "db")]
 fn tokio_run<F>(fut: F) -> Result<(), String>
 where
     F: std::future::Future<Output = Result<(), String>>,
@@ -680,6 +769,7 @@ where
 /// (`DESIGN_ONBOARDING.md` §8) so beginners see plain-English
 /// guidance instead of raw driver text. The verbatim backend error
 /// is preserved in the `Details:` block for senior engineers.
+#[cfg(feature = "db")]
 pub(crate) async fn db() -> Result<rustio_admin::Db, String> {
     let url = std::env::var("DATABASE_URL").map_err(|_| ui::database_url_missing().format())?;
     // Silent-on-success spinner -- `rustio-admin user list` and friends
@@ -701,6 +791,7 @@ pub(crate) async fn db() -> Result<rustio_admin::Db, String> {
 
 /// Strip the password component from a DATABASE_URL for log output.
 /// Returns the input unchanged if it doesn't parse as a URL.
+#[cfg(feature = "db")]
 fn redact_password(url: &str) -> String {
     // postgres://user:pw@host/db → postgres://user:***@host/db
     if let Some(at) = url.rfind('@') {
@@ -718,7 +809,7 @@ fn redact_password(url: &str) -> String {
     url.to_string()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "db"))]
 mod tests {
     use super::redact_password;
 

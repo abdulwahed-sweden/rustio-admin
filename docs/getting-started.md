@@ -48,9 +48,13 @@ In another shell, install the CLI and create your login (run it from the same
 example directory so it reads that `.env`):
 
 ```sh
-cargo install rustio-admin-cli      # provides the `rustio-admin` binary
+cargo install rustio-admin-cli --features db   # `user`/`migrate`/… need the db feature (Rust 1.94)
 rustio-admin user create --email coordinator@agency.local --role administrator
 ```
+
+> The plain `cargo install rustio-admin-cli` is lightweight (scaffolding, theme,
+> and builder verbs only) and installs on common toolchains. This guide uses the
+> database verbs (`user`, `migrate`), so it installs with `--features db`.
 
 Open **<http://127.0.0.1:8000/admin>**, sign in, and you have a working
 dispatch admin:

@@ -8,7 +8,37 @@ leaves the alpha track.
 
 ## Unreleased
 
-*Nothing yet — work for the next release lands here.*
+### Changed
+
+- **`rustio-admin-cli` is now lightweight by default, MSRV 1.85.** `cargo
+  install rustio-admin-cli` no longer compiles the runtime stack
+  (`rustio-admin` + `sqlx 0.9`), dropping its floor from Rust 1.94 to **1.85**
+  (set by `clap 4.6` / `toml_edit 0.25` / `sha2`), so it installs on common
+  toolchains. `rustio-admin-cli` and `rio-theme` now pin an explicit
+  `rust-version = "1.85"` instead of inheriting the workspace's 1.94, and a
+  `msrv-cli-light` CI job guards it. The default build carries the scaffolding /
+  theme / builder / override / docs / reload / test-init verbs. The
+  database & authority verbs — `migrate`, `user`, `group`, `perm`, `audit`,
+  `doctor`, `ai`, `memory` — moved behind a new **`db` cargo feature**
+  (`cargo install rustio-admin-cli --features db`, still Rust 1.94). In a
+  lightweight build those verbs print a four-part onboarding error
+  explaining how to get them. Generated projects are unaffected — they
+  still target 1.94. CI now lints and tests the CLI in both feature
+  configurations.
+
+### Internal
+
+- New **`rustio-admin-assets`** crate: a std-only, dependency-free leaf that
+  bakes the admin templates (`EMBEDDED_TEMPLATES` + the
+  `embedded_template_names`/`embedded_template_source` accessors, moved out of
+  `rustio-admin`'s `templates.rs`). The runtime re-exports the two accessors, so
+  the public API (`rustio_admin::embedded_template_*`) is **unchanged**. This is
+  step one of reducing `cargo install rustio-admin-cli` friction: the CLI's
+  `override` command now reads template bytes from this low-MSRV leaf instead of
+  linking the runtime stack. Template sources moved from
+  `crates/rustio-admin/assets/templates/` to
+  `crates/rustio-admin-assets/assets/templates/`; behaviour and on-disk override
+  precedence are unchanged.
 
 
 ## 0.31.0 — 2026-07-03

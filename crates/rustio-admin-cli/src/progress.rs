@@ -39,6 +39,9 @@ pub(crate) fn configure(quiet: bool, no_progress: bool) {
 
 /// True when an animated spinner is appropriate. False under
 /// non-TTY stderr, `NO_COLOR`, `CI`, `--quiet`, or `--no-progress`.
+// Only the `db` verbs raise a spinner (via `Step`); the lightweight build
+// exercises this in tests but not in the binary, so silence dead-code there.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 fn animation_allowed() -> bool {
     if SUPPRESS_ANIMATION.load(Ordering::Relaxed) {
         return false;
@@ -62,10 +65,12 @@ fn animation_allowed() -> bool {
 /// emitted on stdout, the `✗ <summary>` failure line on stderr --
 /// matching the rest of the CLI, so scripts that grep stdout for
 /// `✓` keep working in both animated and non-animated modes.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 pub(crate) struct Step {
     spinner: Option<ProgressBar>,
 }
 
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 impl Step {
     /// Start a step. In animated mode the spinner ticks on stderr;
     /// otherwise this is a no-op until the caller finishes it.

@@ -84,7 +84,7 @@ You do **not** need Node, a bundler, or any frontend tools.
 
 ```sh
 # 1) the framework CLI — provides the `rustio-admin` binary
-cargo install rustio-admin-cli
+cargo install rustio-admin-cli --features db   # migrate/user below need the db feature (Rust 1.94)
 
 # 2) rustio-draft — the AI drafting tool (from its repo)
 cargo install --git https://github.com/abdulwahed-sweden/rustio-draft
@@ -301,7 +301,7 @@ trail of every change. You wrote one small `main.rs` and one sentence.
 
 ```sh
 # one-time: install
-cargo install rustio-admin-cli
+cargo install rustio-admin-cli --features db   # migrate/user below need the db feature (Rust 1.94)
 cargo install --git https://github.com/abdulwahed-sweden/rustio-draft
 export ANTHROPIC_API_KEY=sk-ant-...
 

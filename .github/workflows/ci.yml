@@ -36,6 +36,17 @@ jobs:
       - name: cargo test
         run: cargo test --workspace --all-targets
 
+      # The CLI is lightweight by default (no `sqlx`/runtime stack) so the
+      # steps above exercise its light half. Its database & authority verbs
+      # (migrate/user/group/perm/audit/doctor/ai/memory) live behind the
+      # `db` feature — clippy + test them explicitly so that half, and its
+      # ~117 tests, stay covered. See the install-friction plan / Stage 2.
+      - name: cargo clippy (cli --features db)
+        run: cargo clippy -p rustio-admin-cli --all-targets --features db -- -D warnings
+
+      - name: cargo test (cli --features db)
+        run: cargo test -p rustio-admin-cli --all-targets --features db
+
       - name: forbid Tier 2 symbols
         run: |
           set -eu
