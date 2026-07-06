@@ -3,8 +3,17 @@
 ## Install
 
 ```bash
-cargo install rustio-admin-cli
+cargo install rustio-admin-cli            # lightweight: scaffolding, theme, builder
+cargo install rustio-admin-cli --features db   # adds the database & authority verbs (Rust 1.94)
 ```
+
+The default install is deliberately lightweight — it builds no runtime stack
+(`sqlx`/`tokio`/`hyper`), so its MSRV is **Rust 1.85** and it works on common
+toolchains. The verbs that
+open a Postgres connection — **`migrate`, `user`, `group`, `perm`, `audit`,
+`doctor`, `ai`, `memory`** — live behind the **`db`** feature and require Rust
+1.94. In a lightweight build, running one prints how to reinstall with the
+feature. Generated projects always target Rust 1.94.
 
 ## Commands
 

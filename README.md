@@ -294,6 +294,14 @@ chrono = { version = "0.4", features = ["serde"] }
 cargo install rustio-admin-cli      # provides the `rustio-admin` binary
 ```
 
+This default install is lightweight — it builds only the scaffolding, theme, and builder verbs (no `sqlx`/`tokio`/`hyper`), so its MSRV is **Rust 1.85** and it installs on common toolchains. The database & authority verbs (`migrate`, `user`, `group`, `perm`, `audit`, `doctor`, `ai`, `memory`) open a Postgres connection and pull the full runtime stack, which requires Rust 1.94; add them with:
+
+```sh
+cargo install rustio-admin-cli --features db    # adds migrate / user / doctor / … (needs Rust 1.94)
+```
+
+Generated projects always target Rust 1.94 regardless.
+
 ## Documentation
 
 The **canonical, always-current** docs live in [`docs/`](./docs/) — index: [`docs/README.md`](./docs/README.md). Read them here on GitHub; they are the source of truth.

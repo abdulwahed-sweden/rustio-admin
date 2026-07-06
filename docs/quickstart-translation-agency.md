@@ -48,7 +48,7 @@ No Node, bundler, or frontend toolchain.
 ## 1. Scaffold the project and sign in
 
 ```sh
-cargo install rustio-admin-cli          # installs the `rustio-admin` binary
+cargo install rustio-admin-cli --features db   # `migrate`/`user` need the db feature (Rust 1.94)
 rustio-admin new translation-agency     # at "Project type", choose 1) custom
 cd translation-agency
 createdb translation_agency_dev         # the database name the wizard showed you

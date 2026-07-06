@@ -2498,6 +2498,7 @@ dependencies = [
  "pulldown-cmark",
  "rand 0.8.6",
  "rust_decimal",
+ "rustio-admin-assets",
  "rustio-admin-macros",
  "serde",
  "serde_json",
@@ -2514,6 +2515,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustio-admin-assets"
+version = "0.31.0"
+
+[[package]]
 name = "rustio-admin-cli"
 version = "0.31.0"
 dependencies = [
@@ -2528,6 +2533,7 @@ dependencies = [
  "rio-theme",
  "rpassword",
  "rustio-admin",
+ "rustio-admin-assets",
  "serde",
  "serde_json",
  "sha2 0.10.9",

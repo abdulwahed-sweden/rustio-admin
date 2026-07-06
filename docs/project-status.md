@@ -9,8 +9,9 @@ to use today.
 The active, canonical RustIO Admin crates:
 
 - `rustio-admin` — the library (admin engine).
-- `rustio-admin-cli` — the CLI; provides the `rustio-admin` binary.
+- `rustio-admin-cli` — the CLI; provides the `rustio-admin` binary. Lightweight by default; database & authority verbs need `--features db`.
 - `rustio-admin-macros` — proc-macros, re-exported from `rustio-admin`.
+- `rustio-admin-assets` — std-only leaf crate holding the embedded admin templates, shared by the library and the CLI.
 - `rio-theme` — build-time theme engine.
 
 ```bash
@@ -18,7 +19,7 @@ cargo install rustio-admin-cli
 rustio-admin --help
 ```
 
-These four ship together at the same version (see [versioning.md](./versioning.md)).
+These crates ship together at the same version (see [versioning.md](./versioning.md)).
 
 ## Active canonical line
 

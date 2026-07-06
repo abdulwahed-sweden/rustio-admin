@@ -27,7 +27,7 @@ pub(crate) fn run(name: Option<String>, force: bool, out: &str) -> Result<(), St
 }
 
 fn list_templates() -> Result<(), String> {
-    let names = rustio_admin::embedded_template_names();
+    let names = rustio_admin_assets::embedded_template_names();
     println!("{} embedded templates:", names.len());
     for n in &names {
         println!("  {n}");
@@ -40,7 +40,7 @@ fn list_templates() -> Result<(), String> {
 }
 
 fn copy_template(name: &str, force: bool, out_root: &Path) -> Result<(), String> {
-    let body = rustio_admin::embedded_template_source(name).ok_or_else(|| {
+    let body = rustio_admin_assets::embedded_template_source(name).ok_or_else(|| {
         format!(
             "unknown template `{name}`. Run `rustio-admin override` (no args) for the full list."
         )
@@ -121,7 +121,7 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
         // Pick the first embedded name -- the test stays robust
         // across reorderings.
-        let names = rustio_admin::embedded_template_names();
+        let names = rustio_admin_assets::embedded_template_names();
         let target = names
             .first()
             .copied()
@@ -130,7 +130,7 @@ mod tests {
         let dest = tmp.join(target);
         assert!(dest.is_file(), "destination {} not written", dest.display());
         let body = fs::read_to_string(&dest).unwrap();
-        let expected = rustio_admin::embedded_template_source(target).unwrap();
+        let expected = rustio_admin_assets::embedded_template_source(target).unwrap();
         assert_eq!(body, expected, "written body diverges from embedded source");
         let _ = fs::remove_dir_all(&tmp);
     }
@@ -139,7 +139,7 @@ mod tests {
     fn refuses_to_clobber_without_force() {
         let tmp = env::temp_dir().join("rustio-cli-override-tests-clobber");
         let _ = fs::remove_dir_all(&tmp);
-        let names = rustio_admin::embedded_template_names();
+        let names = rustio_admin_assets::embedded_template_names();
         let target = names.first().copied().unwrap();
         copy_template(target, false, &tmp).unwrap();
         // Second copy without force fails.

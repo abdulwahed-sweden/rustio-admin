@@ -85,6 +85,10 @@ pub(crate) const ONBOARDING_SENTINEL: &str = "Problem:";
 // ------------------------------
 
 /// `DATABASE_URL` is not set in the environment (or `.env`).
+// Consumed only by the `db`-gated verbs (via `main::db()`); the tests below
+// still exercise it in both builds, so keep it compiled and silence the
+// dead-code lint for the non-test lightweight binary.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 pub(crate) fn database_url_missing() -> OnboardingError {
     OnboardingError {
         problem: "DATABASE_URL is not set.".into(),
@@ -105,6 +109,7 @@ pub(crate) fn database_url_missing() -> OnboardingError {
 /// surfaced as `"pool timed out"`. We treat both of those, plus the
 /// raw `"connection refused"` shape, as the same "service is not
 /// reachable" case -- the fix is the same regardless.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> OnboardingError {
     let lower = raw.to_ascii_lowercase();
     let unreachable = lower.contains("connection refused")
@@ -153,6 +158,7 @@ pub(crate) fn classify_db_connect_error(url_redacted: &str, raw: &str) -> Onboar
 /// and the CLI's caller adds its own `"apply: "` prefix; we pull
 /// out the stem from anywhere in the string and surface the raw
 /// SQL error verbatim in the Details block.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 pub(crate) fn classify_migration_error(raw: &str) -> OnboardingError {
     let (stem, body) = parse_migration_failure(raw)
         .unwrap_or(("<unknown migration>".to_string(), raw.to_string()));
@@ -192,6 +198,24 @@ pub(crate) fn invalid_value(arg: &str, bad: &str, valid: &[String]) -> Onboardin
     }
 }
 
+/// A database / authority verb (`migrate`, `user`, `group`, `perm`,
+/// `audit`, `doctor`, `ai`, `memory`) was invoked on a CLI built without
+/// the `db` feature — the lightweight `cargo install rustio-admin-cli`
+/// default. Explains why the verb is missing and how to get it, in the
+/// four-part onboarding shape. Only compiled into that lightweight build.
+#[cfg(not(feature = "db"))]
+pub(crate) fn db_feature_required(verb: &str) -> OnboardingError {
+    OnboardingError {
+        problem: format!("`rustio-admin {verb}` is not available in this build."),
+        why: "This CLI was installed without database support (the lightweight default). Verbs that open a Postgres connection — migrate, user, group, perm, audit, doctor, ai, memory — are compiled only into the `db` build."
+            .into(),
+        fix: "Reinstall with the `db` feature: `cargo install rustio-admin-cli --features db` (this build needs Rust 1.94 because of the runtime stack). Scaffolding, theme, and builder verbs work without it."
+            .into(),
+        retry: format!("cargo install rustio-admin-cli --features db  &&  rustio-admin {verb}"),
+        details: None,
+    }
+}
+
 // ------------------------------
 // Helpers.
 // ------------------------------
@@ -200,6 +224,7 @@ pub(crate) fn invalid_value(arg: &str, bad: &str, valid: &[String]) -> Onboardin
 /// error string and extract the bare name. PostgreSQL phrases it as
 /// `database "X" does not exist`; sqlx surfaces it verbatim inside
 /// `error returned from database: …`.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 fn parse_missing_database_name(raw: &str) -> Option<String> {
     let lower = raw.to_ascii_lowercase();
     if !lower.contains("does not exist") {
@@ -219,6 +244,7 @@ fn parse_missing_database_name(raw: &str) -> Option<String> {
 /// a strict prefix match. A trailing sanity check rejects matches
 /// where the stem contains a space, which guards against
 /// accidental substring hits like `"migration history"`.
+#[cfg_attr(not(feature = "db"), allow(dead_code))]
 fn parse_migration_failure(raw: &str) -> Option<(String, String)> {
     let idx = raw.find("migration ")?;
     let after = &raw[idx + "migration ".len()..];

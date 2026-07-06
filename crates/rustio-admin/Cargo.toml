@@ -12,6 +12,11 @@ readme = "../../README.md"
 
 [dependencies]
 rustio-admin-macros = { workspace = true }
+# Embedded admin templates (the `EMBEDDED_TEMPLATES` table + name/source
+# accessors). Split into a std-only leaf crate so the CLI can reach the
+# template bytes without linking this runtime; the runtime re-exports the
+# two accessors, so the public API is unchanged.
+rustio-admin-assets = { workspace = true }
 
 # runtime
 tokio = { version = "1", features = [

@@ -2,7 +2,10 @@
 name = "rio-theme"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+# `log`-only and std — its real floor is far lower, but it is a dependency
+# of the lightweight `rustio-admin-cli` (the `theme generate` verb), so its
+# declared floor must not exceed the CLI's 1.85. NOT the workspace 1.94.
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true

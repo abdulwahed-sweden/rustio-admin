@@ -5386,17 +5386,17 @@ mod adaptive_list_tests {
         let mut env = Environment::new();
         env.add_template(
             "admin/_list_adaptive.html",
-            include_str!("../../assets/templates/admin/_list_adaptive.html"),
+            rustio_admin_assets::embedded_template_source("admin/_list_adaptive.html").unwrap(),
         )
         .unwrap();
         env.add_template(
             "admin/view_layer/_row.html",
-            include_str!("../../assets/templates/admin/view_layer/_row.html"),
+            rustio_admin_assets::embedded_template_source("admin/view_layer/_row.html").unwrap(),
         )
         .unwrap();
         env.add_template(
             "admin/view_layer/_cell.html",
-            include_str!("../../assets/templates/admin/view_layer/_cell.html"),
+            rustio_admin_assets::embedded_template_source("admin/view_layer/_cell.html").unwrap(),
         )
         .unwrap();
 
@@ -5430,19 +5430,21 @@ mod adaptive_list_tests {
         for (name, src) in [
             (
                 "admin/list.html",
-                include_str!("../../assets/templates/admin/list.html") as &str,
+                rustio_admin_assets::embedded_template_source("admin/list.html").unwrap(),
             ),
             (
                 "admin/_list_adaptive.html",
-                include_str!("../../assets/templates/admin/_list_adaptive.html"),
+                rustio_admin_assets::embedded_template_source("admin/_list_adaptive.html").unwrap(),
             ),
             (
                 "admin/view_layer/_row.html",
-                include_str!("../../assets/templates/admin/view_layer/_row.html"),
+                rustio_admin_assets::embedded_template_source("admin/view_layer/_row.html")
+                    .unwrap(),
             ),
             (
                 "admin/view_layer/_cell.html",
-                include_str!("../../assets/templates/admin/view_layer/_cell.html"),
+                rustio_admin_assets::embedded_template_source("admin/view_layer/_cell.html")
+                    .unwrap(),
             ),
         ] {
             env.add_template(name, src).unwrap();

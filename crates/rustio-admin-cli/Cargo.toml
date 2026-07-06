@@ -4,7 +4,14 @@ name = "rustio-admin-cli"
 # `rustio-admin = "0.31.0"`. CI guards this in `.github/workflows/ci.yml`.
 version = "0.31.0"
 edition.workspace = true
-rust-version.workspace = true
+# Deliberately NOT `rust-version.workspace = true`. The workspace floor
+# (1.94) is driven by `sqlx 0.9`, which the default (lightweight) build
+# does not compile. The light dependency set's real floor is 1.85 — set by
+# mainstream crates (`clap 4.6`, `toml_edit 0.25`, `sha2`/`digest`/`rand`),
+# not by anything we could shed. The `db` feature pulls `rustio-admin` (1.94)
+# back in, so `cargo install --features db` correctly requires 1.94 again.
+# A CI job (`msrv-cli-light` in ci.yml) pins this so it can't silently drift.
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -16,8 +23,30 @@ readme = "../../README.md"
 name = "rustio-admin"
 path = "src/main.rs"
 
+[features]
+# Lightweight by default. `cargo install rustio-admin-cli` builds only the
+# scaffolding / theme / builder half — no `sqlx`, no runtime stack — so it
+# installs on common toolchains without being dragged to the runtime's
+# Rust 1.94 floor (see the install-friction plan).
+default = []
+# Database & authority verbs: `migrate`, `user`, `group`, `perm`, `audit`,
+# `doctor`, `ai`, `memory`. These open a Postgres connection (and, for
+# `doctor email`, an SMTP handshake), so they pull the full runtime stack —
+# `rustio-admin` + `sqlx 0.9`, which is what raises the MSRV to 1.94.
+# Install with `cargo install rustio-admin-cli --features db` on a project
+# that already targets 1.94.
+db = ["dep:rustio-admin", "dep:sqlx", "dep:tokio", "dep:lettre", "dep:rpassword"]
+
 [dependencies]
-rustio-admin = { workspace = true }
+# Runtime library — only linked by the `db` verbs. Optional so the default
+# (lightweight) build never compiles it or its `sqlx`/`hyper`/`tokio` tree.
+rustio-admin = { workspace = true, optional = true }
+# Embedded admin templates (std-only leaf crate). The `override` verb
+# reads template bytes from here rather than from the runtime, so it
+# does not need the heavy runtime stack. Kept separate from the
+# `rustio-admin` dep on purpose — the Stage 2 feature split gates the
+# runtime behind `db` while this stays in the always-on light half.
+rustio-admin-assets = { workspace = true }
 # Theme engine (DESIGN_THEME). Build-time only — the `rustio-admin theme
 # generate` subcommand turns raw brand colors into a static tokens.css.
 # Runtime CSS is the generated file; the library does not depend on
@@ -26,7 +55,9 @@ rio-theme = { path = "../rio-theme", version = "0.31.0" }
 
 # CLI surface
 clap      = { version = "4", features = ["derive"] }
-rpassword = "7"
+# Password prompt for `user create` — a `db` verb only. Optional so the
+# lightweight build skips it.
+rpassword = { version = "7", optional = true }
 # Spinner + status feedback for long-running onboarding operations
 # (PR 1.4 / DESIGN_ONBOARDING.md §9). The library's own TTY / non-TTY
 # / NO_COLOR detection short-circuits to a no-op draw target in
@@ -40,11 +71,15 @@ indicatif = "0.18"
 # detection lives inside the crate.
 console = "0.16"
 
-# DB + env (DATABASE_URL is read from .env when present)
-sqlx      = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "chrono"] }
+# DB + env (DATABASE_URL is read from .env when present). `sqlx`/`tokio`
+# are `db`-only and optional — they are the crates that raise the MSRV to
+# 1.94, so the lightweight build must not compile them. `chrono` stays
+# always-on: the Builder (`builder/cmd.rs`, `history.rs`) uses it for
+# `.rustio/history.jsonl` timestamps, and it carries a low MSRV.
+sqlx      = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "chrono"], optional = true }
 chrono    = { version = "0.4", default-features = false, features = ["clock", "std"] }
 dotenvy   = "0.15"
-tokio     = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio     = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
 env_logger = "0.11"
 log       = "0.4"
 # R4 emergency-recovery audit metadata. The CLI assembles a
@@ -58,7 +93,7 @@ serde_json = "1"
 # configured server (and optionally sends a single test
 # message). Matches the `lettre` feature set the
 # clinic-appointments example ships with.
-lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname"] }
+lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname"], optional = true }
 
 # Builder layer (DESIGN_BUILDER.md). These deps power the
 # deterministic project compiler: canonical TOML emission, append-

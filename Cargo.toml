@@ -4,6 +4,7 @@ members = [
     "crates/rustio-admin",
     "crates/rustio-admin-macros",
     "crates/rustio-admin-cli",
+    "crates/rustio-admin-assets",
     "crates/rio-theme",
 ]
 # The example projects are each their OWN standalone workspace (own
@@ -21,6 +22,10 @@ version = "0.31.0"
 edition = "2021"
 # sqlx 0.9 raises the floor: its own MSRV is Rust 1.94, so the
 # workspace tracks it. Bumping sqlx and this value move together.
+# Exception: `rustio-admin-cli` (lightweight default) and its `rio-theme`
+# / `rustio-admin-assets` deps do NOT compile sqlx, so they pin explicit,
+# lower `rust-version`s (1.85 / 1.75) instead of inheriting this — see
+# their Cargo.toml and the `msrv-cli-light` CI job.
 rust-version = "1.94"
 license = "MIT"
 repository = "https://github.com/abdulwahed-sweden/rustio-admin"
@@ -30,3 +35,4 @@ authors = ["Abdulwahed Mansour"]
 [workspace.dependencies]
 rustio-admin = { version = "0.31.0", path = "crates/rustio-admin" }
 rustio-admin-macros = { version = "0.31.0", path = "crates/rustio-admin-macros" }
+rustio-admin-assets = { version = "0.31.0", path = "crates/rustio-admin-assets" }
