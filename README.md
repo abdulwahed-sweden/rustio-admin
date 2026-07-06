@@ -17,6 +17,7 @@
   <a href="https://abdulwahed-sweden.github.io/rustio-admin/"><img alt="Documentation site" src="https://img.shields.io/badge/docs-site-2563eb"></a>
   <a href="https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/abdulwahed-sweden/rustio-admin/actions/workflows/ci.yml/badge.svg"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/crates/l/rustio-admin.svg"></a>
+  <a href="https://github.com/sponsors/abdulwahed-sweden"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white"></a>
 </p>
 
 ---
