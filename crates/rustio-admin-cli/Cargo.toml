@@ -4,7 +4,14 @@ name = "rustio-admin-cli"
 # `rustio-admin = "0.31.0"`. CI guards this in `.github/workflows/ci.yml`.
 version = "0.31.0"
 edition.workspace = true
-rust-version.workspace = true
+# Deliberately NOT `rust-version.workspace = true`. The workspace floor
+# (1.94) is driven by `sqlx 0.9`, which the default (lightweight) build
+# does not compile. The light dependency set's real floor is 1.85 — set by
+# mainstream crates (`clap 4.6`, `toml_edit 0.25`, `sha2`/`digest`/`rand`),
+# not by anything we could shed. The `db` feature pulls `rustio-admin` (1.94)
+# back in, so `cargo install --features db` correctly requires 1.94 again.
+# A CI job (`msrv-cli-light` in ci.yml) pins this so it can't silently drift.
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true

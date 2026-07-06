@@ -10,6 +10,29 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  # Guards the install-friction win: `cargo install rustio-admin-cli`
+  # (lightweight, default features) must keep compiling on its declared
+  # MSRV. The floor is 1.85 — set by the light dependency set (clap 4.6,
+  # toml_edit 0.25, sha2/digest/rand), NOT by the runtime's sqlx 0.9 (which
+  # the default build no longer pulls). If a new light dependency raises the
+  # floor, this job fails before release; bump `rust-version` in
+  # crates/rustio-admin-cli/Cargo.toml (and rio-theme) to match, deliberately.
+  msrv-cli-light:
+    name: msrv (cli, lightweight) — 1.85
+    runs-on: ubuntu-latest
+    # Purely a compile-floor gate; don't let version-specific rustc lints
+    # turn a successful build into a failure.
+    env:
+      RUSTFLAGS: ""
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.85
+        uses: dtolnay/rust-toolchain@1.85
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: cargo check (default / lightweight features)
+        run: cargo check -p rustio-admin-cli --no-default-features
+
   build:
     name: build / test / lint
     runs-on: ubuntu-latest
