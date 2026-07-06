@@ -18,6 +18,12 @@ path = "src/main.rs"
 
 [dependencies]
 rustio-admin = { workspace = true }
+# Embedded admin templates (std-only leaf crate). The `override` verb
+# reads template bytes from here rather than from the runtime, so it
+# does not need the heavy runtime stack. Kept separate from the
+# `rustio-admin` dep on purpose — the Stage 2 feature split gates the
+# runtime behind `db` while this stays in the always-on light half.
+rustio-admin-assets = { workspace = true }
 # Theme engine (DESIGN_THEME). Build-time only — the `rustio-admin theme
 # generate` subcommand turns raw brand colors into a static tokens.css.
 # Runtime CSS is the generated file; the library does not depend on

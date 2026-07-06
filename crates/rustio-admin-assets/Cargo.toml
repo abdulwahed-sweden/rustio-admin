@@ -1,0 +1,23 @@
+[package]
+name = "rustio-admin-assets"
+version.workspace = true
+edition.workspace = true
+# Deliberately NOT `rust-version.workspace = true`. This crate is a
+# std-only, dependency-free leaf: it bakes the framework's admin
+# templates and exposes three accessors over them. Keeping its MSRV
+# low lets the lightweight half of the CLI (`override`, and — after
+# the Stage 2 feature split — scaffolding) depend on it without
+# inheriting the runtime's Rust 1.94 floor (which is driven by
+# `sqlx 0.9`, not by anything here). See the install-friction plan.
+rust-version = "1.75"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Embedded admin templates for rustio-admin, shared by the runtime and the CLI."
+readme = "../../README.md"
+
+# No dependencies on purpose. The whole point of this crate is to be a
+# cheap, low-MSRV leaf that neither the runtime stack (sqlx/tokio/hyper)
+# nor the theme engine reaches into.
+[dependencies]

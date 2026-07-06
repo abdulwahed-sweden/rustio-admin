@@ -4,6 +4,7 @@ members = [
     "crates/rustio-admin",
     "crates/rustio-admin-macros",
     "crates/rustio-admin-cli",
+    "crates/rustio-admin-assets",
     "crates/rio-theme",
 ]
 # The example projects are each their OWN standalone workspace (own
@@ -30,3 +31,4 @@ authors = ["Abdulwahed Mansour"]
 [workspace.dependencies]
 rustio-admin = { version = "0.31.0", path = "crates/rustio-admin" }
 rustio-admin-macros = { version = "0.31.0", path = "crates/rustio-admin-macros" }
+rustio-admin-assets = { version = "0.31.0", path = "crates/rustio-admin-assets" }

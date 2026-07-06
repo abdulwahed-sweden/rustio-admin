@@ -380,13 +380,15 @@ mod tests {
     fn shipped_partials_switch_on_kind_and_drop_hidden() {
         use minijinja::{context, Environment, Value};
 
-        const CELL: &str = include_str!("../../assets/templates/admin/view_layer/_cell.html");
-        const ROW: &str = include_str!("../../assets/templates/admin/view_layer/_row.html");
+        let cell =
+            rustio_admin_assets::embedded_template_source("admin/view_layer/_cell.html").unwrap();
+        let row =
+            rustio_admin_assets::embedded_template_source("admin/view_layer/_row.html").unwrap();
 
         let mut env = Environment::new();
-        env.add_template("admin/view_layer/_cell.html", CELL)
+        env.add_template("admin/view_layer/_cell.html", cell)
             .unwrap();
-        env.add_template("admin/view_layer/_row.html", ROW).unwrap();
+        env.add_template("admin/view_layer/_row.html", row).unwrap();
 
         let rendered = render_row(&customer_spec(), &customer_row());
         let tmpl = env.get_template("admin/view_layer/_row.html").unwrap();

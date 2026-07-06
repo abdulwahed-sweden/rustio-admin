@@ -3434,17 +3434,18 @@ mod view_designer_tests {
             .unwrap();
         env.add_template(
             "admin/view_designer_model.html",
-            include_str!("../../assets/templates/admin/view_designer_model.html"),
+            rustio_admin_assets::embedded_template_source("admin/view_designer_model.html")
+                .unwrap(),
         )
         .unwrap();
         env.add_template(
             "admin/view_layer/_row.html",
-            include_str!("../../assets/templates/admin/view_layer/_row.html"),
+            rustio_admin_assets::embedded_template_source("admin/view_layer/_row.html").unwrap(),
         )
         .unwrap();
         env.add_template(
             "admin/view_layer/_cell.html",
-            include_str!("../../assets/templates/admin/view_layer/_cell.html"),
+            rustio_admin_assets::embedded_template_source("admin/view_layer/_cell.html").unwrap(),
         )
         .unwrap();
 

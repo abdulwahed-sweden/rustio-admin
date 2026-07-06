@@ -80,7 +80,7 @@ Read top-to-bottom — the crate layers cleanly from the HTTP core up to the adm
 
 ## Templates
 
-Located under `crates/rustio-admin/assets/templates/admin/`, baked into the binary via `include_str!` (`templates.rs`). A disk-side `templates/admin/<page>.html` wins over the embedded copy when a project sets `RUSTIO_TEMPLATE_DIR`; per-model overrides (`templates/admin/<model>/list.html`) win for that model only.
+Located under `crates/rustio-admin-assets/assets/templates/admin/`, baked into the binary via `include_str!` by the `rustio-admin-assets` leaf crate (which owns the `EMBEDDED_TEMPLATES` table + accessors). The runtime's `templates.rs` imports that table and owns the lookup: a disk-side `templates/admin/<page>.html` wins over the embedded copy when a project sets `RUSTIO_TEMPLATE_DIR`; per-model overrides (`templates/admin/<model>/list.html`) win for that model only.
 
 Grouped by area (not exhaustive):
 
