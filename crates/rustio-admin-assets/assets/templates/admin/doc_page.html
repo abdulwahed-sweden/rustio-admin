@@ -1,9 +1,15 @@
 {% extends "admin/_base.html" %}
 
-{# Doc viewer: console masthead + a typeset reading column. The rendered
- # markdown (`body_html`) is wrapped in `.rio-doc-prose`, styled in
- # pages/tools.css (headings, code, tables, blockquotes, lists). The
- # markdown's own leading <h1> is hidden so the title isn't shown twice. #}
+{# Doc viewer: console masthead + a two-column reading layout. The
+ # rendered markdown (`body_html`) sits in a constrained reading column
+ # (`.rio-doc-prose`, ~66ch for comfortable line length); a sticky
+ # "On this page" table of contents (`.rio-doc-toc`) fills the space
+ # beside it on wide screens. The TOC is built client-side from the
+ # doc's h2/h3 headings — see admin.js `initDocToc` — so this template
+ # only ships the empty slot. Progressive enhancement: without JS the
+ # prose still reads fine and the TOC stays hidden. Styling lives in
+ # pages/tools.css. The markdown's own leading <h1> is hidden (CSS) so
+ # the title isn't shown twice. #}
 
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/docs">Framework docs</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ doc_title }}</span></nav>
@@ -11,13 +17,19 @@
   <h1>{{ doc_title }}</h1>
 </div></div>
 
-<article class="rio-docpage-card">
-  <div class="rio-doc-prose">
-    {{ body_html | safe }}
-  </div>
-</article>
+<div class="rio-docpage">
+  <article class="rio-docpage-card">
+    <div class="rio-doc-prose" data-rio-doc-prose>
+      {{ body_html | safe }}
+    </div>
+    <div class="rio-doc-foot">
+      <a class="rio-doc-back" href="/admin/docs">← All framework docs</a>
+    </div>
+  </article>
 
-<div class="rio-doc-foot">
-  <a class="rio-doc-back" href="/admin/docs">← All framework docs</a>
+  <aside class="rio-doc-toc" data-rio-doc-toc hidden>
+    <p class="rio-doc-toc__title">On this page</p>
+    <nav class="rio-doc-toc__nav" aria-label="On this page"></nav>
+  </aside>
 </div>
 {% endblock %}

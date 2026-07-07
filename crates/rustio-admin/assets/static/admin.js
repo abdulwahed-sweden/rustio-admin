@@ -727,6 +727,70 @@
     apply((hex && hex.value) || "#B84318");
   }
 
+  // ---- Docs: "On this page" table of contents ---------------------
+  // On a framework-docs page, scan the rendered prose for h2/h3
+  // headings, give each a stable id, and build the sticky side nav that
+  // highlights the section currently in view. Progressive enhancement:
+  // the prose reads fine without this, and the nav stays hidden unless
+  // the page has at least two headings.
+  function initDocToc() {
+    const prose = document.querySelector("[data-rio-doc-prose]");
+    const toc = document.querySelector("[data-rio-doc-toc]");
+    if (!prose || !toc) return;
+    const headings = prose.querySelectorAll("h2, h3");
+    if (headings.length < 2) return;
+
+    const slug = (text) =>
+      text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .slice(0, 64) || "section";
+
+    const nav = toc.querySelector(".rio-doc-toc__nav");
+    const used = new Set();
+    const linkFor = {};
+    headings.forEach((h) => {
+      let id = h.id || slug(h.textContent);
+      while (used.has(id)) id += "-x";
+      used.add(id);
+      h.id = id;
+      const a = document.createElement("a");
+      a.href = "#" + id;
+      a.textContent = h.textContent;
+      a.className =
+        "rio-doc-toc__link" +
+        (h.tagName === "H3" ? " rio-doc-toc__link--sub" : "");
+      nav.appendChild(a);
+      linkFor[id] = a;
+    });
+    toc.hidden = false;
+
+    // Highlight the first heading currently within the top of the
+    // viewport as the reader scrolls.
+    if (!("IntersectionObserver" in window)) return;
+    const inView = new Set();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) inView.add(e.target.id);
+          else inView.delete(e.target.id);
+        });
+        for (const h of headings) {
+          if (inView.has(h.id)) {
+            Object.keys(linkFor).forEach((k) =>
+              linkFor[k].classList.toggle("is-active", k === h.id)
+            );
+            break;
+          }
+        }
+      },
+      { rootMargin: "0px 0px -75% 0px", threshold: 0 }
+    );
+    headings.forEach((h) => observer.observe(h));
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       initConsole();
@@ -737,6 +801,7 @@
       initSearchPalette();
       initViewDesigner();
       initBranding();
+      initDocToc();
     });
   } else {
     initConsole();
@@ -747,5 +812,6 @@
     initSearchPalette();
     initViewDesigner();
     initBranding();
+    initDocToc();
   }
 })();
