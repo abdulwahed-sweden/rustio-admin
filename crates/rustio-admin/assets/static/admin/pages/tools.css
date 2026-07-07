@@ -99,13 +99,22 @@
 .rio-doc-card__body { min-width: 0; display: flex; flex-direction: column; }
 .rio-doc-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); transition: color .14s ease; }
 .rio-doc-card:hover .rio-doc-card__title { color: var(--rio-accent); }
-.rio-doc-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-muted); }
+.rio-doc-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rio-doc-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-subtle); transition: transform .14s ease, color .14s ease; }
 .rio-doc-card:hover .rio-doc-card__arrow { transform: translateX(3px); color: var(--rio-accent); }
 
 /* ---- Doc page viewer (doc_page) — moved out of the template's inline <style> ---- */
-.rio-docpage-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); padding: var(--rio-s6); }
-.rio-doc-prose { max-width: 80ch; color: var(--rio-text); font-size: var(--rio-fs-base); line-height: 1.7; }
+/* Doc page: a constrained reading column + a sticky "On this page" nav
+ * beside it. The card hugs the reading measure (~66ch) so the prose
+ * never runs a fatiguing line length, and the TOC fills the space that
+ * used to sit empty to its right. Left-aligned so the card's left edge
+ * lines up with the masthead title. */
+.rio-docpage { display: grid; grid-template-columns: auto minmax(0, 12rem); gap: var(--rio-s6); align-items: start; justify-content: start; }
+.rio-docpage-card { max-width: 44rem; min-width: 0; background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); padding: var(--rio-s6); }
+.rio-doc-prose { max-width: none; color: var(--rio-text); font-size: var(--rio-fs-base); line-height: 1.7; }
+/* Anchor jumps from the TOC land below the top of the scroll area
+ * (the topbar sits outside it) with a little breathing room. */
+.rio-doc-prose :is(h1, h2, h3, h4) { scroll-margin-top: var(--rio-s6); }
 .rio-doc-prose > :first-child { margin-top: 0; }
 /* the markdown's own leading title duplicates the page header → drop it */
 .rio-doc-prose > h1:first-child { display: none; }
@@ -134,3 +143,22 @@
 .rio-doc-foot { margin-top: var(--rio-s5); }
 .rio-doc-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--rio-accent2-ink, var(--rio-accent)); font-weight: var(--rio-fw-semibold); font-size: var(--rio-fs-sm); }
 .rio-doc-back:hover { color: var(--rio-accent2, var(--rio-accent)); }
+
+/* "On this page" — sticky on-page table of contents, populated by
+ * admin.js `initDocToc`. Hidden until JS reveals it (and only when the
+ * doc has ≥2 headings), so a JS-less or short page shows nothing. */
+.rio-doc-toc { position: sticky; top: var(--rio-s6); align-self: start; }
+.rio-doc-toc[hidden] { display: none; }
+.rio-doc-toc__title { margin: 0 0 var(--rio-s3); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-subtle); }
+.rio-doc-toc__nav { display: flex; flex-direction: column; border-left: 1px solid var(--rio-border); }
+.rio-doc-toc__link { padding: var(--rio-s1) var(--rio-s3); margin-left: -1px; border-left: 2px solid transparent; font-size: var(--rio-fs-sm); line-height: 1.35; color: var(--rio-text-muted); transition: color 0.12s ease, border-color 0.12s ease; }
+.rio-doc-toc__link--sub { padding-left: var(--rio-s5); font-size: var(--rio-fs-xs); }
+.rio-doc-toc__link:hover { color: var(--rio-text-strong); }
+.rio-doc-toc__link.is-active { color: var(--rio-accent); border-left-color: var(--rio-accent); font-weight: var(--rio-fw-semibold); }
+
+/* Narrow screens: single column, drop the side nav, let the card fill. */
+@media (max-width: 900px) {
+  .rio-docpage { grid-template-columns: 1fr; }
+  .rio-docpage-card { max-width: none; }
+  .rio-doc-toc { display: none; }
+}
