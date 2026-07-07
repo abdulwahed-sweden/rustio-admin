@@ -2,9 +2,9 @@
 //!
 //! Stage 1 / PR 1.2 of the FTUX redesign. Calm guided creation:
 //! confirm the project name, pick a project type (metadata only),
-//! print PostgreSQL guidance, choose a database name, and hand
-//! the collected inputs back to the scaffold so a matching `.env`
-//! lands alongside the standard files.
+//! choose a database name (suggested from the project name, always a
+//! valid PostgreSQL identifier), and hand the collected inputs back to
+//! the scaffold so a matching `.env` lands alongside the standard files.
 //!
 //! Voice (clarity-first, within `DESIGN_ONBOARDING.md`): the first
 //! screen says *what this is* and *what you'll have at the end* before any
@@ -36,20 +36,6 @@ pub(crate) const PROJECT_TYPES: &[&str] = &[
     "blog",
     "ecommerce",
 ];
-
-/// Brief Postgres install hint printed before the database-name
-/// prompt. Text-only -- `DESIGN_ONBOARDING.md` §4 forbids the CLI
-/// from shelling out to package managers.
-const POSTGRES_GUIDANCE: &str = "\
-RustIO is built on PostgreSQL — one database, by design (no SQLite fallback).
-If you don't have PostgreSQL 16 yet, install and start it:
-
-  macOS    brew install postgresql@16 && brew services start postgresql@16
-  Ubuntu   sudo apt install postgresql-16 && sudo systemctl start postgresql
-  Windows  https://www.postgresql.org/download/windows/
-
-The wizard does not install PostgreSQL for you -- that is deliberate. You
-stay in control of your machine.";
 
 /// The inputs the wizard collects before handing off to the scaffold.
 pub(crate) struct WizardInput {
@@ -88,7 +74,7 @@ pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
     println!();
     println!(
         "  {}",
-        style::hint("Three short questions, then a ready-to-run admin panel —")
+        style::hint("Three quick questions, then a ready-to-run admin panel —")
     );
     println!(
         "  {}",
@@ -97,11 +83,11 @@ pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
     println!();
     println!(
         "  {}",
-        style::hint("Press Enter to accept the default in [brackets]. Nothing is")
+        style::hint("How it works: type your answer, or press Enter to accept the")
     );
     println!(
         "  {}",
-        style::hint("written to disk until you've answered all three.")
+        style::hint("[default]. Nothing is written to disk until you finish all three.")
     );
     println!();
     println!("  {}", style::divider());
@@ -140,12 +126,13 @@ pub(crate) fn run(suggested_name: Option<&str>) -> Result<WizardInput, String> {
 fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
     println!(
         "  {}",
-        style::hint("Names the new folder and the Cargo crate. Letters, digits,")
+        style::hint("What this is: names your project folder and its Cargo crate.")
     );
     println!(
         "  {}",
-        style::hint("'-' and '_'; must start with a letter.")
+        style::hint("Your options: type a name — letters, digits, '-', '_'; must")
     );
+    println!("  {}", style::hint("start with a letter."));
     println!();
     loop {
         let prompt = match suggested {
@@ -188,11 +175,16 @@ fn project_type_hint(t: &str) -> &'static str {
 fn ask_project_type() -> Result<String, String> {
     println!(
         "  {}",
-        style::hint("most types come with example models you can run right away;")
+        style::hint("What this is: the example models your project starts with.")
     );
     println!(
         "  {}",
-        style::hint("only 'custom' starts clean. You can change direction at any time.")
+        style::hint("Most types ship ready-to-run models; only 'custom' starts clean.")
+    );
+    println!();
+    println!(
+        "  {}",
+        style::hint("Your options — type a number, or press Enter for 1 (custom):")
     );
     println!();
     for (i, t) in PROJECT_TYPES.iter().enumerate() {
@@ -234,26 +226,50 @@ fn ask_project_type() -> Result<String, String> {
     }
 }
 
+/// Suggest a valid PostgreSQL database name from the project name.
+///
+/// The project name may contain `-` (crate names allow it), but a
+/// PostgreSQL identifier may not — so hyphens become underscores. This
+/// is the whole point: the suggested default must be one the user can
+/// accept with a single Enter, never one the very next validation step
+/// rejects. Example: `my-shop` → `my_shop_dev`. Trimmed to PostgreSQL's
+/// 63-byte identifier limit (project names are ASCII, so byte-slicing is
+/// safe).
+fn default_db_name(project: &str) -> String {
+    let base: String = project
+        .chars()
+        .map(|c| if c == '-' { '_' } else { c })
+        .collect();
+    // Leave room for the `_dev` suffix under the 63-byte cap.
+    let base = if base.len() > 59 {
+        &base[..59]
+    } else {
+        base.as_str()
+    };
+    format!("{base}_dev")
+}
+
 fn ask_db_name(project: &str) -> Result<String, String> {
+    let default = default_db_name(project);
     println!(
         "  {}",
-        style::hint("Your local PostgreSQL database for development. RustIO writes it")
+        style::hint("What this is: your local PostgreSQL database, for development.")
     );
     println!(
         "  {}",
-        style::hint("into .env; you create it with `createdb` in the next steps.")
+        style::hint("RustIO saves the name to .env; you create it later with `createdb`.")
+    );
+    println!(
+        "  {}",
+        style::hint("No PostgreSQL yet? Install v16 — brew · apt · postgresql.org.")
     );
     println!();
-    // The Postgres install/start guidance, dimmed as reference material.
-    for line in POSTGRES_GUIDANCE.lines() {
-        if line.is_empty() {
-            println!();
-        } else {
-            println!("  {}", style::hint(line));
-        }
-    }
+    println!(
+        "  {}",
+        style::hint("Your options: type a name (letters, digits, '_'), or press Enter")
+    );
+    println!("  {}", style::hint("to accept the suggested default."));
     println!();
-    let default = format!("{project}_dev");
     loop {
         let input = prompt_line(&format!("  {} Database name [{default}]: ", style::arrow()))?;
         let chosen = if input.is_empty() {
@@ -374,6 +390,32 @@ mod tests {
             validate_db_name(&too_long).is_err(),
             "64 chars must be rejected"
         );
+    }
+
+    /// The suggested database default must ALWAYS be a name the user can
+    /// accept with one Enter. Regression: a hyphenated project name (legal
+    /// for a crate) used to produce `my-shop_dev`, which `validate_db_name`
+    /// then rejected — the wizard suggesting a default it refused.
+    #[test]
+    fn default_db_name_is_always_valid_including_hyphens() {
+        for proj in &["myapp", "my-shop", "a-b-c", "MyClinic", "app1"] {
+            let db = default_db_name(proj);
+            assert!(
+                validate_db_name(&db).is_ok(),
+                "default_db_name({proj:?}) = {db:?} must pass validate_db_name"
+            );
+        }
+        assert_eq!(default_db_name("my-shop"), "my_shop_dev");
+        assert_eq!(default_db_name("myapp"), "myapp_dev");
+    }
+
+    /// A very long project name must still yield a default within
+    /// PostgreSQL's 63-byte identifier limit.
+    #[test]
+    fn default_db_name_respects_63_byte_limit() {
+        let db = default_db_name(&"a".repeat(100));
+        assert!(db.len() <= 63, "default is {} bytes: {db}", db.len());
+        assert!(validate_db_name(&db).is_ok());
     }
 
     #[test]
