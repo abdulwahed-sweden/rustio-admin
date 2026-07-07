@@ -149,9 +149,10 @@ enum Command {
         name: String,
         /// Project preset: `minimal` (default -- neutral scaffold, no
         /// domain models), `translation-agency` (`Translator` + `Task`),
-        /// `clinic` (`Patient` + `Appointment`), or `blog` (`Post` +
-        /// `Comment`) -- each content preset ships models + seeded
-        /// migrations. Unknown presets error out with the valid list.
+        /// `clinic` (`Patient` + `Appointment`), `blog` (`Post` +
+        /// `Comment`), or `ecommerce` (`Product` + `Customer` + `Order`)
+        /// -- each content preset ships models + seeded migrations.
+        /// Unknown presets error out with the valid list.
         #[arg(long, default_value = "minimal")]
         preset: String,
     },
@@ -655,15 +656,17 @@ fn dispatch_new(
     if wizard::should_run(no_interactive) {
         let input = wizard::run(name.as_deref())?;
         // project_type drives preset selection. `translation-agency`,
-        // `blog`, and `clinic` each have a real content preset (models +
-        // migrations + pre-wired main.rs) so the developer reaches a
-        // working, non-empty admin without hand-editing a file. The
-        // `custom` type gets the neutral minimal scaffold and a
-        // project-type-aware homepage. `DESIGN_ONBOARDING.md` §6.
+        // `blog`, `clinic`, and `ecommerce` each have a real content
+        // preset (models + migrations + pre-wired main.rs) so the
+        // developer reaches a working, non-empty admin without
+        // hand-editing a file. The `custom` type gets the neutral
+        // minimal scaffold and a project-type-aware homepage.
+        // `DESIGN_ONBOARDING.md` §6.
         let resolved_preset = match input.project_type.as_str() {
             "translation-agency" => "translation-agency",
             "blog" => "blog",
             "clinic" => "clinic",
+            "ecommerce" => "ecommerce",
             _ => "minimal",
         };
         return scaffold::project_with_db(

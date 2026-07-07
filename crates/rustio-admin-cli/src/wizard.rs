@@ -29,7 +29,13 @@ use crate::style;
 /// Curated project types from `DESIGN_ONBOARDING.md` §6. Order is
 /// the order shown to the user; `custom` is the default and is
 /// listed first.
-pub(crate) const PROJECT_TYPES: &[&str] = &["custom", "translation-agency", "clinic", "blog"];
+pub(crate) const PROJECT_TYPES: &[&str] = &[
+    "custom",
+    "translation-agency",
+    "clinic",
+    "blog",
+    "ecommerce",
+];
 
 /// Brief Postgres install hint printed before the database-name
 /// prompt. Text-only -- `DESIGN_ONBOARDING.md` §4 forbids the CLI
@@ -164,15 +170,17 @@ fn ask_project_name(suggested: Option<&str>) -> Result<String, String> {
 }
 
 /// One-line honest hint shown beside each project type. Only the types
-/// with a real content preset (`clinic`, `blog`) advertise example
-/// models; every other type produces the neutral `minimal` scaffold, so
-/// it is labelled a clean slate rather than a "starting point" it does
-/// not deliver. Keep in lock-step with `scaffold::preset_layers`.
+/// with a real content preset (`translation-agency`, `clinic`, `blog`,
+/// `ecommerce`) advertise example models; `custom` produces the neutral
+/// `minimal` scaffold, so it is labelled a clean slate rather than a
+/// "starting point" it does not deliver. Keep in lock-step with
+/// `scaffold::preset_layers`.
 fn project_type_hint(t: &str) -> &'static str {
     match t {
         "translation-agency" => "example models — translators, tasks",
         "clinic" => "example models — patients, appointments",
         "blog" => "example models — posts, comments",
+        "ecommerce" => "example models — products, customers, orders",
         _ => "clean slate (no models yet)",
     }
 }
@@ -180,11 +188,11 @@ fn project_type_hint(t: &str) -> &'static str {
 fn ask_project_type() -> Result<String, String> {
     println!(
         "  {}",
-        style::hint("clinic and blog come with example models you can run right away;")
+        style::hint("most types come with example models you can run right away;")
     );
     println!(
         "  {}",
-        style::hint("the rest start clean. You can change direction at any time.")
+        style::hint("only 'custom' starts clean. You can change direction at any time.")
     );
     println!();
     for (i, t) in PROJECT_TYPES.iter().enumerate() {
