@@ -48,11 +48,13 @@ fix advances the **patch** (`0.31.0 → 0.31.1`).
 
 - Published crates.io versions are **permanent** — they cannot be overwritten.
 - Do not publish without a `cargo publish --dry-run` and explicit owner approval.
-- Publish in dependency order:
+- Publish in dependency order (`rustio-admin-assets` is a leaf that
+  `rustio-admin` depends on, so it goes before it):
   1. `rustio-admin-macros`
-  2. `rio-theme`
-  3. `rustio-admin`
-  4. `rustio-admin-cli`
+  2. `rustio-admin-assets`
+  3. `rio-theme`
+  4. `rustio-admin`
+  5. `rustio-admin-cli`
 
 ## Related projects
 
