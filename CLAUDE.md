@@ -54,7 +54,7 @@ cargo run -p rustio-admin-cli -- theme generate --brand '#2563eb'  # rio-theme �
 
 The CLI surface is larger than the framework's runtime surface; the top-level verbs (`crates/rustio-admin-cli/src/main.rs`, the `Command` enum) group as:
 
-- **Scaffolding** — `new` (friendly interactive wizard; alias for `startproject`, `--no-interactive` to disable), `startproject` (`--preset minimal|blog`), `startapp` (adds a model + table + admin page + migration; repeatable `--field name:type`).
+- **Scaffolding** — `new` (friendly interactive wizard; alias for `startproject`, `--no-interactive` to disable), `startproject` (`--preset minimal|blog|clinic|translation-agency|ecommerce`; content presets ship models + seeded migrations + a pre-wired `main.rs`, wired in `scaffold.rs` via `<PRESET>_OVERRIDES`/`<PRESET>_EXTRAS` + `templates/project_<preset>/`), `startapp` (adds a model + table + admin page + migration; repeatable `--field name:type`).
 - **Database & authority** — `migrate` (`apply`/`status`), `user` (`create`/`list`/`role`/`delete`), `group` (`create`/`list`/`add-user`), `perm` (`grant-user`/`grant-group`/`list`), `audit` (read-only inspection of `rustio_admin_actions`).
 - **Builder authoring** (network-free, atomic; governed by `DESIGN_BUILDER.md`) — `builder new`, `add` (`model`/`field`), `plan` (preview, read-only), `commit` (apply atomically, `--force`). Implementation in `crates/rustio-admin-cli/src/builder/`.
 - **Project memory / AI policy** — `memory` (`render`/`show`/`verify`, drives CLOUD.md; `src/memory/`), `ai` (`status`/`init` for the `.rustio/ai.toml` assistant permission policy).

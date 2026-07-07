@@ -1,0 +1,44 @@
+//! `Order` model — links a `Customer` to a monetary total and a
+//! lifecycle status. Together with `Customer` and `Product` it shows a
+//! foreign key, `Decimal` money, and a `choices` status field rendered
+//! as a dropdown whose values are *also* pinned by a CHECK constraint
+//! in the migration (defence in depth: the form offers the valid set,
+//! the database rejects anything else).
+//!
+//! A real shop would add an `OrderItem` join table between `Order` and
+//! `Product` — that is the natural next `rustio-admin startapp`.
+//!
+//! Rename, extend, or delete this freely — it is your project's code.
+
+use rustio_admin::{DateTime, Decimal, ModelAdmin, RustioAdmin, Utc};
+
+#[derive(RustioAdmin)]
+#[rustio(table = "orders")]
+pub struct Order {
+    pub id: i64,
+    pub customer_id: i64,
+    pub total: Decimal,
+    /// One of `pending` / `paid` / `shipped` / `delivered` /
+    /// `cancelled`. The `choices` attribute renders a `<select>` in the
+    /// form; the migration's CHECK constraint enforces the same set at
+    /// the database level.
+    #[rustio(choices = ["pending", "paid", "shipped", "delivered", "cancelled"])]
+    pub status: String,
+    pub placed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl ModelAdmin for Order {
+    fn list_display() -> &'static [&'static str] {
+        &["customer_id", "total", "status", "placed_at"]
+    }
+    fn list_filter() -> &'static [&'static str] {
+        &["status"]
+    }
+    fn search_fields() -> &'static [&'static str] {
+        &["status"]
+    }
+    fn ordering() -> &'static [&'static str] {
+        &["-placed_at"]
+    }
+}

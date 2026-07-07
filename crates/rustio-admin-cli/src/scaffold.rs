@@ -147,6 +147,47 @@ const TRANSLATION_AGENCY_EXTRAS: &[(&str, &str)] = &[
     ),
 ];
 
+/// `ecommerce` preset -- same layering as `clinic`. A minimal but
+/// coherent shop: `Product` (catalog with a `Decimal` price and a
+/// stock flag), `Customer`, and `Order` (foreign key to `Customer`, a
+/// `Decimal` total, and a status `choices` field also pinned by a
+/// CHECK constraint). Each ships a seeded migration and `src/main.rs`
+/// registers all three, so the developer reaches a working, non-empty
+/// shop admin without editing a file. The full catalogue / cart /
+/// payment domain lives in `examples/shop/`; this preset is the
+/// teachable starting slice of it.
+const ECOMMERCE_OVERRIDES: &[(&str, &str)] = &[(
+    "src/main.rs",
+    include_str!("../templates/project_ecommerce/src/main.rs.tmpl"),
+)];
+
+const ECOMMERCE_EXTRAS: &[(&str, &str)] = &[
+    (
+        "src/product.rs",
+        include_str!("../templates/project_ecommerce/src/product.rs.tmpl"),
+    ),
+    (
+        "src/customer.rs",
+        include_str!("../templates/project_ecommerce/src/customer.rs.tmpl"),
+    ),
+    (
+        "src/order.rs",
+        include_str!("../templates/project_ecommerce/src/order.rs.tmpl"),
+    ),
+    (
+        "migrations/0001_create_products.sql",
+        include_str!("../templates/project_ecommerce/migrations/0001_create_products.sql"),
+    ),
+    (
+        "migrations/0002_create_customers.sql",
+        include_str!("../templates/project_ecommerce/migrations/0002_create_customers.sql"),
+    ),
+    (
+        "migrations/0003_create_orders.sql",
+        include_str!("../templates/project_ecommerce/migrations/0003_create_orders.sql"),
+    ),
+];
+
 /// A slice of `(relative_target_path, template_body)` pairs — the
 /// shape of every template table in this module.
 type TemplateSet = &'static [(&'static str, &'static str)];
@@ -161,6 +202,7 @@ fn preset_layers(preset: &str) -> Option<(TemplateSet, TemplateSet)> {
         "translation-agency" => Some((TRANSLATION_AGENCY_OVERRIDES, TRANSLATION_AGENCY_EXTRAS)),
         "blog" => Some((BLOG_OVERRIDES, BLOG_EXTRAS)),
         "clinic" => Some((CLINIC_OVERRIDES, CLINIC_EXTRAS)),
+        "ecommerce" => Some((ECOMMERCE_OVERRIDES, ECOMMERCE_EXTRAS)),
         _ => None,
     }
 }
@@ -194,13 +236,20 @@ fn type_phrase(project_type: &str) -> &'static str {
         "translation-agency" => "Translation agency project initialized.",
         "clinic" => "Clinic project initialized.",
         "blog" => "Blog project initialized.",
+        "ecommerce" => "E-commerce project initialized.",
         _ => "Custom RustIO project initialized.",
     }
 }
 
 /// Valid preset names, surfaced verbatim in the error path so
 /// `--preset foo` reports the closed list of choices.
-const VALID_PRESETS: &[&str] = &["minimal", "translation-agency", "blog", "clinic"];
+const VALID_PRESETS: &[&str] = &[
+    "minimal",
+    "translation-agency",
+    "blog",
+    "clinic",
+    "ecommerce",
+];
 
 /// One-line comment appended to the `rustio-admin migrate apply` step
 /// in the Next-steps block. Content presets ship migrations and say
@@ -211,6 +260,7 @@ fn migrate_hint(preset: &str) -> &'static str {
         "translation-agency" => "creates the translators + tasks tables (with example rows)",
         "blog" => "creates the posts + comments tables",
         "clinic" => "creates the patients + appointments tables (with example rows)",
+        "ecommerce" => "creates the products + customers + orders tables (with example rows)",
         _ => "no project migrations yet (`rustio-admin startapp <name>` adds the first)",
     }
 }
@@ -1018,6 +1068,13 @@ mod tests {
     }
 
     #[test]
+    fn ecommerce_preset_templates_are_non_empty() {
+        for (rel, body) in ECOMMERCE_OVERRIDES.iter().chain(ECOMMERCE_EXTRAS.iter()) {
+            assert!(!body.is_empty(), "ecommerce template {rel} is empty");
+        }
+    }
+
+    #[test]
     fn project_rejects_unknown_preset_with_valid_list_in_message() {
         let dir = unique_tempdir();
         let err =
@@ -1026,6 +1083,7 @@ mod tests {
         assert!(err.contains("minimal"), "must list minimal: {err}");
         assert!(err.contains("blog"), "must list blog: {err}");
         assert!(err.contains("clinic"), "must list clinic: {err}");
+        assert!(err.contains("ecommerce"), "must list ecommerce: {err}");
     }
 
     /// The `clinic` preset must produce a *real* clinic — `Patient`
@@ -1084,6 +1142,64 @@ mod tests {
         assert!(
             appts.contains("SELECT id FROM patients WHERE full_name ="),
             "seed must link appointments to patients by name"
+        );
+    }
+
+    /// The `ecommerce` preset must produce a real shop admin — `Product`,
+    /// `Customer`, and `Order` models, all three seeded migrations, and a
+    /// `main.rs` that registers the trio — cribbed from `examples/shop`.
+    #[test]
+    fn project_ecommerce_wires_models_and_seeded_migrations() {
+        let dir = unique_tempdir();
+        project_in(&dir, "shop", "ecommerce", "ecommerce").expect("ecommerce should scaffold");
+        let root = dir.join("shop");
+
+        for f in [
+            "src/product.rs",
+            "src/customer.rs",
+            "src/order.rs",
+            "migrations/0001_create_products.sql",
+            "migrations/0002_create_customers.sql",
+            "migrations/0003_create_orders.sql",
+        ] {
+            assert!(root.join(f).exists(), "ecommerce preset must write {f}");
+        }
+
+        // main.rs registers all three models and is fully wired — no
+        // manual edit required on the first run.
+        let main = fs::read_to_string(root.join("src/main.rs")).unwrap();
+        for decl in ["mod product;", "mod customer;", "mod order;"] {
+            assert!(main.contains(decl), "main.rs must declare `{decl}`: {main}");
+        }
+        for reg in [
+            ".model::<Product>()",
+            ".model::<Customer>()",
+            ".model::<Order>()",
+        ] {
+            assert!(main.contains(reg), "main.rs must register `{reg}`: {main}");
+        }
+        // `{{name_title}}` must be substituted, not left literal.
+        assert!(
+            main.contains(".app_name(\"Shop\")"),
+            "main.rs app_name must be the humanised project name: {main}"
+        );
+        assert!(!main.contains("{{"), "no placeholder may survive: {main}");
+
+        // The orders migration FKs to customers and seeds rows linked by
+        // customer name so the foreign keys are correct regardless of ids.
+        let orders = fs::read_to_string(root.join("migrations/0003_create_orders.sql")).unwrap();
+        assert!(
+            orders.contains("REFERENCES customers(id)"),
+            "orders must FK to customers"
+        );
+        assert!(
+            orders.contains("SELECT id FROM customers WHERE full_name ="),
+            "seed must link orders to customers by name"
+        );
+        // The order status set is pinned at the database level too.
+        assert!(
+            orders.contains("CHECK (status IN ("),
+            "orders.status must carry a CHECK constraint"
         );
     }
 
@@ -1216,12 +1332,17 @@ mod tests {
             ),
             ("clinic", "Clinic project initialized."),
             ("blog", "Blog project initialized."),
+            ("ecommerce", "E-commerce project initialized."),
             // Unknown type falls back to custom — neutral, never wrong.
             ("unrecognised", "Custom RustIO project initialized."),
         ];
         for (ty, expected) in cases {
             let dir = unique_tempdir();
-            let preset = if ty == "blog" { "blog" } else { "minimal" };
+            let preset = match ty {
+                "blog" => "blog",
+                "ecommerce" => "ecommerce",
+                _ => "minimal",
+            };
             project_in(&dir, "proj", preset, ty).unwrap_or_else(|e| panic!("{ty}: {e}"));
             let html =
                 fs::read_to_string(dir.join("proj").join("templates").join("home.html")).unwrap();

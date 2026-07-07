@@ -8,6 +8,17 @@ leaves the alpha track.
 
 ## Unreleased
 
+### Added
+
+- **`ecommerce` project preset** for `rustio-admin new` / `startproject
+  --preset ecommerce`. Scaffolds a working, non-empty shop admin — `Product`
+  (catalog, `Decimal` price, stock flag), `Customer`, and `Order` (foreign
+  key to `Customer`, `Decimal` total, a `status` `choices` dropdown pinned by
+  a migration CHECK), each with a seeded migration and a pre-wired
+  `src/main.rs`. Cribbed from `examples/shop/`; added to the `new` wizard's
+  project-type list. The generated project compiles against the framework
+  unchanged.
+
 ### Changed
 
 - **`rustio-admin-cli` is now lightweight by default, MSRV 1.85.** `cargo

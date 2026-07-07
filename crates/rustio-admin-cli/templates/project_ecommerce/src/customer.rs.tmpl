@@ -1,0 +1,30 @@
+//! `Customer` model — the people who place orders. Paired with
+//! `Order` via a `customer_id` foreign key, so the two tables show
+//! relation-driven lists and the framework's audit-on-mutation
+//! pipeline across a parent/child pair.
+//!
+//! Rename, extend, or delete this freely — it is your project's code.
+
+use rustio_admin::{DateTime, ModelAdmin, RustioAdmin, Utc};
+
+#[derive(RustioAdmin)]
+#[rustio(table = "customers")]
+pub struct Customer {
+    pub id: i64,
+    pub full_name: String,
+    pub email: String,
+    pub phone: String,
+    pub created_at: DateTime<Utc>,
+}
+
+impl ModelAdmin for Customer {
+    fn list_display() -> &'static [&'static str] {
+        &["full_name", "email", "phone", "created_at"]
+    }
+    fn search_fields() -> &'static [&'static str] {
+        &["full_name", "email", "phone"]
+    }
+    fn ordering() -> &'static [&'static str] {
+        &["full_name"]
+    }
+}

@@ -1,0 +1,42 @@
+//! `Product` model — your catalog. Shows `Decimal` money handling
+//! (mapped to Postgres `NUMERIC`), a stock flag you can filter on in
+//! the list page, and full-text search across the name and SKU.
+//!
+//! - `#[derive(RustioAdmin)]` produces the `AdminModel` impl that
+//!   drives every list / form / cell rendering, AND the `impl Model`
+//!   ORM contract (table, columns, row decoder, insert binder) — both
+//!   from the struct fields, so there is nothing to keep in sync by
+//!   hand. `#[rustio(table = "…")]` pins the SQL table name.
+//! - `impl ModelAdmin for Product { … }` opts into Django-style
+//!   customisation. Override only the methods you care about; the
+//!   rest inherit framework defaults.
+//!
+//! Rename, extend, or delete this freely — it is your project's code.
+
+use rustio_admin::{DateTime, Decimal, ModelAdmin, RustioAdmin, Utc};
+
+#[derive(RustioAdmin)]
+#[rustio(table = "products")]
+pub struct Product {
+    pub id: i64,
+    pub name: String,
+    pub sku: String,
+    pub price: Decimal,
+    pub in_stock: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+impl ModelAdmin for Product {
+    fn list_display() -> &'static [&'static str] {
+        &["name", "sku", "price", "in_stock", "created_at"]
+    }
+    fn list_filter() -> &'static [&'static str] {
+        &["in_stock"]
+    }
+    fn search_fields() -> &'static [&'static str] {
+        &["name", "sku"]
+    }
+    fn ordering() -> &'static [&'static str] {
+        &["name"]
+    }
+}
