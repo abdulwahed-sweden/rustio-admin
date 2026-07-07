@@ -6,11 +6,12 @@ this document is the policy behind it.
 
 ## Unified workspace versions
 
-These four crates share one `[workspace.package].version` and are released
+These five crates share one `[workspace.package].version` and are released
 together:
 
 - `rustio-admin`
 - `rustio-admin-macros`
+- `rustio-admin-assets`
 - `rustio-admin-cli`
 - `rio-theme`
 
@@ -19,13 +20,19 @@ to any of them advances the shared version.
 
 ## Current public version
 
-- The current published version is **0.31.0** (all four crates; released 2026-07-03).
-- `main` may contain unreleased work committed after the `v0.31.0` tag. When it
+- The current published version is **0.32.0** (all five crates; released 2026-07-07).
+- `main` may contain unreleased work committed after the `v0.32.0` tag. When it
   does, the code on `main` is ahead of the last published/tagged version even
   though the declared version has not yet been bumped.
 
 ## Latest release
 
+- **0.32.0** shipped 2026-07-07: `cargo install rustio-admin-cli` is now
+  **lightweight** — no `sqlx`/runtime stack, **MSRV 1.85** instead of 1.94,
+  with the database & authority verbs behind an opt-in `db` feature. Adds a
+  new std-only **`rustio-admin-assets`** crate, an **`ecommerce`** project
+  preset, and a PII fix in `examples/shop`. Generated projects still target
+  1.94; no framework behaviour change.
 - **0.31.0** shipped 2026-07-03: a breaking dependency/MSRV bump (sqlx 0.9,
   MSRV 1.94) plus significant feature work. In a `0.x` line, breaking changes
   advance the **minor** (`0.30 → 0.31`), which is why this was not a patch.
@@ -35,12 +42,12 @@ to any of them advances the shared version.
 ## Semantic versioning
 
 The project follows [SemVer](https://semver.org/). While on the `0.x` line, a
-breaking change advances the **minor** (`0.30 → 0.31`) and a backward-compatible
-fix advances the **patch** (`0.31.0 → 0.31.1`).
+breaking change advances the **minor** (`0.31 → 0.32`) and a backward-compatible
+fix advances the **patch** (`0.32.0 → 0.32.1`).
 
 ## Tags
 
-- Use **annotated `vX.Y.Z`** tags (e.g. `v0.31.0`).
+- Use **annotated `vX.Y.Z`** tags (e.g. `v0.32.0`).
 - Do not tag until the release checks in [`RELEASING.md`](../RELEASING.md) pass.
 - GitHub Releases should match tags going forward.
 
