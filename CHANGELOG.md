@@ -8,6 +8,16 @@ leaves the alpha track.
 
 ## Unreleased
 
+*Nothing yet — work for the next release lands here.*
+
+
+## 0.33.0 — 2026-07-08
+
+A first-run and documentation polish release: a valid suggested database name
+and a clearer `new` wizard, a `rustio-draft` signpost for new projects, and a
+two-column in-admin docs layout with a table of contents. No API, schema, auth,
+or migration change; no MSRV change.
+
 ### Fixed
 
 - **`rustio-admin new` no longer suggests an invalid database name.** A
@@ -30,6 +40,13 @@ leaves the alpha track.
   generated project README (§2, framing the by-hand `startapp` path vs. the
   draft path), and the `import --help` text — each noting `rustio-draft` is the
   only AI step and the framework itself runs no AI.
+- **Clearer in-admin docs pages.** The framework docs at `/admin/docs/<page>`
+  gain a two-column reading layout: the prose is constrained to a ~66-character
+  measure (was 80) and a sticky "On this page" table of contents — auto-built
+  from the page's headings, with active-section highlighting and shareable
+  `#anchor` links — fills the space beside it. Collapses to a single column on
+  narrow screens. Uses only existing `--rio-*` tokens; progressive enhancement
+  (the prose reads fine without JS).
 
 
 ## 0.32.0 — 2026-07-07
@@ -127,6 +144,7 @@ route, auth, permission, or migration change to existing models.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.33.0** | 2026-07-08 | **First-run + docs polish.** `rustio-admin new` no longer suggests an invalid database name (hyphens → underscores) and each wizard step now states its purpose and options. New projects are pointed to the optional `rustio-draft` tool (draft models from a sentence) alongside the by-hand `startapp` path — in the CLI hint, the generated README, and `import --help`. The in-admin framework docs (`/admin/docs`) gain a two-column reading layout with a sticky "On this page" table of contents. No API / schema / auth / migration change; MSRV unchanged. |
 | **0.32.0** | 2026-07-07 | **Lightweight `cargo install`, `ecommerce` preset, shop PII fix.** The CLI installs light by default — no `sqlx`/runtime stack, **MSRV 1.85** instead of 1.94 — so `cargo install rustio-admin-cli` works on common toolchains; database & authority verbs move behind an opt-in **`db` feature** (still 1.94). Adds a new std-only **`rustio-admin-assets`** crate (embedded templates, shared by runtime + CLI). Adds an **`ecommerce` project preset** (Product / Customer / Order) to `rustio-admin new`. Fixes a PII exposure in `examples/shop` (customer list no longer shows every email). Generated projects still target 1.94; no framework schema / route / auth / permission / migration change. |
 | **0.31.0** | 2026-07-03 | **Adaptive view layer + Studio, sqlx 0.9 / MSRV 1.94, `rustio-draft` split out, docs & sponsorship.** Rolls up ~3 weeks on `main` since 0.30.0. **Breaking:** sqlx 0.8 → 0.9 raises the **MSRV to 1.94**; the crypto stack is untouched (that migration stays deferred). Adds an adaptive, deterministic **view layer**, a **View designer** (`/admin/dev/view-designer`), and the first **Studio** phases (branding/theme wizard, composition editor, read-only schema review, deterministic `schema.json` import). `examples/shop` gains Swedish-first payment methods and a rust-accent + JetBrains Mono repalette; sign-out becomes a POST form. The **`rustio-draft`** companion (brief → schema) was built and **moved to its own repo**. Documentation: new `project-status` / `versioning` maps, a professional sponsorship foundation, and an elevated positioning pass. No schema / route / auth / permission / migration change to existing models. |
 | **0.30.0** | 2026-06-11 | **Admin polish — comfortable dark theme, working ⌘K search, cleaner lists & forms.** The dark theme is re-tuned off near-black slate to a **comfortable graphite-grey** (`--rio-bg #22272e`) with clear surface steps and visible dividers, so elements separate logically and long sessions stay easy on the eyes. The top-bar **search now works**: the `⌘K` palette (grouped, keyboard-navigable, backed by `/admin/_search`) was implemented in JS but never given markup — now wired up. List pages **hide the `id` column** by default (the row links to the record; an explicit `list_display` keeps it). The page **footer goes full-width** with content aligned to the page column. A **subtle elevation pass** (darker hairline + softer surface shadows) lifts every card / panel / table off the near-white background, and the bespoke "console" pages (dashboard, lists, users/groups, sessions, audit, db browser) are brought to full Visual-Contract conformance — Inter labels everywhere, no grey header bands, `·` breadcrumbs, teal permission grid, §9 text-link row actions, and inline related sections now spaced cleanly from the action bar. The `docs/visual-reference/` set is refreshed and **mirrored in dark** under `docs/visual-reference/dark/`. Top bar / sidebar / footer chrome stays frozen; no schema, route, auth, permission, or migration change. |
