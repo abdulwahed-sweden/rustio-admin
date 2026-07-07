@@ -23,6 +23,13 @@ leaves the alpha track.
   has to guess a prompt's purpose. The database step no longer prints the
   full multi-OS PostgreSQL install block on every run (condensed to one
   line).
+- **New projects now point to `rustio-draft`.** A new developer had no signpost
+  in the flow that they can draft models from a plain-English sentence with the
+  optional `rustio-draft` tool (→ `schema.json` → `import`). Added that pointer
+  in three honest places — the scaffold's "Add your first model" hint, the
+  generated project README (§2, framing the by-hand `startapp` path vs. the
+  draft path), and the `import --help` text — each noting `rustio-draft` is the
+  only AI step and the framework itself runs no AI.
 
 
 ## 0.32.0 — 2026-07-07
