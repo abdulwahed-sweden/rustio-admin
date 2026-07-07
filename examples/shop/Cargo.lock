@@ -1599,7 +1599,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin"
-version = "0.31.0"
+version = "0.32.0"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1618,6 +1618,7 @@ dependencies = [
  "pulldown-cmark",
  "rand 0.8.6",
  "rust_decimal",
+ "rustio-admin-assets",
  "rustio-admin-macros",
  "serde",
  "serde_json",
@@ -1632,8 +1633,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustio-admin-assets"
+version = "0.32.0"
+
+[[package]]
 name = "rustio-admin-macros"
-version = "0.31.0"
+version = "0.32.0"
 dependencies = [
  "proc-macro2",
  "quote",
