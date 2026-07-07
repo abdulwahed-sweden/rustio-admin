@@ -1,14 +1,15 @@
 # Releasing
 
-Cutting a new `rustio-admin` release (e.g. `0.23.0` → `0.24.0`). All four
+Cutting a new `rustio-admin` release (e.g. `0.23.0` → `0.24.0`). All five
 crates ship the same version.
 
 ## 1. Bump the version (`OLD` → `NEW`)
 
 Update every pin — two of these are enforced by CI guards, so a miss fails the build:
 
-- [ ] `Cargo.toml` — `[workspace.package].version`, **and** both
-      `[workspace.dependencies]` pins (`rustio-admin`, `rustio-admin-macros`).
+- [ ] `Cargo.toml` — `[workspace.package].version`, **and** all three
+      `[workspace.dependencies]` pins (`rustio-admin`, `rustio-admin-macros`,
+      `rustio-admin-assets`).
 - [ ] `crates/rustio-admin-cli/Cargo.toml` — the inline `version`, the pin
       comment, and the `rio-theme` dependency `version`.
 - [ ] `crates/rustio-admin-cli/templates/project/Cargo.toml.tmpl` — the
@@ -53,12 +54,16 @@ git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_vali
 Dry-run, then publish in **dependency order** (each `cargo publish` waits
 for the index before the next resolves):
 
+`rustio-admin-assets` is a leaf that `rustio-admin` (and the CLI) depend on,
+so it publishes **before** `rustio-admin`.
+
 ```sh
-for c in rustio-admin-macros rio-theme rustio-admin rustio-admin-cli; do
-  cargo publish --dry-run -p "$c"   # macros/rio-theme verify fully; the
+for c in rustio-admin-macros rustio-admin-assets rio-theme rustio-admin rustio-admin-cli; do
+  cargo publish --dry-run -p "$c"   # macros/assets/rio-theme verify fully; the
 done                                # other two "fail" only on the unpublished
                                     # dep — expected, resolves during real publish
 cargo publish -p rustio-admin-macros \
+  && cargo publish -p rustio-admin-assets \
   && cargo publish -p rio-theme \
   && cargo publish -p rustio-admin \
   && cargo publish -p rustio-admin-cli

@@ -18,7 +18,7 @@ members = [
 exclude = ["examples/clinic", "examples/shop", "examples/translation-agency"]
 
 [workspace.package]
-version = "0.31.0"
+version = "0.32.0"
 edition = "2021"
 # sqlx 0.9 raises the floor: its own MSRV is Rust 1.94, so the
 # workspace tracks it. Bumping sqlx and this value move together.
@@ -33,6 +33,6 @@ homepage = "https://github.com/abdulwahed-sweden/rustio-admin"
 authors = ["Abdulwahed Mansour"]
 
 [workspace.dependencies]
-rustio-admin = { version = "0.31.0", path = "crates/rustio-admin" }
-rustio-admin-macros = { version = "0.31.0", path = "crates/rustio-admin-macros" }
-rustio-admin-assets = { version = "0.31.0", path = "crates/rustio-admin-assets" }
+rustio-admin = { version = "0.32.0", path = "crates/rustio-admin" }
+rustio-admin-macros = { version = "0.32.0", path = "crates/rustio-admin-macros" }
+rustio-admin-assets = { version = "0.32.0", path = "crates/rustio-admin-assets" }

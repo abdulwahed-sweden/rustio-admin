@@ -8,6 +8,15 @@ leaves the alpha track.
 
 ## Unreleased
 
+*Nothing yet — work for the next release lands here.*
+
+
+## 0.32.0 — 2026-07-07
+
+Makes `cargo install rustio-admin-cli` lightweight (installs on Rust 1.85
+instead of demanding 1.94), adds an `ecommerce` project preset, and fixes a
+PII exposure in the `shop` example.
+
 ### Added
 
 - **`ecommerce` project preset** for `rustio-admin new` / `startproject
@@ -36,6 +45,14 @@ leaves the alpha track.
   explaining how to get them. Generated projects are unaffected — they
   still target 1.94. CI now lints and tests the CLI in both feature
   configurations.
+
+### Fixed
+
+- **`examples/shop`: the customers list page no longer exposes every
+  customer's email.** `Customer::list_display()` had included `email`, which
+  rendered the entire address book as a bulk, scrapeable column. Email is now
+  omitted from the list (still searchable, still shown on the detail page).
+  Example-only — no framework behaviour change.
 
 ### Internal
 
@@ -89,6 +106,7 @@ route, auth, permission, or migration change to existing models.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.32.0** | 2026-07-07 | **Lightweight `cargo install`, `ecommerce` preset, shop PII fix.** The CLI installs light by default — no `sqlx`/runtime stack, **MSRV 1.85** instead of 1.94 — so `cargo install rustio-admin-cli` works on common toolchains; database & authority verbs move behind an opt-in **`db` feature** (still 1.94). Adds a new std-only **`rustio-admin-assets`** crate (embedded templates, shared by runtime + CLI). Adds an **`ecommerce` project preset** (Product / Customer / Order) to `rustio-admin new`. Fixes a PII exposure in `examples/shop` (customer list no longer shows every email). Generated projects still target 1.94; no framework schema / route / auth / permission / migration change. |
 | **0.31.0** | 2026-07-03 | **Adaptive view layer + Studio, sqlx 0.9 / MSRV 1.94, `rustio-draft` split out, docs & sponsorship.** Rolls up ~3 weeks on `main` since 0.30.0. **Breaking:** sqlx 0.8 → 0.9 raises the **MSRV to 1.94**; the crypto stack is untouched (that migration stays deferred). Adds an adaptive, deterministic **view layer**, a **View designer** (`/admin/dev/view-designer`), and the first **Studio** phases (branding/theme wizard, composition editor, read-only schema review, deterministic `schema.json` import). `examples/shop` gains Swedish-first payment methods and a rust-accent + JetBrains Mono repalette; sign-out becomes a POST form. The **`rustio-draft`** companion (brief → schema) was built and **moved to its own repo**. Documentation: new `project-status` / `versioning` maps, a professional sponsorship foundation, and an elevated positioning pass. No schema / route / auth / permission / migration change to existing models. |
 | **0.30.0** | 2026-06-11 | **Admin polish — comfortable dark theme, working ⌘K search, cleaner lists & forms.** The dark theme is re-tuned off near-black slate to a **comfortable graphite-grey** (`--rio-bg #22272e`) with clear surface steps and visible dividers, so elements separate logically and long sessions stay easy on the eyes. The top-bar **search now works**: the `⌘K` palette (grouped, keyboard-navigable, backed by `/admin/_search`) was implemented in JS but never given markup — now wired up. List pages **hide the `id` column** by default (the row links to the record; an explicit `list_display` keeps it). The page **footer goes full-width** with content aligned to the page column. A **subtle elevation pass** (darker hairline + softer surface shadows) lifts every card / panel / table off the near-white background, and the bespoke "console" pages (dashboard, lists, users/groups, sessions, audit, db browser) are brought to full Visual-Contract conformance — Inter labels everywhere, no grey header bands, `·` breadcrumbs, teal permission grid, §9 text-link row actions, and inline related sections now spaced cleanly from the action bar. The `docs/visual-reference/` set is refreshed and **mirrored in dark** under `docs/visual-reference/dark/`. Top bar / sidebar / footer chrome stays frozen; no schema, route, auth, permission, or migration change. |
 | **0.29.0** | 2026-06-10 | **Admin Visual Contract conformance — Inter + slate + teal, dark theme, font cleanup.** The admin content area is brought to pixel conformance with the Visual Contract (`docs/design/VISUAL-CONTRACT.md`, v2.1): **Inter** for body and titles, a slate neutral ladder, the teal `#119588` accent, a `#fafcfb` background, 44px controls with a 4px teal focus ring, the three §3 section patterns (legend-on-border / eyebrow / legend-less by page shape), the §8.2 action bar, and no-zebra tables with lowercase status pills — in **light and dark** (token-driven, no per-component dark CSS) and **LTR + RTL** (logical properties + legend/eyebrow letter-spacing neutralization). Retired the unused baked font faces (Spectral, Hanken Grotesk, Geist, Geist Mono): their `@font-face` / woff2 / `include_bytes!` / routes are gone, those `/static/fonts/*.woff2` now **404**, the binary is ~340 KB smaller, and `LICENSE.txt` maps 1:1 to the shipped faces (+ JetBrains Mono OFL). The build-time `rio-theme` emitter now produces dual-block dark-aware `tokens.css` (`DarkPolicy`: auto / light-only / explicit), and the runtime logs a startup WARN on a light-only `RUSTIO_TOKENS_CSS` override. Ships a ten-image visual reference set under `docs/visual-reference/`, plus a doctrine-doc refresh that points all token values at the contract. Two builtin labels change ("Old password" → "Current password"; create-form "Password" → "Temporary password"). **Top bar / sidebar / footer frozen; no functional, schema, route, auth, permission, or migration change.** |
