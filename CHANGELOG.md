@@ -8,7 +8,21 @@ leaves the alpha track.
 
 ## Unreleased
 
-*Nothing yet — work for the next release lands here.*
+### Fixed
+
+- **`rustio-admin new` no longer suggests an invalid database name.** A
+  hyphenated project name (legal for a crate) produced a suggested default
+  like `my-shop_dev`, which the wizard's own PostgreSQL-identifier check
+  then rejected — offering a default the user could not accept. Hyphens now
+  map to underscores (`my-shop` → `my_shop_dev`), always a valid name.
+
+### Changed
+
+- **Clearer `rustio-admin new` wizard.** Each step now opens with a
+  "What this is" line and a "Your options" line, so a first-time user never
+  has to guess a prompt's purpose. The database step no longer prints the
+  full multi-OS PostgreSQL install block on every run (condensed to one
+  line).
 
 
 ## 0.32.0 — 2026-07-07
