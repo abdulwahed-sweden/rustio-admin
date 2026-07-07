@@ -391,8 +391,10 @@ the 3 lines to add to src/main.rs; then run `rustio-admin migrate apply` and \
     /// Import a schema.json into the Builder draft (deterministic, no AI).
     ///
     /// Validates the contract, then records the same `add model` / `add field`
-    /// events so `plan` / `commit` apply it. An external AI assistant (governed
-    /// by `.rustio/ai.toml`) or a human authors the JSON — RustIO runs no AI.
+    /// events so `plan` / `commit` apply it. The JSON is authored by a human,
+    /// by an external AI assistant (governed by `.rustio/ai.toml`), or by the
+    /// separate `rustio-draft` tool (plain-English brief → schema.json) —
+    /// RustIO itself runs no AI.
     Import {
         /// Path to the schema JSON file.
         path: std::path::PathBuf,

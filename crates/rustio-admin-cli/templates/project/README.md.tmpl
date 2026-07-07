@@ -40,6 +40,21 @@ The default scaffold ships with no domain models -- the admin panel
 is ready, the homepage is alive, and you decide what the first
 model represents.
 
+There are **two ways** to add your models:
+
+1. **By hand** -- `rustio-admin startapp <name> --field ...` (shown below).
+   No AI, no network; you name every field. Best while you are learning.
+2. **From a sentence** -- describe your app in plain English and let the
+   optional, separate
+   [`rustio-draft`](https://github.com/abdulwahed-sweden/rustio-draft) tool
+   write a `schema.json`, then apply it deterministically:
+   `rustio-admin import schema.json && rustio-admin plan && rustio-admin commit`.
+   `rustio-draft` is the *only* AI step -- the framework itself runs no AI.
+   Full walkthrough:
+   [`tutorial-rustio-draft.md`](https://github.com/abdulwahed-sweden/rustio-admin/blob/main/docs/tutorial-rustio-draft.md).
+
+The rest of this section uses the by-hand path.
+
 ```sh
 # Declare your fields up front (recommended):
 rustio-admin startapp patient \

@@ -385,6 +385,15 @@ fn print_first_model_hint() {
         sty::hint("Field types, relations, and choices:  rustio-admin startapp --help")
     );
     println!();
+    println!(
+        "  {}",
+        sty::hint("Prefer to describe your app in a sentence? The optional `rustio-draft`")
+    );
+    println!(
+        "  {}",
+        sty::hint("tool drafts a schema.json for `rustio-admin import` — see README section 2.")
+    );
+    println!();
 }
 
 fn project_in(parent: &Path, name: &str, preset: &str, project_type: &str) -> Result<(), String> {
