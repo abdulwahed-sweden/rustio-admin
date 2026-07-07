@@ -14,14 +14,22 @@ pub struct Customer {
 
 // Admin list-page configuration. Each method overrides a default.
 impl ModelAdmin for Customer {
+    // Do NOT surface `email` (PII) as a column on the bulk list page —
+    // that exposes every customer's address in one scrapeable view.
+    // It stays searchable below and is still shown on the detail/edit
+    // page, so operators can find and read it, but the list no longer
+    // dumps the whole address book.
     fn list_display() -> &'static [&'static str] {
-        &["full_name", "email", "phone"]
+        &["full_name", "phone"]
     }
 
     fn list_filter() -> &'static [&'static str] {
         &[]
     }
 
+    // `email` stays searchable: an operator can look a customer up by
+    // address without the list rendering everyone's. The search
+    // highlight for a non-displayed column is never emitted to HTML.
     fn search_fields() -> &'static [&'static str] {
         &["full_name", "email", "phone"]
     }
