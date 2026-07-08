@@ -20,13 +20,19 @@ to any of them advances the shared version.
 
 ## Current public version
 
-- The current published version is **0.32.0** (all five crates; released 2026-07-07).
-- `main` may contain unreleased work committed after the `v0.32.0` tag. When it
+- The current published version is **0.33.0** (all five crates; released 2026-07-08).
+- `main` may contain unreleased work committed after the `v0.33.0` tag. When it
   does, the code on `main` is ahead of the last published/tagged version even
   though the declared version has not yet been bumped.
 
 ## Latest release
 
+- **0.33.0** shipped 2026-07-08: a first-run + docs polish release —
+  `rustio-admin new` suggests a valid database name and states each step's
+  purpose, new projects are pointed to the optional `rustio-draft` tool
+  (alongside the by-hand `startapp` path), and the in-admin docs gain a
+  two-column reading layout with a table of contents. No API / schema / auth /
+  migration change; MSRV unchanged.
 - **0.32.0** shipped 2026-07-07: `cargo install rustio-admin-cli` is now
   **lightweight** — no `sqlx`/runtime stack, **MSRV 1.85** instead of 1.94,
   with the database & authority verbs behind an opt-in `db` feature. Adds a
@@ -42,12 +48,12 @@ to any of them advances the shared version.
 ## Semantic versioning
 
 The project follows [SemVer](https://semver.org/). While on the `0.x` line, a
-breaking change advances the **minor** (`0.31 → 0.32`) and a backward-compatible
-fix advances the **patch** (`0.32.0 → 0.32.1`).
+breaking change advances the **minor** (`0.32 → 0.33`) and a backward-compatible
+fix advances the **patch** (`0.33.0 → 0.33.1`).
 
 ## Tags
 
-- Use **annotated `vX.Y.Z`** tags (e.g. `v0.32.0`).
+- Use **annotated `vX.Y.Z`** tags (e.g. `v0.33.0`).
 - Do not tag until the release checks in [`RELEASING.md`](../RELEASING.md) pass.
 - GitHub Releases should match tags going forward.
 

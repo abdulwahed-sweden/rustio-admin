@@ -29,8 +29,8 @@ sessions, recovery, RBAC, and audit designed as one system.
 
 - It is **not** the earlier monolithic `rustio-core` line.
 - It is **not** the unrelated `rustio` crate on crates.io.
-- The latest published version is **0.32.0** (released 2026-07-07).
-- `main` may contain unreleased work committed after the `v0.32.0` tag.
+- The latest published version is **0.33.0** (released 2026-07-08).
+- `main` may contain unreleased work committed after the `v0.33.0` tag.
 
 ## Earlier / legacy line
 
@@ -84,9 +84,9 @@ setup steps. The install target is `rustio-admin-cli`, which provides the
 
 ## Release status
 
-- **crates.io:** the five active crates are published at **0.32.0**.
-- **Git tags:** latest is `v0.32.0` (annotated `vX.Y.Z` tags).
+- **crates.io:** the five active crates are published at **0.33.0**.
+- **Git tags:** latest is `v0.33.0` (annotated `vX.Y.Z` tags).
 - **GitHub Releases:** current — see the
-  [v0.32.0 release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.32.0).
-- **Latest release:** **0.32.0** (2026-07-07) — tag, GitHub Release, and
+  [v0.33.0 release](https://github.com/abdulwahed-sweden/rustio-admin/releases/tag/v0.33.0).
+- **Latest release:** **0.33.0** (2026-07-08) — tag, GitHub Release, and
   crates.io, cut per [`RELEASING.md`](../RELEASING.md).
