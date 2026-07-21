@@ -16,6 +16,8 @@ pub mod background;
 pub mod email;
 // public:
 pub mod error;
+
+pub mod guard;
 // public:
 pub mod http;
 // public:
@@ -45,6 +47,8 @@ pub use crate::admin::{
 pub use crate::auth::{Identity, Role};
 // public:
 pub use crate::error::{Error, Result};
+
+pub use crate::guard::{require_admin_session, SessionGuard};
 // public:
 pub use crate::http::{FormData, Request, Response};
 // public:
