@@ -128,7 +128,7 @@ Library:
 
 ```toml
 [dependencies]
-rustio-admin = "*"
+rustio-admin = "0.33"
 ```
 
 CLI:
