@@ -237,6 +237,34 @@ jobs:
           fi
           echo "OK: workspace and reference example both pin $workspace"
 
+  integration:
+    name: integration (PostgreSQL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.94
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      # The `integration-test` feature turns on the testcontainers suites under
+      # `crates/rustio-admin/tests/integration_*.rs`. Each test boots its own
+      # ephemeral Postgres container, so it needs a Docker daemon and nothing
+      # else — no service container, no DATABASE_URL, no secrets; the harness
+      # derives the URL from the mapped port. GitHub's ubuntu runners ship
+      # Docker, so this needs no extra setup.
+      #
+      # It is its own job rather than another step in `build / test / lint`
+      # because container startup dominates its runtime, and the lint/unit gate
+      # should stay fast.
+      - name: docker available
+        run: docker version
+
+      - name: cargo test (integration suites)
+        run: cargo test --workspace --all-targets --features integration-test
+
   reference-example:
     name: reference example (clinic)
     runs-on: ubuntu-latest

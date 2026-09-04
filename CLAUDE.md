@@ -31,6 +31,8 @@ cargo test -p rustio-admin --features integration-test --test integration_recove
 
 Integration suites under `crates/rustio-admin/tests/integration_*.rs` are gated by the `integration-test` feature (see the `[features]` block in `crates/rustio-admin/Cargo.toml`). They each boot an ephemeral Postgres container per test via `testcontainers`, so Docker must be running. The `cascade_lockstep.rs` test is *not* gated and runs in the default suite.
 
+In CI these run in their own job, **`integration (PostgreSQL)`** in `ci.yml`, separate from `build / test / lint` so that container startup does not slow the lint/unit gate. The job needs nothing but a Docker daemon — no service container, no `DATABASE_URL`, no secrets; the harness derives the connection URL from the mapped container port.
+
 CI's Tier-2-symbol guard (`.github/workflows/ci.yml`) — also run this locally before pushing if you've touched core or examples:
 
 ```sh
