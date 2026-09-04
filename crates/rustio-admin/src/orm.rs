@@ -364,9 +364,7 @@ pub async fn find<M: Model>(db: &Db, id: i64) -> Result<Option<M>> {
 // public:
 pub async fn create<M: Model>(db: &Db, model: &M) -> Result<i64> {
     let cols = M::INSERT_COLUMNS.join(", ");
-    let placeholders: Vec<String> = (1..=M::INSERT_COLUMNS.len())
-        .map(|i| format!("${i}"))
-        .collect();
+    let (placeholders, bound) = placeholders_for(model.insert_values());
     let sql = format!(
         "INSERT INTO {} ({}) VALUES ({}) RETURNING id",
         M::TABLE,
@@ -374,7 +372,7 @@ pub async fn create<M: Model>(db: &Db, model: &M) -> Result<i64> {
         placeholders.join(", ")
     );
     let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
-    for value in model.insert_values() {
+    for value in bound {
         query = bind_value(query, value);
     }
     let row = query.fetch_one(db.pool()).await?;
@@ -386,19 +384,20 @@ pub async fn create<M: Model>(db: &Db, model: &M) -> Result<i64> {
 
 // public:
 pub async fn update<M: Model>(db: &Db, id: i64, model: &M) -> Result<()> {
+    let (placeholders, bound) = placeholders_for(model.insert_values());
     let sets: Vec<String> = M::INSERT_COLUMNS
         .iter()
-        .enumerate()
-        .map(|(i, col)| format!("{col} = ${}", i + 1))
+        .zip(&placeholders)
+        .map(|(col, slot)| format!("{col} = {slot}"))
         .collect();
     let sql = format!(
         "UPDATE {} SET {} WHERE id = ${}",
         M::TABLE,
         sets.join(", "),
-        M::INSERT_COLUMNS.len() + 1
+        bound.len() + 1
     );
     let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
-    for value in model.insert_values() {
+    for value in bound {
         query = bind_value(query, value);
     }
     query = query.bind(id);
@@ -416,11 +415,47 @@ pub async fn delete<M: Model>(db: &Db, id: i64) -> Result<()> {
     Ok(())
 }
 
+/// Decide, per value, whether it travels as a bound parameter or as the SQL
+/// literal `NULL`, renumbering the placeholders around the ones that drop out.
+///
+/// A bound NULL has to carry a type, and [`Value::Null`] does not know one:
+/// the blanket `From<Option<T>>` erases it. Binding a guess — it used to be
+/// `None::<i64>` — makes Postgres reject the statement the moment the target
+/// column is not a `bigint`:
+///
+/// ```text
+/// column "notified_at" is of type timestamp with time zone
+/// but expression is of type bigint
+/// ```
+///
+/// which left any row holding a NULL in a nullable non-`bigint` column
+/// impossible to update. The literal has no such problem: `SET col = NULL` and
+/// `VALUES (NULL)` take their type from the column being written, so Postgres
+/// never has to infer one.
+///
+/// Only the keyword is ever interpolated, never a value, so this stays exactly
+/// as injection-safe as the fully parameterised form it replaces.
+fn placeholders_for(values: Vec<Value>) -> (Vec<String>, Vec<Value>) {
+    let mut placeholders = Vec::with_capacity(values.len());
+    let mut bound = Vec::with_capacity(values.len());
+    for value in values {
+        if matches!(value, Value::Null) {
+            placeholders.push("NULL".to_string());
+        } else {
+            bound.push(value);
+            placeholders.push(format!("${}", bound.len()));
+        }
+    }
+    (placeholders, bound)
+}
+
 fn bind_value<'a>(
     q: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     v: Value,
 ) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
     match v {
+        // Unreachable from `create` / `update`, which route NULLs through
+        // `placeholders_for` as SQL literals. Kept so the match stays total.
         Value::Null => q.bind(None::<i64>),
         Value::I32(n) => q.bind(n),
         Value::I64(n) => q.bind(n),
@@ -455,5 +490,80 @@ mod value_conversion_tests {
         assert!(matches!(Value::from(t), Value::Time(v) if v == t));
         let u = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440000);
         assert!(matches!(Value::from(u), Value::Uuid(v) if v == u));
+    }
+}
+
+#[cfg(test)]
+mod null_placeholder_tests {
+    use super::{placeholders_for, Value};
+
+    #[test]
+    fn every_value_gets_a_numbered_placeholder_when_none_are_null() {
+        let (slots, bound) = placeholders_for(vec![
+            Value::Text("a".into()),
+            Value::I64(1),
+            Value::Bool(true),
+        ]);
+        assert_eq!(slots, ["$1", "$2", "$3"]);
+        assert_eq!(bound.len(), 3);
+    }
+
+    #[test]
+    fn nulls_become_literals_and_do_not_consume_a_placeholder() {
+        let (slots, bound) =
+            placeholders_for(vec![Value::Text("a".into()), Value::Null, Value::I64(7)]);
+        assert_eq!(slots, ["$1", "NULL", "$2"]);
+        assert_eq!(bound.len(), 2, "the NULL must not be bound");
+    }
+
+    #[test]
+    fn leading_and_trailing_nulls_renumber_correctly() {
+        let (slots, bound) = placeholders_for(vec![
+            Value::Null,
+            Value::Text("a".into()),
+            Value::Null,
+            Value::I32(3),
+            Value::Null,
+        ]);
+        assert_eq!(slots, ["NULL", "$1", "NULL", "$2", "NULL"]);
+        assert_eq!(bound.len(), 2);
+    }
+
+    #[test]
+    fn an_all_null_row_binds_nothing() {
+        let (slots, bound) = placeholders_for(vec![Value::Null, Value::Null]);
+        assert_eq!(slots, ["NULL", "NULL"]);
+        assert!(bound.is_empty());
+        // `update` puts the id at `bound.len() + 1`, so it must still be $1.
+        assert_eq!(bound.len() + 1, 1);
+    }
+
+    #[test]
+    fn placeholder_count_always_matches_the_values_that_will_be_bound() {
+        let values = vec![
+            Value::Null,
+            Value::I64(1),
+            Value::Null,
+            Value::Text("x".into()),
+            Value::Bool(false),
+        ];
+        let expected = values.iter().filter(|v| !matches!(v, Value::Null)).count();
+        let (slots, bound) = placeholders_for(values);
+        assert_eq!(bound.len(), expected);
+        assert_eq!(
+            slots.iter().filter(|s| s.starts_with('$')).count(),
+            expected
+        );
+    }
+
+    #[test]
+    fn no_value_is_ever_interpolated_into_the_sql() {
+        // Only "$n" and the NULL keyword may appear; a value reaching the SQL
+        // string would be an injection vector.
+        let (slots, _) = placeholders_for(vec![
+            Value::Text("'; DROP TABLE orders; --".into()),
+            Value::Null,
+        ]);
+        assert_eq!(slots, ["$1", "NULL"]);
     }
 }

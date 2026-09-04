@@ -11,6 +11,42 @@ leaves the alpha track.
 *Nothing yet — work for the next release lands here.*
 
 
+## 0.33.1 — 2026-09-04
+
+A bug-fix release. A row holding NULL in a nullable non-`bigint` column could
+not be created or updated at all. No API, schema, auth, or migration change;
+no MSRV change.
+
+### Fixed
+
+- **A NULL in a nullable non-`bigint` column made a row uneditable.**
+  `orm::create` and `orm::update` bind `Model::insert_values()` positionally,
+  and a `Value::Null` carries no type — the blanket `From<Option<T>>` erases
+  it. Both paths bound it as `None::<i64>`, so PostgreSQL rejected the
+  statement whenever the target column was not a `bigint`:
+
+  ```text
+  column "seen_at" is of type timestamp with time zone
+  but expression is of type bigint
+  ```
+
+  The consequence was not a corner case. Any row whose optional timestamp or
+  text had never been set — which is to say the ones an operator most often
+  needs to act on — could not be saved from the admin at all, and the change
+  form returned `500` with nothing in the log to explain it.
+
+  NULLs now travel as the SQL literal `NULL`, which takes its type from the
+  column being written, and the remaining placeholders are renumbered around
+  them. Non-NULL values are still bound parameters, and only the keyword is
+  ever interpolated — never a value — so this is exactly as injection-safe as
+  the fully parameterised form it replaces.
+
+  Covered by `tests/integration_nullable_columns.rs` (live PostgreSQL: a row
+  with NULL timestamp and text is created, read and updated; NULLs stay NULL;
+  untouched columns keep their values; a column can be cleared and set again)
+  and by unit tests for placeholder numbering around NULLs in `orm.rs`.
+
+
 ## 0.33.0 — 2026-07-08
 
 A first-run and documentation polish release: a valid suggested database name
@@ -144,6 +180,7 @@ route, auth, permission, or migration change to existing models.
 
 | Version   | Date       | Headline                                                                          |
 |-----------|------------|-----------------------------------------------------------------------------------|
+| **0.33.1** | 2026-09-04 | **Rows with NULL in a nullable non-`bigint` column are editable again.** `orm::create` / `orm::update` bound every `Value::Null` as `None::<i64>`, so PostgreSQL rejected any insert or update whose target column was a `TIMESTAMPTZ` or `TEXT` — meaning a record whose optional timestamp had never been set could not be saved from the admin at all, failing with a `500`. NULLs now travel as the SQL literal `NULL` (typed by the target column) with placeholders renumbered around them; non-NULL values remain bound parameters and no value is ever interpolated. Adds a live-PostgreSQL regression suite and placeholder-numbering unit tests. No API, schema, auth, or migration change; MSRV unchanged. |
 | **0.33.0** | 2026-07-08 | **First-run + docs polish.** `rustio-admin new` no longer suggests an invalid database name (hyphens → underscores) and each wizard step now states its purpose and options. New projects are pointed to the optional `rustio-draft` tool (draft models from a sentence) alongside the by-hand `startapp` path — in the CLI hint, the generated README, and `import --help`. The in-admin framework docs (`/admin/docs`) gain a two-column reading layout with a sticky "On this page" table of contents. No API / schema / auth / migration change; MSRV unchanged. |
 | **0.32.0** | 2026-07-07 | **Lightweight `cargo install`, `ecommerce` preset, shop PII fix.** The CLI installs light by default — no `sqlx`/runtime stack, **MSRV 1.85** instead of 1.94 — so `cargo install rustio-admin-cli` works on common toolchains; database & authority verbs move behind an opt-in **`db` feature** (still 1.94). Adds a new std-only **`rustio-admin-assets`** crate (embedded templates, shared by runtime + CLI). Adds an **`ecommerce` project preset** (Product / Customer / Order) to `rustio-admin new`. Fixes a PII exposure in `examples/shop` (customer list no longer shows every email). Generated projects still target 1.94; no framework schema / route / auth / permission / migration change. |
 | **0.31.0** | 2026-07-03 | **Adaptive view layer + Studio, sqlx 0.9 / MSRV 1.94, `rustio-draft` split out, docs & sponsorship.** Rolls up ~3 weeks on `main` since 0.30.0. **Breaking:** sqlx 0.8 → 0.9 raises the **MSRV to 1.94**; the crypto stack is untouched (that migration stays deferred). Adds an adaptive, deterministic **view layer**, a **View designer** (`/admin/dev/view-designer`), and the first **Studio** phases (branding/theme wizard, composition editor, read-only schema review, deterministic `schema.json` import). `examples/shop` gains Swedish-first payment methods and a rust-accent + JetBrains Mono repalette; sign-out becomes a POST form. The **`rustio-draft`** companion (brief → schema) was built and **moved to its own repo**. Documentation: new `project-status` / `versioning` maps, a professional sponsorship foundation, and an elevated positioning pass. No schema / route / auth / permission / migration change to existing models. |

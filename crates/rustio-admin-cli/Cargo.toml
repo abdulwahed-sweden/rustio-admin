@@ -1,8 +1,8 @@
 [package]
 name = "rustio-admin-cli"
 # Tracks the workspace minor. Bundled template pins new projects to
-# `rustio-admin = "0.33.0"`. CI guards this in `.github/workflows/ci.yml`.
-version = "0.33.0"
+# `rustio-admin = "0.33.1"`. CI guards this in `.github/workflows/ci.yml`.
+version = "0.33.1"
 edition.workspace = true
 # Deliberately NOT `rust-version.workspace = true`. The workspace floor
 # (1.94) is driven by `sqlx 0.9`, which the default (lightweight) build
@@ -51,7 +51,7 @@ rustio-admin-assets = { workspace = true }
 # generate` subcommand turns raw brand colors into a static tokens.css.
 # Runtime CSS is the generated file; the library does not depend on
 # this crate.
-rio-theme = { path = "../rio-theme", version = "0.33.0" }
+rio-theme = { path = "../rio-theme", version = "0.33.1" }
 
 # CLI surface
 clap      = { version = "4", features = ["derive"] }

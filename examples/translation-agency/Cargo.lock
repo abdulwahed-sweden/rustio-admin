@@ -1589,7 +1589,7 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin"
-version = "0.33.0"
+version = "0.33.1"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1624,11 +1624,11 @@ dependencies = [
 
 [[package]]
 name = "rustio-admin-assets"
-version = "0.33.0"
+version = "0.33.1"
 
 [[package]]
 name = "rustio-admin-macros"
-version = "0.33.0"
+version = "0.33.1"
 dependencies = [
  "proc-macro2",
  "quote",
