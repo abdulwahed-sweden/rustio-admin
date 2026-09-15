@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A reading/detail page: the standard measure. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Branding</span></nav>
 <div class="rio-masthead-top">
@@ -27,12 +29,12 @@
     </div>
     <div class="rio-brand-presets">
       <span class="rio-meta">Presets</span>
-      <button type="button" class="rio-brand-preset" data-hex="#B84318" title="Rust (default)" style="--sw:#B84318"></button>
-      <button type="button" class="rio-brand-preset" data-hex="#0F6890" title="Ocean" style="--sw:#0F6890"></button>
-      <button type="button" class="rio-brand-preset" data-hex="#2E7D5B" title="Forest" style="--sw:#2E7D5B"></button>
-      <button type="button" class="rio-brand-preset" data-hex="#C9572E" title="Sunset" style="--sw:#C9572E"></button>
-      <button type="button" class="rio-brand-preset" data-hex="#0E6B5B" title="Patina" style="--sw:#0E6B5B"></button>
-      <button type="button" class="rio-brand-preset" data-hex="#1A1A1A" title="Monochrome" style="--sw:#1A1A1A"></button>
+      <button type="button" class="rio-brand-preset rio-brand-preset--rust" data-hex="#B84318" title="Rust (default)"></button>
+      <button type="button" class="rio-brand-preset rio-brand-preset--ocean" data-hex="#0F6890" title="Ocean"></button>
+      <button type="button" class="rio-brand-preset rio-brand-preset--forest" data-hex="#2E7D5B" title="Forest"></button>
+      <button type="button" class="rio-brand-preset rio-brand-preset--sunset" data-hex="#C9572E" title="Sunset"></button>
+      <button type="button" class="rio-brand-preset rio-brand-preset--patina" data-hex="#0E6B5B" title="Patina"></button>
+      <button type="button" class="rio-brand-preset rio-brand-preset--mono" data-hex="#1A1A1A" title="Monochrome"></button>
     </div>
   </section>
 

@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A focused task page: forms and confirmations take the narrow measure. #}
+{% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
 
@@ -29,7 +31,7 @@
 
   {% if read_only %}
   <div class="rio-form-actions">
-    <span style="color:var(--rio-text-mute);font-size:var(--rio-text-14)">Read-only mode — deletes are disabled.</span>
+    <span class="rio-hint">Read-only mode — deletes are disabled.</span>
     <span class="rio-form-actions-spacer" aria-hidden="true"></span>
     <a href="/admin/{{ admin_name }}/{{ object_id }}/edit" class="rio-btn rio-btn--subtle rio-btn--md">Back</a>
   </div>

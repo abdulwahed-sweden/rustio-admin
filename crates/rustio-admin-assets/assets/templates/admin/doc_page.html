@@ -11,6 +11,8 @@
  # pages/tools.css. The markdown's own leading <h1> is hidden (CSS) so
  # the title isn't shown twice. #}
 
+{# A reading/detail page: the standard measure. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/docs">Framework docs</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ doc_title }}</span></nav>
 <div class="rio-masthead-top"><div>

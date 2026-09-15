@@ -9,6 +9,6 @@
 {% macro row_actions(admin_name, row_id, edit_path="edit", delete_path="delete") -%}
 <span class="rio-row-actions">
   <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row_id }}/{{ edit_path }}" aria-label="Edit row {{ row_id }}">{{ icon("pencil") }}</a>
-  <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row_id }}/{{ delete_path }}" aria-label="Delete row {{ row_id }}" style="color:var(--rio-danger)">{{ icon("trash") }}</a>
+  <a class="rio-iconbtn rio-iconbtn--sm rio-danger-ink" href="/admin/{{ admin_name }}/{{ row_id }}/{{ delete_path }}" aria-label="Delete row {{ row_id }}">{{ icon("trash") }}</a>
 </span>
 {%- endmacro %}

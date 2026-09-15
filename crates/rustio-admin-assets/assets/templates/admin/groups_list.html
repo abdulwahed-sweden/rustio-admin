@@ -1,5 +1,7 @@
 {% extends "admin/_base.html" %}
 {% from "admin/_row_actions.html" import row_actions %}
+{# A data page: lists and matrices take the wide measure. #}
+{% block page_measure %}rio-page--wide{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Groups</span></nav>
 
@@ -15,7 +17,7 @@
 
 <div class="rio-board">
   {% if groups %}
-  <div style="overflow:auto">
+  <div class="rio-tablewrap">
   <table class="rio-dtable">
     <thead><tr><th>Group</th><th>Description</th><th class="col-act">&nbsp;</th></tr></thead>
     <tbody>
@@ -27,7 +29,7 @@
             <span class="rio-prod-text"><a class="rio-prod-name" href="/admin/groups/{{ g.id }}/edit">{{ g.name }}</a><span class="rio-prod-cat">#{{ g.id }}</span></span>
           </div>
         </td>
-        <td style="color:var(--rio-text-mute)">{{ g.description }}</td>
+        <td class="rio-hint">{{ g.description }}</td>
         <td class="col-act">{{ row_actions("groups", g.id) }}</td>
       </tr>
       {% endfor %}
@@ -40,7 +42,7 @@
     {{ icon("key") }}
     <div class="rio-empty-title">No groups yet</div>
     <div>Create a group to bundle permissions — then assign the group to users instead of granting permissions one by one.</div>
-    <div style="margin-block-start:14px"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/groups/new">{{ icon("plus") }} Add group</a></div>
+    <div class="rio-stack-16"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/groups/new">{{ icon("plus") }} Add group</a></div>
   </div>
   {% endif %}
 </div>

@@ -4,6 +4,8 @@
  # title, and source path. Chrome matches the console masthead; styling
  # lives in pages/tools.css (`.rio-doc-*`). #}
 
+{# A reading/detail page: the standard measure. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top"><div>

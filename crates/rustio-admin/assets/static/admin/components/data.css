@@ -178,12 +178,26 @@
 }
 
 /* Bulk-action bar (appears when rows are selected) */
+/* Selection bar. Count and Clear read as one unit at the start; the
+   actions group sits at the end and wraps onto its own line rather
+   than marching off the edge of a busy list. */
 .rio-bulkbar {
-  display: flex; align-items: center; gap: var(--rio-space-12);
-  padding: 10px 16px; border-block-end: 1px solid var(--rio-line);
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--rio-space-8) var(--rio-space-12);
+  padding: var(--rio-space-12) var(--rio-card-pad-x);
+  border-block-end: 1px solid var(--rio-line);
   background: var(--rio-rust-tint);
+  min-inline-size: 0;
 }
 .rio-bulkbar-count { font-size: var(--rio-text-13); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); }
+.rio-bulkbar-actions {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--rio-space-8);
+  margin-inline-start: auto;
+}
+@media (max-width: 760px) {
+  .rio-bulkbar-actions { margin-inline-start: 0; inline-size: 100%; }
+}
 
 /* Filters bar */
 .rio-filters { display: flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
@@ -240,3 +254,8 @@
 /* Empty-state call to action — replaces the inline margin the users
    list used to carry. */
 .rio-empty-cta { margin-block-start: var(--rio-space-16); }
+
+/* Board footer text and a centred empty board (dashboard "no models"). */
+.rio-board-foot-text { font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-board-foot-text strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); }
+.rio-board--center { padding: var(--rio-space-48) var(--rio-card-pad-x); text-align: center; }

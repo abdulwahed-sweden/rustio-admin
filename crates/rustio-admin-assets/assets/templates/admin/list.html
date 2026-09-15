@@ -78,6 +78,8 @@
 {% endmacro %}
 
 
+{# A data page: lists and tables take the wide measure. #}
+{% block page_measure %}rio-page--wide{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ display_name }}</span></nav>
 
@@ -171,8 +173,8 @@
 <div class="rio-bulkbar" role="region" aria-live="polite" aria-label="Bulk actions">
   <span class="rio-bulkbar-count"><strong data-rio-bulk-count>0</strong> selected</span>
   <button type="button" class="rio-btn rio-btn--ghost rio-btn--sm" data-rio-bulk-clear>Clear</button>
-  <span style="margin-inline-start:auto;display:flex;gap:8px">
-    <button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm" style="color:var(--rio-danger)">{{ icon("trash") }} Delete selected</button>
+  <span class="rio-bulkbar-actions">
+    <button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm rio-danger-ink">{{ icon("trash") }} Delete selected</button>
     {% for btn in bulk_action_buttons %}<button type="submit" formaction="{{ btn.form_action }}" class="rio-btn rio-btn--secondary rio-btn--sm{% if btn.destructive %} rio-btn--danger{% endif %}">{{ btn.label }}</button>{% endfor %}
   </span>
 </div>
@@ -181,7 +183,7 @@
 <div class="rio-board">
   {% if rows %}
   {% if adaptive %}{% include "admin/_list_adaptive.html" %}{% else %}
-  <div style="overflow:auto">
+  <div class="rio-tablewrap">
   <table class="rio-dtable">
     <thead>
       <tr>
@@ -213,7 +215,7 @@
           {% if not read_only %}
           <span class="rio-row-actions">
             <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row.id }}/edit" aria-label="Edit">{{ icon("pencil") }}</a>
-            <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row.id }}/delete" aria-label="Delete" style="color:var(--rio-danger)">{{ icon("trash") }}</a>
+            <a class="rio-iconbtn rio-iconbtn--sm rio-danger-ink" href="/admin/{{ admin_name }}/{{ row.id }}/delete" aria-label="Delete">{{ icon("trash") }}</a>
           </span>
           {% endif %}
         </td>
@@ -238,7 +240,7 @@
     {{ icon("inbox") }}
     <div class="rio-empty-title">No {{ display_name|lower }} yet</div>
     <div>{% if read_only %}There are no records to display here.{% else %}Add the first {{ singular_name|lower }} to get started.{% endif %}</div>
-    {% if not read_only %}<div style="margin-block-start:14px"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/{{ admin_name }}/new">{{ icon("plus") }} Add {{ singular_name }}</a></div>{% endif %}
+    {% if not read_only %}<div class="rio-stack-16"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/{{ admin_name }}/new">{{ icon("plus") }} Add {{ singular_name }}</a></div>{% endif %}
   </div>
   {% endif %}
 </div>

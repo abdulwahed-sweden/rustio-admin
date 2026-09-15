@@ -34,14 +34,32 @@ leaves the alpha track.
 
 ### Changed
 
-- **Light-only admin shell and Users pilot.** The authenticated UI now uses a
-  two-row utility/module header, a light contextual rail, a neutral-black
-  16px type hierarchy, and explicit wide/standard/form page measures. The
-  Users list gains a five-track wide layout, persistent authorised row
-  actions, long-email containment, and continuous separators; the real
-  new-user form uses the focused 672px measure. Dark-theme controls, stored
-  state, and stylesheet rules are removed. Routes, permissions, CSRF, RTL,
-  accessibility semantics, and backend behaviour are unchanged.
+- **The admin UI is migrated to a single light visual system.** Every one of
+  the 45 page templates now renders through one contract: a light-only
+  interface on an off-white ground with white and soft surfaces, restrained
+  blue actions and active states, a neutral-black text hierarchy at a 16px
+  base, a two-row fluid utility/module header, a light contextual sidebar,
+  and the project's central SVG icon registry.
+
+  Page width is no longer one number. A template declares its measure
+  through a `page_measure` block — **wide 1480px** for lists, tables and
+  matrices (9 pages), **standard 1120px** for detail, dashboard and
+  documentation pages (13), and **focused 672px** for simple forms and
+  destructive confirmations (23). The nine partials carry no measure, and
+  the four unauthenticated pages keep the 408px `.rio-auth-card` with no
+  shell around it.
+
+  Dark-theme controls, stored state and stylesheet rules are gone; a
+  `RUSTIO_TOKENS_CSS` override that declares dark rules now logs a startup
+  warning. Directional icons mirror exactly once in RTL, every layout rule
+  uses logical properties, and overflow is contained locally — tab strips,
+  data tables and the module row scroll inside themselves so the page never
+  scrolls sideways. All inline `style` attributes are gone from the template
+  tree, replaced by a small set of shared semantic utilities.
+
+  Routes, handlers, forms, validation, permissions, CSRF, sessions, MFA and
+  recovery behaviour, i18n, project template overrides, template blocks and
+  generated-project behaviour are unchanged.
 
 - **The test architecture is now two explicit layers.** Inline
   `#[cfg(test)]` modules keep the unit-level coverage — they are the only

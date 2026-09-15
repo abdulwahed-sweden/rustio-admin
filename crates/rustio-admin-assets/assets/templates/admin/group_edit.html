@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A data page: lists and matrices take the wide measure. #}
+{% block page_measure %}rio-page--wide{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ name }}</span></nav>
@@ -21,7 +23,7 @@
     <legend class="rio-fieldset-legend">Permissions</legend>
     {% if matrix.rows or matrix.extras %}
     {% if matrix.rows %}
-    <div style="overflow:auto">
+    <div class="rio-tablewrap">
     <table class="rio-perm-matrix">
       <thead>
         <tr>

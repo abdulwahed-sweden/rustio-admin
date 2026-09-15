@@ -226,3 +226,7 @@ textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; 
 .rio-switch input:checked + .rio-switch-track .rio-switch-thumb { inset-inline-start: 18px; }
 .rio-switch input:focus-visible + .rio-switch-track { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
 .rio-switch input:disabled + .rio-switch-track { opacity: 0.5; }
+
+/* A numeric input that should not stretch to the full field width
+   (a duration in minutes, a page size). */
+.rio-input--w8 { inline-size: 8em; }
