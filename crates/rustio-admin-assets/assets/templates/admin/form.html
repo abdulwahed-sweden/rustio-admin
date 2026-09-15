@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A focused task page: forms and confirmations take the narrow measure. #}
+{% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
 
@@ -39,7 +41,7 @@
     <button type="submit" name="_continue" class="rio-btn rio-btn--secondary">Save and continue editing</button>
     <button type="submit" name="_addanother" class="rio-btn rio-btn--secondary">Save and add another</button>
     {% else %}
-    <span style="color:var(--rio-text-mute);font-size:var(--rio-text-14)">Read-only mode — saves are disabled.</span>
+    <span class="rio-hint">Read-only mode — saves are disabled.</span>
     {% endif %}
     <span class="rio-action-bar-end">
       {% if mode == "edit" %}
@@ -55,7 +57,7 @@
 <section class="rio-board rio-inline-section" aria-labelledby="inline-{{ inline.target_admin_name }}">
   <header class="rio-inline-section__header">
     <h2 id="inline-{{ inline.target_admin_name }}">{{ inline.label }}</h2>
-    <span style="font-family:var(--rio-font-mono);font-size:var(--rio-text-12);color:var(--rio-text-faint)">
+    <span class="rio-inline-meta">
       {% if inline.has_more %}Showing {{ inline.rows|length }} of {{ inline.total }}{% else %}{{ inline.total }} {% if inline.total == 1 %}row{% else %}rows{% endif %}{% endif %}
     </span>
   </header>
@@ -69,7 +71,7 @@
           {% if not read_only %}
           <span class="rio-row-actions">
             <a class="rio-iconbtn rio-iconbtn--sm" href="{{ r.edit_url }}" aria-label="Edit">{{ icon("pencil") }}</a>
-            <a class="rio-iconbtn rio-iconbtn--sm" href="{{ r.delete_url }}" aria-label="Delete" style="color:var(--rio-danger)">{{ icon("trash") }}</a>
+            <a class="rio-iconbtn rio-iconbtn--sm rio-danger-ink" href="{{ r.delete_url }}" aria-label="Delete">{{ icon("trash") }}</a>
           </span>
           {% else %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="{{ r.edit_url }}">View</a>{% endif %}
         </td>
@@ -81,7 +83,7 @@
   <div class="rio-empty">
     {{ icon("table") }}
     <div class="rio-empty-title">No related {{ inline.target_display_name|lower }} yet</div>
-    {% if not read_only %}<div>Add the first one — it links back to this row automatically.</div><div style="margin-block-start:12px"><a class="rio-btn rio-btn--primary rio-btn--sm" href="{{ inline.add_url }}">{{ icon("plus") }} Add {{ inline.target_display_name|lower }}</a></div>{% endif %}
+    {% if not read_only %}<div>Add the first one — it links back to this row automatically.</div><div class="rio-stack-12"><a class="rio-btn rio-btn--primary rio-btn--sm" href="{{ inline.add_url }}">{{ icon("plus") }} Add {{ inline.target_display_name|lower }}</a></div>{% endif %}
   </div>
   {% endif %}
   <div class="rio-board-foot">

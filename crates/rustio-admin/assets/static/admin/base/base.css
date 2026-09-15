@@ -224,3 +224,10 @@ a:hover { color: var(--rio-rust-hover); }
   overflow-wrap: anywhere;
   margin: 0;
 }
+
+/* Inline machine metadata beside a label (ids, slugs, counts). */
+.rio-inline-meta {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  color: var(--rio-text-mute);
+}
