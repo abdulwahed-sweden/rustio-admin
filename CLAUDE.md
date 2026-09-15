@@ -10,7 +10,7 @@ Project README: `README.md`. Architecture map: `docs/architecture.md`. Design co
 
 ## Common commands
 
-Workspace pins `rust-version = "1.94"` (MSRV), `edition = "2021"`, and a single workspace `version` (currently `0.32.0`) in the root `Cargo.toml`. There is no `rust-toolchain.toml` — use a stable toolchain ≥ 1.94.
+Workspace pins `rust-version = "1.94"` (MSRV), `edition = "2021"`, and a single workspace `version` (currently `0.33.1`) in the root `Cargo.toml`. There is no `rust-toolchain.toml` — use a stable toolchain ≥ 1.94.
 
 CI runs with `RUSTFLAGS="-D warnings"` — clippy/build/test all fail on any warning. Match that locally.
 
@@ -58,7 +58,7 @@ The CLI surface is larger than the framework's runtime surface; the top-level ve
 
 - **Scaffolding** — `new` (friendly interactive wizard; alias for `startproject`, `--no-interactive` to disable), `startproject` (`--preset minimal|blog|clinic|translation-agency|ecommerce`; content presets ship models + seeded migrations + a pre-wired `main.rs`, wired in `scaffold.rs` via `<PRESET>_OVERRIDES`/`<PRESET>_EXTRAS` + `templates/project_<preset>/`), `startapp` (adds a model + table + admin page + migration; repeatable `--field name:type`).
 - **Database & authority** — `migrate` (`apply`/`status`), `user` (`create`/`list`/`role`/`delete`), `group` (`create`/`list`/`add-user`), `perm` (`grant-user`/`grant-group`/`list`), `audit` (read-only inspection of `rustio_admin_actions`).
-- **Builder authoring** (network-free, atomic; governed by `DESIGN_BUILDER.md`) — `builder new`, `add` (`model`/`field`), `plan` (preview, read-only), `commit` (apply atomically, `--force`). Implementation in `crates/rustio-admin-cli/src/builder/`.
+- **Builder authoring** (network-free, atomic; governed by `DESIGN_BUILDER.md`) — `builder new`, `add` (`model`/`field`), `plan` (preview, read-only), `commit` (apply atomically, `--force`), `import <schema.json>` (validate a schema contract and record the equivalent `add model` / `add field` events — deterministic, no AI). Implementation in `crates/rustio-admin-cli/src/builder/`.
 - **Project memory / AI policy** — `memory` (`render`/`show`/`verify`, drives CLOUD.md; `src/memory/`), `ai` (`status`/`init` for the `.rustio/ai.toml` assistant permission policy).
 - **Theme & assets** — `theme` (`list`/`generate`), `override` (copies an embedded admin template to `./templates`, `--force`/`--out`).
 - **Diagnostics & dev** — `doctor` (health check; `doctor email [--to …] [--html-preview]`), `docs` (`--open`), `reload` (`cargo watch -x run` wrapper), `test-init` (generates `tests/smoke.rs`).
@@ -93,7 +93,7 @@ The library layers cleanly — read in this order:
 ### Templates and CSS
 
 - Templates live under `crates/rustio-admin-assets/assets/templates/admin/`, baked at compile time by the `rustio-admin-assets` crate (which owns `EMBEDDED_TEMPLATES` + the `embedded_template_names`/`embedded_template_source` accessors; the runtime re-exports the accessors, so `rustio_admin::embedded_template_*` is unchanged). The runtime's `templates.rs` still owns the *lookup* (disk override → embedded default): a disk-side `templates/admin/<page>.html` wins over the embedded copy if `RUSTIO_TEMPLATE_DIR` is set.
-- CSS lives under `crates/rustio-admin/assets/static/admin/`, organized as a Primer/Carbon-style multi-file architecture: `tokens/` → `base/` → `layout/` → `components/` → `pages/` → `print/`. The runtime concatenates fragments and serves one bundle at `/static/admin.css`. **The `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in lock-step** — order matters, and `responsive.css` is intentionally loaded last to override desktop layout.
+- CSS lives under `crates/rustio-admin/assets/static/admin/`, organized as a Primer/Carbon-style multi-file architecture: `tokens/` → `base/` → `components/` → `layout/` → `pages/` → `print/`. The runtime concatenates fragments and serves one bundle at `/static/admin.css`. **The `@import` list in `admin/admin.css` and the `ADMIN_CSS` `concat!(include_str!(…), …)` block in `src/admin/routes.rs` must stay in lock-step** — order matters, and `print/print.css` is intentionally loaded last so its rules override the screen layout. Responsive rules are not a separate fragment: they live in `@media` blocks inside `layout/console.css` and the `pages/` fragments that need them.
 - The framework ships **light and dark**, **token-driven only** (Visual Contract v2.0 §12): light is the default `:root`, and dark is re-derived in the dark blocks of `tokens/colors.css` (`@media (prefers-color-scheme: dark)` for auto + `[data-theme="dark"]` for an explicit toggle; auto-dark is placed before the explicit blocks so an explicit theme wins by source order). There is **no per-component dark CSS** — components reference tokens, and only the token blocks carry per-theme values. The full token philosophy is `docs/design/DESIGN_DOCTRINE.md` (visual identity) and `docs/design/DESIGN_SYSTEM.md` (token ownership). Read both before changing CSS.
 
 ## Hard rules this codebase refuses to break

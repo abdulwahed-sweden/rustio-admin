@@ -1092,7 +1092,6 @@ impl Admin {
 
     /// Internal accessor — handlers fetch the registered extension
     /// closure (if any) here. Used by `admin/builtin.rs` (P6.b).
-    #[allow(dead_code)]
     pub(crate) fn user_profile_ext(&self) -> Option<&UserProfileExtensionFn> {
         self.user_profile_ext.as_ref()
     }
