@@ -81,7 +81,7 @@ jobs:
           # focused on Rust source / TOML / templates.
           forbidden='HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel'
           if git grep -nE "($forbidden)" \
-              -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'; then
+              -- 'crates/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'; then
             echo "::error::Forbidden Tier 2 symbol detected. Tier 1 must not reference Tier 2 metadata."
             exit 1
           fi
@@ -209,34 +209,6 @@ jobs:
           fi
           echo "OK: workspace and scaffold template both pin $workspace"
 
-      - name: reference example pin tracks workspace version
-        run: |
-          set -eu
-          # The canonical reference project (examples/clinic) pins
-          # the published rustio-admin. On a version bump it MUST be
-          # re-pinned in lock-step — re-pinning the reference is part of
-          # the release, enforced here (same convention as the scaffold
-          # template pin above). The `reference-example` job then builds
-          # it against the framework at HEAD via a path patch, so a
-          # matching pin keeps that job green.
-          workspace=$(awk '
-            /^\[workspace\.package\]/ { in_section = 1; next }
-            /^\[/                     { in_section = 0 }
-            in_section && $1 == "version" { gsub(/"/, "", $3); print $3; exit }
-          ' Cargo.toml)
-          example=$(grep -E '^rustio-admin\s*=\s*"' \
-            examples/clinic/Cargo.toml \
-            | head -1 | cut -d'"' -f2)
-          if [ -z "$workspace" ] || [ -z "$example" ]; then
-            echo "::error::reference-example-pin guard could not extract both values (workspace='$workspace', example='$example'). Fix the regex or the file format."
-            exit 1
-          fi
-          if [ "$workspace" != "$example" ]; then
-            echo "::error::Workspace version ($workspace) and examples/clinic pin ($example) have drifted. Re-pin examples/clinic/Cargo.toml [workspace.dependencies] to 'rustio-admin = \"$workspace\"' as part of the release."
-            exit 1
-          fi
-          echo "OK: workspace and reference example both pin $workspace"
-
   integration:
     name: integration (PostgreSQL)
     runs-on: ubuntu-latest
@@ -250,7 +222,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       # The `integration-test` feature turns on the testcontainers suites under
-      # `crates/rustio-admin/tests/integration_*.rs`. Each test boots its own
+      # `crates/rustio-admin/tests/contract_*.rs`. Each test boots its own
       # ephemeral Postgres container, so it needs a Docker daemon and nothing
       # else — no service container, no DATABASE_URL, no secrets; the harness
       # derives the URL from the mapped port. GitHub's ubuntu runners ship
@@ -265,90 +237,3 @@ jobs:
       - name: cargo test (integration suites)
         run: cargo test --workspace --all-targets --features integration-test
 
-  reference-example:
-    name: reference example (clinic)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.94
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: examples/clinic
-
-      # `examples/clinic` is the canonical reference project. It is
-      # its own workspace and pins the published `rustio-admin`, but here
-      # we build it against the framework at HEAD (via `[patch.crates-io]`)
-      # so a breaking change to the public API trips THIS job — that's the
-      # whole point. If a framework *minor* bump makes the pin mismatch the
-      # patch, re-pin examples/clinic to the new version as part of
-      # the release (same convention as the scaffold-template pin).
-      - name: fmt + clippy + build (against framework HEAD)
-        working-directory: examples/clinic
-        run: |
-          set -eu
-          cargo fmt --all --check
-          printf '\n[patch.crates-io]\nrustio-admin = { path = "../../crates/rustio-admin" }\n' >> Cargo.toml
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo build --workspace
-
-  example-shop:
-    name: example (shop)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.94
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: examples/shop
-
-      # `examples/shop` is a single-crate e-commerce admin example. Unlike
-      # examples/clinic it path-deps the in-repo framework directly, so it
-      # already builds against HEAD — no version pin or `[patch.crates-io]`
-      # needed. A breaking change to the framework trips THIS job.
-      - name: fmt + clippy + build (against framework HEAD)
-        working-directory: examples/shop
-        run: |
-          set -eu
-          cargo fmt --all --check
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo build --workspace
-
-  example-translation-agency:
-    name: example (translation-agency)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.94
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: examples/translation-agency
-
-      # `examples/translation-agency` is a single-crate interpreter-dispatch
-      # admin example. Like examples/shop it path-deps the in-repo framework
-      # directly, so it builds against HEAD — a breaking framework change
-      # trips THIS job.
-      - name: fmt + clippy + build (against framework HEAD)
-        working-directory: examples/translation-agency
-        run: |
-          set -eu
-          cargo fmt --all --check
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo build --workspace

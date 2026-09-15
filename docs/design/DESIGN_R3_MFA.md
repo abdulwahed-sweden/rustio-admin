@@ -1092,7 +1092,7 @@ R2's testcontainers suite extends to R3:
   `mfa_secret_key_id`.
 
 Located under `crates/rustio-admin/tests/integration/` (extends
-the existing `integration_recovery.rs` pattern). Gated behind
+the existing `contract_authority_recovery.rs` pattern). Gated behind
 `--features integration-test`.
 
 ### 13.4 End-to-end (downstream validation pass)

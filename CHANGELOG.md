@@ -10,6 +10,19 @@ leaves the alpha track.
 
 ### Removed
 
+- **The bundled example applications are gone.** `examples/clinic`,
+  `examples/shop`, and `examples/translation-agency` (106 files, ~3.6 MB) have
+  been removed, along with their three CI jobs and the
+  `reference example pin tracks workspace version` release guard. Consumer
+  projects are now **generated, not bundled**: every example's domain still
+  ships as a `rustio-admin startproject --preset <preset>` template
+  (`translation-agency`, `clinic`, `ecommerce`, `blog`, `minimal`), which is
+  what the guides now point at. The public-API compile coverage that
+  `examples/clinic` provided — it pinned the published crate and CI patched it
+  to HEAD — is replaced by
+  `crates/rustio-admin/tests/contract_public_api.rs`. No production code, no
+  public API, and no framework behaviour changed.
+
 - **`admin/includes/_field_errors.html` is no longer an embedded template.**
   The partial was never rendered or `{% include %}`d — field errors are
   emitted inline by `admin/includes/_form_field.html`, which owns the
@@ -18,6 +31,36 @@ leaves the alpha track.
   now returns 58 entries instead of 59, and
   `rustio-admin override admin/includes/_field_errors.html` no longer
   resolves. No rendered page changes.
+
+### Changed
+
+- **The test architecture is now two explicit layers.** Inline
+  `#[cfg(test)]` modules keep the unit-level coverage — they are the only
+  place that can reach the `pub(crate)` internals of `auth::*` and `admin::*`,
+  so every internal security assertion stays exactly where it was. On top of
+  them sits a new **contract suite** that checks the product's outward
+  promises from a consumer's position:
+  `contract_public_api` (the clinic replacement), `contract_assets`
+  (embedded-template inventory, the `RUSTIO_TEMPLATE_DIR` override ladder,
+  and that every `@import` in the CSS manifest resolves to a real file),
+  `contract_authority_guards` (the role ladder, self-demotion, cross-rank and
+  role-ceiling rules), and `crates/rustio-admin-cli/tests/contract_scaffold`
+  (every preset scaffolds, and the generated pin tracks the workspace).
+
+- **The database-backed suites were consolidated onto one harness.** The five
+  `tests/integration_*.rs` files each carried a byte-identical copy of the
+  testcontainers `boot()`; that now lives once in `tests/common/mod.rs`. The
+  files are renamed for the contract they protect —
+  `contract_authority_recovery`, `contract_mfa`, `contract_emergency_access`,
+  `contract_view_spec_store`, `contract_orm_nullable`. Every assertion is
+  preserved; they remain gated behind the `integration-test` feature.
+
+- **`tests/cascade_lockstep.rs` was removed as a duplicate.** It asserted the
+  same `@import`-order vs `ADMIN_CSS`-concat invariant as
+  `admin::routes::css_lockstep_tests::import_manifest_matches_concat_bundle`,
+  which reads both lists through `include_str!` and so also holds inside a
+  published tarball. `contract_assets` now adds the complement the in-crate
+  test does not cover: that every imported fragment exists on disk.
 
 
 ## 0.33.1 — 2026-09-04

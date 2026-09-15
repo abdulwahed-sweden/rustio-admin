@@ -51,9 +51,10 @@ crates/rustio-admin-assets   bundled static assets
 crates/rio-theme             theme crate
 ```
 
-The projects under `examples/` are **standalone workspaces** with their own
-`Cargo.lock`, so they are not built by a workspace-wide `cargo build`. Build them
-from inside their own directory when you change something they depend on.
+The repository ships no bundled example projects. To exercise the framework as a
+downstream consumer would, scaffold one:
+`rustio-admin startproject demo --preset translation-agency`. Public-API compile
+coverage is held by `crates/rustio-admin/tests/contract_public_api.rs`.
 
 ## Pull requests
 

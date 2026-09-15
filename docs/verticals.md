@@ -38,8 +38,8 @@ specific packs are the planned commercial side (see
 
 | Vertical | Status | Location |
 |----------|--------|----------|
-| Clinic admin | ✅ Example ships in the repo | [`examples/clinic`](../examples/clinic/) |
-| Shop / e-commerce admin | ✅ Example ships in the repo (also a standalone project) | [`examples/shop`](../examples/shop/) · [`abdulwahed-sweden/shop`](https://github.com/abdulwahed-sweden/shop) |
+| Clinic admin | ✅ Ships as a project preset | `rustio-admin startproject --preset clinic` |
+| Shop / e-commerce admin | ✅ Ships as a project preset (a standalone project also exists) | `rustio-admin startproject --preset ecommerce` · [`abdulwahed-sweden/shop`](https://github.com/abdulwahed-sweden/shop) |
 
 ### Planned — vertical packs
 

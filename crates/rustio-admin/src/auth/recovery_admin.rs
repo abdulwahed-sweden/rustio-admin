@@ -6,7 +6,7 @@
 //! flow (which lives in `auth::recovery`). The HTTP wrappers live in
 //! `admin::admin_recovery_handlers`; routes are registered in
 //! `admin::routes::register_admin_routes`. The testcontainers
-//! integration suite under `tests/integration_*.rs` exercises the
+//! contract suite under `tests/contract_*.rs` exercises the
 //! DB-touching paths end-to-end against an ephemeral Postgres,
 //! gated behind `--features integration-test` per `DESIGN_R2_
 //! ORGANISATIONAL.md` §10.3.

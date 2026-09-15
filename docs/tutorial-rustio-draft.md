@@ -272,8 +272,8 @@ async fn main() -> Result<()> {
 }
 ```
 
-That is the whole server. (For a fuller example — a homepage, branding, logging —
-see [`examples/shop/src/main.rs`](../examples/shop/src/main.rs).)
+That is the whole server. (For a fuller starting point — a homepage, branding,
+logging — scaffold one with `rustio-admin startproject --preset ecommerce`.)
 
 ---
 

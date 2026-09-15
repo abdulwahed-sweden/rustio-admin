@@ -8,7 +8,7 @@ decision, not an archaeology dig.
 
 The module is built and tested; these are the parts that exist in the spec/types
 but have no runtime consumer yet, plus the gaps to close when the layer grows up.
-None of these block trying the tool today (see `examples/shop/seeds/viewspec_payment_methods.sql`).
+None of these block trying the tool today.
 
 ### 1. A real adaptive `Table` mode (with column headers)
 - **Now:** `ViewMode::Table` falls back to the legacy table; the adaptive path
@@ -60,9 +60,8 @@ None of these block trying the tool today (see `examples/shop/seeds/viewspec_pay
   override (`templates/admin/<model>/list.html`, via `RUSTIO_TEMPLATE_DIR`)
   shadows `list.html` for that model — and if the override renders a plain table
   with no `{% if adaptive %}` branch, the saved spec is read but never shown.
-  In `examples/shop` this affects `customers`, `orders`, and `products` (their
-  rustio-design templates are table-only); models without an override (e.g.
-  `payment_methods`, used by the demo seed) render the adaptive view fine.
+  Any project shipping a table-only per-model override is affected this way;
+  models without an override render the adaptive view fine.
 - **Why deferred:** opting those overrides in is a template change to the shop's
   generated rustio-design artifacts (and a docs note for downstream projects),
   not a framework change — out of scope for "make the layer tr-yable."

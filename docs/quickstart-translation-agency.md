@@ -131,9 +131,9 @@ Your pages are live:
 List, create, edit, search, delete — and the `translator_id` column links
 straight to the assigned person, not a raw id.
 
-> A ready-to-run version of everything below lives at
-> [`examples/translation-agency/`](../examples/translation-agency/) — compiled,
-> tested, and seeded with example rows.
+> A ready-to-run version of everything below is one command away:
+> `rustio-admin startproject --preset translation-agency` scaffolds exactly
+> this project, models and migrations included.
 
 ---
 

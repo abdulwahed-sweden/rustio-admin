@@ -105,14 +105,14 @@ log = "0.4"
 # so these live in `[dependencies]` with `optional = true`; the
 # `integration-test` feature below activates them. The library
 # code itself never references testcontainers — only the
-# `tests/integration_*.rs` files (which are also gated on the
+# `tests/contract_*.rs` files (which are also gated on the
 # feature) do.
 testcontainers = { version = "0.27", optional = true }
 testcontainers-modules = { version = "0.15", optional = true, features = ["postgres"] }
 
 [features]
 # Enables the testcontainers Postgres integration suite under
-# `tests/integration_*.rs`. CI runs `cargo test --workspace
+# `tests/contract_*.rs`. CI runs `cargo test --workspace
 # --features integration-test`; local `cargo test --workspace`
 # (no flag) skips them and keeps the unit-test gate fast.
 # See `DESIGN_R2_ORGANISATIONAL.md` §10.3.

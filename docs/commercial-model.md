@@ -18,7 +18,7 @@ The engine and everything needed to build real systems with it:
 - the schema/model format and `#[derive(RustioAdmin)]` admin generation;
 - the CRUD/admin surface and the CLI;
 - documentation, guides, and onboarding;
-- example and reference verticals (`examples/clinic`, `examples/shop`).
+- the project presets (`rustio-admin startproject --preset …`).
 
 The open core is complete enough to build and run serious admin systems on its
 own. It is never gated behind the commercial layer.
@@ -47,9 +47,9 @@ Planned commercial offerings, developed under that line:
 Reference verticals show what the engine is for. Some ship as open examples;
 industry-specific packs are the planned commercial side. Honest status:
 
-**Existing (open examples)**
-- Clinic admin — [`examples/clinic`](../examples/clinic/)
-- Shop / e-commerce admin — [`examples/shop`](../examples/shop/)
+**Existing (open presets)**
+- Clinic admin — `rustio-admin startproject --preset clinic`
+- Shop / e-commerce admin — `rustio-admin startproject --preset ecommerce`
 
 **Planned (commercial packs)**
 - Waste logistics
