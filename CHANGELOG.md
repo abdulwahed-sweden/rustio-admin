@@ -34,6 +34,15 @@ leaves the alpha track.
 
 ### Changed
 
+- **Light-only admin shell and Users pilot.** The authenticated UI now uses a
+  two-row utility/module header, a light contextual rail, a neutral-black
+  16px type hierarchy, and explicit wide/standard/form page measures. The
+  Users list gains a five-track wide layout, persistent authorised row
+  actions, long-email containment, and continuous separators; the real
+  new-user form uses the focused 672px measure. Dark-theme controls, stored
+  state, and stylesheet rules are removed. Routes, permissions, CSRF, RTL,
+  accessibility semantics, and backend behaviour are unchanged.
+
 - **The test architecture is now two explicit layers.** Inline
   `#[cfg(test)]` modules keep the unit-level coverage — they are the only
   place that can reach the `pub(crate)` internals of `auth::*` and `admin::*`,
