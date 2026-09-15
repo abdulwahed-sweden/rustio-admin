@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A focused task page: forms and confirmations take the narrow measure. #}
+{% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
 
@@ -59,8 +61,7 @@
           min="1"
           step="1"
           placeholder="minutes"
-          class="rio-input rio-input--inline"
-          style="width: 8em;"
+          class="rio-input rio-input--inline rio-input--w8"
         > <span class="rio-radio-desc">minutes</span>
       </span>
     </label>

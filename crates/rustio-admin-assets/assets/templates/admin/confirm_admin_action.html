@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A focused task page: forms and confirmations take the narrow measure. #}
+{% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
 
@@ -23,7 +25,7 @@
   <fieldset class="rio-fieldset rio-board">
     <legend class="rio-fieldset-legend">Reason</legend>
     <div class="rio-field">
-      <label class="rio-label" for="rio-reason">Reason <span style="color:var(--rio-text-faint);font-weight:var(--rio-weight-regular)">(audited; minimum 8 characters)</span></label>
+      <label class="rio-label" for="rio-reason">Reason <span class="rio-label-note">(audited; minimum 8 characters)</span></label>
       <textarea id="rio-reason" name="reason" rows="3" required minlength="8" class="rio-input" autofocus{% if "reason" in field_errors %} aria-invalid="true"{% endif %}>{{ reason }}</textarea>
       {% if "reason" in field_errors %}<p class="rio-error">{{ field_errors["reason"][0] }}</p>{% endif %}
     </div>
