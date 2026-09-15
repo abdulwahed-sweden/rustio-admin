@@ -48,9 +48,9 @@ Governs:
 
 ### 1.2 What this document does not cover
 
-- SMTP transport choice — projects own the `Mailer` impl. See
-  `examples/clinic-appointments/src/mailer.rs` for the canonical
-  `LettreSmtpMailer` reference.
+- SMTP transport choice — projects own the `Mailer` impl. The framework
+  ships only `LogMailer`; wire your own transport (e.g. `lettre`) behind
+  `Admin::mailer`.
 - Admin chrome surfaces — `DESIGN_CHROME.md`.
 - Audit trail — `DESIGN_AUDIT.md`. Email-dispatch audit rows are
   emitted by the recovery flow, not by the renderer.

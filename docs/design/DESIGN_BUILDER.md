@@ -878,7 +878,7 @@ list is exhaustive against the feature parser's accepted values.
 The doctrine-bound feature names are also grepped:
 
 ```sh
-git grep -nE 'audit[[:space:]]*=[[:space:]]*false' -- '*.toml' 'crates/' 'examples/'
+git grep -nE 'audit[[:space:]]*=[[:space:]]*false' -- '*.toml' 'crates/'
 # must produce zero matches outside test fixtures intended to verify rejection
 ```
 

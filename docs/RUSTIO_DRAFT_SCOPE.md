@@ -118,7 +118,7 @@ Grounded in the current Claude API reference, not memory.
 ## 5. Where it lives / dependencies
 
 - A **separate workspace** (own repo, or a `rustio-draft/` sibling excluded from
-  the framework workspace exactly like `examples/`). It may depend on
+  the framework workspace). It may depend on
   `rustio-admin-cli`'s import path *or* simply shell out to the installed
   `rustio-admin` binary — preference: shell out, to keep zero coupling.
 - New deps live **only** here: `reqwest` (rustls), `serde`/`serde_json`,

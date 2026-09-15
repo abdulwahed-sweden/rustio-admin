@@ -154,7 +154,7 @@ const TRANSLATION_AGENCY_EXTRAS: &[(&str, &str)] = &[
 /// CHECK constraint). Each ships a seeded migration and `src/main.rs`
 /// registers all three, so the developer reaches a working, non-empty
 /// shop admin without editing a file. The full catalogue / cart /
-/// payment domain lives in `examples/shop/`; this preset is the
+/// payment domain is deliberately out of scope; this preset is the
 /// teachable starting slice of it.
 const ECOMMERCE_OVERRIDES: &[(&str, &str)] = &[(
     "src/main.rs",
@@ -1156,7 +1156,7 @@ mod tests {
 
     /// The `ecommerce` preset must produce a real shop admin — `Product`,
     /// `Customer`, and `Order` models, all three seeded migrations, and a
-    /// `main.rs` that registers the trio — cribbed from `examples/shop`.
+    /// `main.rs` that registers the trio.
     #[test]
     fn project_ecommerce_wires_models_and_seeded_migrations() {
         let dir = unique_tempdir();

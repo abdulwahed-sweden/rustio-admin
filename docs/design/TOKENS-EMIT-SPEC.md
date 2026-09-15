@@ -110,4 +110,4 @@ structurally (selectors, token set) and semantically (slate ladder + the §5 acc
 
 1. Implement §2–§5 in the `rustio-design build` emitter.
 2. Add a `light_only` key to `rustio.design.toml` (default `false`) wired to the §3 opt-out.
-3. **Regenerate and commit `examples/shop/generated/tokens.css`** once shipped. Until then the shop's override is light-only and **dark mode leaks light surfaces** — the framework logs a WARN at startup naming the file (`override_is_dark_leak_hazard` in `crates/rustio-admin/src/admin/routes.rs`), and the shop README notes it under known issues. This is a generator gap, not a framework bug.
+3. **Regenerate any committed `tokens.css`** once shipped. Until a generator emits dark blocks its override is light-only and **dark mode leaks light surfaces** — the framework logs a WARN at startup naming the file (`override_is_dark_leak_hazard` in `crates/rustio-admin/src/admin/routes.rs`). This is a generator gap, not a framework bug.
