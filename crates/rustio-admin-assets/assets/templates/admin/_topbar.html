@@ -1,24 +1,36 @@
-{# RustIO Console — slim workspace header: workspace id on the start,
- # a centered global search, and actions on the end. #}
+{# Active module, derived from the existing `nav_active` vocabulary —
+ # no new backend variable. Models is active ONLY when `nav_active`
+ # matches a registered model exactly; an unknown route leaves every
+ # primary module inactive rather than guessing. #}
+{% set model_names = (entries | default([])) | map(attribute="admin_name") | list %}
+{% set nav_module =
+     "dashboard"      if nav_active == "home"
+     else ("administration" if nav_active in ["users", "groups", "history"]
+     else ("security"       if nav_active in ["mfa", "sessions"]
+     else ("system"         if nav_active in ["db", "schema", "view-designer", "branding", "health", "apis", "docs", "flags"]
+     else ("models"         if nav_active in model_names
+     else "")))) %}
+{# RustIO Console — workspace header, two restrained rows.
+ #
+ # Row 1 (utility): environment badge on the start, global search
+ # centred, notifications / Docs / account on the end. The application
+ # name is NOT repeated here — the contextual rail already carries it.
+ #
+ # Row 2 (modules): the five primary modules. The rail below changes
+ # with whichever one is active. #}
 <header class="rio-wshead" role="banner">
-  <div class="rio-ws-id">
-    <strong>{{ app_name }}</strong>
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  <div class="rio-wshead-utility">
+    <div class="rio-wshead-inner">
     <span class="rio-devpill rio-devpill--{{ environment_kind }}">{{ environment_label }}</span>
-  </div>
-  <button type="button" class="rio-ws-search" data-rio-search-trigger aria-label="Search records (Command-K)">
+    <button type="button" class="rio-ws-search" data-rio-search-trigger aria-label="Search records (Command-K)">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <span class="rio-ws-search-label">Search {{ app_name }}…</span>
     <span class="rio-kbd">⌘K</span>
-  </button>
-  <div class="rio-ws-actions">
+    </button>
+    <div class="rio-ws-actions">
     <a class="rio-iconbtn" href="/admin/notifications" aria-label="Notifications">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10.5 19a1.7 1.7 0 0 0 3 0"/></svg>
     </a>
-    <button class="rio-iconbtn" id="themeToggle" type="button" aria-label="Toggle theme">
-      <svg class="rio-theme-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8Z"/></svg>
-      <svg class="rio-theme-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
-    </button>
     <a class="rio-btn rio-btn--subtle rio-btn--sm" href="/admin/docs">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>
       Docs
@@ -47,5 +59,34 @@
       </div>
     </div>
     {% endif %}
+    </div>
+    </div>
   </div>
+  {# Primary modules. Every href is a registered route; an item is
+   # omitted entirely when the operator's role cannot reach it. The
+   # contextual rail carries the destinations *within* the active
+   # module, so the two never duplicate each other. #}
+  <nav class="rio-modnav" aria-label="Modules">
+    <div class="rio-modnav-inner">
+    <a class="rio-modnav-item" href="/admin"{% if nav_module == "dashboard" %} aria-current="true"{% endif %}>
+      {{ icon("layout-dashboard") }}<span>Dashboard</span>
+    </a>
+    {% if entries %}
+    <a class="rio-modnav-item" href="/admin/{{ entries[0].admin_name }}"{% if nav_module == "models" %} aria-current="true"{% endif %}>
+      {{ icon("database") }}<span>Models</span>
+    </a>
+    {% endif %}
+    {% if identity and identity.is_admin %}
+    <a class="rio-modnav-item" href="/admin/users"{% if nav_module == "administration" %} aria-current="true"{% endif %}>
+      {{ icon("users") }}<span>Administration</span>
+    </a>
+    {% endif %}
+    <a class="rio-modnav-item" href="/admin/account/sessions"{% if nav_module == "security" %} aria-current="true"{% endif %}>
+      {{ icon("shield") }}<span>Security</span>
+    </a>
+    <a class="rio-modnav-item" href="/admin/health"{% if nav_module == "system" %} aria-current="true"{% endif %}>
+      {{ icon("settings") }}<span>System</span>
+    </a>
+    </div>
+  </nav>
 </header>

@@ -33,7 +33,7 @@
   --rio-text-13: 0.9375rem;   /* 15 — fine print, nudged up to match */
   --rio-text-14: 1rem;        /* 16 — product base (body, inputs, tables) */
   --rio-text-15: 1rem;        /* 16 */
-  --rio-text-17: 1.09375rem;  /* 17.5 — sidebar nav */
+  --rio-text-17: 1.0625rem;   /* 17 — lead / section title */
   --rio-text-20: 1.375rem;    /* 22 — lead / section title */
   --rio-text-24: 1.625rem;    /* 26 — card title */
   --rio-text-30: 1.9375rem;   /* 31 — h3 / stat value */
@@ -47,13 +47,13 @@
   --rio-weight-medium:   500;
   --rio-weight-semibold: 600;
   --rio-weight-bold:     700;
-  --rio-weight-display:  600; /* display family weight (titles use 800, see base.css) */
+  --rio-weight-display:  600; /* headings sit in the 600-700 band; no 800 */
 
   /* --- Line heights — generous for comfortable reading --- */
   --rio-leading-display: 1.1;  /* serif display / headlines */
   --rio-leading-tight:   1.22; /* sub-heads */
   --rio-leading-snug:    1.45; /* leads */
-  --rio-leading-body:    1.62; /* body copy */
+  --rio-leading-body:    1.5;  /* body copy — contract: 1rem / 1.5 */
   --rio-leading-relaxed: 1.72; /* long-form */
 
   /* --- Letter spacing ---

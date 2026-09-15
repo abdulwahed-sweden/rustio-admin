@@ -22,4 +22,37 @@
   /* --- Hit targets --- */
   --rio-hit-compact:     40px; /* compact / admin density */
   --rio-hit-comfortable: 44px; /* comfortable / marketing density */
+
+  /* --- Layout measures -------------------------------------------
+     Three layers, on purpose. The shell is fluid across the workspace
+     after the sidebar; data pages take a wide centred measure; focused
+     task pages take a narrow one. There is no single centred width for
+     the whole application.
+
+     The scale above is already the 4 / 8 / 12 / 16 / 24 / 32 grid — the
+     tokens are named for the px they render, so `--rio-space-4` IS 4px.
+     What follows is only what that scale cannot express. */
+  --rio-shell-pad-x:     var(--rio-space-32); /* 32 — shell gutter */
+
+  --rio-page-wide:       1480px; /* lists, tables, reports, bulk surfaces */
+  --rio-page-standard:   1120px; /* default page measure */
+  --rio-page-form:        672px; /* forms, confirmations, reading */
+
+  --rio-card-pad-x:      var(--rio-space-24); /* 24 — one x-origin per card */
+  --rio-row-h:           64px;   /* comfortable body row */
+  --rio-table-head-h:    48px;
+  --rio-table-foot-h:    48px;
+  --rio-topbar-h:        52px;   /* utility row + sidebar brand */
+  --rio-modulebar-h:     48px;   /* module row */
+  --rio-page-top-space:  56px;   /* module row -> first page content */
+  --rio-rail-inset:      var(--rio-space-24); /* 24 — rail x-origin */
+}
+
+/* Narrow shells breathe less. Declared here so every region that uses
+   the token follows automatically — shell, module row and footer. */
+@media (max-width: 760px) {
+  :root {
+    --rio-shell-pad-x:    var(--rio-space-16); /* 16 */
+    --rio-page-top-space: var(--rio-space-32); /* 32 */
+  }
 }

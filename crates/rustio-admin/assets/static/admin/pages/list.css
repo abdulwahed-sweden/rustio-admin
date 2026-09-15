@@ -119,3 +119,153 @@
 .rio-multi-select-option { display: flex; align-items: center; gap: 8px; font-size: var(--rio-text-14); cursor: pointer; }
 .rio-date-range-field { display: flex; flex-direction: column; gap: 4px; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
 .rio-date-range { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+
+/* ============================================================
+   Shared list-surface hardening.
+   Added with the Users pilot; the rules the later model pages
+   need so a busy toolbar degrades instead of turning into one
+   endless horizontal procession.
+   ============================================================ */
+
+/* A table never widens the page. It scrolls inside its own board. */
+.rio-board { min-inline-size: 0; }
+.rio-tablewrap {
+  inline-size: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Toolbars wrap; they do not scroll off into the distance. */
+.rio-listbar {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 10px 12px; min-inline-size: 0;
+}
+.rio-listbar > * { min-inline-size: 0; }
+.rio-listbar-spacer { flex: 1 1 auto; min-inline-size: 0; }
+
+/* Selection state reads as one unit: count and Clear stay together. */
+.rio-selbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 10px 14px; border-radius: var(--rio-radius-control);
+  background: var(--rio-rust-tint); border: 1px solid var(--rio-rust-tint-2);
+  color: var(--rio-text-hi); font-size: 0.9375rem;
+}
+.rio-selbar-count { font-weight: var(--rio-weight-semibold); }
+.rio-selbar-group { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.rio-selbar-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-inline-start: auto;
+}
+/* Destructive bulk actions stay visually distinct from the common ones. */
+.rio-selbar-actions .rio-btn--danger { margin-inline-start: 4px; }
+
+/* Long machine strings (emails, ids, URLs) wrap instead of forcing width. */
+.rio-wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+
+/* Mono metadata cell — dates, ids. Compact but never below 14px. */
+.rio-cell-meta {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-13);
+  color: var(--rio-text-mute);
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Role/authority badge — readable without relying on colour alone. */
+.rio-role {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: var(--rio-radius-pill);
+  background: var(--rio-sunken); border: 1px solid var(--rio-line);
+  color: var(--rio-text); font-size: 0.875rem;
+  font-weight: var(--rio-weight-medium); white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .rio-selbar-actions { margin-inline-start: 0; inline-size: 100%; }
+}
+
+/* ============================================================
+   Users list — desktop column distribution.
+   Scoped to `.rio-dtable--users`: `.rio-dtable` is shared by every list
+   page and each has a different column count, so the tracks cannot
+   live on the base class.
+
+   One x-origin for the whole card: the row owns the 24px inner
+   padding, the cells own none, and `column-gap` does the rest. That is
+   what puts the USER header, the first user cell and the
+   "Showing N accounts" footer on the same vertical line.
+   ============================================================ */
+.rio-dtable--users { display: block; }
+.rio-dtable--users thead,
+.rio-dtable--users tbody { display: block; }
+
+.rio-dtable--users tr {
+  display: grid;
+  grid-template-columns:
+    minmax(420px, 1fr)  /* user identity — absorbs the remainder */
+    160px               /* role    */
+    120px               /* status  */
+    184px               /* created */
+    64px;               /* row actions */
+  column-gap: var(--rio-space-24);
+  align-items: center;
+  padding-inline: var(--rio-card-pad-x);
+}
+
+.rio-dtable--users thead tr { block-size: var(--rio-table-head-h); }
+.rio-dtable--users thead th {
+  display: flex; align-items: center; min-inline-size: 0;
+  padding: 0; block-size: 100%;
+  position: static; /* grid rows do not need the sticky table head */
+}
+
+/* One continuous separator per row, drawn on the row itself — cell
+   borders would break into fragments under every column gap. */
+.rio-dtable--users tbody tr {
+  min-block-size: var(--rio-row-h);
+  padding-block: var(--rio-space-12);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-dtable--users tbody tr:last-child { border-block-end: 0; }
+.rio-dtable--users tbody td {
+  display: flex; align-items: center; min-inline-size: 0;
+  padding: 0; block-size: auto; border-block-end: 0;
+}
+.rio-dtable--users .col-act { justify-content: flex-end; inline-size: auto; }
+/* Actions are always visible in a grid row: the hover-reveal that the
+   legacy table used hides an authorized control behind a pointer. */
+.rio-dtable--users .rio-row-actions { opacity: 1; }
+
+/* Long addresses truncate inside their own track instead of pushing
+   ROLE sideways. The full value stays in the DOM and in `title`. */
+.rio-cell-user { min-inline-size: 0; }
+.rio-cell-user .rio-prod,
+.rio-cell-user .rio-prod-text { min-inline-size: 0; }
+.rio-cell-user .rio-prod { gap: var(--rio-space-12); } /* avatar -> text */
+.rio-cell-user .rio-prod-text {
+  display: flex; flex-direction: column; gap: var(--rio-space-4); /* email -> #id */
+}
+.rio-email {
+  display: block; min-inline-size: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Card footer shares the row x-origin and the header's height. */
+.rio-board .rio-board-foot {
+  min-block-size: var(--rio-table-foot-h);
+  padding: 0 var(--rio-card-pad-x);
+}
+
+/* Heading block: title + description at the start, primary action at
+   the inline end, 24px down to the card. Both belong to the same
+   layout — the button is never positioned against the viewport. */
+.rio-page--wide .rio-masthead-top { margin-block-end: var(--rio-space-24); }
+
+/* Narrow: the card scrolls inside `.rio-tablewrap`; the page never
+   scrolls sideways. */
+@media (max-width: 1040px) {
+  .rio-dtable--users tr {
+    grid-template-columns: minmax(240px, 1fr) 160px 120px 184px 64px;
+  }
+}

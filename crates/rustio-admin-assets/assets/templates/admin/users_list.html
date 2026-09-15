@@ -1,7 +1,9 @@
 {% extends "admin/_base.html" %}
 {% from "admin/_row_actions.html" import row_actions %}
+{# A data page: lists take the wide measure. #}
+{% block page_measure %}rio-page--wide{% endblock %}
 {% block content %}
-<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Users</span></nav>
+<nav class="rio-crumbs" aria-label="Breadcrumb"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Users</span></nav>
 
 <div class="rio-masthead-top">
   <div>
@@ -15,21 +17,32 @@
 
 <div class="rio-board">
   {% if users %}
-  <div style="overflow:auto">
-  <table class="rio-dtable">
-    <thead><tr><th>User</th><th>Role</th><th>Active</th><th>Created</th><th class="col-act">&nbsp;</th></tr></thead>
+  <div class="rio-tablewrap">
+  <table class="rio-dtable rio-dtable--users">
+    <thead>
+      <tr>
+        <th scope="col">User</th>
+        <th scope="col">Role</th>
+        <th scope="col">Status</th>
+        <th scope="col">Created</th>
+        <th scope="col" class="col-act"><span class="rio-sr-only">Actions</span></th>
+      </tr>
+    </thead>
     <tbody>
       {% for u in users %}
       <tr>
-        <td>
+        <td class="rio-cell-user">
           <div class="rio-prod">
             <span class="rio-mono-tile">{{ u.email | first | upper }}</span>
-            <span class="rio-prod-text"><a class="rio-prod-name" href="/admin/users/{{ u.id }}">{{ u.email }}</a><span class="rio-prod-cat">#{{ u.id }}</span></span>
+            <span class="rio-prod-text">
+              <a class="rio-prod-name rio-email" href="/admin/users/{{ u.id }}" title="{{ u.email }}">{{ u.email }}</a>
+              <span class="rio-prod-cat">#{{ u.id }}</span>
+            </span>
           </div>
         </td>
-        <td>{{ u.role }}</td>
-        <td><span class="rio-pill rio-pill--{% if u.is_active %}on{% else %}off{% endif %}">{% if u.is_active %}active{% else %}inactive{% endif %}</span></td>
-        <td style="font-family:var(--rio-font-mono);font-size:var(--rio-text-13);color:var(--rio-text-mute)">{{ u.created_at }}</td>
+        <td><span class="rio-role">{{ u.role }}</span></td>
+        <td><span class="rio-pill rio-pill--{% if u.is_active %}on{% else %}off{% endif %}">{% if u.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+        <td class="rio-cell-meta">{{ u.created_at }}</td>
         <td class="col-act">{{ row_actions("users", u.id) }}</td>
       </tr>
       {% endfor %}
@@ -42,7 +55,7 @@
     {{ icon("users") }}
     <div class="rio-empty-title">No users yet</div>
     <div>Add an account to grant admin access — role controls what they can see and change.</div>
-    <div style="margin-block-start:14px"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a></div>
+    <div class="rio-empty-cta"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a></div>
   </div>
   {% endif %}
 </div>

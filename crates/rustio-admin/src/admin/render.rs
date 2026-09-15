@@ -4265,7 +4265,7 @@ pub(crate) fn user_new_form_sections(
                     required: true,
                     options: None,
                     multiple: false,
-                    span: 1,
+                    span: 2,
                     autocomplete: Some("off"),
                     autofocus: true,
                     disabled: false,
@@ -4319,7 +4319,7 @@ pub(crate) fn user_new_form_sections(
                     // create-path behaviour the framework doesn't expose
                     // (`create_user` always inserts `is_active = TRUE`). Active is
                     // a documented deferral — see VISUAL-CONTRACT v2.1 §3 note.
-                    span: 2,
+                    span: 1,
                     autocomplete: None,
                     autofocus: false,
                     disabled: false,

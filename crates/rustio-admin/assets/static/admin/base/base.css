@@ -11,6 +11,8 @@
 }
 
 html {
+  /* Contract: 16px root, so every rem in the scale is predictable. */
+  font-size: 16px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -22,7 +24,7 @@ body {
   background-color: var(--rio-bg);
   color: var(--rio-text);
   font-family: var(--rio-font-body);
-  font-size: var(--rio-text-14);
+  font-size: 1rem;
   line-height: var(--rio-leading-body);
   font-weight: var(--rio-weight-regular);
   letter-spacing: 0; /* contract: flat tracking (the negative track was a Hanken flourish) */
@@ -53,7 +55,7 @@ h1, h2, h3, h4 {
 /* Page title — contract §2.1: weight 800, line-height 1.15. Inherited from the
    base layer so pages don't each re-declare title weight. */
 h1 {
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.15;
 }
 
@@ -98,12 +100,38 @@ a {
 }
 a:hover { color: var(--rio-rust-hover); }
 
-/* --- Focus: always-visible copper ring, offset --- */
+/* --- Focus: always-visible blue ring, offset. Uses the dedicated
+   focus token (#2F7BD6) rather than the accent, so the ring stays
+   legible even when a project rebrands --rio-rust. --- */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--rio-rust);
+  outline: 2px solid var(--rio-accent-focus);
   outline-offset: 2px;
   border-radius: var(--rio-radius-sm);
 }
+
+/* --- Skip to content — first tab stop in the authenticated shell.
+   Off-canvas until focused, then pinned to the start corner. --- */
+.rio-skip {
+  position: fixed;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  min-block-size: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--rio-surface);
+  color: var(--rio-text-hi);
+  border: 1px solid var(--rio-line-strong);
+  border-radius: var(--rio-radius-control);
+  box-shadow: var(--rio-shadow-lg);
+  font-weight: var(--rio-weight-semibold);
+  text-decoration: none;
+  transform: translateY(calc(-100% - 16px));
+  transition: transform var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-skip:focus-visible { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .rio-skip { transition: none; } }
 
 ::selection {
   background: var(--rio-rust-tint-2);
@@ -144,4 +172,14 @@ a:hover { color: var(--rio-rust-hover); }
   letter-spacing: var(--rio-tracking-caps);
   text-transform: uppercase;
   color: var(--rio-text-mute);
+}
+
+/* Visually hidden, still announced. Used for column headers that carry
+   no visible label (a row-actions column, for instance). */
+.rio-sr-only {
+  position: absolute;
+  inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%);
+  white-space: nowrap; border: 0;
 }

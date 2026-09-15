@@ -1,246 +1,104 @@
 /* ============================================================
    RustIO — Color tokens
-   Light is primary (default :root). Dark is the secondary "dim slate".
+   LIGHT ONLY. There is no dark theme: no `prefers-color-scheme`
+   block, no `[data-theme]` block, no pre-paint theme script. The
+   admin renders one calm, light surface everywhere.
 
-   One accent only: RustIO Rust — a confident burnt copper (#B84318).
-   Against the cool blue-grey "ink" neutrals it reads warm, grounded, and
-   unmistakable. Everything else is an INK grey. (Palette adopted from the
-   rustio reference project: rust brand + ink scale + #EDF1F5 canvas.)
+   One accent only: RustIO Blue — a restrained, professional
+   #1F5797. It replaces the former burnt-copper "rust" accent on
+   every normal primary action. Red is reserved for genuinely
+   destructive actions.
 
-   Two accent roles, on purpose:
+   Two accent roles are kept, on purpose:
    · --rio-rust*       — the accent for TEXT, links, dots, borders, tints.
-   · --rio-rust-solid* — the FILLED button accent, paired with --rio-on-solid
-                         (white) in BOTH themes, so button text never flips.
+   · --rio-rust-solid* — the FILLED button accent, paired with
+                         --rio-on-solid (white).
 
-   Scope order: the auto-dark @media block is placed BEFORE the explicit
-   [data-theme] blocks so an explicit theme always wins by source order.
+   The `--rio-rust*` names are retained deliberately: they are the
+   established token contract that project-level `AdminTheme`
+   overrides and downstream stylesheets already target. Renaming
+   them would break every branding override for no visual gain.
    ============================================================ */
 
-/* --- Default = Light (cool ink) --- */
 :root {
   color-scheme: light;
 
-  /* Surfaces (elevation ladder) — reference ink scale */
-  --rio-bg:            #EDF1F5; /* content area — cool blue-grey canvas */
-  --rio-surface:       #FFFFFF; /* cards, panels */
-  --rio-raised:        #EAEEF2; /* hover / raised (ink-100) */
+  /* Surfaces (elevation ladder) */
+  --rio-bg:            #F1F1EE; /* page — warm paper */
+  --rio-surface:       #FFFFFF; /* cards, panels, table body */
+  --rio-raised:        #F1F4F8; /* hover / raised / table head */
   --rio-overlay:       #FFFFFF; /* modals, popovers */
-  --rio-sunken:        #F5F7F9; /* inset / code wells (ink-50) */
-  --rio-surface-tint:  #EAEEF2; /* inline code / kbd chip (ink-100) */
+  --rio-sunken:        #F7F9FC; /* inset / code wells / soft fills */
+  --rio-surface-tint:  #F1F4F8; /* inline code / kbd chip */
 
   /* Lines — soft card border vs strong input border */
-  --rio-line:          #D6DEE5; /* hairline / card border (ink-200) */
-  --rio-line-strong:   #B8C3CC; /* input / radio border   (ink-300) */
+  --rio-line:          #D5DCE5;
+  --rio-line-strong:   #B9C5D3;
 
-  /* Canvas dot-grid — faint engineered texture */
-  --rio-dot:           rgba(40, 60, 110, 0.05);
-  --rio-text-hi:       #0F141A; /* titles, labels, table text (ink-900) */
-  --rio-text:          #2B343C; /* body / lead (ink-700) */
-  --rio-text-mute:     #5F6D78; /* legends, hints, breadcrumb current (ink-500) */
-  --rio-text-faint:    #8A97A2; /* placeholder text (ink-400) */
+  /* Contextual navigation rail — light and calm, never near-black */
+  --rio-rail-bg:       #F4F6F9;
+  --rio-rail-line:     #D3DBE5;
+
+  /* Canvas dot-grid — off by contract; kept so overrides resolve */
+  --rio-dot:           rgba(32, 39, 51, 0.04);
+
+  /* --- Ink — neutral black ----------------------------------------
+     A true neutral ramp: no blue cast, no warm cast. Mapped onto the
+     framework's four existing text roles rather than a second set of
+     names — these are what every component, every `AdminTheme`
+     override and every downstream stylesheet already targets.
+
+       role              value     used for
+       --rio-text-hi     #000000   titles, identifiers, table usernames
+       --rio-text        #0B0C0E   body, form + table values, nav labels
+       --rio-text-mute   #30343A   descriptions, breadcrumbs, metadata
+       --rio-text-faint  #4B535C   tertiary detail, footer meta, placeholders
+
+     Only the top of the ramp is pure black, and only for the things
+     that carry the page's authority. Everything else steps down. */
+  --rio-text-hi:       #000000;
+  --rio-text:          #0B0C0E;
+  --rio-text-mute:     #30343A;
+  --rio-text-faint:    #4B535C;
   --rio-text-onrust:   #FFFFFF;
 
-  /* Accent: RustIO Rust (as text/border/dot) — reference #B84318 */
-  --rio-rust:          #B84318;
-  --rio-rust-hover:    #8F3413;
-  --rio-rust-active:   #76290F;
-  --rio-rust-tint:     rgba(184, 67, 24, 0.08);
-  --rio-rust-tint-2:   rgba(184, 67, 24, 0.16);
-  --rio-rust-ring:     rgba(184, 67, 24, 0.35); /* = --rio-accent-ring */
-  --rio-accent-focus:  #B84318;                 /* focused-field border */
+  /* Accent: RustIO Blue (as text/border/dot) */
+  --rio-rust:          #1F5797;
+  --rio-rust-hover:    #174578;
+  --rio-rust-active:   #123A66;
+  --rio-rust-tint:     #DFEAFB; /* primary-soft */
+  --rio-rust-tint-2:   #B7CDEA; /* primary-line */
+  --rio-rust-ring:     rgba(47, 123, 214, 0.40);
+  --rio-accent-focus:  #2F7BD6; /* focused-field border + focus ring */
 
-  /* Accent: filled-button rust + on-color (white text both themes) */
-  --rio-rust-solid:        #B84318;
-  --rio-rust-solid-hover:  #8F3413;
-  --rio-rust-solid-active: #76290F;
+  /* Accent: filled-button blue + on-color */
+  --rio-rust-solid:        #1F5797;
+  --rio-rust-solid-hover:  #174578;
+  --rio-rust-solid-active: #123A66;
   --rio-on-solid:          #FFFFFF;
 
-  /* Status (warm-leaning — never a rainbow) */
-  /* Secondary accent: warm amber — rare delight touches only */
-  --rio-gold:          #B54708;
-  --rio-gold-tint:     rgba(181, 71, 8, 0.12);
-  --rio-success:       #067647;
-  --rio-success-tint:  rgba(6, 118, 71, 0.10);
-  --rio-warn:          #B54708;
-  --rio-warn-tint:     rgba(181, 71, 8, 0.10);
+  /* Status — calm, never a rainbow */
+  --rio-gold:          #8A5A0B;
+  --rio-gold-tint:     rgba(138, 90, 11, 0.10);
+  --rio-success:       #16704A;
+  --rio-success-tint:  rgba(22, 112, 74, 0.10);
+  --rio-warn:          #8A5A0B;
+  --rio-warn-tint:     rgba(138, 90, 11, 0.10);
   --rio-danger:        #B42318;
   --rio-danger-hover:  #912018;
   --rio-danger-tint:   rgba(180, 35, 24, 0.10);
 
-  /* Status pills (contract §9) */
-  --rio-pill-on-bg:    #ECFDF3;
-  --rio-pill-on-text:  #067647;
-  --rio-pill-off-bg:   #EAEEF2;
-  --rio-pill-off-text: #3F4A54;
+  /* Status pills */
+  --rio-pill-on-bg:    #E3F3EC;
+  --rio-pill-on-text:  #16704A;
+  --rio-pill-off-bg:   #ECEFF4;
+  --rio-pill-off-text: #30343A;
 
   /* Syntax tints (calm, accent-led) */
-  --rio-syntax-key:    #B84318;
-  --rio-syntax-str:    #067647;
-  --rio-syntax-num:    #B54708;
-  --rio-syntax-fn:     #1A2027;
-  --rio-syntax-comment:#8A97A2;
-  --rio-syntax-punc:   #5F6D78;
-}
-
-/* --- Auto dark: follow the OS when no explicit theme is set.
-   Dim neutral slate, lifted rust accent. No pure black. --- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-
-    /* Surfaces — slate dark, re-derived by inverting the light ladder. */
-    --rio-bg:            #22272e; /* page — soft graphite, deliberately not near-black */
-    --rio-surface:       #2d333b; /* cards — one clear step up from the page */
-    --rio-raised:        #373e47; /* hover / raised */
-    --rio-overlay:       #2d333b;
-    --rio-sunken:        #1c2128; /* inset / code wells — just below the page */
-    --rio-surface-tint:  #2b2521; /* inline code / kbd chip — faint warm well */
-
-    --rio-line:          #444c56; /* card / divider — clearly visible */
-    --rio-line-strong:   #697079; /* input / radio border */
-    --rio-dot:           rgba(255, 255, 255, 0.03);
-    --rio-text-hi:       #e6edf3; /* titles — bright, comfortable */
-    --rio-text:          #adbac7; /* body — soft grey, ~7:1 on surface */
-    --rio-text-mute:     #8b949e; /* secondary */
-    --rio-text-faint:    #6e7681; /* placeholder */
-    --rio-text-onrust:   #FFFFFF;
-
-    /* Accent: rust lifted to a warm coral so it passes AA on dark surfaces. */
-    --rio-rust:          #F2935E;
-    --rio-rust-hover:    #F7AE84;
-    --rio-rust-active:   #FACDB5;
-    --rio-rust-tint:     rgba(242, 147, 94, 0.14);
-    --rio-rust-tint-2:   rgba(242, 147, 94, 0.24);
-    --rio-rust-ring:     rgba(242, 147, 94, 0.45); /* focus ring — visible on dark */
-    --rio-accent-focus:  #F2935E;
-
-    /* Filled-button rust kept deep enough for white text (AA-large). */
-    --rio-rust-solid:        #C2491A;
-    --rio-rust-solid-hover:  #A93D14;
-    --rio-rust-solid-active: #8F3413;
-    --rio-on-solid:          #FFFFFF;
-
-    --rio-gold:          #E0AE5A;
-    --rio-gold-tint:     rgba(224, 174, 90, 0.16);
-    --rio-success:       #6FB98A;
-    --rio-success-tint:  rgba(111, 185, 138, 0.15);
-    --rio-warn:          #D6A65A;
-    --rio-warn-tint:     rgba(214, 166, 90, 0.15);
-    --rio-danger:        #ef4444; /* lifted red — legible as text AND as button fill */
-    --rio-danger-hover:  #dc2626;
-    --rio-danger-tint:   rgba(239, 68, 68, 0.16);
-
-    --rio-pill-on-bg:    rgba(111, 185, 138, 0.16);
-    --rio-pill-on-text:  #86efac;
-    --rio-pill-off-bg:   #373e47;
-    --rio-pill-off-text: #adbac7;
-
-    --rio-syntax-key:    #F2935E;
-    --rio-syntax-str:    #6FB98A;
-    --rio-syntax-num:    #D6A65A;
-    --rio-syntax-fn:     #f1f5f9;
-    --rio-syntax-comment:#64748b;
-    --rio-syntax-punc:   #94a3b8;
-  }
-}
-
-/* --- Explicit light (wins over auto-dark by source order) --- */
-[data-theme="light"] {
-  color-scheme: light;
-
-  --rio-bg:            #EDF1F5;
-  --rio-surface:       #FFFFFF;
-  --rio-raised:        #EAEEF2;
-  --rio-overlay:       #FFFFFF;
-  --rio-sunken:        #F5F7F9;
-  --rio-surface-tint:  #EAEEF2;
-  --rio-line:          #D6DEE5;
-  --rio-line-strong:   #B8C3CC;
-  --rio-dot:           rgba(40, 60, 110, 0.05);
-  --rio-text-hi:       #0F141A;
-  --rio-text:          #2B343C;
-  --rio-text-mute:     #5F6D78;
-  --rio-text-faint:    #8A97A2;
-  --rio-text-onrust:   #FFFFFF;
-  --rio-rust:          #B84318;
-  --rio-rust-hover:    #8F3413;
-  --rio-rust-active:   #76290F;
-  --rio-rust-tint:     rgba(184, 67, 24, 0.08);
-  --rio-rust-tint-2:   rgba(184, 67, 24, 0.16);
-  --rio-rust-ring:     rgba(184, 67, 24, 0.35);
-  --rio-accent-focus:  #B84318;
-  --rio-rust-solid:        #B84318;
-  --rio-rust-solid-hover:  #8F3413;
-  --rio-rust-solid-active: #76290F;
-  --rio-on-solid:          #FFFFFF;
-  /* Secondary accent: warm amber — rare delight touches only */
-  --rio-gold:          #B54708;
-  --rio-gold-tint:     rgba(181, 71, 8, 0.12);
-  --rio-success:       #067647;
-  --rio-success-tint:  rgba(6, 118, 71, 0.10);
-  --rio-warn:          #B54708;
-  --rio-warn-tint:     rgba(181, 71, 8, 0.10);
-  --rio-danger:        #B42318;
-  --rio-danger-hover:  #912018;
-  --rio-danger-tint:   rgba(180, 35, 24, 0.10);
-  --rio-pill-on-bg:    #ECFDF3;
-  --rio-pill-on-text:  #067647;
-  --rio-pill-off-bg:   #EAEEF2;
-  --rio-pill-off-text: #3F4A54;
-  --rio-syntax-key:    #B84318;
-  --rio-syntax-str:    #067647;
-  --rio-syntax-num:    #B54708;
-  --rio-syntax-fn:     #1A2027;
-  --rio-syntax-comment:#8A97A2;
-  --rio-syntax-punc:   #5F6D78;
-}
-
-/* --- Explicit dark --- */
-[data-theme="dark"] {
-  color-scheme: dark;
-
-  --rio-bg:            #22272e;
-  --rio-surface:       #2d333b;
-  --rio-raised:        #373e47;
-  --rio-overlay:       #2d333b;
-  --rio-sunken:        #1c2128;
-  --rio-surface-tint:  #2b2521;
-  --rio-line:          #444c56;
-  --rio-line-strong:   #697079;
-  --rio-dot:           rgba(255, 255, 255, 0.03);
-  --rio-text-hi:       #e6edf3;
-  --rio-text:          #adbac7;
-  --rio-text-mute:     #8b949e;
-  --rio-text-faint:    #6e7681;
-  --rio-text-onrust:   #FFFFFF;
-  --rio-rust:          #F2935E;
-  --rio-rust-hover:    #F7AE84;
-  --rio-rust-active:   #FACDB5;
-  --rio-rust-tint:     rgba(242, 147, 94, 0.14);
-  --rio-rust-tint-2:   rgba(242, 147, 94, 0.24);
-  --rio-rust-ring:     rgba(242, 147, 94, 0.45);
-  --rio-accent-focus:  #F2935E;
-  --rio-rust-solid:        #C2491A;
-  --rio-rust-solid-hover:  #A93D14;
-  --rio-rust-solid-active: #8F3413;
-  --rio-on-solid:          #FFFFFF;
-  --rio-gold:          #E0AE5A;
-  --rio-gold-tint:     rgba(224, 174, 90, 0.16);
-  --rio-success:       #6FB98A;
-  --rio-success-tint:  rgba(111, 185, 138, 0.15);
-  --rio-warn:          #D6A65A;
-  --rio-warn-tint:     rgba(214, 166, 90, 0.15);
-  --rio-danger:        #ef4444;
-  --rio-danger-hover:  #dc2626;
-  --rio-danger-tint:   rgba(239, 68, 68, 0.16);
-  --rio-pill-on-bg:    rgba(111, 185, 138, 0.16);
-  --rio-pill-on-text:  #86efac;
-  --rio-pill-off-bg:   #373e47;
-  --rio-pill-off-text: #adbac7;
-  --rio-syntax-key:    #F2935E;
-  --rio-syntax-str:    #6FB98A;
-  --rio-syntax-num:    #D6A65A;
-  --rio-syntax-fn:     #f1f5f9;
-  --rio-syntax-comment:#64748b;
-  --rio-syntax-punc:   #94a3b8;
+  --rio-syntax-key:    #1F5797;
+  --rio-syntax-str:    #16704A;
+  --rio-syntax-num:    #8A5A0B;
+  --rio-syntax-fn:     #0B0C0E;
+  --rio-syntax-comment:#4B535C;
+  --rio-syntax-punc:   #30343A;
 }

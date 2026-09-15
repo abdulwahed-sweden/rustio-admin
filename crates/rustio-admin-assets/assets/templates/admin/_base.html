@@ -4,16 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ page_title|default("") }}{% if page_title %} · {% endif %}{{ site_title }}{% endblock %}</title>
-{# Flicker-free theme: set data-theme before first paint. #}
-<script>
-  (function () {
-    try {
-      var t = localStorage.getItem("rio-theme");
-      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", t);
-    } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
-  })();
-</script>
+{# The admin is light-only: no theme script, no stored theme state. #}
+<meta name="color-scheme" content="light">
 <link rel="stylesheet" href="/static/admin.css">
 {# _theme.html MUST come after admin.css — project token overrides
  # win cascade ties on source order without needing !important. #}
@@ -22,11 +14,17 @@
 </head>
 <body class="rio-canvas {% if identity %}rio-console{% if is_demo_session %} rio-console--demo{% endif %}{% if read_only %} rio-console--read-only{% endif %}{% else %}rio-auth{% endif %}">
 {% if identity %}
+  <a class="rio-skip" href="#main">Skip to content</a>
   {% block sidebar %}{% include "admin/_sidebar.html" %}{% endblock %}
   <div class="rio-ws">
     {% block topbar %}{% include "admin/_topbar.html" %}{% endblock %}
     <div class="rio-ws-body">
-      <div class="rio-ws-inner">
+      {# Page measure. Layer 2/3 of the layout system: a page declares
+       # which centred measure it wants by overriding this block —
+       # `rio-page--wide` for lists/tables/reports, `rio-page--form` for
+       # forms and confirmations. Default is the standard measure. No
+       # JS, no URL matching, no content-dependent selectors. #}
+      <div class="rio-ws-inner {% block page_measure %}{% endblock %}">
         {% if is_demo_session %}<div class="rio-alert rio-alert--info" role="status">DEMO USER{% if demo_label %} ({{ demo_label }}){% endif %} — actions are visible to other operators.</div>{% endif %}
         {% if read_only %}<div class="rio-alert rio-alert--warn" role="status">READ-ONLY — project-data mutations are disabled. Auth flows still work.</div>{% endif %}
         {% if flash %}<div class="rio-alert rio-alert--{{ flash.kind }}" role="status">{{ flash.message }}</div>{% endif %}

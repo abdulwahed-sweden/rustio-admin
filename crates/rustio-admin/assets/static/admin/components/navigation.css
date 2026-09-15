@@ -61,27 +61,39 @@
   background: var(--rio-surface);
   border-block-start: 1px solid var(--rio-line);
 }
+/* The footer belongs to the shell layer: fluid across the workspace,
+   never constrained to a page measure. App name + links at the inline
+   start, identity/timestamp at the inline end. */
 .rio-appfoot-inner {
-  max-inline-size: 1320px; inline-size: 100%; margin: 0 auto;
-  min-block-size: 56px;
+  inline-size: 100%;
+  padding-inline: var(--rio-shell-pad-x);
+  min-block-size: var(--rio-topbar-h);
   display: flex; align-items: center; gap: var(--rio-space-16);
-  padding: var(--rio-space-12) 44px;
+  padding-block: var(--rio-space-12);
   font-size: var(--rio-text-13); color: var(--rio-text-mute);
 }
 .rio-appfoot-links { display: flex; align-items: center; gap: var(--rio-space-16); }
 .rio-appfoot-links a { color: var(--rio-text-mute); text-decoration: none; }
 .rio-appfoot-links a:hover { color: var(--rio-text-hi); }
-.rio-appfoot-meta { margin-inline-start: auto; font-family: var(--rio-font-body); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
+.rio-appfoot-meta { margin-inline-start: auto; font-family: var(--rio-font-body); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
 
-/* DEVELOPMENT pill */
+/* Environment badge. Quiet by default — it states the stage, it does
+   not compete with the search or the module row beside it. Only a
+   NON-production stage earns the amber treatment, because that is the
+   case where mistaking the environment actually costs something. */
 .rio-devpill {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold);
+  font-family: var(--rio-font-body); font-size: var(--rio-text-12); font-weight: var(--rio-weight-medium);
   letter-spacing: .04em; text-transform: uppercase;
-  color: var(--rio-gold); padding: 2px 8px;
-  background: var(--rio-gold-tint); border-radius: var(--rio-radius-pill);
+  color: var(--rio-text-mute); padding: 3px 9px;
+  background: var(--rio-sunken); border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-pill); white-space: nowrap;
 }
-.rio-devpill::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 999px; background: var(--rio-gold); }
+.rio-devpill::before { content: ""; inline-size: 6px; block-size: 6px; border-radius: 999px; background: var(--rio-text-faint); }
+.rio-devpill--dev,
+.rio-devpill--other { color: var(--rio-gold); background: var(--rio-gold-tint); border-color: transparent; }
+.rio-devpill--dev::before,
+.rio-devpill--other::before { background: var(--rio-gold); }
 
 /* Dropdown menu (filters, account) */
 .rio-menu {
@@ -209,3 +221,75 @@
 .rio-search-palette__result.is-selected,
 .rio-search-palette__result:hover { background: var(--rio-rust-tint); color: var(--rio-rust); }
 .rio-search-palette__empty { padding: 18px 16px; color: var(--rio-text-mute); font-size: var(--rio-fs-md); }
+
+/* ============================================================
+   Primary module navigation — row 2 of the workspace header.
+   Five modules, each pointing at a real registered route. The
+   contextual rail below carries the destinations *within* the
+   active module, so the two never repeat each other.
+
+   The active treatment is a flat blue label plus a thin bottom
+   indicator — no rounded pill. A pill in a 48px row reads heavy
+   and competes with the buttons in the utility strip above.
+   ============================================================ */
+.rio-modnav {
+  display: flex; block-size: var(--rio-modulebar-h); flex: none;
+  min-inline-size: 0;
+  /* The one approved differentiation: the soft surface token already in
+     the palette (#F7F9FC). The utility row above stays white. */
+  background: var(--rio-sunken);
+  border-block-start: 1px solid var(--rio-line);
+  overflow-x: auto; overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.rio-modnav::-webkit-scrollbar { display: none; }
+/* Full-bleed scroll container, axis-aligned contents: the wrapper sits on
+   the shared 1280px axis while it fits, and grows past it to scroll when
+   the five modules no longer do. */
+.rio-modnav-inner {
+  display: flex; align-items: stretch; gap: var(--rio-space-24);
+  block-size: 100%; inline-size: 100%; min-inline-size: max-content;
+  padding-inline: var(--rio-shell-pad-x);
+}
+
+.rio-modnav-item {
+  display: inline-flex; align-items: center; gap: var(--rio-space-8);
+  block-size: 100%; flex: none;
+  padding: var(--rio-space-4) 0 0; /* 4px lift above the icon + label */
+  position: relative;
+  color: var(--rio-text-mute); text-decoration: none;
+  font-size: 0.9375rem; font-weight: var(--rio-weight-medium);
+  white-space: nowrap;
+  transition: color var(--rio-dur-fast) var(--rio-ease),
+              background var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-modnav-item svg {
+  inline-size: 18px; block-size: 18px; flex: none;
+  stroke-width: 1.75; color: currentColor;
+}
+/* Restrained hover: colour lifts, a faint wash, no shape change. */
+.rio-modnav-item:hover { background: var(--rio-surface); color: var(--rio-text-hi); }
+
+/* Active: blue label + a 2px bottom indicator sitting on the header's
+   own bottom edge. `inset-block-end: -1px` overlaps the header border
+   so the indicator reads as part of the rule, not stacked on it. */
+.rio-modnav-item[aria-current="true"] {
+  color: var(--rio-rust);
+  font-weight: var(--rio-weight-semibold);
+  background: transparent;
+}
+.rio-modnav-item[aria-current="true"]::after {
+  content: ""; position: absolute;
+  inset-inline: 10px; inset-block-end: -1px;
+  block-size: 2px; border-radius: 2px 2px 0 0;
+  background: var(--rio-rust);
+}
+.rio-modnav-item[aria-current="true"]:hover { background: var(--rio-rust-tint); }
+/* Keep the focus ring off the scroll edge in the 48px row. */
+.rio-modnav-item:focus-visible { outline-offset: -2px; }
+
+@media (max-width: 760px) {
+  .rio-wshead-inner { gap: var(--rio-space-12); }
+  .rio-modnav-inner { gap: var(--rio-space-16); }
+}

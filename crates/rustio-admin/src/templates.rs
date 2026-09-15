@@ -464,6 +464,16 @@ mod tests {
             "model link should be active when nav_active matches its admin_name"
         );
 
+        // An UNKNOWN nav_active must not be guessed into a module. Models is
+        // active only on an exact `entries` match, so an unrecognised route
+        // leaves every primary module — and every rail item — inactive.
+        let unknown = render_with("not-a-registered-model");
+        assert_eq!(
+            unknown.matches(r#"aria-current="page""#).count(),
+            0,
+            "an unknown nav_active must leave every rail item inactive"
+        );
+
         // The new developer entry highlights when active and is always present.
         let designer = render_with("view-designer");
         assert!(designer.contains(r#"href="/admin/dev/view-designer""#));

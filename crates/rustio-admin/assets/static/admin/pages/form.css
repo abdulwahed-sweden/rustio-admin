@@ -8,6 +8,10 @@
  * ============================================================ */
 
 .rio-form-shell { max-inline-size: 880px; margin-inline: auto; }    /* contract §10.1 */
+/* Inside the focused form measure the page column already owns the
+   width, so the legacy 880px shell must not fight it — breadcrumb,
+   title, description and card all share the same 672px edges. */
+.rio-page--form .rio-form-shell { max-inline-size: 100%; }
 .rio-content-shell { max-inline-size: 1040px; margin-inline: auto; }
 .rio-form { display: flex; flex-direction: column; gap: var(--rio-space-32); }
 
@@ -179,3 +183,22 @@
   color: var(--rio-text-hi);
 }
 .rio-form--inline .rio-btn { flex: 0 0 auto; }
+
+/* ---- Focused form measure (layer 3) ---------------------------
+   Scoped to `.rio-page--form` so no other form page is migrated by
+   this slice. ---------------------------------------------------- */
+.rio-page--form .rio-fieldset {
+  padding: var(--rio-card-pad-x);
+}
+.rio-page--form .rio-fieldset-grid {
+  column-gap: var(--rio-space-16);
+  row-gap: var(--rio-space-16);
+}
+@media (max-width: 760px) {
+  .rio-page--form .rio-fieldset-grid { grid-template-columns: 1fr; }
+}
+/* Actions sit at the inline end, Cancel before the primary action.
+   DOM order matches visual order, so keyboard and screen-reader order
+   are unchanged by the alignment. */
+.rio-page--form .rio-form-actions { justify-content: flex-end; }
+.rio-page--form .rio-form-actions .rio-action-bar-end { margin-inline-start: 0; }

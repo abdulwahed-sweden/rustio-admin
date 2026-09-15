@@ -103,7 +103,7 @@
 .rio-vd-json__dots { display: inline-flex; gap: 6px; }
 .rio-vd-json__dots i { inline-size: 10px; block-size: 10px; border-radius: 999px; background: rgba(255,255,255,0.25); }
 .rio-vd-json__name { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-on-solid); }
-.rio-vd-json__hint { margin-inline-start: auto; font-size: var(--rio-text-12); color: rgba(255,255,255,0.45); }
+.rio-vd-json__hint { margin-inline-start: auto; font-size: var(--rio-text-12); color: var(--rio-text-faint); }
 .rio-vd-json__body { margin: 0; padding: var(--rio-space-16); background: var(--rio-surface-chrome); overflow-x: auto; }
 .rio-vd-json__body code { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); line-height: 1.6; color: var(--rio-on-solid); white-space: pre; }
 .rio-vd-json__foot { padding: var(--rio-space-8) var(--rio-space-16); background: var(--rio-surface-chrome); color: var(--rio-success); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); border-block-start: 1px solid rgba(255,255,255,0.08); }
