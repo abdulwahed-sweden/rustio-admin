@@ -29,26 +29,28 @@ You do **not** need Node, a bundler, or any frontend toolchain.
 
 ---
 
-## See it work now — the translation-agency example
+## See it work now — the translation-agency preset
 
-The fastest way to understand RustIO is to run a real admin. The repository
-ships a **translation-agency** example — `Translator` and `Task` models, already
-registered, with example rows — so the first thing you do is sign in to
-something real.
-
-```sh
-git clone https://github.com/abdulwahed-sweden/rustio-admin
-cd rustio-admin/examples/translation-agency
-cp .env.example .env                # defaults are fine for local Postgres
-createdb translation_agency_dev
-cargo run                           # applies migrations + seeds, then serves
-```
-
-In another shell, install the CLI and create your login (run it from the same
-example directory so it reads that `.env`):
+The fastest way to understand RustIO is to run a real admin. You do not clone
+this repository to get one: the CLI **generates** a complete project from a
+preset. The `translation-agency` preset ships `Translator` and `Task` models,
+already registered, with their migrations — so the first thing you do is sign
+in to something real.
 
 ```sh
 cargo install rustio-admin-cli --features db   # `user`/`migrate`/… need the db feature (Rust 1.94)
+rustio-admin startproject agency --preset translation-agency
+cd agency
+cp .env.example .env                # defaults are fine for local Postgres
+createdb agency_dev
+rustio-admin migrate apply          # creates the framework + project tables
+cargo run                           # serves on http://127.0.0.1:8000
+```
+
+In another shell, create your login (run it from the project directory so it
+reads that `.env`):
+
+```sh
 rustio-admin user create --email coordinator@agency.local --role administrator
 ```
 
@@ -57,7 +59,7 @@ rustio-admin user create --email coordinator@agency.local --role administrator
 > database verbs (`user`, `migrate`), so it installs with `--features db`.
 
 Open **<http://127.0.0.1:8000/admin>**, sign in, and you have a working
-dispatch admin:
+dispatch admin. Add a translator and a task or two and the list pages fill in:
 
 ```text
 Translators (3)           Tasks (3)

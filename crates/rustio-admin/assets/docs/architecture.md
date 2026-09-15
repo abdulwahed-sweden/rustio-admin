@@ -12,9 +12,13 @@ rustio-admin/
 │   ├── rustio-admin-cli/      ← `rustio-admin` CLI binary (scaffolding, migrations,
 │   │                            users, `theme`, `ai` assistant permissions, builder)
 │   └── rio-theme/             ← build-time theme engine (brand colors → tokens.css)
-└── examples/
-    └── clinic/                ← canonical end-to-end consumer of the library
+├── docs/                      ← guides, reference, and the design doctrine
+└── .github/workflows/         ← CI
 ```
+
+There is no bundled `examples/` tree. Consumer projects are **generated** —
+`rustio-admin startproject <name> --preset <preset>` — from the preset sources in
+`crates/rustio-admin-cli/templates/project_<preset>/`.
 
 The `ai` surface (`crates/rustio-admin-cli/src/ai.rs`) is a permissions / approval / audit layer over external AI coding assistants — see [`design/DESIGN_AI_ASSISTANT.md`](./design/DESIGN_AI_ASSISTANT.md). It is offline by default; its `--as <email>` path authenticates an approver and mirrors decisions into `rustio_admin_actions` via three typed `AuditEvent` variants (`ai_proposal_approved` / `_rejected` / `_applied`).
 

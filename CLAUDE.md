@@ -26,10 +26,10 @@ Running one test:
 
 ```sh
 cargo test -p rustio-admin <name_substring>
-cargo test -p rustio-admin --features integration-test --test integration_recovery <name>
+cargo test -p rustio-admin --features integration-test --test contract_authority_recovery <name>
 ```
 
-Integration suites under `crates/rustio-admin/tests/integration_*.rs` are gated by the `integration-test` feature (see the `[features]` block in `crates/rustio-admin/Cargo.toml`). They each boot an ephemeral Postgres container per test via `testcontainers`, so Docker must be running. The `cascade_lockstep.rs` test is *not* gated and runs in the default suite.
+Tests come in two layers. **Inline `#[cfg(test)]` modules** next to the code are where the bulk of the coverage lives — they are the only place that can reach the `pub(crate)` internals of `auth::*` and `admin::*`, so every unit-level security assertion lives there. **Contract suites** under `crates/rustio-admin/tests/contract_*.rs` (plus `crates/rustio-admin-cli/tests/`) check the product's outward promises from a consumer's position: the public API, the embedded-template inventory and override ladder, the authority guards, the CSS manifest, and CLI scaffolding. The database-backed contract suites share `tests/common/mod.rs` and are gated behind the `integration-test` feature — they boot an ephemeral Postgres per test via `testcontainers`, so Docker must be running for those.
 
 In CI these run in their own job, **`integration (PostgreSQL)`** in `ci.yml`, separate from `build / test / lint` so that container startup does not slow the lint/unit gate. The job needs nothing but a Docker daemon — no service container, no `DATABASE_URL`, no secrets; the harness derives the connection URL from the mapped container port.
 
@@ -37,7 +37,7 @@ CI's Tier-2-symbol guard (`.github/workflows/ci.yml`) — also run this locally 
 
 ```sh
 git grep -nE 'HasSchema|ModelSchema|RustType|SchemaOps|from_schema|contract_validator|contract_doctor|RustioModel' \
-    -- 'crates/' 'examples/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'
+    -- 'crates/' 'Cargo.toml' ':(exclude,glob)crates/*/assets/**'
 ```
 
 The `crates/*/assets/**` exclusion matches CI: bundled docs under those dirs legitimately *mention* these symbols when explaining the guard itself, so the guard scans source/TOML/templates only. Any match is a CI failure. These symbols belong to a future `rustio-pro` layer and must never appear in this repo.
@@ -118,7 +118,7 @@ The narrow surface is the point. If a feature feels like it wants schema-driven 
 - Touching CSS, tokens, or templates → `docs/design/DESIGN_DOCTRINE.md` § 1 (tokens), § 7 (source layout), § 9 (adding a fragment). The PR template requires a token disclosure and a visual regression checklist (`.github/pull_request_template.md`).
 - Changing what's public → `docs/public-api.md` is generated/descriptive; the canonical `pub use` surface lives in `crates/rustio-admin/src/lib.rs`. Anything not re-exported there is `pub(crate)` or `pub` inside `admin::*` for testing only.
 - Understanding scope and history → `ROADMAP.md`, `CHANGELOG.md`, and `docs/archive/STRATEGIC_RESET_PLAN.md` § 8 (strict architectural rules).
-- The end-to-end consumers of the library live under `examples/`. They have distinct roles — point developers at the right one: `examples/translation-agency/` is the **canonical worked example** (single-crate interpreter/translation dispatch — `Translator` + `Task`; path-deps HEAD). It matches the docs (Quick Start, getting-started, `modeladmin`) and the `translation-agency` scaffold preset — this is the one to learn from. `examples/clinic/` is the **reference multi-crate architecture** for larger projects (a `-core` foundation crate, one crate per capability, a server crate); it pins the published crate and CI patches it to HEAD, so it *also* guards the public API. `examples/shop/` is a fuller single-crate e-commerce admin (path-deps HEAD; also a standalone published repo). All are standalone workspaces, excluded from the framework workspace.
+- End-to-end consumer projects are **generated, not bundled**. The repository ships no `examples/` tree; `rustio-admin startproject --preset <p>` is the worked example. `translation-agency` is the canonical one the docs are written against (`Translator` + `Task`), `clinic` and `ecommerce` are the fuller domains, `blog` is the smallest non-trivial one, and `minimal` is the bare shell. The preset sources live in `crates/rustio-admin-cli/templates/project_<preset>/`. Public-API compile coverage that the former `examples/clinic` provided now lives in `crates/rustio-admin/tests/contract_public_api.rs`.
 
 ## Workflow conventions
 
