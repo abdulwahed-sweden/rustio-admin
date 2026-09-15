@@ -1,11 +1,13 @@
 /* rustio-admin — RustIO Design System stylesheet, split for contributors.
  *
- * The admin adopts the RustIO Design System: RustIO Cobalt accent
- * (--rio-rust*), warm-stone neutrals, Spectral / Hanken Grotesk /
- * JetBrains Mono type, and TWO themes (light default + dim-slate dark
- * via @media + [data-theme]). The layout is the "RustIO Console": a
- * dark command-rail, a slim workspace header, an editorial masthead,
- * a metrics ledger, and a reworked data board (layout/console.css).
+ * The admin adopts the RustIO Design System: a restrained blue accent
+ * (--rio-rust*, #1F5797), cool paper neutrals, and Inter / JetBrains
+ * Mono type. It is LIGHT ONLY — there is no dark theme, no
+ * `prefers-color-scheme` block and no `[data-theme]` block anywhere in
+ * this tree. The layout is the "RustIO Console": a light contextual
+ * navigation rail, a slim workspace header carrying the primary module
+ * row, an editorial masthead, a metrics ledger, and a data board
+ * (layout/console.css).
  *
  * Source order (matches the DS's own styles.css, plus the framework's
  * multi-script i18n typography and a print sheet):

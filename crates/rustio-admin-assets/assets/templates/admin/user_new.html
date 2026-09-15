@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A focused task page: forms take the narrow measure. #}
+{% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Add user</span></nav>
@@ -15,10 +17,10 @@
   </fieldset>
   {% endfor %}
   <div class="rio-form-actions">
-    <button type="submit" class="rio-btn rio-btn--primary">Create user</button>
     <span class="rio-action-bar-end">
       <a href="/admin/users" class="rio-action-link">Cancel</a>
     </span>
+    <button type="submit" class="rio-btn rio-btn--primary">Create user</button>
   </div>
 </form>
 </div>

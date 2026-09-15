@@ -133,7 +133,7 @@
   text-align: start;
   font-family: var(--rio-font-body);   /* contract §9: weight 800 needs Inter, not mono */
   font-size: var(--rio-text-12);        /* 14px (floor) */
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--rio-text-mute);
@@ -169,7 +169,7 @@
 /* Product name link + category sub-label */
 .rio-cell-link { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; }
 .rio-cell-link:hover { color: var(--rio-rust); }
-.rio-cell-sub { font-size: var(--rio-text-12); color: var(--rio-text-faint); margin-block-start: 1px; }
+.rio-cell-sub { font-size: var(--rio-text-12); color: var(--rio-text-mute); margin-block-start: 1px; }
 
 /* Table footer (count + pagination) */
 .rio-tablefoot {
@@ -236,3 +236,7 @@
 /* Empty state */
 .rio-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: var(--rio-space-48); text-align: center; color: var(--rio-text-mute); }
 .rio-empty-title { font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-17); color: var(--rio-text-hi); }
+
+/* Empty-state call to action — replaces the inline margin the users
+   list used to carry. */
+.rio-empty-cta { margin-block-start: var(--rio-space-16); }

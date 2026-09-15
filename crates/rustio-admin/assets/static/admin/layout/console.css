@@ -7,102 +7,124 @@
 
 .rio-console { display: flex; height: 100vh; overflow: hidden; }
 
-/* ---- Persistent dark command rail (always dark, both themes) ---- */
+/* ---- Contextual navigation rail — light, calm, one theme ----
+   The rail holds CONTEXTUAL destinations for the active module. The
+   primary module row lives in the workspace header (.rio-modnav), so
+   the two never duplicate each other. No icon-only collapse: the
+   labels are the point, and hiding them behind a tooltip only made
+   the rail harder to scan. ------------------------------------- */
 .rio-rail {
-  inline-size: 78px; flex: none;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 18px 0 14px;
-  background: #232833;
-  border-inline-end: 1px solid rgba(255, 255, 255, 0.07);
+  inline-size: 232px; flex: none;
+  display: flex; flex-direction: column;
+  gap: 2px; padding: 0 var(--rio-space-12) var(--rio-space-16);
+  background: var(--rio-rail-bg);
+  border-inline-end: 1px solid var(--rio-rail-line);
   position: relative; z-index: 30;
-  transition: inline-size var(--rio-dur-slow) var(--rio-ease);
+  overflow-y: auto; overscroll-behavior: contain;
 }
-/* Expanded variant — icons + labels */
-.rio-rail.rio-rail--open { inline-size: 236px !important; flex: 0 0 236px !important; align-items: stretch; padding: 16px 14px 14px; gap: 2px; }
 
-/* Rail header: mark (+ wordmark when open) + collapse toggle */
-.rio-rail-head { display: flex; align-items: center; gap: 11px; min-block-size: 46px; margin-block-end: 12px; inline-size: 100%; }
-.rio-rail:not(.rio-rail--open) .rio-rail-head { justify-content: center; flex-direction: column; gap: 10px; }
-.rio-rail-word { font-family: var(--rio-font-display); font-weight: 600; font-size: 20px; letter-spacing: -0.01em; color: #fff; flex: 1; white-space: nowrap; }
-.rio-rail:not(.rio-rail--open) .rio-rail-word { display: none; }
-.rio-rail-toggle {
-  inline-size: 32px; block-size: 32px; border-radius: 9px; flex: none;
-  display: grid; place-items: center; cursor: pointer; border: 0;
-  color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.06);
-  transition: color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+/* Rail brand sits on the utility row's baseline: same height, same
+   vertical centring. Below it a real module-row-height spacer, so the
+   contextual section starts exactly where the page body does. */
+.rio-rail-head {
+  display: flex; align-items: center; gap: var(--rio-space-12);
+  block-size: var(--rio-topbar-h); flex: none;
+  /* Clear the whole two-row header, then a deliberate 24px inset so the
+     section caption never lines up with the module-row border. */
+  margin-block-end: calc(var(--rio-modulebar-h) + var(--rio-space-24));
+  padding-inline: calc(var(--rio-rail-inset) - var(--rio-space-12));
+  inline-size: 100%;
 }
-.rio-rail-toggle:hover { color: #fff; background: rgba(255,255,255,0.12); }
-.rio-rail-toggle svg { inline-size: 17px; block-size: 17px; }
+.rio-rail-word {
+  font-family: var(--rio-font-display); font-weight: var(--rio-weight-semibold);
+  font-size: 1.0625rem; letter-spacing: -0.01em;
+  color: var(--rio-text-hi); flex: 1; min-inline-size: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rio-rail-mark { display: grid; place-items: center; flex: none; color: var(--rio-rust); }
+.rio-rail-sep {
+  block-size: 1px; background: var(--rio-rail-line);
+  margin: var(--rio-space-12) 0; flex: none;
+}
+.rio-rail-caption {
+  font-size: 0.875rem; font-weight: var(--rio-weight-semibold);
+  letter-spacing: .04em; text-transform: uppercase;
+  color: var(--rio-text-mute);
+  padding: 0 calc(var(--rio-rail-inset) - var(--rio-space-12)) var(--rio-space-8);
+  white-space: nowrap;
+}
+.rio-rail-spacer { flex: 1; min-block-size: 8px; }
 
-.rio-rail-mark { display: grid; place-items: center; flex: none; }
-.rio-rail-sep { inline-size: 30px; block-size: 1px; background: rgba(255,255,255,0.09); margin: 9px 0; flex: none; }
-.rio-rail--open .rio-rail-sep { inline-size: calc(100% - 8px); margin: 9px 4px; }
-.rio-rail-caption { font-family: var(--rio-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,0.4); padding: 14px 12px 6px; white-space: nowrap; }
-.rio-rail-spacer { flex: 1; }
 .rio-rail-btn {
-  inline-size: 46px; block-size: 46px; border-radius: 13px;
-  display: grid; place-items: center;
-  color: rgba(255, 255, 255, 0.52);
-  background: transparent; border: 0; cursor: pointer;
-  position: relative; flex: none;
-  transition: color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
+  inline-size: 100%; min-block-size: 40px;
+  display: grid; grid-template-columns: 18px 1fr; align-items: center;
+  justify-items: start; gap: var(--rio-space-12);
+  padding: var(--rio-space-8) calc(var(--rio-rail-inset) - var(--rio-space-12));
+  border-radius: var(--rio-radius-control);
+  color: var(--rio-text); background: transparent; border: 0;
+  text-decoration: none; cursor: pointer; position: relative;
+  transition: color var(--rio-dur-fast) var(--rio-ease),
+              background var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-rail-btn svg { inline-size: 21px; block-size: 21px; flex: none; }
-.rio-rail-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
-.rio-rail-btn[aria-current="page"] { color: #fff; background: rgba(110, 140, 255, 0.20); }
+.rio-rail-btn svg {
+  inline-size: 18px; block-size: 18px; flex: none;
+  stroke-width: 1.75; color: var(--rio-text-mute);
+}
+.rio-rail-btn:hover { background: var(--rio-surface); color: var(--rio-text-hi); }
+.rio-rail-btn:hover svg { color: var(--rio-text); }
+.rio-rail-btn[aria-current="page"] {
+  background: var(--rio-rust-tint); color: var(--rio-rust);
+  font-weight: var(--rio-weight-semibold);
+}
+.rio-rail-btn[aria-current="page"] svg { color: var(--rio-rust); }
 .rio-rail-btn[aria-current="page"]::before {
-  content: ""; position: absolute; inset-inline-start: -18px; inset-block: 13px;
-  inline-size: 3px; border-radius: 999px; background: #6E8CFF;
+  content: ""; position: absolute;
+  inset-inline-start: 0; inset-block: 8px;
+  inline-size: 3px; border-radius: 999px; background: var(--rio-rust);
 }
-/* Open mode: full-width rows with labels */
-.rio-rail-label { display: none; font-family: var(--rio-font-body); font-size: var(--rio-text-17); font-weight: var(--rio-weight-semibold); white-space: nowrap; }
-.rio-rail--open .rio-rail-btn { inline-size: 100%; block-size: 42px; border-radius: 10px; grid-template-columns: 21px 1fr; justify-items: start; align-items: center; gap: 13px; padding-inline: 12px; }
-.rio-rail--open .rio-rail-btn .rio-rail-label { display: block; }
-.rio-rail--open .rio-rail-btn::after { display: none; }
-.rio-rail--open .rio-rail-btn[aria-current="page"]::before { inset-inline-start: -14px; inset-block: 9px; }
-/* Hover tooltip label (collapsed only) */
-.rio-rail-btn::after {
-  content: attr(data-label);
-  position: absolute; inset-inline-start: calc(100% + 12px); inset-block-start: 50%;
-  transform: translateY(-50%) translateX(-4px);
-  padding: 6px 10px; border-radius: 8px;
-  background: #181C24; color: #fff;
-  font-family: var(--rio-font-body); font-size: 12px; font-weight: 600; letter-spacing: -0.005em;
-  white-space: nowrap; pointer-events: none; opacity: 0; z-index: 60;
-  box-shadow: 0 6px 20px -6px rgba(0,0,0,.5);
-  transition: opacity var(--rio-dur-fast) var(--rio-ease), transform var(--rio-dur-fast) var(--rio-ease);
+.rio-rail-label {
+  font-family: var(--rio-font-body); font-size: 0.9375rem;
+  font-weight: var(--rio-weight-medium); line-height: 1.35;
+  min-inline-size: 0; overflow-wrap: anywhere;
 }
-.rio-rail-btn:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
-/* Foot row (avatar + identity when open) */
-.rio-rail-foot { display: flex; align-items: center; gap: 11px; inline-size: 100%; margin-block-start: 4px; }
-.rio-rail:not(.rio-rail--open) .rio-rail-foot { justify-content: center; }
-.rio-rail-avatar {
-  inline-size: 38px; block-size: 38px; border-radius: 11px; flex: none;
-  display: grid; place-items: center; cursor: pointer;
-  background: #6E8CFF; color: #0E1E54;
-  font-family: var(--rio-font-mono); font-weight: 700; font-size: 15px;
-  border: 0;
+
+/* Narrow: the rail becomes a horizontally scrollable strip above the
+   content. The PAGE never scrolls sideways — only this strip does. */
+@media (max-width: 1040px) {
+  .rio-console { flex-direction: column; height: auto; min-block-size: 100vh; overflow: visible; }
+  .rio-rail {
+    inline-size: 100%; flex-direction: row; align-items: center;
+    gap: 6px; padding: 8px 12px; overflow-x: auto; overflow-y: hidden;
+    border-inline-end: 0; border-block-end: 1px solid var(--rio-rail-line);
+    scrollbar-width: thin;
+  }
+  .rio-rail-head, .rio-rail-sep, .rio-rail-caption, .rio-rail-spacer { display: none; }
+  .rio-rail-btn { padding-inline: var(--rio-space-12); }
+  .rio-rail-btn { inline-size: auto; flex: none; white-space: nowrap; }
+  .rio-rail-btn[aria-current="page"]::before { inset-block: auto; inset-block-end: 0; inset-inline: 10px; inline-size: auto; block-size: 2px; }
+  .rio-rail-label { overflow-wrap: normal; }
 }
-.rio-rail-id { display: none; flex-direction: column; min-inline-size: 0; }
-.rio-rail--open .rio-rail-id { display: flex; }
-.rio-rail-id-name { font-family: var(--rio-font-body); font-size: var(--rio-text-13); font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rio-rail-id-role { font-family: var(--rio-font-mono); font-size: 11px; color: #E0AE5A; letter-spacing: .02em; }
 
 /* ---- Workspace column ---- */
 .rio-ws { flex: 1; display: flex; flex-direction: column; min-inline-size: 0; }
 
 /* Slim workspace header — global search centered */
+/* Two restrained rows: a 56px utility strip, then a 48px module row.
+   Compact on purpose — the header is chrome, not a landing surface. */
 .rio-wshead {
-  block-size: 60px; flex: none;
-  display: flex; align-items: center; gap: 18px;
-  padding-inline: 24px;
+  flex: none;
+  display: flex; flex-direction: column;
   background: var(--rio-surface);
   border-block-end: 1px solid var(--rio-line);
   position: relative; z-index: 20;
 }
-.rio-ws-id { display: flex; align-items: center; gap: 9px; font-family: var(--rio-font-mono); font-size: 13px; color: var(--rio-text-mute); white-space: nowrap; }
-.rio-ws-id strong { color: var(--rio-text-hi); font-weight: 600; }
-.rio-ws-id .rio-devpill { margin-inline-start: 2px; }
+.rio-wshead-utility {
+  display: flex; block-size: var(--rio-topbar-h); flex: none;
+  min-inline-size: 0;
+}
+/* The environment badge is present but quiet — it states the stage,
+   it does not compete with the search or the module row. */
+.rio-wshead-utility .rio-devpill { flex: none; }
 .rio-ws-search {
   flex: 1; max-inline-size: 460px; margin: 0 auto;
   display: flex; align-items: center; gap: 10px;
@@ -113,7 +135,7 @@
   transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-ws-search:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
-.rio-ws-search:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-ws-search:focus-visible { outline: 2px solid var(--rio-accent-focus); outline-offset: 2px; }
 .rio-ws-search-label { flex: 1; text-align: start; }
 .rio-ws-search .rio-kbd { flex: none; }
 .rio-ws-actions { display: flex; align-items: center; gap: 8px; }
@@ -141,7 +163,7 @@
 .rio-usermenu .rio-usermenu-panel { inset-inline-end: 0; inset-inline-start: auto; min-inline-size: 268px; padding: 8px; }
 .rio-usermenu-head { padding: 8px 12px 10px; }
 .rio-usermenu-head-name { display: block; font-weight: 600; color: var(--rio-text-hi); font-size: var(--rio-text-14); }
-.rio-usermenu-head-role { display: block; font-family: var(--rio-font-mono); font-size: 12px; color: var(--rio-text-mute); text-transform: uppercase; letter-spacing: .04em; margin-block-start: 3px; }
+.rio-usermenu-head-role { display: block; font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); text-transform: uppercase; letter-spacing: .04em; margin-block-start: 3px; }
 .rio-usermenu-sep { block-size: 1px; background: var(--rio-line); margin: 6px 4px; }
 .rio-usermenu-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; color: var(--rio-text); text-decoration: none; font-size: var(--rio-text-14); }
 .rio-usermenu-item:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
@@ -155,8 +177,41 @@
 button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; cursor: pointer; font-family: inherit; text-align: start; }
 
 /* Scroll body */
-.rio-ws-body { flex: 1; overflow: auto; display: flex; flex-direction: column; }
-.rio-ws-inner { flex: 1; padding: 32px 44px 40px; display: flex; flex-direction: column; gap: 28px; max-inline-size: 1320px; inline-size: 100%; margin: 0 auto; }
+.rio-ws-body { flex: 1; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; min-inline-size: 0; }
+/* ---- Layer 1: the shell is FLUID -------------------------------
+   The utility row, module row and footer span the whole workspace
+   after the sidebar. They are chrome: they belong to the window, not
+   to the page measure, so the account control sits near the workspace
+   edge rather than on a centred page boundary. */
+.rio-wshead-inner {
+  display: flex; align-items: center; gap: var(--rio-space-16);
+  block-size: 100%; inline-size: 100%; min-inline-size: 0;
+  padding-inline: var(--rio-shell-pad-x);
+}
+
+/* ---- Layers 2 and 3: page measures -----------------------------
+   The page picks its own measure through a template modifier on the
+   content column — never from JS, a URL match or a content-dependent
+   selector. `--standard` is the default; lists take `--wide`; forms
+   and confirmations take `--form`. */
+.rio-ws-inner {
+  flex: 1;
+  display: flex; flex-direction: column;
+  gap: var(--rio-space-24);
+  max-inline-size: var(--rio-page-standard);
+  inline-size: calc(100% - 64px);
+  margin-inline: auto;
+  padding-block: var(--rio-page-top-space) var(--rio-space-40);
+  min-inline-size: 0;
+}
+.rio-ws-inner.rio-page--wide { max-inline-size: var(--rio-page-wide); }
+.rio-ws-inner.rio-page--form {
+  max-inline-size: var(--rio-page-form);
+  inline-size: calc(100% - 32px);
+}
+@media (max-width: 760px) {
+  .rio-ws-inner { inline-size: calc(100% - 32px); }
+}
 
 /* ---- Editorial masthead + ledger ---- */
 .rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-block-end: var(--rio-space-32); }
@@ -204,7 +259,7 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
 .rio-dtable thead th {
   text-align: start; font-family: var(--rio-font-body); font-size: var(--rio-text-13);
-  font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
   color: var(--rio-text-mute); padding: 12px 22px;
   background: var(--rio-surface); border-block-end: 1px solid var(--rio-line);
   position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
@@ -237,7 +292,7 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-prod-text { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; flex: 1; }
 .rio-prod-name { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rio-prod-name:hover { color: var(--rio-rust); }
-.rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); display: block; }
+.rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); display: block; }
 .rio-price { font-family: var(--rio-font-mono); font-size: var(--rio-text-15); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
 .rio-mono-tile {
   inline-size: 44px; block-size: 44px; border-radius: 12px; flex: none;
