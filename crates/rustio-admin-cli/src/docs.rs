@@ -156,7 +156,17 @@ pub(crate) fn print_docs(open: bool) -> Result<(), String> {
 /// a hand-rolled probe is the right tradeoff vs. pulling in
 /// `ureq` / `hyper` for one endpoint.
 fn health_probe() -> bool {
-    let addr = SocketAddr::from(([127, 0, 0, 1], PORT));
+    health_probe_at(SocketAddr::from(([127, 0, 0, 1], PORT)))
+}
+
+/// The probe itself, against an explicit address.
+///
+/// Split out from [`health_probe`] purely so the tests can point it
+/// at an OS-assigned ephemeral port instead of racing each other for
+/// the canonical 8000. Production always calls it with `PORT`; the
+/// socket logic, timeouts, request shape and validation below are
+/// unchanged.
+fn health_probe_at(addr: SocketAddr) -> bool {
     let mut stream = match TcpStream::connect_timeout(&addr, PROBE_TIMEOUT) {
         Ok(s) => s,
         Err(_) => return false,
@@ -167,9 +177,10 @@ fn health_probe() -> bool {
     if stream.set_write_timeout(Some(PROBE_TIMEOUT)).is_err() {
         return false;
     }
+    let port = addr.port();
     let req = format!(
         "GET {HEALTH_PATH} HTTP/1.1\r\n\
-         Host: {HOST}:{PORT}\r\n\
+         Host: {HOST}:{port}\r\n\
          User-Agent: rustio-cli-health-probe\r\n\
          Connection: close\r\n\r\n"
     );
@@ -250,53 +261,61 @@ mod tests {
     /// contract.
     #[test]
     fn health_probe_returns_false_when_nothing_listening() {
-        // We can't guarantee port 8000 is free on every test host,
-        // so this test is best-effort -- if a real rustio-admin server
-        // happens to be running on 8000, the assertion below is
-        // skipped. CI runs on a clean box where 8000 is free.
-        if TcpStream::connect_timeout(
-            &SocketAddr::from(([127, 0, 0, 1], PORT)),
-            Duration::from_millis(50),
-        )
-        .is_ok()
-        {
-            eprintln!("[skip] port {PORT} appears to be in use; cannot verify failure-closed");
-            return;
-        }
+        // Bind an ephemeral port, read the address, then drop the
+        // listener: the address is now guaranteed free and nothing is
+        // accepting on it. That makes the refused-connect path
+        // deterministic without depending on the canonical port 8000
+        // being unoccupied on the test host.
+        let addr = {
+            let listener =
+                TcpListener::bind(("127.0.0.1", 0)).expect("bind an ephemeral loopback port");
+            listener.local_addr().expect("listener has a local address")
+        };
         assert!(
-            !health_probe(),
+            !health_probe_at(addr),
             "probe must return false on refused connect"
         );
     }
 
-    /// Helper: bind a stub on PORT and serve one canned response.
-    /// Skips the calling test if PORT is in use.
-    fn spawn_stub(canned: &'static [u8]) -> Option<thread::JoinHandle<()>> {
-        let listener = TcpListener::bind(("127.0.0.1", PORT)).ok()?;
-        Some(thread::spawn(move || {
+    /// Bind a stub on an OS-assigned ephemeral port and serve one
+    /// canned response.
+    ///
+    /// Port `0` lets the kernel hand out a free port, so every test
+    /// owns its own listener and none of them can receive a sibling's
+    /// canned response. The listener is bound *before* the thread is
+    /// spawned and then moved into it, so the returned address is
+    /// already accepting by the time the caller probes it — no sleep,
+    /// no retry, no ordering assumption.
+    ///
+    /// Infallible by design: a test must assert or fail, never skip.
+    fn spawn_stub(canned: &'static [u8]) -> (SocketAddr, thread::JoinHandle<()>) {
+        let listener =
+            TcpListener::bind(("127.0.0.1", 0)).expect("bind an ephemeral loopback port");
+        let addr = listener
+            .local_addr()
+            .expect("stub listener has a local address");
+        let handle = thread::spawn(move || {
             if let Ok((mut stream, _)) = listener.accept() {
                 let mut buf = [0u8; 256];
                 let _ = stream.read(&mut buf);
                 let _ = stream.write_all(canned);
             }
-        }))
+        });
+        (addr, handle)
     }
 
     /// The probe must classify a 2xx response carrying the
     /// rustio-specific `x-correlation-id` header as "running".
     #[test]
     fn health_probe_recognises_rustio_200_with_correlation_id() {
-        let Some(handle) = spawn_stub(
+        let (addr, handle) = spawn_stub(
             b"HTTP/1.1 200 OK\r\n\
               Content-Type: text/plain\r\n\
               x-correlation-id: 019e0000-0000-7000-0000-000000000001\r\n\
               Content-Length: 2\r\n\
               Connection: close\r\n\r\nok",
-        ) else {
-            eprintln!("[skip] port {PORT} in use; cannot bind stub");
-            return;
-        };
-        let result = health_probe();
+        );
+        let result = health_probe_at(addr);
         let _ = handle.join();
         assert!(
             result,
@@ -310,17 +329,14 @@ mod tests {
     /// correlation_id middleware fires before any auth gate.
     #[test]
     fn health_probe_recognises_303_with_correlation_id() {
-        let Some(handle) = spawn_stub(
+        let (addr, handle) = spawn_stub(
             b"HTTP/1.1 303 See Other\r\n\
               Location: /admin/login\r\n\
               x-correlation-id: 019e0000-0000-7000-0000-000000000002\r\n\
               Content-Length: 0\r\n\
               Connection: close\r\n\r\n",
-        ) else {
-            eprintln!("[skip] port {PORT} in use");
-            return;
-        };
-        let result = health_probe();
+        );
+        let result = health_probe_at(addr);
         let _ = handle.join();
         assert!(
             result,
@@ -337,16 +353,13 @@ mod tests {
     /// falsely classified it as running.
     #[test]
     fn health_probe_rejects_foreign_server_without_correlation_id() {
-        let Some(handle) = spawn_stub(
+        let (addr, handle) = spawn_stub(
             b"HTTP/1.1 303 See Other\r\n\
               Location: /login\r\n\
               Content-Length: 0\r\n\
               Connection: close\r\n\r\n",
-        ) else {
-            eprintln!("[skip] port {PORT} in use");
-            return;
-        };
-        let result = health_probe();
+        );
+        let result = health_probe_at(addr);
         let _ = handle.join();
         assert!(!result, "probe must reject a 303 without x-correlation-id");
     }
@@ -356,16 +369,13 @@ mod tests {
     /// return false even when the header IS present.
     #[test]
     fn health_probe_classifies_500_as_not_running() {
-        let Some(handle) = spawn_stub(
+        let (addr, handle) = spawn_stub(
             b"HTTP/1.1 500 Internal Server Error\r\n\
               x-correlation-id: 019e0000-0000-7000-0000-000000000003\r\n\
               Content-Length: 0\r\n\
               Connection: close\r\n\r\n",
-        ) else {
-            eprintln!("[skip] port {PORT} in use");
-            return;
-        };
-        let result = health_probe();
+        );
+        let result = health_probe_at(addr);
         let _ = handle.join();
         assert!(!result, "probe must NOT classify a 500 as 'running'");
     }
@@ -374,11 +384,8 @@ mod tests {
     /// HTTP response.
     #[test]
     fn health_probe_rejects_non_http_response() {
-        let Some(handle) = spawn_stub(b"GARBLE_GARBLE_NOT_HTTP\r\n") else {
-            eprintln!("[skip] port {PORT} in use");
-            return;
-        };
-        let result = health_probe();
+        let (addr, handle) = spawn_stub(b"GARBLE_GARBLE_NOT_HTTP\r\n");
+        let result = health_probe_at(addr);
         let _ = handle.join();
         assert!(
             !result,
