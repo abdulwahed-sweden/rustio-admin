@@ -27,10 +27,12 @@
 
 #![cfg(feature = "integration-test")]
 
+mod common;
+
+use common::{boot, create_user};
+
 use chrono::Duration as ChronoDuration;
 use sqlx::Row as _;
-use testcontainers::runners::AsyncRunner;
-use testcontainers_modules::postgres::Postgres;
 
 use rustio_admin::__integration::{
     admin_revoke_sessions, admin_set_temp_password, check_account_lockout, check_session_elevated,
@@ -40,39 +42,6 @@ use rustio_admin::__integration::{
 };
 use rustio_admin::auth::{self, Role};
 use rustio_admin::orm::Db;
-
-// ---- Test harness ----------------------------------------------------------
-
-/// Holds the running Postgres container alongside its connected
-/// `Db`. The container shuts down when the env drops.
-struct TestEnv {
-    db: Db,
-    _container: testcontainers::ContainerAsync<Postgres>,
-}
-
-async fn boot() -> TestEnv {
-    let container = Postgres::default()
-        .start()
-        .await
-        .expect("postgres container starts");
-    let port = container
-        .get_host_port_ipv4(5432)
-        .await
-        .expect("port mapping");
-    let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
-    let db = Db::connect(&url).await.expect("Db::connect");
-    auth::init_tables(&db).await.expect("auth::init_tables");
-    TestEnv {
-        db,
-        _container: container,
-    }
-}
-
-async fn create_user(db: &Db, email: &str, password: &str, role: Role) -> i64 {
-    auth::create_user(db, email, password, role)
-        .await
-        .expect("create_user")
-}
 
 /// Issue a session and return the resolved `session_id`. Used by
 /// every test that needs a target session to exist for revocation /

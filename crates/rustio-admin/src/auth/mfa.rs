@@ -8,7 +8,7 @@
 //! live in `admin::mfa_handlers`; routes are registered in
 //! `admin::routes::register_admin_routes` after R2's
 //! admin-recovery routes. The testcontainers integration suite
-//! under `tests/integration_*.rs` exercises the DB-touching paths
+//! under `tests/contract_*.rs` exercises the DB-touching paths
 //! end-to-end against an ephemeral Postgres, gated behind
 //! `--features integration-test` per `DESIGN_R3_MFA.md` §13.3.
 //!
@@ -1324,7 +1324,7 @@ pub async fn consume_backup_code(
 /// Outcome of [`disable_mfa`]. Lets the disable handler render
 /// the right page without embedding HTTP concerns in the
 /// runtime layer.
-#[allow(dead_code)] // `sessions_revoked` is read by tests/integration_mfa.rs;
+#[allow(dead_code)] // `sessions_revoked` is read by tests/contract_mfa.rs;
                     // the disable handler discards it (`sessions_revoked: _`)
 pub enum DisableOutcome {
     /// MFA disabled successfully. The user row's four MFA

@@ -40,9 +40,11 @@
 
 #![cfg(feature = "integration-test")]
 
+mod common;
+
+use common::{boot, create_user};
+
 use sqlx::Row as _;
-use testcontainers::runners::AsyncRunner;
-use testcontainers_modules::postgres::Postgres;
 
 use rustio_admin::__integration::hash_token_for_storage;
 use rustio_admin::auth::emergency::{
@@ -51,37 +53,6 @@ use rustio_admin::auth::emergency::{
 };
 use rustio_admin::auth::{self, Role};
 use rustio_admin::orm::Db;
-
-// ---- Test harness --------------------------------------------------------
-
-struct TestEnv {
-    db: Db,
-    _container: testcontainers::ContainerAsync<Postgres>,
-}
-
-async fn boot() -> TestEnv {
-    let container = Postgres::default()
-        .start()
-        .await
-        .expect("postgres container starts");
-    let port = container
-        .get_host_port_ipv4(5432)
-        .await
-        .expect("port mapping");
-    let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
-    let db = Db::connect(&url).await.expect("Db::connect");
-    auth::init_tables(&db).await.expect("auth::init_tables");
-    TestEnv {
-        db,
-        _container: container,
-    }
-}
-
-async fn create_user(db: &Db, email: &str, password: &str, role: Role) -> i64 {
-    auth::create_user(db, email, password, role)
-        .await
-        .expect("create_user")
-}
 
 async fn mint_session_token(db: &Db, user_id: i64) -> String {
     auth::create_session(db, user_id)

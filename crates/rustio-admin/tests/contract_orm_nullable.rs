@@ -21,33 +21,15 @@
 
 #![cfg(feature = "integration-test")]
 
-use rustio_admin::orm::{self, Db};
-use rustio_admin::{Result, RustioAdmin};
-use testcontainers::runners::AsyncRunner;
-use testcontainers_modules::postgres::Postgres;
+mod common;
 
-/// Holds the running Postgres container alongside its connected `Db`. The
-/// container shuts down when the env drops.
-struct TestEnv {
-    db: Db,
-    _container: testcontainers::ContainerAsync<Postgres>,
-}
+use common::{boot_bare, TestEnv};
 
+/// Boot Postgres and create the one table this contract needs: a nullable
+/// timestamp and a nullable text column alongside a nullable bigint that
+/// always worked, so a regression in either direction is visible.
 async fn boot() -> TestEnv {
-    let container = Postgres::default()
-        .start()
-        .await
-        .expect("postgres container starts");
-    let port = container
-        .get_host_port_ipv4(5432)
-        .await
-        .expect("port mapping");
-    let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
-    let db = Db::connect(&url).await.expect("Db::connect");
-
-    // One table carrying both shapes the old binding broke on: a nullable
-    // timestamp and a nullable text column, alongside a nullable bigint that
-    // always worked and is here to prove the fix did not regress it.
+    let env = boot_bare().await;
     sqlx::query(sqlx::AssertSqlSafe(
         "CREATE TABLE widgets (
              id         BIGSERIAL PRIMARY KEY,
@@ -58,15 +40,14 @@ async fn boot() -> TestEnv {
          )"
         .to_string(),
     ))
-    .execute(db.pool())
+    .execute(env.db.pool())
     .await
     .expect("create table");
-
-    TestEnv {
-        db,
-        _container: container,
-    }
+    env
 }
+
+use rustio_admin::orm::{self, Db};
+use rustio_admin::{Result, RustioAdmin};
 
 /// A row with one nullable column of each shape the binding has to get right.
 #[derive(RustioAdmin)]

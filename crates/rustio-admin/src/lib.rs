@@ -97,7 +97,7 @@ extern crate self as rustio_admin;
 
 // internal: test-only re-export surface, gated by integration-test feature
 /// Test-only re-exports for the integration-test suite under
-/// `tests/integration_*.rs`. NOT part of the public API — the
+/// `tests/contract_*.rs`. NOT part of the public API — the
 /// module is `#[doc(hidden)]` and gated behind the
 /// `integration-test` Cargo feature, so a regular
 /// `cargo build` / `cargo test --workspace` cannot reach it.
@@ -158,7 +158,7 @@ pub mod __integration {
 
     // internal: test-only re-export of the view-spec store
     /// View-designer persistence (`admin::view_specs`) is `pub(crate)`;
-    /// these aliases let `tests/integration_view_specs.rs` exercise the
+    /// these aliases let `tests/contract_view_spec_store.rs` exercise the
     /// real Postgres round-trip (`ensure_table` → `save` → `load` →
     /// `saved_models`) without promoting the store to permanent `pub`.
     pub use crate::admin::view_specs::{
