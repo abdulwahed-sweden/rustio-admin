@@ -56,6 +56,10 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
         "arrow-left",
         r#"<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>"#,
     );
+    m.insert(
+        "arrow-right",
+        r#"<path d="m12 5 7 7-7 7"/><path d="M5 12h14"/>"#,
+    );
     m.insert("log-out",
         r#"<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>"#);
     m.insert("key",
@@ -156,7 +160,7 @@ static ICONS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
 /// vertical-axis chevrons (`chevron-down`) stay unchanged in
 /// either direction — adding them to this list would mirror
 /// glyphs that shouldn't mirror.
-const DIRECTIONAL_ICONS: &[&str] = &["arrow-left", "log-out"];
+const DIRECTIONAL_ICONS: &[&str] = &["arrow-left", "arrow-right", "log-out"];
 
 fn is_directional(name: &str) -> bool {
     DIRECTIONAL_ICONS.contains(&name)
@@ -211,7 +215,61 @@ mod tests {
         assert_eq!(svg, "");
     }
 
-    /// Directional icons (`arrow-left`, `log-out`, …) carry the
+    /// Both pagination arrows must resolve. `arrow-right` was used by
+    /// `user_view.html`'s "Next" link for a long time while missing
+    /// from this table, so `icon()` silently rendered nothing and the
+    /// chevron never appeared. Assert the pair together so one cannot
+    /// drift away from the other again.
+    #[test]
+    fn both_pagination_arrows_render_valid_svg() {
+        for name in ["arrow-left", "arrow-right"] {
+            let svg = render_inline(name, "rio-icon");
+            assert!(!svg.is_empty(), "{name} resolved to an empty string");
+            assert!(svg.starts_with("<svg"), "{name} is not an <svg>: {svg}");
+            assert!(svg.ends_with("</svg>"), "{name} is unterminated: {svg}");
+            // The wrapper contract every icon shares.
+            assert!(
+                svg.contains(r#"viewBox="0 0 24 24""#),
+                "{name} viewBox: {svg}"
+            );
+            assert!(
+                svg.contains(r#"width="16" height="16""#),
+                "{name} size: {svg}"
+            );
+            assert!(
+                svg.contains(r#"stroke="currentColor""#),
+                "{name} stroke: {svg}"
+            );
+            assert!(
+                svg.contains(r#"stroke-width="2""#),
+                "{name} stroke-width: {svg}"
+            );
+            assert!(
+                svg.contains(r#"stroke-linecap="round""#),
+                "{name} linecap: {svg}"
+            );
+            assert!(
+                svg.contains(r#"stroke-linejoin="round""#),
+                "{name} linejoin: {svg}"
+            );
+            assert!(svg.contains(r#"fill="none""#), "{name} fill: {svg}");
+            // Decorative: the surrounding link carries the label.
+            assert!(
+                svg.contains(r#"aria-hidden="true""#),
+                "{name} aria-hidden: {svg}"
+            );
+            // Both arrows mirror in RTL, so a flipped pagination
+            // control stays internally consistent.
+            assert!(
+                svg.contains("rio-icon--directional"),
+                "{name} must be directional: {svg}"
+            );
+            // Each carries a shaft and a head — two paths.
+            assert_eq!(svg.matches("<path").count(), 2, "{name} geometry: {svg}");
+        }
+    }
+
+    /// Directional icons (`arrow-left`, `arrow-right`, `log-out`, …) carry the
     /// `rio-icon--directional` class so the CSS rule under
     /// `[dir="rtl"]` flips them horizontally without per-template
     /// boilerplate.
