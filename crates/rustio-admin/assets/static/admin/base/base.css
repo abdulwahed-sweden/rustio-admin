@@ -90,6 +90,16 @@ p { text-wrap: pretty; }
   unicode-bidi: isolate;
 }
 
+/* Directional icons mirror once in RTL. `icons.rs` marks arrows and
+   log-out with `rio-icon--directional`; symbol glyphs (home, users,
+   database) never carry it, because a mirrored house is just wrong.
+   This is the only transform applied to an icon anywhere in the
+   stylesheet, so a marked icon flips exactly once. */
+[dir="rtl"] .rio-icon--directional {
+  transform: scaleX(-1);
+  transform-origin: center;
+}
+
 code, pre, kbd, samp {
   font-family: var(--rio-font-mono);
 }

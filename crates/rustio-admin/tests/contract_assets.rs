@@ -165,6 +165,55 @@ fn every_css_import_resolves_to_a_file_on_disk() {
     assert!(checked > 0, "no @import found — did the manifest move?");
 }
 
+/// **Contract: directional icons mirror exactly once in RTL.**
+///
+/// `admin::icons` stamps `rio-icon--directional` onto arrows and
+/// `log-out` but not onto symbol glyphs. That marker is inert unless the
+/// stylesheet acts on it — which is how the Activity pagination shipped
+/// with arrows that never flipped. Two halves, asserted together:
+/// the rule exists, and it is the *only* icon mirror in the bundle, so a
+/// marked icon cannot be flipped twice back to its original hand.
+#[test]
+fn rtl_flips_directional_icons_exactly_once() {
+    let dir = assets_root().join("static/admin");
+    let manifest = fs::read_to_string(dir.join("admin.css")).expect("admin.css is readable");
+    let mut bundle = String::new();
+    for line in manifest.lines() {
+        if let Some(rest) = line.trim_start().strip_prefix("@import url(\"") {
+            let frag = &rest[..rest.find("\")").expect("terminated @import")];
+            bundle.push_str(&fs::read_to_string(dir.join(frag)).expect("fragment is readable"));
+            bundle.push('\n');
+        }
+    }
+
+    let rule_start = bundle
+        .find("[dir=\"rtl\"] .rio-icon--directional")
+        .expect("RTL mirror rule for .rio-icon--directional is missing from the bundle");
+    let block_end = bundle[rule_start..]
+        .find('}')
+        .expect("unterminated RTL mirror rule")
+        + rule_start;
+    let block = &bundle[rule_start..block_end];
+    assert!(
+        block.contains("scaleX(-1)"),
+        "the RTL rule must mirror horizontally; got: {block}"
+    );
+
+    // Exactly one horizontal mirror in the whole bundle. A second would
+    // flip a directional icon back to its LTR hand.
+    assert_eq!(
+        bundle.matches("scaleX(-1)").count(),
+        1,
+        "more than one scaleX(-1) in the bundle would double-mirror directional icons"
+    );
+    // The mirror must be gated on RTL; an ungated rule would flip LTR too.
+    assert_eq!(
+        bundle.matches(".rio-icon--directional").count(),
+        1,
+        ".rio-icon--directional must be styled in exactly one place"
+    );
+}
+
 #[test]
 fn the_admin_js_bundle_ships() {
     assert!(assets_root().join("static/admin.js").is_file());

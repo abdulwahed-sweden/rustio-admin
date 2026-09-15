@@ -1,17 +1,39 @@
 /* ============================================================
- * rustio-admin / pages / detail  —  tabbed detail (user_view) bits:
- * tabs, definition list, in-card section heading, timeline, badge.
+ * rustio-admin / pages / detail  —  the tabbed User detail page.
+ *
+ * Everything here except `.rio-form-inline` is used by
+ * `user_view.html` alone, so these rules are safe to shape for that
+ * page. They consume the shell and layout contract established for
+ * the admin: standard page measure, 24px card padding, the blue
+ * accent, and the neutral-black ink ramp.
  * ============================================================ */
 
-/* ---- Tabs ---- */
+/* ---- Page heading ---------------------------------------------
+   Identity at the inline start, Edit at the inline end, both inside
+   the page container — the action is aligned to the heading block,
+   never to the viewport. Long names and addresses wrap instead of
+   pushing the button off the row. */
+.rio-identity { min-inline-size: 0; }
+.rio-identity-name { overflow-wrap: anywhere; }
+.rio-identity-email { overflow-wrap: anywhere; }
+
+/* ---- Tabs ------------------------------------------------------
+   Flat and calm: a blue label plus a 2px indicator sitting on the
+   strip's own rule. No pill, no fill. The strip scrolls locally when
+   four tabs plus their counts no longer fit; the page never does. */
 .rio-tabs {
   display: flex;
   gap: var(--rio-space-4);
   border-block-end: 1px solid var(--rio-line);
-  margin-block: var(--rio-space-4) var(--rio-space-20);
+  margin-block: var(--rio-space-4) var(--rio-space-24);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
 }
+.rio-tabs::-webkit-scrollbar { display: none; }
 .rio-tab {
-  padding: 10px 16px;
+  padding: var(--rio-space-12) var(--rio-space-16);
+  flex: none;
   color: var(--rio-text-mute);
   text-decoration: none;
   font-size: var(--rio-text-14);
@@ -19,29 +41,80 @@
   border-block-end: 2px solid transparent;
   margin-block-end: -1px;
   white-space: nowrap;
+  transition: color var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-tab:hover { color: var(--rio-text-hi); }
-.rio-tab--active { color: var(--rio-rust); border-block-end-color: var(--rio-rust); }
+.rio-tab--active {
+  color: var(--rio-rust);
+  border-block-end-color: var(--rio-rust);
+  font-weight: var(--rio-weight-semibold);
+}
+/* Keep the ring inside the strip so scrolling never clips it. */
+.rio-tab:focus-visible { outline-offset: -2px; }
 
 /* ---- Detail card (a padded board) ---- */
-.rio-detail-card { padding: var(--rio-space-24); }
+.rio-detail-card { padding: var(--rio-card-pad-x); }
 
-/* ---- Definition list ---- */
-.rio-dl { display: grid; grid-template-columns: 190px 1fr; margin: 0; }
-.rio-dl dt {
-  padding: 11px 0;
-  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
-  text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-faint);
-  border-block-end: 1px solid var(--rio-line);
+/* ---- Definition list -------------------------------------------
+   A stable label column against a fluid value column, with one
+   continuous separator per row. Labels are dark and readable rather
+   than a faint mono eyebrow; values carry the page's ink. */
+.rio-dl {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: var(--rio-space-24);
+  margin: 0;
 }
-.rio-dl dd { padding: 11px 0; margin: 0; color: var(--rio-text-hi); border-block-end: 1px solid var(--rio-line); }
-.rio-dl dt:last-of-type, .rio-dl dd:last-of-type { border-block-end: 0; }
-@media (max-width: 600px) { .rio-dl { grid-template-columns: 1fr; } .rio-dl dt { border-block-end: 0; padding-block-end: 0; } }
+.rio-dl dt {
+  padding-block: var(--rio-space-12);
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-medium);
+  color: var(--rio-text-mute);
+  border-block-end: 1px solid var(--rio-line);
+  min-inline-size: 0;
+}
+.rio-dl dd {
+  padding-block: var(--rio-space-12);
+  margin: 0;
+  color: var(--rio-text-hi);
+  border-block-end: 1px solid var(--rio-line);
+  min-inline-size: 0;
+}
+.rio-dl dt:last-of-type,
+.rio-dl dd:last-of-type { border-block-end: 0; }
+
+/* Long single-token values (addresses, group lists, project fields)
+   wrap inside their column instead of widening the card. */
+.rio-dl-wrap { overflow-wrap: anywhere; }
+/* Timestamps: mono figures, wrap only at a sensible point. */
+.rio-dl-meta {
+  font-family: var(--rio-font-mono);
+  font-variant-numeric: lining-nums tabular-nums;
+  overflow-wrap: break-word;
+}
+
+/* Narrow: stack the label above its value on the canonical
+   breakpoint, and let the separator carry the whole pair. */
+@media (max-width: 760px) {
+  .rio-dl { grid-template-columns: 1fr; column-gap: 0; }
+  .rio-dl dt {
+    border-block-end: 0;
+    padding-block: var(--rio-space-12) 0;
+    font-size: var(--rio-text-13);
+  }
+  .rio-dl dd { padding-block: var(--rio-space-4) var(--rio-space-12); }
+}
 
 .rio-card-section {
   font-family: var(--rio-font-display); font-weight: var(--rio-weight-display);
   font-size: var(--rio-text-20); color: var(--rio-text-hi);
   margin: var(--rio-space-24) 0 var(--rio-space-12);
+}
+/* Recent activity is a section *within* the card: a hairline sets it
+   apart from the definition list without becoming a second card. */
+.rio-detail-card .rio-dl + .rio-card-section {
+  padding-block-start: var(--rio-space-24);
+  border-block-start: 1px solid var(--rio-line);
 }
 
 /* ---- Timeline (recent activity) ---- */
@@ -50,11 +123,34 @@
   padding-inline-start: var(--rio-space-16);
   border-inline-start: 2px solid var(--rio-line);
   font-size: var(--rio-text-14); color: var(--rio-text);
+  overflow-wrap: anywhere;
 }
-.rio-timeline-item .rio-meta { display: block; font-size: var(--rio-text-12); margin-block-end: 2px; }
+.rio-timeline-item .rio-meta { display: block; font-size: var(--rio-text-12); color: var(--rio-text-mute); margin-block-end: var(--rio-space-4); }
 .rio-timeline-item--create { border-inline-start-color: var(--rio-success); }
 .rio-timeline-item--delete { border-inline-start-color: var(--rio-danger); }
 .rio-timeline-item--update { border-inline-start-color: var(--rio-rust); }
+
+/* Pagination below a timeline — replaces the template's inline margin. */
+.rio-detail-pagination { margin-block-start: var(--rio-space-16); }
+
+/* ---- Detail tables (Permissions, Sessions) ---------------------
+   The shared `.rio-dtable` geometry, given the card's x-origin so the
+   first column lines up with the tabs and heading above it. Both
+   tables live inside `.rio-tablewrap`, so a wide row scrolls within
+   the card and never widens the page. */
+.rio-dtable--detail thead th,
+.rio-dtable--detail tbody td { padding-inline: var(--rio-card-pad-x); }
+.rio-dtable--detail tbody td { block-size: auto; padding-block: var(--rio-space-12); }
+
+.rio-cell-nowrap { white-space: nowrap; }
+/* A user agent is one long unbroken token. Cap it, ellipsise it, and
+   keep the full string in the DOM and in `title`. */
+.rio-cell-ua {
+  max-inline-size: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Status pills are owned canonically by components/data.css (§9: 15px / 700 /
    0.25rem 0.75rem). The neutral grey badge formerly defined here is .rio-pill--neutral
