@@ -8,7 +8,16 @@ leaves the alpha track.
 
 ## Unreleased
 
-*Nothing yet — work for the next release lands here.*
+### Removed
+
+- **`admin/includes/_field_errors.html` is no longer an embedded template.**
+  The partial was never rendered or `{% include %}`d — field errors are
+  emitted inline by `admin/includes/_form_field.html`, which owns the
+  `.rio-field-errors` markup. It survived the `rustio-admin-assets` crate
+  split (`80cf5ff`) as a carried-over orphan. `embedded_template_names()`
+  now returns 58 entries instead of 59, and
+  `rustio-admin override admin/includes/_field_errors.html` no longer
+  resolves. No rendered page changes.
 
 
 ## 0.33.1 — 2026-09-04

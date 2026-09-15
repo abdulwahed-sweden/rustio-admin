@@ -4857,7 +4857,7 @@ mod tests {
         // Every pill class must be one the CSS knows about. New
         // arms must use one of `badge-success / badge-neutral /
         // badge-danger / badge-warning` — see
-        // `assets/static/admin.css` for the rio-pill-- definitions.
+        // `assets/static/admin/admin.css` for the rio-pill-- definitions.
         let known_strings: &[&str] = &[
             "create",
             "update",

@@ -8,7 +8,7 @@ decision, not an archaeology dig.
 
 The module is built and tested; these are the parts that exist in the spec/types
 but have no runtime consumer yet, plus the gaps to close when the layer grows up.
-None of these block trying the tool today (see `examples/shop/seeds/viewspec_customers.sql`).
+None of these block trying the tool today (see `examples/shop/seeds/viewspec_payment_methods.sql`).
 
 ### 1. A real adaptive `Table` mode (with column headers)
 - **Now:** `ViewMode::Table` falls back to the legacy table; the adaptive path

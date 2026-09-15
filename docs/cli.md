@@ -52,6 +52,7 @@ feature. Generated projects always target Rust 1.94.
 | `add field <Model> <name> <type>`      | Record an `add_field` event in the Builder log              |
 | `plan`                                 | Show the diff `commit` would apply (read-only)              |
 | `commit`                               | Apply the Builder plan atomically                           |
+| `import <schema.json>`                 | Import a schema.json into the Builder draft (no AI)         |
 | `help`                                 | Show available commands                                     |
 
 ## Examples

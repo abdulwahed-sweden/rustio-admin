@@ -24,7 +24,7 @@
 <!--
   REQUIRED if this PR modifies any of:
 
-    - crates/rustio-admin/assets/static/admin.css
+    - crates/rustio-admin/assets/static/admin/admin.css
     - any file containing --rio-* token definitions
     - font-family declarations or @font-face blocks
     - any :root { ... } block in framework or downstream-installed CSS

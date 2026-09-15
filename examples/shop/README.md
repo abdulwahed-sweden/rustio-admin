@@ -5,13 +5,15 @@ product catalog, customers, orders with line items and payments, and
 addresses — nine related models wired together with inline relations,
 validation, and a custom navy + amber theme.
 
-It is one of two examples in this repo:
+It is one of three examples in this repo:
 
 - **`examples/shop`** (this one) — a single-crate project that
   **path-deps the in-repo framework**, so it always builds against the
   current source. Start here to see a real admin end-to-end.
 - **`examples/clinic`** — the canonical multi-crate reference that pins
   the *published* crate (the shape `rustio-admin new` scaffolds).
+- **`examples/translation-agency`** — the smaller single-crate worked
+  example the docs are written against (interpreter/translation dispatch).
 
 To run it: copy `.env.example` to `.env`, then follow the steps below.
 Everything below is the project's own guide; `GETTING_STARTED.md` is a

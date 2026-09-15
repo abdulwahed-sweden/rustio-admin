@@ -855,11 +855,11 @@ The checks live alongside the existing Tier-2-symbol guard in
 
 ```sh
 # Exactly one function definition writing to history.jsonl:
-git grep -nE 'fn[[:space:]]+append.*history\.jsonl' -- crates/rustio-admin-cli/src/history.rs
+git grep -nE 'fn[[:space:]]+append.*history\.jsonl' -- crates/rustio-admin-cli/src/builder/history.rs
 
 # No other file constructs a write handle to history.jsonl:
 git grep -nE 'OpenOptions.*append|File::create.*history\.jsonl' -- crates/rustio-admin-cli/src/ \
-  | grep -v 'crates/rustio-admin-cli/src/history.rs' \
+  | grep -v 'crates/rustio-admin-cli/src/builder/history.rs' \
   | wc -l   # must be 0
 ```
 
@@ -886,7 +886,7 @@ git grep -nE 'audit[[:space:]]*=[[:space:]]*false' -- '*.toml' 'crates/' 'exampl
 
 ```sh
 git grep -nE 'toml::to_string|toml_edit::.*to_string' -- crates/rustio-admin-cli/src/ \
-  | grep -v 'crates/rustio-admin-cli/src/toml.rs' \
+  | grep -v 'crates/rustio-admin-cli/src/builder/toml_canon.rs' \
   | wc -l   # must be 0
 ```
 
@@ -894,7 +894,7 @@ git grep -nE 'toml::to_string|toml_edit::.*to_string' -- crates/rustio-admin-cli
 
 ```sh
 git grep -nE 'fn[[:space:]]+redact' -- crates/rustio-admin-cli/src/ \
-  | grep -v 'crates/rustio-admin-cli/src/redact.rs' \
+  | grep -v 'crates/rustio-admin-cli/src/builder/redact.rs' \
   | wc -l   # must be 0
 ```
 

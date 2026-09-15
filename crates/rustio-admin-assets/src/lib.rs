@@ -51,10 +51,6 @@ pub const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         "admin/includes/_form_field.html",
         include_str!("../assets/templates/admin/includes/_form_field.html"),
     ),
-    (
-        "admin/includes/_field_errors.html",
-        include_str!("../assets/templates/admin/includes/_field_errors.html"),
-    ),
     // Generic pages
     (
         "admin/login.html",

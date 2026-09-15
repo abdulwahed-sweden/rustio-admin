@@ -352,7 +352,7 @@ Groups come from operational need.
 
 ## 8. Token ownership
 
-`crates/rustio-admin/assets/static/admin.css` is the single
+`crates/rustio-admin/assets/static/admin/admin.css` is the single
 source of truth for the framework's design tokens. Three
 canonical sections live there, each marked with a banner
 comment so a diff in those blocks is visually loud:
@@ -521,7 +521,7 @@ Concretely:
 Any PR that touches one of the following triggers the
 **Token disclosure** section of the PR template:
 
-- `crates/rustio-admin/assets/static/admin.css`
+- `crates/rustio-admin/assets/static/admin/admin.css`
 - Any file containing `--rio-*` token definitions
 - Font family declarations / `@font-face` blocks
 - Any `:root { ... }` block
@@ -572,7 +572,7 @@ Carry from the design doctrine. Do not re-litigate.
 | Size ladder | Owned by VISUAL-CONTRACT.md §2 (16px body, 14px floor, 36px titles) | Project class wrappers; no token redefinition |
 | Spacing scale | `--rio-s1` (4px) → `--rio-s7` (48px) | Same |
 | Project token prefix | `--bsk-*` / `--app-*` / `--<project>-*` | None — convention |
-| Token authority | `crates/rustio-admin/assets/static/admin.css` | None — single source of truth |
+| Token authority | `crates/rustio-admin/assets/static/admin/admin.css` | None — single source of truth |
 | Branch policy | One canonical branch (`main`). Feature branches converge | None — operational |
 
 
