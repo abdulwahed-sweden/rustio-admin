@@ -254,3 +254,8 @@
 /* Empty-state call to action — replaces the inline margin the users
    list used to carry. */
 .rio-empty-cta { margin-block-start: var(--rio-space-16); }
+
+/* Board footer text and a centred empty board (dashboard "no models"). */
+.rio-board-foot-text { font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-board-foot-text strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); }
+.rio-board--center { padding: var(--rio-space-48) var(--rio-card-pad-x); text-align: center; }

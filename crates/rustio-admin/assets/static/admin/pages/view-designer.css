@@ -122,7 +122,16 @@
 .rio-brand-color { inline-size: 48px; block-size: 38px; padding: 0; border: 1px solid var(--rio-line-strong); border-radius: var(--rio-radius-sm); background: none; cursor: pointer; }
 .rio-brand-hex { inline-size: 9rem; }
 .rio-brand-presets { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); }
-.rio-brand-preset { inline-size: 24px; block-size: 24px; padding: 0; border-radius: var(--rio-radius-pill); border: 2px solid var(--rio-surface); box-shadow: 0 0 0 1px var(--rio-line-strong); background: var(--sw); cursor: pointer; transition: transform var(--rio-dur-fast) var(--rio-ease); }
+.rio-brand-preset { inline-size: 24px; block-size: 24px; padding: 0; border-radius: var(--rio-radius-pill); border: 2px solid var(--rio-surface); box-shadow: 0 0 0 1px var(--rio-line-strong); background: var(--sw, var(--rio-line-strong)); cursor: pointer; transition: transform var(--rio-dur-fast) var(--rio-ease); }
+/* The six shipped presets. Named modifiers rather than an inline
+   `--sw` declaration, so the template carries no style attribute.
+   These are brand sample colours, not interface tokens. */
+.rio-brand-preset--rust   { --sw: #B84318; }
+.rio-brand-preset--ocean  { --sw: #0F6890; }
+.rio-brand-preset--forest { --sw: #2E7D5B; }
+.rio-brand-preset--sunset { --sw: #C9572E; }
+.rio-brand-preset--patina { --sw: #0E6B5B; }
+.rio-brand-preset--mono   { --sw: #1A1A1A; }
 .rio-brand-preset:hover { transform: scale(1.12); }
 .rio-brand-samples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-12); }
 

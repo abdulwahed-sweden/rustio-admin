@@ -1,4 +1,6 @@
 {% extends "admin/_base.html" %}
+{# A reading/detail page: the standard measure. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ index_title }}</span></nav>
@@ -52,11 +54,11 @@
     </tbody>
   </table>
   <div class="rio-board-foot">
-    <span style="font-size:var(--rio-text-13);color:var(--rio-text-mute)">Showing <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_models }}</strong> model{% if total_models != 1 %}s{% endif %} · <strong style="color:var(--rio-text-hi);font-weight:600">{{ total_rows }}</strong> row{% if total_rows != 1 %}s{% endif %} total</span>
+    <span class="rio-board-foot-text">Showing <strong>{{ total_models }}</strong> model{% if total_models != 1 %}s{% endif %} · <strong>{{ total_rows }}</strong> row{% if total_rows != 1 %}s{% endif %} total</span>
   </div>
 </div>
 {% else %}
-<div class="rio-board" style="padding:48px 24px;text-align:center">
+<div class="rio-board rio-board--center">
   <div class="rio-empty">
     {{ icon("database") }}
     <div class="rio-empty-title">No models registered yet</div>
