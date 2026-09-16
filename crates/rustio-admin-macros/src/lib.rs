@@ -263,11 +263,13 @@ fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
                 // ISO-8601 form with `T` separator. This is the exact
                 // wire format `<input type="datetime-local">` expects
                 // (`%Y-%m-%dT%H:%M`); the form-render path puts this
-                // string straight into the input's `value=` attribute.
-                // The list path detects the same shape (16 chars, `T`
-                // at index 10) and splits it into the two-line cell
-                // layout. NOTE: `datetime-local` cannot encode timezone;
-                // we surface UTC values directly.
+                // string straight into the input's `value=` attribute,
+                // which is why the shape is fixed here rather than
+                // chosen for readability. The list page reformats it
+                // for display in `render::humanise_timestamp_cell`.
+                // NOTE: `datetime-local` cannot encode timezone; we
+                // surface UTC values directly, and the list page says
+                // so by appending `UTC`.
                 out.push((#fname_str.to_string(), self.#fname.format("%Y-%m-%dT%H:%M").to_string()));
             },
             FieldKind::OptionalDateTime => quote! {

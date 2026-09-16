@@ -1292,6 +1292,51 @@ fn push_html_escaped_str(out: &mut String, s: &str) {
     }
 }
 
+/// Turn a list cell's machine-shaped timestamp into something a
+/// person reads: `2026-09-04T02:01` → `2026-09-04 02:01 UTC`.
+///
+/// `AdminModel::display_values` emits `%Y-%m-%dT%H:%M` for every
+/// `DateTime` column, and it has to: the same method feeds the change
+/// form, where the string goes straight into an
+/// `<input type="datetime-local">` `value=` attribute, and that
+/// element accepts no other shape. The list page has no such
+/// constraint, so it reformats on the way out — one place, after the
+/// row is already fetched, no extra query.
+///
+/// The `UTC` suffix is not decoration. `datetime-local` cannot encode
+/// a zone, so the stored value is surfaced as UTC without saying so
+/// anywhere on the list page; the built-in user and session pages
+/// already print `%Y-%m-%d %H:%M UTC`, and this brings project models
+/// into line with them.
+///
+/// Anything that is not exactly the expected shape is returned
+/// untouched — an empty `Option<DateTime>` cell stays empty, and a
+/// column that somehow carries free text still renders its text
+/// rather than being mangled into a half-formatted date.
+fn humanise_timestamp_cell(cell: &str) -> String {
+    // `%Y-%m-%dT%H:%M` is exactly 16 bytes with `T` at index 10 and
+    // `-`/`:` at the other fixed positions. Checking the shape by hand
+    // beats a parse-and-reformat round trip on every cell of every row.
+    let b = cell.as_bytes();
+    let shaped = b.len() == 16
+        && b[10] == b'T'
+        && b[4] == b'-'
+        && b[7] == b'-'
+        && b[13] == b':'
+        && b.iter()
+            .enumerate()
+            .all(|(i, c)| matches!(i, 4 | 7 | 10 | 13) || c.is_ascii_digit());
+    if !shaped {
+        return cell.to_string();
+    }
+    let mut out = String::with_capacity(20);
+    out.push_str(&cell[..10]);
+    out.push(' ');
+    out.push_str(&cell[11..]);
+    out.push_str(" UTC");
+    out
+}
+
 /// Wrap every occurrence of `term` inside `text` with `<mark>…</mark>`,
 /// HTML-escaping the rest. Returns `None` when the term doesn't
 /// appear at all so the caller can keep using the plain-string
@@ -1977,12 +2022,34 @@ pub(crate) fn list_ctx(
                         if *name == "id" {
                             continue;
                         }
+                        // `display_values()` emits timestamps in the
+                        // `<input type="datetime-local">` wire format
+                        // (`%Y-%m-%dT%H:%M`) because the SAME method
+                        // feeds the change form, which needs that shape
+                        // verbatim in its `value=` attribute. A reader
+                        // should not have to parse a `T`, so the list
+                        // page — and only the list page — humanises it
+                        // here. See `humanise_timestamp_cell`.
+                        let is_timestamp = matches!(
+                            field_types.get(i),
+                            Some(
+                                crate::admin::FieldType::DateTime
+                                    | crate::admin::FieldType::OptionalDateTime
+                            )
+                        );
+                        let cell = if is_timestamp {
+                            humanise_timestamp_cell(&cell)
+                        } else {
+                            cell
+                        };
                         // Build the highlight HTML BEFORE moving `cell`
                         // into the typed value below. Only emit a
                         // fragment when the column was actually scanned
                         // by the search clause AND at least one match
                         // landed; otherwise the template falls back to
-                        // the plain string path.
+                        // the plain string path. Runs on the humanised
+                        // string so the highlighted and plain renderings
+                        // of one cell never disagree.
                         if let Some(term) = &search_term_for_highlight {
                             let is_bool =
                                 matches!(field_types.get(i), Some(crate::admin::FieldType::Bool));
@@ -4649,6 +4716,43 @@ pub(crate) fn must_change_password_form_sections(min_length: usize) -> Vec<FormS
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The list page must not show operators the `datetime-local`
+    /// wire format. `display_values` has to emit it — the change form
+    /// puts that exact string in an `<input value=>` — so the list
+    /// path reformats instead, and the UTC suffix names the zone the
+    /// value was always in.
+    #[test]
+    fn a_timestamp_cell_reads_as_a_date_not_a_wire_format() {
+        assert_eq!(
+            humanise_timestamp_cell("2026-09-04T02:01"),
+            "2026-09-04 02:01 UTC"
+        );
+        assert_eq!(
+            humanise_timestamp_cell("1999-12-31T23:59"),
+            "1999-12-31 23:59 UTC"
+        );
+    }
+
+    /// Anything that is not exactly `%Y-%m-%dT%H:%M` passes through
+    /// untouched. An `Option<DateTime>` that is `None` renders as an
+    /// empty cell, and a value that somehow is not a timestamp still
+    /// shows what it holds rather than a half-rewritten string.
+    #[test]
+    fn a_cell_that_is_not_that_shape_is_left_alone() {
+        for odd in [
+            "",                    // Option<DateTime>::None
+            "2026-09-04",          // date only — a NaiveDate column
+            "02:01",               // time only
+            "2026-09-04T02:01:33", // seconds — 19 chars, not our shape
+            "2026-09-04 02:01",    // already humanised; not re-suffixed
+            "not a timestamp",
+            "2026-09-04X02:01", // right length, wrong separator
+            "20A6-09-04T02:01", // right shape, non-digit in the year
+        ] {
+            assert_eq!(humanise_timestamp_cell(odd), odd, "mangled {odd:?}");
+        }
+    }
 
     /// `humanise_field` and its macro-side mirror must produce
     /// identical output. This battery pins the contract; if a
