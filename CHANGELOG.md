@@ -428,6 +428,21 @@ route, auth, permission, or migration change to existing models.
   dense-button sizing) are deferred as contract-level decisions.
 
 ### Fixed
+- **List pages no longer show raw `datetime-local` wire format.** Timestamp
+  columns rendered as `2026-09-04T02:01` — the shape
+  `<input type="datetime-local">` requires in its `value=` attribute. Because
+  `AdminModel::display_values` feeds *both* the change form and the list page,
+  the format could not simply be changed at the macro; the list path now
+  reformats on the way out (`render::humanise_timestamp_cell`) to
+  `2026-09-04 02:01 UTC`, matching the built-in user and session pages. The
+  `UTC` suffix names a zone that was previously implicit: `datetime-local`
+  cannot encode one, so the stored value was always surfaced as UTC without
+  saying so. The change form still receives the `T` form verbatim and its
+  round-trip is unchanged; cells that are not exactly `%Y-%m-%dT%H:%M` — an
+  empty `Option<DateTime>`, a date-only column — pass through untouched. The
+  macro comment claiming the list path split this into a two-line cell
+  described code that was never written; it is corrected to point at the
+  reformatter.
 - **Primary buttons rendered as links no longer lose their label on hover.**
   Link-style buttons (e.g. the list page's “＋ Add &lt;model&gt;”, which is an
   `<a class="rio-btn rio-btn--primary">`) were hit by the global content-link
