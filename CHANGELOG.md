@@ -321,6 +321,19 @@ route, auth, permission, or migration change to existing models.
 ## [Unreleased]
 
 ### Changed
+- **Admin: the page header is one white surface.** The region carrying the
+  breadcrumb, title, supporting text and page-level actions now renders as a
+  card on `--rio-surface`, matching `.rio-board` / `.rio-card` (same
+  `--rio-line` hairline, `--rio-radius-xl`, `--rio-shadow-sm`,
+  `--rio-card-pad-x`), with its inline edges flush to the table, form or card
+  below. Applied centrally in the new `components/page-header.css` to both
+  shared header contracts — `.rio-page-header` and the unwrapped
+  `.rio-crumbs` + `.rio-masthead-top` pair — so every console page inherits
+  it without a per-page edit. Height stays content-driven; on narrow screens
+  the title block and actions stack inside the surface. Signed-out auth pages
+  and the error/forbidden pages are unaffected.
+  `csv_import_result.html` swaps its page-local `.pgx-head` / `.pgx-title`
+  header for `.rio-page-header` so it inherits the same treatment.
 - **CLI: `translation-agency` scaffold preset; the empty `school`/`inventory`
   project types are dropped.** `rustio-admin new` (choose *translation-agency*)
   and `startproject --preset translation-agency` now scaffold a working dispatch
@@ -439,6 +452,12 @@ route, auth, permission, or migration change to existing models.
   tokens; markup/CSS unchanged (the `aria-current` styling already existed).
 
 ### Added
+- **Token — `--rio-page-narrow` (920px)** and the matching
+  `.rio-page--narrow` page measure, for reading pages whose content is
+  deliberately narrower than the console. Account sessions
+  (`/admin/account/sessions`) adopts it, replacing two hand-repeated
+  `max-inline-size: 920px` caps on `.rio-sess-list` / `.rio-sess-bulk`, so
+  the page header and the session cards share one set of inline edges.
 - **`schema.json` import (Studio Phase 4 — deterministic genesis).** New
   `rustio-admin import <schema.json>` loads a schema document into the Builder
   draft: it validates the whole contract first (a `models` array of

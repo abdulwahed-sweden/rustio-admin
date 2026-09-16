@@ -205,6 +205,7 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
   min-inline-size: 0;
 }
 .rio-ws-inner.rio-page--wide { max-inline-size: var(--rio-page-wide); }
+.rio-ws-inner.rio-page--narrow { max-inline-size: var(--rio-page-narrow); }
 .rio-ws-inner.rio-page--form {
   max-inline-size: var(--rio-page-form);
   inline-size: calc(100% - 32px);
