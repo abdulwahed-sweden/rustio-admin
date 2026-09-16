@@ -86,7 +86,7 @@
 <div class="rio-masthead-top">
   <div>
     <h1>{{ display_name }}</h1>
-    <p class="rio-masthead-desc">Every {{ singular_name|lower }} rustio generated for {{ app_name }} — searchable, sortable, production-ready.</p>
+    <p class="rio-masthead-desc">All {{ display_name|lower }} in {{ app_name }}.</p>
   </div>
   <div class="rio-masthead-cta">
     <a class="rio-btn rio-btn--secondary rio-btn--md" href="{{ csv_export_url }}" download>{{ icon("download") }} Export</a>
@@ -142,7 +142,7 @@
 
   {% if per_page_options %}
   <div class="rio-dropdown" data-rio-dropdown>
-    <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("table") }} {{ current_per_page_label }} / page {{ icon("chevron-down", class="rio-chev") }}</button>
+    <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("table") }} {{ current_per_page_label }} {{ icon("chevron-down", class="rio-chev") }}</button>
     <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Rows per page"><div class="rio-dropdown-section"><div class="rio-chip-row">{% for opt in per_page_options %}<a href="{{ opt.link }}" class="rio-chip{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>{% endfor %}</div></div></div>
   </div>
   {% endif %}
