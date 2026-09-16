@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FixShop</title>
+  <style>
+    :root { --brand: #b45309; --text: #1f2937; --muted: #6b7280; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      max-width: 640px; margin: 0 auto; padding: 4rem 1.5rem;
+      color: var(--text); line-height: 1.6; background: #fafafa; font-size: 15px;
+    }
+    h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+    p.lede { color: var(--muted); margin: 0 0 2rem; }
+    ol { padding-left: 1.2rem; }
+    li { margin: .4rem 0; }
+    code { background: #f1f1f1; padding: .1rem .35rem; border-radius: 3px; font-size: .9em; }
+    a.cta {
+      display: inline-block; margin-top: 1.5rem; padding: .6rem 1.1rem;
+      background: var(--brand); color: #fff; text-decoration: none; border-radius: 6px;
+    }
+    footer { margin-top: 3rem; color: var(--muted); font-size: .85em; }
+  </style>
+</head>
+<body>
+  <h1>FixShop</h1>
+  <p class="lede">A repair shop, run from the admin panel.</p>
+
+  <p>An item comes in, gets diagnosed, gets a price. The customer says
+  yes or no. If yes, it gets fixed and picked up.</p>
+
+  <ol>
+    <li><strong>Front desk</strong> books the item in and records what the customer said.</li>
+    <li><strong>Technician</strong> diagnoses, quotes, and repairs.</li>
+    <li><strong>Owner</strong> can do all of it, plus edit quotes and delete.</li>
+  </ol>
+
+  <p>A job cannot move to <em>in progress</em> until its quote is
+  approved. Jobs past their promised date sit at the top of the list.</p>
+
+  <a class="cta" href="/admin">Open the admin</a>
+
+  <footer>Built with rustio-admin. See <code>README.md</code> for the sign-in accounts.</footer>
+</body>
+</html>
