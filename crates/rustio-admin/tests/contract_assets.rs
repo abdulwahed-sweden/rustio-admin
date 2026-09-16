@@ -219,6 +219,49 @@ fn the_admin_js_bundle_ships() {
     assert!(assets_root().join("static/admin.js").is_file());
 }
 
+// ---- 4. the shared page-header contract -----------------------------------
+
+/// The console carries two page-header shapes. `.rio-page-header` wraps its
+/// own content, so `components/page-header.css` can style it as one box.
+/// The other shape — `.rio-crumbs` followed by `.rio-masthead-top` — has no
+/// wrapper, so that fragment caps the two halves (top corners on the crumbs,
+/// bottom corners on the masthead) to render them as one surface.
+///
+/// That capping is unconditional, which is only safe while the two classes
+/// are a matched pair: every template carrying one carries the other,
+/// exactly once. A template that grew a lone `.rio-crumbs` would render an
+/// open-bottomed box, and a lone `.rio-masthead-top` an open-topped one.
+/// Neither is a compile error, and neither shows up in a unit test — hence
+/// this check.
+#[test]
+fn the_page_header_halves_are_a_matched_pair() {
+    let mut checked = 0usize;
+    for name in embedded_template_names().iter() {
+        let src = embedded_template_source(name).expect("listed template resolves");
+        let crumbs = src.matches("\"rio-crumbs\"").count();
+        let masthead = src.matches("\"rio-masthead-top\"").count();
+        if crumbs == 0 && masthead == 0 {
+            continue;
+        }
+        assert_eq!(
+            crumbs, masthead,
+            "{name} has {crumbs} `rio-crumbs` and {masthead} `rio-masthead-top` — \
+             the page-header halves must appear together or the capped surface \
+             renders with an open edge (see components/page-header.css)"
+        );
+        assert_eq!(
+            crumbs, 1,
+            "{name} repeats the page-header pair {crumbs} times; the capped \
+             surface assumes one header per page"
+        );
+        checked += 1;
+    }
+    assert!(
+        checked > 0,
+        "no template uses the crumbs/masthead header — did the contract move?"
+    );
+}
+
 /// A unique scratch directory under the target dir. Avoids a dev-dependency
 /// on `tempfile` for three call sites.
 fn tempdir() -> PathBuf {

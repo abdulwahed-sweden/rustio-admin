@@ -6,10 +6,6 @@
  # data. Scoped under `.imp`; amber via the accent2 fallback. #}
 {% block extra_head %}
 <style>
-  .pgx-head { margin-bottom: var(--rio-s5); }
-  .pgx-head__row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--rio-s4); flex-wrap: wrap; }
-  .pgx-title { font-size: var(--rio-fs-display); font-weight: var(--rio-fw-bold); line-height: var(--rio-lh-tight); color: var(--rio-text-strong); margin-top: var(--rio-s1); }
-
   .imp-summary { display: flex; align-items: center; gap: var(--rio-s2); margin-top: var(--rio-s3); flex-wrap: wrap; color: var(--rio-text-muted); font-size: var(--rio-fs-md); }
   .imp-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); padding: 0.2rem 0.6rem; border-radius: 999px; }
   .imp-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -52,12 +48,10 @@
 {# A reading/detail page: the standard measure. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
-<header class="pgx-head">
-  <div class="pgx-head__row">
-    <div>
-      <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <a href="/admin/{{ admin_name }}">{{ display_name }}</a> · <span>CSV import</span></nav>
-      <h1 class="pgx-title">Import complete</h1>
-    </div>
+<header class="rio-page-header">
+  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <a href="/admin/{{ admin_name }}">{{ display_name }}</a> · <span>CSV import</span></nav>
+  <div class="rio-page-actions">
+    <h1>Import complete</h1>
     <a class="rio-btn rio-btn--subtle rio-btn--md" href="/admin/{{ admin_name }}">← Back to {{ display_name }}</a>
   </div>
   <div class="imp-summary">

@@ -1,0 +1,119 @@
+/* ==========================================================================
+   Page header — the shared white surface at the top of every console page.
+   ==========================================================================
+
+   The region that carries breadcrumb → title → supporting text → page-level
+   actions. It reads as one card, matching `.rio-board` / `.rio-card`: the
+   same `--rio-surface` ground, the same `--rio-line` hairline, the same
+   `--rio-radius-xl` corners, the same `--rio-shadow-sm`, and the canonical
+   `--rio-card-pad-x` x-origin, so the header's edges line up with the table
+   or form card directly beneath it.
+
+   TWO MARKUP SHAPES, ONE SURFACE
+   ------------------------------
+   The console grew two header contracts and both are in active use:
+
+     A. `.rio-page-header` (12 templates) — already a single wrapping
+        `<header>` around `.rio-breadcrumbs`, `h1`, `.rio-page-header__lead`
+        and `.rio-page-actions`. One box, styled directly.
+
+     B. `.rio-crumbs` + `.rio-masthead-top` (27 templates) — the same content
+        as two ADJACENT SIBLINGS with no wrapper. Rather than add a wrapper
+        element to 27 templates, the two halves are capped so they render as
+        one continuous surface: crumbs take the top corners and lose their
+        bottom margin, the masthead takes the bottom corners, and both carry
+        the inline hairlines. The join is invisible because the masthead
+        paints its own `--rio-surface` background over the crumbs' 1px
+        shadow (later sibling, later paint).
+
+   The two classes in shape B are a matched pair — every template that has
+   one has the other, exactly once — enforced by
+   `contract_assets::the_page_header_halves_are_a_matched_pair`, which is
+   what makes the unconditional capping below safe.
+
+   CASCADE
+   -------
+   Imported after `components/navigation.css` so the `.rio-crumbs`
+   bottom-margin reset wins on source order at equal specificity. Nothing
+   in `layout/` or `pages/` sets background, border, radius, padding or
+   box-shadow on these selectors, so no later fragment is overridden —
+   only `pages/list.css` touches `.rio-masthead-top`, and only its
+   `margin-block-end`, which is the gap BELOW the surface and is
+   deliberately left alone.
+
+   HEIGHT IS CONTENT-DRIVEN
+   ------------------------
+   No height, no min-height. A page with no description, several
+   breadcrumbs, a long title or a row of actions sizes itself.
+   ========================================================================== */
+
+/* ---- Shape A: the wrapped header ---------------------------------------- */
+
+.rio-page-header {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-xl);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+  padding: var(--rio-space-20) var(--rio-card-pad-x);
+}
+
+/* ---- Shape B: the sibling pair, capped into one surface ----------------- */
+
+.rio-crumbs,
+.rio-masthead-top {
+  background: var(--rio-surface);
+  border-inline-start: 1px solid var(--rio-line);
+  border-inline-end: 1px solid var(--rio-line);
+  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+}
+
+.rio-crumbs {
+  border-block-start: 1px solid var(--rio-line);
+  /* Logical corner properties keep the cap on the correct side in RTL. */
+  border-start-start-radius: var(--rio-radius-xl);
+  border-start-end-radius: var(--rio-radius-xl);
+  padding: var(--rio-space-20) var(--rio-card-pad-x) 0;
+  /* Closes the gap to the masthead so the two halves read as one box.
+     Overrides the s3 breadcrumb rhythm in components/navigation.css. */
+  margin-block-end: 0;
+}
+
+.rio-masthead-top {
+  border-block-end: 1px solid var(--rio-line);
+  border-end-start-radius: var(--rio-radius-xl);
+  border-end-end-radius: var(--rio-radius-xl);
+  /* Top padding is the breadcrumb → title rhythm; the crumbs half already
+     paid the surface's top inset. */
+  padding: var(--rio-space-12) var(--rio-card-pad-x) var(--rio-space-20);
+}
+
+/* The masthead's own `margin-block-end` (layout/console.css, and the
+   narrower `--rio-space-24` that pages/list.css sets for wide pages) is
+   the deliberate gap between this surface and the filter bar, table or
+   form below it. It is intentionally not touched here. */
+
+/* ---- Narrow screens ------------------------------------------------------
+   The title block and the action row stack inside the same surface instead
+   of overflowing it. `align-items: stretch` lets full-width buttons fill
+   the measure; `flex-wrap` on the CTA row keeps several actions tidy. */
+
+@media (max-width: 760px) {
+  .rio-crumbs,
+  .rio-masthead-top,
+  .rio-page-header {
+    padding-inline: var(--rio-space-16);
+  }
+
+  .rio-masthead-top,
+  .rio-page-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--rio-space-16);
+  }
+
+  .rio-masthead-cta,
+  .rio-page-actions {
+    flex-wrap: wrap;
+    padding-block-start: 0;
+  }
+}

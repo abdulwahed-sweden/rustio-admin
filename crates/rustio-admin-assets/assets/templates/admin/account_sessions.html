@@ -1,6 +1,8 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
-{% block page_measure %}rio-page--standard{% endblock %}
+{# A reading page whose cards are deliberately narrower than the console.
+ # The measure lives here, not on `.rio-sess-list`, so the page header and
+ # the session cards share one set of inline edges. #}
+{% block page_measure %}rio-page--narrow{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Active sessions</span></nav>
 <div class="rio-masthead-top"><div>

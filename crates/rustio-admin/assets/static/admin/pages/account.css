@@ -15,9 +15,7 @@
 .rio-page-header { margin-block-end: var(--rio-space-32); }
 .rio-page-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--rio-space-16); }
 /* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
-.rio-page-header__lead, .pgx-lead { color: var(--rio-text); margin: var(--rio-space-16) 0 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
-.pgx-head { margin-block-end: var(--rio-space-20); }
-.pgx-title { margin: var(--rio-space-4) 0 0; }
+.rio-page-header__lead { color: var(--rio-text); margin: var(--rio-space-16) 0 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
 
 /* ---- Card -> padded board ---- */
 .rio-card {
@@ -57,7 +55,9 @@
 .rio-backup-codes .rio-code-block { display: block; text-align: center; }
 
 /* ---- Active-sessions list (rewritten account_sessions) ---- */
-.rio-sess-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-16); max-inline-size: 920px; }
+/* Width comes from the page measure (`rio-page--narrow`), not from here —
+   that is what keeps the session cards flush with the page header above. */
+.rio-sess-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-16); }
 .rio-sess-card { position: relative; background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); padding: var(--rio-space-20); }
 .rio-sess-card--current { border-color: var(--rio-rust); box-shadow: inset 3px 0 0 var(--rio-rust), var(--rio-shadow-sm); }
 .rio-sess-top { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-16); }
@@ -72,7 +72,7 @@
 .rio-sess-meta dd { margin: 2px 0 0; font-size: var(--rio-text-14); color: var(--rio-text); font-variant-numeric: tabular-nums; }
 .rio-sess-foot { margin-block-start: var(--rio-space-16); padding-block-start: var(--rio-space-16); border-block-start: 1px solid var(--rio-line); display: flex; align-items: center; }
 .rio-sess-note { color: var(--rio-text-faint); font-size: var(--rio-text-14); }
-.rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); margin-block-start: var(--rio-space-20); max-inline-size: 920px; }
+.rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); margin-block-start: var(--rio-space-20); }
 /* Per-session revoke — pushed to the row's end, danger-tinted label. */
 .rio-sess-revoke { margin-inline-start: auto; }
 .rio-sess-revoke .rio-btn { color: var(--rio-danger); }

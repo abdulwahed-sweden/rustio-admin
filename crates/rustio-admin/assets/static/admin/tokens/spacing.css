@@ -36,6 +36,10 @@
 
   --rio-page-wide:       1480px; /* lists, tables, reports, bulk surfaces */
   --rio-page-standard:   1120px; /* default page measure */
+  --rio-page-narrow:      920px; /* reading pages whose content is
+                                   deliberately narrower than the console:
+                                   account sessions, and anything else that
+                                   caps itself rather than filling the column */
   --rio-page-form:        672px; /* forms, confirmations, reading */
 
   --rio-card-pad-x:      var(--rio-space-24); /* 24 — one x-origin per card */
