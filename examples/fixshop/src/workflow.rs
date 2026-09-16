@@ -212,9 +212,50 @@ pub fn run<'a>(
         }
 
         let label = label_for(action);
-        Ok(BulkActionResult::partial(moved, failed)
-            .with_message(format!("{label}: {moved} of {} jobs moved", ids.len())))
+        let message = summary_line(label, moved, ids.len(), &failed);
+        Ok(BulkActionResult::partial(moved, failed).with_message(message))
     })
+}
+
+/// How many refusal reasons to spell out in the audit summary before
+/// collapsing the rest into a count. The full list always survives in
+/// `metadata.failure_reasons`; this cap only keeps the one-line
+/// summary on `/admin/history` readable when someone selects the whole
+/// list and presses a button that most rows cannot take.
+const REASONS_IN_SUMMARY: usize = 3;
+
+/// Build the operator-facing line for one bulk submission.
+///
+/// The framework uses `BulkActionResult.message` verbatim as the audit
+/// row's `summary`, which is the text `/admin/history` renders — so
+/// folding the refusal reasons in here is what makes them readable
+/// there. `metadata.failure_reasons` is built by the framework from
+/// `BulkActionResult.failed`, which this does not touch, so the
+/// structured list stays exactly as it was.
+///
+/// Reasons name the **ticket number** and nothing else. Every one is
+/// built in [`advance`] from `ticket_no` plus status names — customer
+/// names and phone numbers never reach a reason string, and so never
+/// reach an audit summary that a wider set of operators can read than
+/// can read the customer record itself.
+fn summary_line(label: &str, moved: usize, total: usize, failed: &[BulkActionFailure]) -> String {
+    let mut line = format!("{label}: {moved} of {total} jobs moved");
+    if failed.is_empty() {
+        return line;
+    }
+    let shown = failed.len().min(REASONS_IN_SUMMARY);
+    line.push_str(" — ");
+    line.push_str(
+        &failed[..shown]
+            .iter()
+            .map(|f| f.reason.as_str())
+            .collect::<Vec<_>>()
+            .join("; "),
+    );
+    if let Some(rest) = failed.len().checked_sub(shown).filter(|n| *n > 0) {
+        line.push_str(&format!("; and {rest} more"));
+    }
+    line
 }
 
 /// Move one job one rung. `Ok(Ok(()))` moved it; `Ok(Err(reason))` is
@@ -366,6 +407,43 @@ mod tests {
         let ways_in: Vec<&Step> = STEPS.iter().filter(|s| s.to == "in_progress").collect();
         assert_eq!(ways_in.len(), 1);
         assert!(ways_in[0].requires_approved_quote);
+    }
+
+    /// The reason a row was refused has to survive into the audit
+    /// summary, because that is the text `/admin/history` shows — the
+    /// structured `metadata.failure_reasons` is not rendered there.
+    /// Long batches collapse to a count so the line stays readable,
+    /// and the ticket number is the only identifier that appears.
+    #[test]
+    fn refusal_reasons_reach_the_audit_summary() {
+        let failed = vec![
+            BulkActionFailure::new(
+                9,
+                "FS-1009 has no approved quote — the customer has to say yes first",
+            ),
+            BulkActionFailure::new(
+                6,
+                "FS-1004 is booked in, and this step starts from approved",
+            ),
+        ];
+
+        let line = summary_line("Start repair", 1, 3, &failed);
+        assert!(line.starts_with("Start repair: 1 of 3 jobs moved"));
+        assert!(line.contains("FS-1009 has no approved quote"));
+        assert!(line.contains("FS-1004 is booked in"));
+
+        // A clean run stays a plain count — no trailing separator.
+        assert_eq!(
+            summary_line("Start repair", 3, 3, &[]),
+            "Start repair: 3 of 3 jobs moved"
+        );
+
+        // Past the cap, the overflow collapses instead of running on.
+        let many: Vec<BulkActionFailure> = (0..7)
+            .map(|i| BulkActionFailure::new(i, format!("FS-10{i:02} is booked in")))
+            .collect();
+        let long = summary_line("Start repair", 0, 7, &many);
+        assert!(long.ends_with("; and 4 more"), "got: {long}");
     }
 
     #[test]
