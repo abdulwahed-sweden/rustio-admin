@@ -5,44 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FixShop</title>
   <style>
-    :root { --brand: #b45309; --text: #1f2937; --muted: #6b7280; }
+    :root {
+      --bg:     #ffffff;
+      --ink:    #111827;
+      --muted:  #6b7280;
+      --rule:   #e5e7eb;
+    }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      max-width: 640px; margin: 0 auto; padding: 4rem 1.5rem;
-      color: var(--text); line-height: 1.6; background: #fafafa; font-size: 15px;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.6;
     }
-    h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
-    p.lede { color: var(--muted); margin: 0 0 2rem; }
-    ol { padding-left: 1.2rem; }
-    li { margin: .4rem 0; }
-    code { background: #f1f1f1; padding: .1rem .35rem; border-radius: 3px; font-size: .9em; }
+    main {
+      max-width: 34rem;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+    }
+    h1 { font-size: 1.6rem; margin: 0 0 .25rem; letter-spacing: -0.01em; }
+    p  { margin: 0 0 1.25rem; }
+    .lede { color: var(--muted); margin-bottom: 2rem; }
+    ul { margin: 0 0 1.25rem; padding-left: 1.1rem; }
+    li { margin: .3rem 0; }
+    .rule {
+      border-top: 1px solid var(--rule);
+      padding-top: 1.25rem;
+    }
+    .signin { color: var(--muted); font-size: .9em; }
+    code { font-size: .9em; }
     a.cta {
-      display: inline-block; margin-top: 1.5rem; padding: .6rem 1.1rem;
-      background: var(--brand); color: #fff; text-decoration: none; border-radius: 6px;
+      display: inline-block;
+      margin-top: .5rem;
+      padding: .65rem 1.2rem;
+      background: var(--ink);
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
     }
-    footer { margin-top: 3rem; color: var(--muted); font-size: .85em; }
+    a.cta:hover { background: #000000; }
   </style>
 </head>
 <body>
-  <h1>FixShop</h1>
-  <p class="lede">A repair shop, run from the admin panel.</p>
+  <main>
+    <h1>FixShop</h1>
+    <p class="lede">A repair shop, run from the admin panel.</p>
 
-  <p>An item comes in, gets diagnosed, gets a price. The customer says
-  yes or no. If yes, it gets fixed and picked up.</p>
+    <p>Someone brings in a broken thing &mdash; a phone, a laptop, a bike, a
+    washing machine. The shop takes it in, works out what is wrong, and sends
+    the customer a price. If the customer says yes, it gets repaired. Then they
+    come back and pick it up.</p>
 
-  <ol>
-    <li><strong>Front desk</strong> books the item in and records what the customer said.</li>
-    <li><strong>Technician</strong> diagnoses, quotes, and repairs.</li>
-    <li><strong>Owner</strong> can do all of it, plus edit quotes and delete.</li>
-  </ol>
+    <ul>
+      <li><strong>Front desk</strong> &mdash; books items in, records what the customer said, hands them back.</li>
+      <li><strong>Technician</strong> &mdash; diagnoses, quotes, repairs.</li>
+      <li><strong>Owner</strong> &mdash; all of it, plus editing quotes and deleting.</li>
+    </ul>
 
-  <p>A job cannot move to <em>in progress</em> until its quote is
-  approved. Jobs past their promised date sit at the top of the list.</p>
+    <p class="rule">A job cannot move to in progress until its quote is approved.</p>
 
-  <a class="cta" href="/admin">Open the admin</a>
+    <p class="signin">Sign in as anna (front desk), mike (technician) or sara
+    (owner) &mdash; passwords in <code>README.md</code>.</p>
 
-  <footer>Built with rustio-admin. See <code>README.md</code> for the sign-in accounts.</footer>
+    <a class="cta" href="/admin">Open the admin</a>
+  </main>
 </body>
 </html>
