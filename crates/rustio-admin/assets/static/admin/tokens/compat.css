@@ -23,22 +23,22 @@
   --rio-s5: var(--s5);
   --rio-s6: var(--s6);
 
-  /* Font sizes — Visual Contract v2.0 scale (px it renders) */
-  --rio-fs-display: 2.25rem; /* 36 — page title (contract §2) */
-  --rio-fs-h2: 26px;
-  --rio-fs-lg: 19px;
-  --rio-fs-lead: 1.0625rem;  /* 17 — page lead paragraph (contract §2.1) */
-  --rio-fs-md: 16px;
-  --rio-fs-base: 16px;
-  --rio-fs-sm: 15px;
-  --rio-fs-xs: 0.9375rem;   /* 15 — small tier nudged up from 14 */
+  /* Font sizes — the Composition 3.1 ladder (VISUAL-CONTRACT.md §2.1) */
+  --rio-fs-display: var(--rio-text-24); /* 24 — page title */
+  --rio-fs-h2: var(--rio-text-20);      /* 18 */
+  --rio-fs-lg: var(--rio-text-17);      /* 16 */
+  --rio-fs-lead: var(--rio-text-15);    /* 15 — page lead, max 680px */
+  --rio-fs-md: var(--rio-text-15);      /* 15 — base */
+  --rio-fs-base: var(--rio-text-15);    /* 15 */
+  --rio-fs-sm: var(--rio-text-14);      /* 14 */
+  --rio-fs-xs: var(--rio-text-12);      /* 13 — mono micro-label */
 
   /* Font weights + line heights */
-  --rio-fw-bold: 700;
-  --rio-fw-semibold: 600;
-  --rio-fw-regular: 400;
-  --rio-lh-tight: 1.12;
-  --rio-lh-ui: 1.5;
+  --rio-fw-bold: var(--rio-weight-bold);
+  --rio-fw-semibold: var(--rio-weight-semibold);
+  --rio-fw-regular: var(--rio-weight-regular);
+  --rio-lh-tight: var(--rio-leading-display);
+  --rio-lh-ui: var(--rio-leading-ui);
 
   /* Text roles */
   --rio-text-strong: var(--ink);

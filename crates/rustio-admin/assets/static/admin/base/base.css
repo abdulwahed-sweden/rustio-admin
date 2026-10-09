@@ -19,14 +19,15 @@ html {
 
 body {
   margin: 0;
-  /* Contract v2.0: the content area is a flat, barely-warm near-white (#fafcfb).
-     The reference screenshots carry no texture, so the dot-grid is omitted. */
+  /* The content area is the flat `--page` ground; no texture, no dot-grid. */
   background-color: var(--rio-bg);
   color: var(--rio-text);
   font-family: var(--rio-font-body);
-  font-size: 1rem;
+  /* Base is 15px / 500 (VISUAL-CONTRACT.md §2.1): table cells, inputs,
+     labels and field values all inherit it. */
+  font-size: var(--rio-text-15);
   line-height: var(--rio-leading-body);
-  font-weight: var(--rio-weight-regular);
+  font-weight: var(--rio-weight-medium);
   letter-spacing: 0; /* contract: flat tracking (the negative track was a Hanken flourish) */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -52,11 +53,27 @@ h1, h2, h3, h4 {
   text-wrap: balance; /* tidy, even headline line-breaks */
 }
 
-/* Page title — contract §2.1: weight 800, line-height 1.15. Inherited from the
-   base layer so pages don't each re-declare title weight. */
+/* The heading ladder (VISUAL-CONTRACT.md §2.1). Declared once here so
+   pages don't each re-state a title's size, weight or track. */
 h1 {
-  font-weight: 700;
-  line-height: 1.15;
+  font-size: var(--rio-text-24); /* 24 */
+  font-weight: var(--rio-weight-display); /* 800 */
+  letter-spacing: var(--rio-tracking-display); /* -.02em */
+  line-height: var(--rio-leading-display); /* 1.2 */
+}
+
+h2 {
+  font-size: var(--rio-text-20); /* 18 */
+  font-weight: var(--rio-weight-bold); /* 700 */
+  letter-spacing: var(--rio-tracking-tight); /* -.01em */
+  line-height: var(--rio-leading-tight); /* 1.3 */
+}
+
+h3 {
+  font-size: var(--rio-text-17); /* 16 */
+  font-weight: var(--rio-weight-bold); /* 700 */
+  letter-spacing: var(--rio-tracking-tight);
+  line-height: 1.35;
 }
 
 /* Long-form paragraphs break more gracefully. */
