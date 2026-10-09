@@ -118,7 +118,9 @@ pub(crate) async fn list_users(
                 is_active: r.get_bool("is_active")?,
                 created_at: r
                     .get_datetime("created_at")?
-                    .format("%Y-%m-%d %H:%M")
+                    // The zone is not decoration: the value is stored and
+                    // rendered as UTC, and every other surface says so.
+                    .format("%Y-%m-%d %H:%M UTC")
                     .to_string(),
             })
         })

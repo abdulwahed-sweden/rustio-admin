@@ -623,7 +623,7 @@ pub(crate) fn account_sessions_ctx(
             is_current: Some(s.session_id) == current_session_id,
             ip: s.ip.unwrap_or_else(|| "—".to_string()),
             ua_summary: summarise_user_agent(s.user_agent.as_deref()),
-            created_at: s.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            created_at: s.created_at.format("%Y-%m-%d %H:%M UTC").to_string(),
             last_seen_relative: relative_time(s.last_seen),
             expires_relative: relative_time(s.expires_at),
         })
