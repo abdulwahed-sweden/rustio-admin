@@ -15,33 +15,38 @@
 /* ---- Mode switcher ---------------------------------------- */
 .rio-view-modes {
   display: inline-flex;
-  gap: var(--rio-space-4);
-  margin-block-end: var(--rio-space-16);
-  padding: var(--rio-space-2);
-  background: var(--rio-sunken);
-  border-radius: var(--rio-radius-control);
+  gap: 0;
+  padding: 0;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-sm);
+  overflow: hidden;
 }
 .rio-view-mode {
   display: inline-flex;
   align-items: center;
-  padding-block: var(--rio-space-4);
+  min-block-size: var(--rio-ctl-sm);
   padding-inline: var(--rio-space-12);
-  border-radius: var(--rio-radius-sm);
-  color: var(--rio-text-mute);
+  border-radius: 0;
+  color: var(--rio-text);
   text-decoration: none;
-  font-size: var(--rio-text-13);
-  font-weight: var(--rio-weight-medium);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-button-sm);
+  white-space: nowrap;
   transition: color var(--rio-dur-fast) var(--rio-ease),
     background var(--rio-dur-fast) var(--rio-ease);
 }
+.rio-view-mode + .rio-view-mode { border-inline-start: 1px solid var(--rio-line); }
 .rio-view-mode:hover {
+  background: var(--rio-sunken);
   color: var(--rio-text-hi);
 }
 .rio-view-mode.is-active {
-  background: var(--rio-surface);
+  background: var(--rio-rust-tint);
   color: var(--rio-rust);
-  box-shadow: var(--rio-shadow-sm);
+  font-weight: var(--rio-weight-bold);
 }
+.rio-view-mode:focus-visible { outline-offset: -3px; }
 
 /* ---- Row container (an <a> wrapping a record's cells) ----- */
 .av-list {
@@ -66,7 +71,11 @@
 /* Cards: a responsive grid; each row becomes a card with cells stacked. */
 .av-list--cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* `auto-fill` keeps its empty tracks, so two records on a 1600px
+     workspace are two ~300px cards packed from the left, never two
+     790px slabs. `min(100%, 300px)` is the guard that keeps a card
+     from overflowing its column below 300px. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: var(--rio-space-16);
   /* size each card to its content instead of stretching to the row's tallest,
      so short cards don't trail empty space */
@@ -79,21 +88,18 @@
   flex-flow: row wrap;
   align-items: center;
   align-content: flex-start;
-  gap: var(--rio-space-6);
-  padding: var(--rio-space-20);
+  gap: var(--rio-space-4);
+  padding: var(--rio-space-16);
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-lg);
-  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
-  transition: box-shadow var(--rio-dur-fast) var(--rio-ease),
-    border-color var(--rio-dur-fast) var(--rio-ease),
-    transform var(--rio-dur-fast) var(--rio-ease);
+  border-radius: var(--rio-radius);
+  transition: border-color var(--rio-dur-fast) var(--rio-ease);
 }
+/* Flat, and it stays flat on hover: a card that lifts and shadows on
+   pointer-over is motion for its own sake in a records grid. */
 .av-list--cards .av-row:hover {
   background: var(--rio-surface);
-  border-color: var(--rio-rust);
-  box-shadow: var(--rio-shadow-md);
-  transform: translateY(-1px);
+  border-color: var(--rio-line-strong);
 }
 /* Card cell composition — pure flex-line control over the flat cells:
    title on its own line, then an inline meta line ("provider · country")
@@ -126,26 +132,40 @@
   margin-inline-start: var(--rio-space-12);
 }
 
-/* List: divided rows, primary leads, the rest trail. */
+/* List — one surface of 64px rows, the primary leading and the rest
+   trailing. The row is a line of the surface, not a tile on it. */
 .av-list--list .av-row {
+  align-items: center;
+  min-block-size: 64px;
+  padding-block: var(--rio-space-12);
   border-block-end: 1px solid var(--rio-line);
   border-radius: 0;
 }
+.av-list--list .av-row:last-child { border-block-end: 0; }
 .av-list--list .av-row:hover {
-  background: var(--rio-surface-tint);
+  background: var(--rio-sunken);
 }
 
-/* Compact: denser rows for large datasets. */
+/* Compact — the denser surface: a 40px line, no column head, the title
+   leading and the actions trailing. Secondary cells and the timestamp
+   are dropped; the point of Compact is how many records fit on screen. */
 .av-list--compact .av-row {
-  gap: var(--rio-space-8);
-  padding-block: var(--rio-space-6);
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--rio-space-12);
+  min-block-size: var(--rio-th-h);
+  padding-block: var(--rio-space-4);
   border-block-end: 1px solid var(--rio-line);
   border-radius: 0;
-  font-size: var(--rio-text-13);
 }
+.av-list--compact .av-row:last-child { border-block-end: 0; }
 .av-list--compact .av-row:hover {
-  background: var(--rio-surface-tint);
+  background: var(--rio-sunken);
 }
+.av-list--compact .av-primary { flex: 0 1 auto; min-inline-size: 0; }
+.av-list--compact .av-secondary,
+.av-list--compact .av-ts { display: none; }
+.av-list--compact .av-badge { margin-inline-start: auto; }
 
 /* ---- Cells ------------------------------------------------ */
 .av-primary {
@@ -155,15 +175,18 @@
 }
 .av-list--cards .av-primary {
   font-size: var(--rio-text-17);
+  font-weight: var(--rio-weight-bold);
 }
 .av-secondary {
   color: var(--rio-text-mute);
   font-size: var(--rio-text-13);
 }
 .av-ts {
-  color: var(--rio-text-faint);
+  color: var(--rio-text-meta);
   font-family: var(--rio-font-mono);
   font-size: var(--rio-text-12);
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* Badges — token tints mirroring `.rio-badge--*`, keyed by the view layer's

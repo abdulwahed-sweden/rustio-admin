@@ -244,18 +244,71 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-ledger-item--accent .rio-ledger-num { color: var(--rio-rust); }
 
 /* ---- Command toolbar (search + filters in one bar) ---- */
-.rio-cmdbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-block-end: var(--rio-space-20); }
-.rio-cmdbar .rio-search--hero { flex: 1; min-inline-size: 280px; }
+/* ---- Find row ----
+   Search, the filter triggers, Reset, and then the count. The search
+   field is a 340px control, not a hero: it is one way into the data,
+   beside the filters, not the page's centrepiece. */
+.rio-cmdbar { display: flex; align-items: center; gap: var(--rio-space-12); flex-wrap: wrap; margin-block-end: var(--rio-space-16); }
+.rio-cmdbar .rio-search--hero { flex: 0 1 340px; min-inline-size: 220px; }
 .rio-cmdbar-spacer { flex: 1; }
+/* The result count reads as a count, not as a control. */
+.rio-find-count {
+  margin-inline-start: var(--rio-space-4);
+  color: var(--rio-text-mute);
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-semibold);
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-find-count strong { color: var(--rio-text); font-weight: var(--rio-weight-bold); }
 
-/* ---- Reworked data table ---- */
+/* ---- Data surface ----
+   One flat bordered surface holding the head, the data and the foot. */
 .rio-board {
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-xl);
-  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+  border-radius: var(--rio-radius-lg);
   overflow: hidden;
 }
+
+/* ---- Data-surface head ----
+   How the data is arranged belongs to the surface that arranges it. The
+   view-mode switch is pushed to the trailing edge, as RustIO's
+   `.data-head .view-tools` is. */
+.rio-board-head {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--rio-space-8) var(--rio-space-16);
+  padding: var(--rio-space-8) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+  background: var(--rio-raised);
+}
+.rio-board-head:empty { display: none; }
+.rio-board-head > .rio-view-modes { margin-inline-start: auto; }
+
+/* Cards are their own objects on the page ground, so the surface steps
+   out of the way and the head becomes a bordered strip above the grid
+   (RustIO's `.data--cards`). `:has()` keeps this a CSS decision — the
+   template emits the same markup for every view mode. */
+.rio-board:has(.av-list--cards) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.rio-board:has(.av-list--cards) > .rio-board-head {
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  margin-block-end: var(--rio-space-16);
+}
+.rio-board:has(.av-list--cards) > .rio-board-foot {
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  margin-block-start: var(--rio-space-16);
+}
+
+/* List and Compact are lines OF the surface, so they run edge to edge. */
+.rio-board > .av-list--list,
+.rio-board > .av-list--compact { padding: 0; }
 .rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-15); }
 .rio-dtable thead th {
   text-align: start; block-size: var(--rio-th-h);
@@ -309,8 +362,8 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-dtable tbody tr:hover .rio-row-actions, .rio-row-actions:focus-within { opacity: 1; }
 
 /* board footer */
-.rio-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
-.rio-board-foot strong { color: var(--rio-text-hi); font-weight: 600; }
+.rio-board-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--rio-space-12); padding: var(--rio-space-8) var(--rio-space-16); border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); font-size: var(--rio-text-14); color: var(--rio-text-mute); }
+.rio-board-foot strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); }
 
 @media (prefers-reduced-motion: reduce) {
   .rio-row-actions { opacity: 1; }

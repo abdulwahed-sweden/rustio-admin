@@ -192,12 +192,12 @@
 .rio-bulkbar {
   display: flex; align-items: center; flex-wrap: wrap;
   gap: var(--rio-space-8) var(--rio-space-12);
-  padding: var(--rio-space-12) var(--rio-card-pad-x);
-  border-block-end: 1px solid var(--rio-line);
+  padding: var(--rio-space-8) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-rust-tint-2);
   background: var(--rio-rust-tint);
   min-inline-size: 0;
 }
-.rio-bulkbar-count { font-size: var(--rio-text-13); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); }
+.rio-bulkbar-count { font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); }
 .rio-bulkbar-actions {
   display: flex; flex-wrap: wrap; align-items: center;
   gap: var(--rio-space-8);
@@ -256,8 +256,19 @@
 }
 
 /* Empty state */
-.rio-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: var(--rio-space-48); text-align: center; color: var(--rio-text-mute); }
-.rio-empty-title { font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-17); color: var(--rio-text-hi); }
+/* Empty state — flat, inside the surface it belongs to. No icon tile:
+   a decorative glyph above "No records yet" tells the operator nothing
+   the sentence does not (VISUAL-CONTRACT.md §13). */
+.rio-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--rio-space-4);
+  padding: var(--rio-space-32) var(--rio-space-24);
+  text-align: center; color: var(--rio-text-mute);
+  font-size: var(--rio-text-15);
+}
+.rio-empty > svg, .rio-empty > .rio-icon { display: none; }
+.rio-empty-title { font-family: var(--rio-font-display); font-weight: var(--rio-weight-bold); font-size: var(--rio-text-17); color: var(--rio-text-hi); }
+.rio-empty p, .rio-empty > div:not(.rio-empty-title):not(.rio-empty-cta) { max-inline-size: 52ch; margin: 0; }
 
 /* Empty-state call to action — replaces the inline margin the users
    list used to carry. */

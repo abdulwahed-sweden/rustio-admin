@@ -96,7 +96,7 @@
   </div>
 </div>
 
-{# ---- Command bar ---- #}
+{# ---- Find row: search + filters + reset + result count ---- #}
 <div class="rio-cmdbar">
   <form method="get" action="/admin/{{ admin_name }}" class="rio-search rio-search--lg rio-search--hero{% if search_query %} rio-search--filled{% endif %}" role="search">
     <span class="rio-search-icon">{{ icon("search") }}</span>
@@ -110,13 +110,13 @@
   {% if filters %}
     {% for group in filters %}{% if loop.index <= 2 %}
     <div class="rio-dropdown" data-rio-dropdown>
-      <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle{% if filter_active(group) %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false">{{ filter_icon(group.kind) }} {{ group.label }} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--sm rio-dropdown-toggle{% if filter_active(group) %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false">{{ filter_icon(group.kind) }} {{ group.label }} {{ icon("chevron-down", class="rio-chev") }}</button>
       <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="{{ group.label }}"><div class="rio-dropdown-section">{{ filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) }}</div></div>
     </div>
     {% endif %}{% endfor %}
     {% if filters|length > 2 %}
     <div class="rio-dropdown" data-rio-dropdown>
-      <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("filter") }} More filters{% if active_filter_count > 0 %} <span class="rio-dropdown-badge">{{ active_filter_count }}</span>{% endif %} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--sm rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("filter") }} More filters{% if active_filter_count > 0 %} <span class="rio-dropdown-badge">{{ active_filter_count }}</span>{% endif %} {{ icon("chevron-down", class="rio-chev") }}</button>
       <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="More filters">
         {% for group in filters %}{% if loop.index > 2 %}<div class="rio-dropdown-section"><span class="rio-dropdown-label">{{ group.label }}</span>{{ filter_body(group, admin_name, search_query, active_sort_field, active_sort_dir, active_per_page_override, csrf_token) }}</div>{% endif %}{% endfor %}
         {% if active_filter_count > 0 %}<div class="rio-dropdown-footer"><a href="{{ clear_all_filters_link }}" class="rio-btn rio-btn--secondary rio-btn--sm">Clear all</a></div>{% endif %}
@@ -125,29 +125,11 @@
     {% endif %}
   {% endif %}
 
-  {% if sort_fields %}
-  <div class="rio-dropdown" data-rio-dropdown>
-    <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("sliders") }} Sort: {{ current_sort_field_label }} {{ icon("chevron-down", class="rio-chev") }}</button>
-    <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Sort">
-      <div class="rio-dropdown-section"><span class="rio-dropdown-label">Sort by</span>
-        <div class="rio-dropdown-menu">
-          <a href="{{ default_sort_link }}" class="rio-menu-item{% if not active_sort_field %} is-active{% endif %}">Default order</a>
-          {% for sf in sort_fields %}<a href="{{ sf.asc_link }}" class="rio-menu-item{% if sf.is_active %} is-active{% endif %}">{{ sf.label }}</a>{% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
-  {% if active_sort_field %}<a class="rio-btn rio-btn--secondary rio-btn--lg" href="{{ sort_dir_toggle_link }}" title="Switch direction">{{ icon("arrow-up-down") }} {{ current_sort_dir_label }}</a>{% endif %}
-  {% endif %}
 
-  {% if per_page_options %}
-  <div class="rio-dropdown" data-rio-dropdown>
-    <button type="button" class="rio-btn rio-btn--secondary rio-btn--lg rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("table") }} {{ current_per_page_label }} {{ icon("chevron-down", class="rio-chev") }}</button>
-    <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Rows per page"><div class="rio-dropdown-section"><div class="rio-chip-row">{% for opt in per_page_options %}<a href="{{ opt.link }}" class="rio-chip{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>{% endfor %}</div></div></div>
-  </div>
-  {% endif %}
+  {% if search_query or active_filter_count > 0 %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="{{ clear_all_filters_link }}">{{ icon("rotate-ccw") }} Reset</a>{% endif %}
 
-  {% if search_query or active_filter_count > 0 %}<a class="rio-btn rio-btn--subtle rio-btn--lg" href="{{ clear_all_filters_link }}">{{ icon("rotate-ccw") }} Reset</a>{% endif %}
+  {# The count sits after the last control, where the eye already is. #}
+  <span class="rio-find-count">Showing <strong>{{ rows|length }}</strong> of <strong>{{ total_rows }}</strong> {{ display_name|lower }}</span>
 </div>
 
 {% if active_filter_pills %}
@@ -158,30 +140,57 @@
 </div>
 {% endif %}
 
-{# ---- View-mode switcher (only when a saved ViewSpec exists) ---- #}
-{% if mode_links %}
-<nav class="rio-view-modes" aria-label="View mode">
-  {% for m in mode_links %}<a href="{{ m.href }}" class="rio-view-mode{% if m.active %} is-active{% endif %}">{{ m.label }}</a>{% endfor %}
-</nav>
-{% endif %}
-
 {# ---- Board ---- #}
 {% if not read_only and not adaptive %}
 <form method="post" action="/admin/{{ admin_name }}/bulk_delete" class="rio-bulk-form" data-rio-bulk>
 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 <input type="hidden" name="_ids" value="" data-rio-bulk-ids>
-<div class="rio-bulkbar" role="region" aria-live="polite" aria-label="Bulk actions">
-  <span class="rio-bulkbar-count"><strong data-rio-bulk-count>0</strong> selected</span>
-  <button type="button" class="rio-btn rio-btn--ghost rio-btn--sm" data-rio-bulk-clear>Clear</button>
-  <span class="rio-bulkbar-actions">
-    <button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm rio-danger-ink">{{ icon("trash") }} Delete selected</button>
-    {% for btn in bulk_action_buttons %}<button type="submit" formaction="{{ btn.form_action }}" class="rio-btn rio-btn--secondary rio-btn--sm{% if btn.destructive %} rio-btn--danger{% endif %}">{{ btn.label }}</button>{% endfor %}
-  </span>
-</div>
 {% endif %}
 
 <div class="rio-board">
+  {% if not read_only and not adaptive %}
+  <div class="rio-bulkbar" role="region" aria-live="polite" aria-label="Bulk actions">
+    <span class="rio-bulkbar-count"><strong data-rio-bulk-count>0</strong> selected</span>
+    <button type="button" class="rio-btn rio-btn--ghost rio-btn--sm" data-rio-bulk-clear>Clear</button>
+    <span class="rio-bulkbar-actions">
+      <button type="submit" class="rio-btn rio-btn--subtle rio-btn--sm rio-danger-ink">{{ icon("trash") }} Delete selected</button>
+      {% for btn in bulk_action_buttons %}<button type="submit" formaction="{{ btn.form_action }}" class="rio-btn rio-btn--secondary rio-btn--sm{% if btn.destructive %} rio-btn--danger{% endif %}">{{ btn.label }}</button>{% endfor %}
+    </span>
+  </div>
+  {% endif %}
   {% if rows %}
+  {# ---- Data-surface head: how the data is arranged, on the surface it
+     arranges. Sort, direction, rows-per-page and the view-mode switch
+     belong to the table, not to the page. ---- #}
+  <div class="rio-board-head">
+    {% if sort_fields %}
+    <div class="rio-dropdown" data-rio-dropdown>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--sm rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("sliders") }} Sort: {{ current_sort_field_label }} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Sort">
+        <div class="rio-dropdown-section"><span class="rio-dropdown-label">Sort by</span>
+          <div class="rio-dropdown-menu">
+            <a href="{{ default_sort_link }}" class="rio-menu-item{% if not active_sort_field %} is-active{% endif %}">Default order</a>
+            {% for sf in sort_fields %}<a href="{{ sf.asc_link }}" class="rio-menu-item{% if sf.is_active %} is-active{% endif %}">{{ sf.label }}</a>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% if active_sort_field %}<a class="rio-btn rio-btn--secondary rio-btn--sm" href="{{ sort_dir_toggle_link }}" title="Switch direction">{{ icon("arrow-up-down") }} {{ current_sort_dir_label }}</a>{% endif %}
+    {% endif %}
+
+    {% if per_page_options %}
+    <div class="rio-dropdown" data-rio-dropdown>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--sm rio-dropdown-toggle" aria-haspopup="true" aria-expanded="false">{{ icon("table") }} {{ current_per_page_label }} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Rows per page"><div class="rio-dropdown-section"><div class="rio-chip-row">{% for opt in per_page_options %}<a href="{{ opt.link }}" class="rio-chip{% if opt.is_active %} is-active{% endif %}">{{ opt.label }}</a>{% endfor %}</div></div></div>
+    </div>
+    {% endif %}
+
+    {% if mode_links %}
+    <nav class="rio-view-modes" aria-label="View mode">
+      {% for m in mode_links %}<a href="{{ m.href }}" class="rio-view-mode{% if m.active %} is-active{% endif %}">{{ m.label }}</a>{% endfor %}
+    </nav>
+    {% endif %}
+  </div>
   {% if adaptive %}{% include "admin/_list_adaptive.html" %}{% else %}
   <div class="rio-tablewrap">
   <table class="rio-dtable">
@@ -225,22 +234,20 @@
   </table>
   </div>
   {% endif %}
+  {% if total_pages > 1 %}
   <div class="rio-board-foot">
-    <span>Showing <strong>{{ rows|length }}</strong> of <strong>{{ total_rows }}</strong> {{ display_name|lower }}</span>
-    {% if total_pages > 1 %}
     <nav class="rio-pagination" aria-label="Pagination">
       {% if prev_page_link %}<a class="rio-page" href="{{ prev_page_link }}" aria-label="Previous">{{ icon("arrow-left") }}</a>{% endif %}
       {% for item in page_items %}{% if item.kind == "ellipsis" %}<span class="rio-page rio-page--ellipsis">…</span>{% elif item.is_active %}<span class="rio-page" aria-current="page">{{ item.number }}</span>{% else %}<a class="rio-page" href="{{ item.link }}">{{ item.number }}</a>{% endif %}{% endfor %}
       {% if next_page_link %}<a class="rio-page rio-page--next" href="{{ next_page_link }}">Next {{ icon("arrow-right") }}</a>{% endif %}
     </nav>
-    {% endif %}
   </div>
+  {% endif %}
   {% else %}
   <div class="rio-empty">
-    {{ icon("inbox") }}
     <div class="rio-empty-title">No {{ display_name|lower }} yet</div>
     <div>{% if read_only %}There are no records to display here.{% else %}Add the first {{ singular_name|lower }} to get started.{% endif %}</div>
-    {% if not read_only %}<div class="rio-stack-16"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/{{ admin_name }}/new">{{ icon("plus") }} Add {{ singular_name }}</a></div>{% endif %}
+    {% if not read_only %}<div class="rio-empty-cta"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/{{ admin_name }}/new">{{ icon("plus") }} Add {{ singular_name }}</a></div>{% endif %}
   </div>
   {% endif %}
 </div>
