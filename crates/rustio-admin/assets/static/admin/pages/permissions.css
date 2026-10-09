@@ -26,6 +26,7 @@
 }
 .rio-perm-matrix tbody tr:last-child th,
 .rio-perm-matrix tbody tr:last-child td { border-block-end: 0; }
+.rio-perm-matrix tbody td { block-size: var(--rio-th-h); }
 .rio-perm-matrix thead th {
   font-family: var(--rio-font-body); font-weight: 800;
   font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em;

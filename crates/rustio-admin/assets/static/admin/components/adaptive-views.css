@@ -106,6 +106,12 @@
    with the badges pushed to the row's end. */
 .av-list--cards .av-primary {
   flex: 0 0 100%;
+  /* A floor, because this product's record names are longer than
+     RustIO's: a 12rem minimum keeps a wrapping title from squeezing
+     itself into a one-word-per-line column, and `break-word` stops a
+     long unbroken identifier from widening the card. */
+  min-inline-size: 12rem;
+  overflow-wrap: break-word;
   margin-block-end: var(--rio-space-2);
   line-height: 1.3;
 }

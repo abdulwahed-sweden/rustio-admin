@@ -7,11 +7,12 @@
 .rio-confirm__head { display: flex; gap: var(--rio-space-16); align-items: flex-start; }
 .rio-confirm__icon {
   flex: none;
-  inline-size: 44px; block-size: 44px; border-radius: var(--rio-radius-lg);
+  inline-size: var(--rio-ctl); block-size: var(--rio-ctl);
+  border-radius: var(--rio-radius-control);
   display: grid; place-items: center;
   background: var(--rio-danger-tint); color: var(--rio-danger);
 }
-.rio-confirm__icon svg { inline-size: 22px; block-size: 22px; }
+.rio-confirm__icon svg { inline-size: 18px; block-size: 18px; }
 .rio-confirm--danger { border-color: color-mix(in srgb, var(--rio-danger) 35%, var(--rio-line)); }
 .rio-confirm--neutral .rio-confirm__icon { background: var(--rio-rust-tint); color: var(--rio-rust); }
 .rio-confirm__head .rio-error { margin-block-start: var(--rio-space-8); }

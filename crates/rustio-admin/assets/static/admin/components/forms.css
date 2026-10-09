@@ -177,43 +177,53 @@ textarea.rio-input {
 .rio-search-placeholder { font-size: var(--rio-text-14); }
 .rio-search--hero .rio-input::placeholder { color: var(--rio-text-faint); }
 
-/* Checkbox & radio */
+/* ============================================================
+   Boolean field — a 38px bordered row (VISUAL-CONTRACT.md §5)
+
+   The control and its label sit inside a field-line box on the surface,
+   so a boolean reads as a control of the same weight as the text input
+   beside it rather than as a stray line of text.
+
+   This also fixes a real defect. `.rio-check` used to hide the native
+   checkbox (`position: absolute; opacity: 0`) and draw a substitute
+   `.rio-check-box` span — which NO template has ever rendered. Every
+   boolean field on every model form therefore had an invisible,
+   unclickable control: the label was all that showed. The substitute
+   box and its twelve rules are deleted rather than fixed, because a
+   native checkbox with `accent-color` is the whole of what they drew.
+   ============================================================ */
 .rio-check {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: var(--rio-space-8);
-  cursor: pointer;
-  font-size: var(--rio-text-14);
-  color: var(--rio-text);
-}
-.rio-check input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
-.rio-check-box {
-  inline-size: 18px; block-size: 18px;
-  flex: none;
-  margin-block-start: 1px;
-  border: 1.5px solid var(--rio-line-strong);
-  border-radius: 5px;
-  background: var(--rio-surface);
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+  gap: var(--rio-space-12);
+  min-block-size: var(--rio-ctl);
+  padding: 0 var(--rio-space-12);
+  border: 1px solid var(--rio-field-line);
+  border-radius: var(--rio-radius-control);
+  background: var(--rio-surface);
+  color: var(--rio-text-hi);
+  font-size: var(--rio-text-15);
+  font-weight: var(--rio-weight-medium);
+  cursor: pointer;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-check-box--radio { border-radius: 999px; }
-.rio-check:hover .rio-check-box { border-color: var(--rio-text-faint); }
-.rio-check input:focus-visible + .rio-check-box { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
-.rio-check input:checked + .rio-check-box {
-  background: var(--rio-rust);
-  border-color: var(--rio-rust);
+.rio-check:hover { border-color: var(--rio-line-strong); }
+.rio-check:focus-within { border-color: var(--rio-accent-focus); }
+.rio-check input[type="checkbox"],
+.rio-check input[type="radio"] {
+  position: static;
+  opacity: 1;
+  inline-size: 18px;
+  block-size: 18px;
+  flex: none;
+  margin: 0;
+  /* Contract §7: one accent on every checkbox and radio, never the
+     browser's default blue by accident. */
+  accent-color: var(--rio-rust);
+  cursor: pointer;
 }
-.rio-check-box svg { inline-size: 12px; block-size: 12px; color: var(--rio-text-onrust); opacity: 0; }
-.rio-check input:checked + .rio-check-box svg { opacity: 1; }
-.rio-check-box--radio::after {
-  content: ""; inline-size: 7px; block-size: 7px; border-radius: 999px;
-  background: var(--rio-text-onrust); transform: scale(0); transition: transform var(--rio-dur-fast) var(--rio-ease);
-}
-.rio-check input:checked + .rio-check-box--radio::after { transform: scale(1); }
-.rio-check input:disabled + .rio-check-box { opacity: 0.5; }
+.rio-check input:disabled { cursor: not-allowed; }
+.rio-check:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
 
 /* Switch */
 .rio-switch { display: inline-flex; align-items: center; gap: var(--rio-space-8); cursor: pointer; }

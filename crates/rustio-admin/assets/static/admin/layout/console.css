@@ -351,7 +351,9 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); display: block; }
 .rio-price { font-family: var(--rio-font-mono); font-size: var(--rio-text-15); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
 .rio-mono-tile {
-  inline-size: 44px; block-size: 44px; border-radius: 12px; flex: none;
+  /* Removed — identity is the link, not a coloured square with an
+     initial in it (VISUAL-CONTRACT.md §13). */
+  display: none;
   background: var(--rio-sunken); border: 1px solid var(--rio-line);
   display: grid; place-items: center;
   font-family: var(--rio-font-display); font-size: 16px; font-weight: 700; color: var(--rio-rust);

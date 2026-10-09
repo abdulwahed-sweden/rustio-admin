@@ -32,7 +32,9 @@
 }
 .rio-tabs::-webkit-scrollbar { display: none; }
 .rio-tab {
-  padding: var(--rio-space-12) var(--rio-space-16);
+  display: inline-flex; align-items: center;
+  block-size: var(--rio-ctl);
+  padding: 0 var(--rio-space-16);
   flex: none;
   color: var(--rio-text-mute);
   text-decoration: none;
@@ -61,15 +63,20 @@
    than a faint mono eyebrow; values carry the page's ink. */
 .rio-dl {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr);
   column-gap: var(--rio-space-24);
   margin: 0;
 }
 .rio-dl dt {
   padding-block: var(--rio-space-12);
-  font-size: var(--rio-text-14);
-  font-weight: var(--rio-weight-medium);
-  color: var(--rio-text-mute);
+  /* The label names the value: a 13px mono micro-label, as every other
+     label in the system is (VISUAL-CONTRACT.md §2.1). */
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mono);
   border-block-end: 1px solid var(--rio-line);
   min-inline-size: 0;
 }

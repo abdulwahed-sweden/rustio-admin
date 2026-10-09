@@ -66,7 +66,13 @@
 .rio-api-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
 .rio-api-card__glyph { width: 38px; height: 38px; flex: none; border-radius: var(--rio-radius-sm); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
 .rio-api-card__glyph .rio-icon { width: 18px; height: 18px; }
-.rio-api-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
+.rio-api-card__title {
+  font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong);
+  /* The same identity floor the record cards take: an API path is long
+     and unbreakable, and without a floor it wraps one segment per line. */
+  min-inline-size: 12rem;
+  overflow-wrap: break-word;
+}
 .rio-api-card__title a { color: inherit; }
 .rio-api-card__title a:hover { color: var(--rio-accent); }
 .rio-api-card__sub { font-weight: var(--rio-fw-regular); color: var(--rio-text-subtle); font-size: var(--rio-fs-sm); }

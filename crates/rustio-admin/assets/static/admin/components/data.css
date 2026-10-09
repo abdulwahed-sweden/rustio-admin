@@ -168,7 +168,7 @@
 }
 .rio-avatar img { inline-size: 100%; block-size: 100%; object-fit: cover; }
 .rio-avatar--sm { inline-size: 24px; block-size: 24px; }
-.rio-avatar--lg { inline-size: 44px; block-size: 44px; font-size: var(--rio-text-15); }
+.rio-avatar--lg { inline-size: var(--rio-ctl); block-size: var(--rio-ctl); font-size: var(--rio-text-14); }
 
 /* Stat card */
 .rio-stat { display: flex; flex-direction: column; gap: 6px; padding: var(--rio-space-16) var(--rio-space-20); }
