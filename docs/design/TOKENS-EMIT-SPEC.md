@@ -13,9 +13,22 @@ correctly in **both** light and dark mode. The in-repo reference implementation 
 
 ---
 
+> **Status — light-only runtime (Visual Contract v3.0 §12).** The framework is
+> light-only: `tokens/colors.css` carries a single `:root` block, with no
+> `@media (prefers-color-scheme: dark)` and no `[data-theme]` block. The §1
+> hazard below therefore describes a historical state, and the §3 dark-block
+> requirements are **retained unchanged** — they are what `rio-theme`'s
+> `emit.rs` and its golden fixtures produce today, and changing them means
+> changing the emitter. Reconciling this contract with the light-only runtime,
+> together with the canonical-name alias pass, is the emitter pass of
+> `docs/design/rustio-admin-composition-study/MIGRATION.md`. Until then: this
+> document stays normative for *generators*, and `VISUAL-CONTRACT.md` is
+> authoritative on whether the framework has a dark theme. Do not read §1–§5 as
+> a licence to add dark blocks back to the framework's own stylesheets.
+
 ## 1. The hazard this contract prevents
 
-The framework ships a dark theme as two blocks (`crates/rustio-admin/assets/static/admin/tokens/colors.css`):
+Historically the framework shipped a dark theme as two blocks (`crates/rustio-admin/assets/static/admin/tokens/colors.css`):
 
 ```css
 :root { /* light */ }

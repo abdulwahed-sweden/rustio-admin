@@ -37,9 +37,10 @@ Pull request review runs against this document, not only the diff.
   `Admin::theme(...)`, an inline `<style>` block, not the engine.
 - CSS layout, components, the cascade order of the baked bundle →
   `CLAUDE.md` "Templates and CSS" and `DESIGN_DOCTRINE.md`.
-- The framework's own dark theme — the runtime ships **light and dark**,
-  token-driven (`VISUAL-CONTRACT.md` §12). This doc covers how the *engine*
-  emits a dark-aware `tokens.css` (§8 + `TOKENS-EMIT-SPEC.md`).
+- The framework's own theme palette — the runtime is **light-only**
+  (`VISUAL-CONTRACT.md` §12). This doc covers how the *engine* emits a
+  `tokens.css`; its dark-aware emission (§8 + `TOKENS-EMIT-SPEC.md`) is retained
+  for now and is reconciled with the light-only runtime in the emitter pass.
 
 ### 1.3 Closing principle
 
@@ -187,8 +188,15 @@ what fired.
 
 ## 8. Dark-mode structure
 
-The framework ships a real dark theme, so a generated `tokens.css` **must** be
-dark-aware. `emit.rs` writes the framework's full dual dark structure — an
+> **Status.** The runtime is light-only (`VISUAL-CONTRACT.md` §12): there is no
+> dark block in `tokens/colors.css` for an override to compose against. The
+> dark-aware emission below is **retained unchanged** — it is what `emit.rs` and
+> its golden fixtures do today — and is reconciled with the light-only runtime in
+> the emitter pass, together with the canonical-name alias pass. Nothing in this
+> section is a licence to add a dark theme back to the framework.
+
+Historically the framework shipped a dark theme, so a generated `tokens.css`
+**must** still be dark-aware. `emit.rs` writes the framework's full dual dark structure — an
 explicit `:root[data-theme="dark"]` block **and** a
 `@media (prefers-color-scheme: dark) { :root { … } }` auto block — with identical
 values, via a [`DarkPolicy`] (auto-derive / light-only / explicit). A `:root`-only

@@ -1,6 +1,12 @@
 # Remediation Plan — RustIO Admin Visual Contract v2.0 Conformance
 
-Status: Approved, in execution
+Status: **Historical — superseded.** This plan drove the Visual Contract v2.0/v2.1
+rollout. Contract **v3.0** (Composition 3.1) repealed several of the rules this
+plan enforces — the 44px control floor, the 14px text floor, the 36px title, the
+16px body, the burnt-copper accent and the mandatory dark theme. Read this file
+as a record of what happened, not as instructions. The current target is
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md); the current sequence is
+`rustio-admin-composition-study/MIGRATION.md`.
 Canonical source: the **RustIO Admin Visual Contract v2.0** (the contract wins over any
 older stylesheet; when the contract is silent the reference screenshot wins; when both
 are silent, ask — do not invent).

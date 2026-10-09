@@ -12,9 +12,10 @@ in `src/admin/routes.rs` for the assembly order. The order matches
 `admin/admin.css`'s `@import` manifest line-for-line; **both must be kept
 in lock-step.**
 
-> **Values live in the contract, not here.** As of the Visual Contract v2.0
+> **Values live in the contract, not here.** As of the Visual Contract v3.0
 > rollout, all concrete token **values** — colors, the type scale, fonts,
-> light/dark — are owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md). This
+> the control and row scale — are owned by
+> [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) (v3.0, Composition 3.1). This
 > document keeps the *principles, architecture, and rationale*; where it used to
 > restate hex/px/font values it now points there, so a rebrand changes one file.
 > If a number below and the contract disagree, the contract wins.
@@ -27,19 +28,22 @@ Five variable groups, one source of truth per group:
 
 | Group       | File                          | Purpose                                       |
 |-------------|-------------------------------|-----------------------------------------------|
-| Colors      | `tokens/colors.css`           | Accent, surface ladder, slate text, semantics |
-| Spacing     | `tokens/spacing.css`          | 4 / 8 / 12 / 16 / 24 / 32 / 48 px scale       |
-| Radius      | `tokens/radius.css`           | `sm` 6 · `control` 8 · `md` 9 · `lg` 12 · `xl` 16 |
-| Shadows     | `tokens/shadows.css`          | sm / md / lg / xl + card / inset — quiet      |
+| Colors      | `tokens/colors.css`           | Accent, surface ladder, the ink ramp, semantics |
+| Spacing     | `tokens/spacing.css`          | 4 / 8 / 12 / 16 / 24 / 32 px scale             |
+| Radius      | `tokens/radius.css`           | `sm` 6 · `control` 8 · card 14 (contract §1.7) |
+| Shadows     | `tokens/shadows.css`          | sm (cards in a grid) · lg (overlays) — flat by default |
 | Typography  | `tokens/typography.css`       | Fonts, sizes, line-heights, weights, tracking |
 
 Three rules:
 
-1. **One canonical value per token, per theme block.** The framework ships
-   **light and dark**, token-driven only — light in `:root`, dark re-derived in
-   the `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]` blocks of
-   `tokens/colors.css`. No per-component dark CSS (see
-   [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §12).
+1. **One canonical value per token.** The framework is **light-only**: a single
+   `:root` block in `tokens/colors.css`, `color-scheme: light`, and no
+   `@media (prefers-color-scheme: dark)` block, no `[data-theme]` block, and no
+   pre-paint theme script anywhere (see
+   [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §12). Canonical names carry the
+   values and every `--rio-*` name is a permanent alias onto them, because
+   `AdminTheme`, `rio-theme` and downstream projects target the `--rio-*`
+   contract (contract §1).
 2. **No hard-coded colours, spacing, or font sizes outside `tokens/`.**
    Every component resolves through `var(--rio-*)`. Projects override the
    framework by patching the token blocks from their own theme file; if a
@@ -47,11 +51,19 @@ Three rules:
 3. **New token = CHANGELOG entry.** Tokens are public API; a new `--rio-*` token
    ships under a "Tokens" CHANGELOG note so branches can't drift the palette.
 
-The brand accent is **rust** — its canonical value (`--rio-accent`) lives in
-[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1, not restated here. It is reserved
-for affordances — primary buttons, focus rings, active state, links — and **never
-flood-filled across page chrome**; surfaces stay neutral so the accent keeps its
-weight as a call-to-action.
+The brand accent is **RustIO Blue** — its canonical value lives in
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1.3, not restated here. (The
+`--rio-rust*` token names are kept deliberately as the established override
+contract; the *name* is historical, the *value* is blue. The burnt-copper accent
+of Visual Contract v2.x is retired.) It is reserved for affordances — primary
+buttons, active state, links, dots, tints — and **never flood-filled across page
+chrome**; surfaces stay neutral so the accent keeps its weight as a
+call-to-action.
+
+**Focus is a separate role, not a shade of the accent.** `--rio-accent-focus`
+carries its own value with its own contrast budget and is never re-pointed at the
+primary — including by `AdminTheme`, which overrides the accent and leaves focus
+alone (contract §1.3, §15.2).
 
 ---
 
@@ -68,10 +80,14 @@ Latin faces are self-hosted from the binary (`@font-face` in `base/fonts.css`);
 **no CDN round-trip, no FOUT, no GDPR/tracking surface.** Arabic faces are gated
 by `unicode-range`, so a Latin-only page pays zero download for them. The exact
 font stacks and the type scale are owned by
-[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2 — body/labels/inputs/tables at 16px,
-legends/headers/kbd at 14px, page titles 36px, and a hard **14px floor: no
-content-area UI text below 14px.** (The prior Geist / Spectral / Hanken faces and
-the 13px floor were retired with the contract.)
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2 — body/labels/inputs/table cells at
+**15px**, mono micro-labels (table heads, fieldset bands, `dl` labels, eyebrows)
+at **13px**, and page titles at **24px**. There is **no size floor**: 13px is the
+family's mono/micro size and 12px is the ladder's bottom step. What replaces it is
+a *role and contrast* floor — operational text may not be pale, and 13px is
+reserved for the mono/micro roles rather than for prose (contract §1.2, §2.1).
+(The prior Geist / Spectral / Hanken faces were retired with the contract; the
+v2.x 14px floor and 36px title were repealed in v3.0.)
 
 ### Line height is tuned per script
 
@@ -98,26 +114,32 @@ contract §12 (connected script breaks under tracking).
 ## 3. Surface hierarchy
 
 Surfaces lift in small steps from page canvas to popovers — depth comes from
-*layering*, not drop shadow. The canonical light values (`--rio-bg` `#fafcfb`,
-`--rio-surface` white, the code-chip tint, and the dark-theme inversions) are
-owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (and §12 for dark).
-Principles that hold regardless of value:
+*layering*, not drop shadow. The canonical values (the page ground, `--rio-surface`
+white, the hover/head rungs, the code-chip tint) are owned by
+[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1.1. Principles that hold regardless
+of value:
 
-- Never pure white, never pure black.
-- Chrome (topbar / sidebar / footer) sits on a distinct deep-slate surface so the
-  operator skeleton reads without conscious attention. The chrome stays dark in
-  both light and dark themes.
+- Never pure white as a page ground, never pure black as ink.
+- Chrome (topbar / sidebar / footer) sits on its own surface so the operator
+  skeleton reads without conscious attention. It is a *distinct* surface, not a
+  dark one: the admin is light throughout (§5).
+- Cards are **flat** — a white card on the page ground with a 1px border is
+  already separated. A shadow is reserved for cards in a grid and for the auth
+  card (contract §1.6).
 - Tables carry **no zebra** — rows separate by soft dividers and hover, not striping.
 
-Borders are two weights (contract §1): a **soft** card/divider border
-(`--rio-border-soft`) and a **strong** input/control border (`--rio-border-input`)
-that keeps fields clearly outlined rather than melting into the card.
+Borders are two weights (contract §1.1): a **soft** card/divider border and a
+**strong** border, plus a deeper dedicated field line (contract §1.5) that keeps
+inputs clearly outlined rather than melting into the card.
 
 ### Shadow scale
 
-Shadows are quiet by design. Use `--rio-shadow-xs` for buttons,
-`--rio-shadow` for cards, and `--rio-shadow-lg` *only* for transient
-overlays (dropdown panels, modal-equivalent surfaces). Premium tooling
+Shadows are quiet by design, and flat is the default. `--rio-shadow-sm` is for
+cards **in a grid**; `--rio-shadow-lg` is for transient overlays (dropdown
+panels, popovers) and is a product token with no RustIO counterpart;
+`--rio-shadow-xl` dresses the auth card alone. `--rio-shadow-md`,
+`--rio-shadow-card` and `--rio-shadow-inset` are retired (contract §1.6).
+Premium tooling
 prefers borders + surface contrast over drop shadow; if you reach for
 `box-shadow` for emphasis, reach for a darker border first.
 
@@ -125,7 +147,7 @@ prefers borders + surface contrast over drop shadow; if you reach for
 
 ## 4. Spacing scale
 
-Seven steps, 4 → 48 px:
+Six canonical steps, 4 → 32 px:
 
 | Token | rem    | px |
 |-------|--------|----|
@@ -135,7 +157,10 @@ Seven steps, 4 → 48 px:
 | `s4`  | 1      | 16 |
 | `s5`  | 1.5    | 24 |
 | `s6`  | 2      | 32 |
-| `s7`  | 3      | 48 |
+
+Larger legacy steps (`--rio-space-40/48/64/80/96`) and the off-scale
+`--rio-space-2/6/20` are audited out as components move onto the six
+(contract §1.7).
 
 Component rhythm uses `gap` on flex containers rather than per-element
 margins. The form rule `gap: var(--rio-s5)` on `.rio-form` is canonical: it
@@ -145,30 +170,34 @@ without per-field margin accounting.
 Two shell reservations live in `tokens/spacing.css` because some component
 rules need to compute against them:
 
-- `--rio-sidebar-w`: 240 px (260 px ≥ 1280 px)
-- `--rio-topbar-h`: 64 px
+- `--rio-sidebar-w` — the contextual rail
+- `--rio-topbar-h` — the utility row (aliases the shared `--masthead`)
+- `--rio-modulebar-h` — the module row, a product token
+
+Their values are owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §10, not
+restated here.
 
 ---
 
-## 5. Light and dark
+## 5. Light only
 
-The framework ships **both themes, token-driven only** (contract §12). Light is
-the default `:root`; dark is re-derived in the `@media (prefers-color-scheme:
-dark)` (auto) and `[data-theme="dark"]` (explicit toggle) blocks of
-`tokens/colors.css` — the auto block is placed before the explicit one so an
-explicit theme wins by source order. There is **no per-component dark CSS**:
-components reference tokens, and only the token blocks carry per-theme values.
+The framework ships **one theme** (contract §12). `tokens/colors.css` declares a
+single `:root` with `color-scheme: light`. There is no
+`@media (prefers-color-scheme: dark)` block, no `[data-theme="dark"]` block, no
+pre-paint theme script, and no per-component theme CSS.
 
-- **Slate dark, not charcoal.** Dark inverts the surface ladder to a slate family
-  and lifts the accent so it clears AA on dark surfaces; body text clears 4.5:1
-  on its background. Exact dark values live in
-  [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §12 + `tokens/colors.css`.
-- **One re-derivation per theme block to audit.** Because dark is token-only, the
-  WCAG pairings are checked per block, not per component — no parallel component CSS.
-- **Projects rebrand via the token blocks.** A generated `tokens.css` override
-  must itself be dark-aware ([`TOKENS-EMIT-SPEC.md`](TOKENS-EMIT-SPEC.md)); a
-  light-only override leaks light into dark mode, and the runtime logs a WARN
-  naming the file at startup.
+- **One calm, light surface everywhere.** Hierarchy comes from the surface ladder
+  and borders (§3), not from a second palette.
+- **One set of WCAG pairings to audit.** Because there is one block, contrast is
+  checked once per token pair rather than per theme per component.
+- **Projects rebrand via the token block.** A generated `tokens.css` override is
+  appended after the baked bundle and needs only `:root` to compose correctly.
+- **History.** Visual Contract v2.1 §12 declared a dark theme *mandatory* and
+  described a slate dark ladder. The shipped stylesheets have been light-only
+  since the blue-accent pass, so v2.1 described a theme that did not exist;
+  contract v3.0 corrected the record. `TOKENS-EMIT-SPEC.md` still carries the
+  dark-aware emission rules and is reconciled in the emitter pass — until then
+  the contract wins on whether a dark theme exists.
 
 ---
 
@@ -182,14 +211,18 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
    hover — **no zebra striping**, no accent-tinted overlay. Cards layer with
    borders, not glow.
 2. **Reserve the accent for affordances.** Anything the user can act on
-   may wear the rust accent; anything that's just content stays neutral.
-   If everything is accented, nothing is.
-3. **Mobile-first, three breakpoints.** `< 768 px` collapses the sidebar
-   off-canvas behind a hamburger; `≥ 768 px` pins it; `≥ 1280 px` widens
-   it to 260 px and caps `.rio-main` at 1280 px so a 4 K monitor doesn't
-   stretch a table row across the user's whole field of view.
+   may wear the blue accent; anything that's just content stays neutral.
+   If everything is accented, nothing is. Focus is not an accent — it is its
+   own role (§1).
+3. **Mobile-first, and the measure is capped.** Narrow widths collapse the rail;
+   wider ones pin it. Every page is capped by its `page_measure` so a 4 K monitor
+   doesn't stretch a table row across the user's whole field of view, and the
+   workspace gutter steps down with the viewport. The measures, the gutter steps
+   and the breakpoints are owned by
+   [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §10 and §2.2.
 4. **One canonical accent across every admin page.** Projects override
-   exactly one rust value to rebrand.
+   the accent to rebrand, through `AdminTheme` — which does not touch focus
+   (§1, contract §15.2).
 5. **Reuse before invention.** The `.rio-dropdown` machinery is generic
    on purpose: filters, sort menus, per-page pickers, and future column
    togglers all live on top of it. Don't bake a one-off floating panel
@@ -202,27 +235,25 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
 7. **No marketing surfaces.** Sessions, MFA enrolment, recovery codes —
    all read like a settings page, not a SaaS auth dashboard. No hero,
    no gradient, no "secure your account" illustration.
-8. **Operator readability first.** The default body font size sits at
-   16 px, the floor at **14 px** (contract §2 — no content-area text below it),
-   table cells at 16 px, line-height at 1.6. Density is achieved with `gap` and
-   surface contrast, not by shrinking text.
-9. **Deeper surface ladder.** Adjacent surfaces sit ≥ 4 % apart so the
-   eye never squints to tell canvas from card from table-header from
-   row-hover. Added v0.15.0; details in
-   [`PLAN_VISUAL_v2.md`](../archive/PLAN_VISUAL_v2.md). The surface scale
-   carries six rungs (`--rio-bg` → `--rio-surface` → `--rio-surface-2` →
-   `--rio-surface-3` → `--rio-surface-chrome` → `--rio-surface-elevated`).
-10. **Chrome carries weight.** Topbar, sidebar, and footer render on
-    `--rio-surface-chrome` — a surface that is visually distinct from
-    both card and canvas so the operator skeleton is visible without
-    conscious attention. Direction is a project-aesthetic choice:
-    chrome between card and canvas (subtle frame, v0.15.0 default) or
-    chrome darker than canvas (dark-frame, v0.15.1 default — preferred
-    for premium operator-software feel). When chrome goes dark in
-    light mode, a chrome-scope cascade in `layout/shell.css` flips
-    `--rio-text-*`, `--rio-surface-2/3`, `--rio-border-*`, and
-    `--rio-accent` to light-on-dark variants for every descendant —
-    no per-component edits needed. Added v0.15.0; reframed v0.15.1.
+8. **Operator readability first.** The default body size sits at **15 px** and
+   table cells at 15 px (contract §2.1). Density comes from the row and control
+   scale — 48 px rows, 40 px heads, 38 px controls — plus `gap` and surface
+   contrast, not from shrinking prose. The 13 px mono size is for micro-labels
+   that name a thing, never for text the operator has to read in quantity, and
+   no operational text may be pale (contract §1.2).
+9. **Legible surface ladder.** Adjacent surfaces sit far enough apart that the
+   eye never squints to tell canvas from card from table-header from row-hover.
+   The rungs that exist are the page ground, the card surface, the
+   hover/sunken rung, the head/raised rung, the rail and the overlay — named and
+   valued in [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1.1. (An earlier
+   six-rung scheme with `--rio-surface-2/3/chrome/elevated` was planned in
+   `PLAN_VISUAL_v2.md` and never shipped; those tokens do not exist.)
+10. **Chrome carries weight.** Topbar, rail, and footer render on their own
+    surfaces (`--rio-rail-bg` and the ladder's upper rungs) so the operator
+    skeleton is visible without conscious attention. Chrome is *distinct*, not
+    *dark*: the admin is light throughout (§5), and the earlier "dark-frame"
+    direction — with its chrome-scope cascade flipping text, surface, border and
+    accent tokens to light-on-dark — is retired along with the dark theme.
 11. **Typography hierarchy is a weight choice, not just a size.**
     Display sizes (h1, h2, login title) declare gravity through weight
     700–800 *and* tracking that reads as deliberate. Body and table
@@ -238,7 +269,7 @@ through a ten-hour shift — not to convert a free-trial user. Concretely:
 crates/rustio-admin/assets/static/admin/
 ├── admin.css            ← contributor-facing @import manifest
 ├── tokens/              ← single source of truth for the visual scale
-│   ├── colors.css       ← light :root + dark @media / [data-theme] blocks
+│   ├── colors.css       ← the single light :root token block
 │   ├── compat.css       ← contract-name aliases onto the engine tokens
 │   ├── spacing.css · radius.css · shadows.css · motion.css · typography.css
 ├── base/
