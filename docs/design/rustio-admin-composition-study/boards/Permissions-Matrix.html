@@ -1,0 +1,1016 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Permissions matrix · rustio-admin composition study v3</title><style>
+/* --- Reference-page chrome. Deliberately plain: this file is a design
+   reference read from a repository, not a product screen. The RustIO product
+   styles live below, scoped to .rio, and are the actual contract. --- */
+:root{
+  --pg:#f6f7f9;--pg-2:#ffffff;--pg-line:#dfe4ea;--pg-ink:#171B22;--pg-ink-2:#3F4A59;
+  --pg-accent:#1f5797;
+  --g1:4px;--g2:8px;--g3:12px;--g4:16px;--g5:24px;--g6:32px;--g7:48px;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pg-ink);font-family:var(--sans);
+  font-size:16px;font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:var(--g7) var(--g5) 96px}
+a{color:var(--pg-accent)}
+:focus-visible{outline:3px solid #2f7bd6;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--g2);margin-bottom:var(--g5);
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.crumbs a{color:var(--pg-accent);text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+h1{margin:0 0 var(--g3);font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+h2{margin:0;font-size:18px;font-weight:700;line-height:1.3}
+h3{margin:0 0 var(--g2);font-size:16px;font-weight:700;line-height:1.35}
+.lede{max-width:74ch;color:var(--pg-ink-2);font-size:16px;font-weight:500}
+.sec{margin-top:var(--g7)}
+.sec-head{display:flex;align-items:baseline;gap:var(--g3);padding-bottom:var(--g2);
+  margin-bottom:var(--g4);border-bottom:1px solid var(--pg-line)}
+.sec-key{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--pg-accent);letter-spacing:.06em}
+/* `:where()` contributes no specificity, so these documentation colours can
+   never outrank a product rule inside a board render. Without it `.sec p`
+   (0-1-1) silently beats `.rio-card-title` (0-1-0) and mono labels lose their
+   colour. */
+.sec :where(p,li){color:var(--pg-ink-2);max-width:78ch}
+.sec ul{margin:0;padding-left:1.15em;display:grid;gap:var(--g2)}
+.note{padding:var(--g3) var(--g4);border-left:3px solid var(--pg-line);background:#fff;
+  border-radius:0 8px 8px 0;font-size:15px;color:var(--pg-ink-2)}
+code{font-family:var(--mono);font-size:.9em;background:#eef1f5;border:1px solid var(--pg-line);
+  border-radius:4px;padding:1px 5px;color:#174578}
+table.doc{width:100%;border-collapse:collapse;font-size:15px;background:#fff;
+  border:1px solid var(--pg-line);border-radius:10px;overflow:hidden}
+table.doc th{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#202733;text-align:left;padding:12px 14px;
+  background:#f1f4f8;border-bottom:1px solid var(--pg-line)}
+table.doc :where(td){padding:11px 14px;border-bottom:1px solid var(--pg-line);color:var(--pg-ink-2);vertical-align:top}
+table.doc :where(td:first-child){color:var(--pg-ink);font-weight:600}
+table.doc :where(tr:last-child td){border-bottom:0}
+.scroll{overflow-x:auto}
+.st{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid;
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;line-height:1.7}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st-existing{color:#4c5868;border-color:#c7cfd9;background:#f1f3f6}
+.st-visual{color:#174578;border-color:#b7cdea;background:#eaf2fd}
+.st-wiring{color:#7a4c08;border-color:#e3c981;background:#fff6e6}
+.st-future{color:#5b3f87;border-color:#c3b1e0;background:#f4f0fb;border-style:dashed}
+.props{display:grid;gap:1px;background:var(--pg-line);border:1px solid var(--pg-line);
+  border-radius:10px;overflow:hidden}
+.prop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--g4);padding:var(--g4);background:#fff;align-items:start}
+.prop h3{margin-bottom:4px;font-size:15px}
+.prop :where(p){margin:0;font-size:15px;color:var(--pg-ink-2)}
+.prop.is-future{background:repeating-linear-gradient(135deg,#fbfaff,#fbfaff 10px,#f5f2fb 10px,#f5f2fb 20px)}
+.explore{border:2px dashed #c3b1e0;border-radius:12px;padding:var(--g5);background:#faf8fd;margin-top:var(--g5)}
+.explore .hd{display:flex;align-items:center;gap:var(--g3);margin-bottom:var(--g3);flex-wrap:wrap}
+.explore .dim{filter:saturate(.3) opacity(.6);pointer-events:none}
+/* A board render sits in a frame and scrolls inside it, so the page body
+   never scrolls sideways at any width. */
+.frame{border:1px solid var(--pg-line);border-radius:12px;overflow:hidden;contain:paint;
+  background:#fff;max-width:100%}
+.frame-bar{display:flex;align-items:center;gap:var(--g3);padding:10px var(--g4);
+  border-bottom:1px solid var(--pg-line);background:#f1f4f8;font-family:var(--mono);
+  font-size:13px;color:#3F4A59}
+.frame-bar .w{margin-left:auto;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.frame-body>.rio{min-width:1040px}
+.frame.narrow{width:390px}
+.frame.narrow .frame-body>.rio{min-width:0}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);
+  font-size:14px;color:#596779}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+
+.wrap{max-width:1520px}
+/* Frames are same-origin iframes so admin.css's media queries respond to the
+   frame width, not the reader's window. A script sizes each to its content. */
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.shot{display:block;border:0;height:320px;max-width:none;background:#f1f1ee}
+.frame.narrow{width:390px;max-width:100%}
+.frame.w480{width:480px;max-width:100%}
+.frame.w760{width:760px;max-width:100%}
+.frame.w900{width:900px;max-width:100%}
+.frame.w1100{width:1100px;max-width:100%}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);font-size:14px;color:#596779}
+.flow{font-family:var(--mono);font-size:13px;line-height:1.6;background:#fff;border:1px solid var(--pg-line);border-radius:10px;padding:var(--g4) var(--g5);white-space:pre;overflow-x:auto;color:#202733}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:var(--g2) var(--g5);font-size:15px}
+.kv dt{font-family:var(--mono);font-size:13px;font-weight:700;color:#334052;letter-spacing:.04em}
+.kv dd{margin:0;color:var(--pg-ink-2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--g4)}
+.cards a{display:block;padding:var(--g4);border:1px solid var(--pg-line);border-radius:10px;background:#fff;color:var(--pg-ink);text-decoration:none}
+.cards a:hover{border-color:#b7cdea}
+.cards a strong{display:block;font-size:16px;margin-bottom:4px}
+.cards a span{font-size:14px;color:var(--pg-ink-2)}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+.tri{display:grid;gap:12px;margin-top:12px} .tri .lab{font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#596779;margin:16px 0 4px}
+.st-drop{background:#f3e3e2;color:#7a2d28} .st-div{background:#e9e4f6;color:#43337a}</style></head><body><div class="wrap">
+<nav class="crumbs"><a href="index.html">Index</a> <span>·</span> <a href="Shell.html">Shell</a> <span>·</span> <a href="Dashboard.html">Dashboard</a> <span>·</span> <a href="Data-Table.html">Data table</a> <span>·</span> <a href="View-Modes.html">View modes</a> <span>·</span> <a href="Users-Groups.html">Users & groups</a> <span>·</span> <strong>Permissions matrix</strong> <span>·</span> <a href="API-Surface.html">API surface</a> <span>·</span> <a href="Account-Sessions.html">Account & sessions</a> <span>·</span> <a href="Form.html">Form</a> <span>·</span> <a href="History.html">History (dense)</a> <span>·</span> <a href="Dense-Orders.html">Dense: Orders</a> <span>·</span> <a href="Narrow.html">Narrow</a> <span>·</span> <a href="Comparison.html">Comparison</a></nav><p class="cap">rustio-admin · composition unification study · v3 · RustIO main @ 00b933c</p><h1>Permissions matrix</h1><p class="lede">The group editor's matrix: every model × the four verbs, row and column toggles, members, one action bar.</p>
+<div class="sec"><div class="sec-head"><span class="sec-key">A</span><h2>At 1440</h2></div><div class="frame"><div class="frame-bar"><span>/admin</span><span class="w">1440</span></div><div class="frame-body"><iframe class="shot" title="permissions v3" style="width:1440px" srcdoc="&lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&lt;title&gt;Edit group · Shop&lt;/title&gt;&lt;style&gt;/* ============================================================
+   rustio-admin in the RustIO Composition 3.1 grammar — MOCK STYLESHEET v3 (RustIO main 00b933c authoritative)
+   Design study only. Not product CSS; nothing here is proposed verbatim.
+   Class names are rustio-admin&#x27;s own (.rio-*) so every rule maps back to
+   a real template. Token block: canonical RustIO names carry the values;
+   the --rio-* names are aliases, which is the mapping proposal made
+   concrete. Light only.
+   ============================================================ */
+:root {
+  color-scheme: light;
+  /* --- canonical (RustIO Composition 3.1 values, verbatim) --- */
+  --page: #f1f1ee; --surface: #ffffff; --surface-soft: #f7f9fc; --surface-head: #f1f4f8;
+  --rail-bg: #f4f6f9; --rail-line: #d3dbe5;
+  --blue: #1f5797; --blue-dark: #174578; --blue-soft: #dfeafb; --blue-line: #b7cdea; --focus: #2f7bd6;
+  --ink: #171B22; --ink-body: #202733; --ink-2: #3F4A59; --ink-hint: #4C5868; --ink-mono: #334052; --ink-3: #596779;
+  --border: #d5dce5; --border-strong: #b9c5d3; --field-line: #848f9e;
+  --green: #19724b; --green-soft: #e8f6ee; --amber: #935b0a; --amber-soft: #fff4df; --red: #a23f3a; --red-soft: #fff0ee;
+  --grey: #4c5868; --grey-soft: #f2f4f7;
+  --shadow-sm: 0 1px 2px rgba(22,32,56,.06);
+  --shadow: 0 1px 0 rgba(255,255,255,.6), 0 24px 50px -24px rgba(22,32,56,.45), 0 8px 20px -12px rgba(22,32,56,.25);
+  --radius: 14px; --radius-btn: 8px; --radius-sm: 6px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
+  --masthead: 56px; --rail: 240px; --gutter: 32px;
+  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+
+  /* --- rustio-admin aliases (the token mapping, as it would land) --- */
+  --rio-bg: var(--page); --rio-surface: var(--surface); --rio-sunken: var(--surface-soft);
+  --rio-raised: var(--surface-head); --rio-overlay: var(--surface); --rio-surface-tint: var(--surface-head);
+  --rio-line: var(--border); --rio-line-strong: var(--border-strong);
+  --rio-rail-bg: var(--rail-bg); --rio-rail-line: var(--rail-line);
+  --rio-text-hi: var(--ink); --rio-text: var(--ink-body); --rio-text-mute: var(--ink-2); --rio-text-faint: var(--ink-3);
+  --rio-rust: var(--blue); --rio-rust-hover: var(--blue-dark); --rio-rust-tint: var(--blue-soft); --rio-rust-tint-2: var(--blue-line);
+  --rio-rust-solid: var(--blue); --rio-rust-solid-hover: var(--blue-dark); --rio-on-solid: #fff; --rio-accent-focus: var(--focus);
+  --rio-success: var(--green); --rio-success-tint: var(--green-soft); --rio-warn: var(--amber); --rio-warn-tint: var(--amber-soft);
+  --rio-danger: var(--red); --rio-danger-tint: var(--red-soft);
+  --rio-pill-on-bg: var(--green-soft); --rio-pill-on-text: var(--green); --rio-pill-off-bg: var(--grey-soft); --rio-pill-off-text: var(--grey);
+  /* product-specific, no canonical equivalent — kept as rustio-admin tokens */
+  --rio-modulebar-h: 40px; --rio-shadow-lg: 0 6px 16px -8px rgba(24,39,61,.16), 0 2px 5px rgba(24,39,61,.07);
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+body { margin: 0; min-height: 100vh; background: var(--page); color: var(--ink-body); font-family: var(--sans); font-size: 16px; font-weight: 500; line-height: 1.55; -webkit-font-smoothing: antialiased; font-variant-numeric: lining-nums tabular-nums; }
+a { color: var(--blue); text-underline-offset: 3px; }
+a:hover { color: var(--blue-dark); }
+button, input, select { font: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .92em; padding: 1px 6px; border-radius: var(--radius-sm); background: var(--surface-head); color: var(--ink); }
+.rio-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+h1,h2,h3 { margin: 0; color: var(--ink); }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+h2 { font-size: 18px; font-weight: 700; line-height: 1.3; }
+h3 { font-size: 16px; font-weight: 700; line-height: 1.35; }
+svg { display: block; }
+
+/* ---------------------------------------------------------- shell */
+.rio-console { display: grid; grid-template-columns: var(--rail) minmax(0,1fr); min-height: 100vh; }
+.rio-rail { grid-column: 1; display: flex; flex-direction: column; gap: 4px; padding: 0 var(--s3) var(--s6); background: var(--rail-bg); border-right: 1px solid var(--rail-line); }
+.rio-rail-head { display: flex; align-items: center; gap: var(--s3); height: var(--masthead); padding: 0 var(--s3); margin-bottom: calc(var(--rio-modulebar-h) + var(--s5)); }
+.rio-rail-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: var(--radius-sm); background: var(--blue); color: #fff; font-size: 14px; font-weight: 800; }
+.rio-rail-word { color: var(--ink); font-weight: 700; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rio-rail-caption { margin: 0 0 var(--s2); padding: 0 var(--s3); color: var(--ink-mono); text-transform: uppercase; font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+.rio-rail-sep { height: 1px; background: var(--rail-line); margin: var(--s3) 0; }
+.rio-rail-btn { display: flex; min-height: var(--ctl); align-items: center; gap: var(--s2); padding: 0 var(--s3); border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--ink); font-size: 15px; font-weight: 500; text-decoration: none; }
+.rio-rail-btn svg { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; color: var(--ink-2); }
+.rio-rail-btn:hover { border-color: var(--blue-line); background: var(--surface); color: var(--blue); }
+.rio-rail-btn[aria-current=&quot;page&quot;] { background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+.rio-rail-btn[aria-current=&quot;page&quot;] svg { color: var(--blue); }
+.rio-rail-spacer { flex: 1; }
+
+.rio-ws { grid-column: 2; display: flex; flex-direction: column; min-width: 0; }
+.rio-wshead { background: var(--surface); border-bottom: 1px solid var(--border); }
+.rio-wshead-utility { height: var(--masthead); }
+.rio-wshead-inner { display: flex; align-items: center; gap: var(--s4); height: 100%; padding: 0 var(--gutter); }
+.rio-devpill { display: inline-flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s2); border: 1px solid #e3c981; border-radius: var(--radius-sm); background: var(--amber-soft); color: #5c3f13; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.rio-ws-search { flex: 0 1 420px; margin: 0 auto; display: flex; align-items: center; gap: var(--s2); height: var(--ctl-util); padding: 0 var(--s3); border: 1px solid var(--field-line); border-radius: var(--radius-btn); background: var(--surface); color: var(--ink-hint); font-size: 14px; cursor: pointer; text-align: left; }
+.rio-ws-search svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; }
+.rio-ws-search-label { flex: 1; }
+.rio-kbd { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-soft); color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+.rio-ws-actions { display: flex; align-items: center; gap: var(--s2); }
+.rio-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: var(--ctl-util); height: var(--ctl-util); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--ink-2); }
+.rio-iconbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.rio-iconbtn:hover { background: var(--surface-soft); color: var(--ink); }
+.rio-usermenu-btn { display: inline-flex; align-items: center; gap: var(--s2); height: var(--ctl-util); padding: 0 var(--s2) 0 var(--s1); border: 1px solid var(--field-line); border-radius: var(--radius-btn); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+.rio-usermenu-avatar { width: 24px; height: 24px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); font-size: 13px; font-weight: 800; }
+.rio-usermenu-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; color: var(--ink-2); }
+.rio-modnav { height: var(--rio-modulebar-h); background: var(--surface-soft); border-top: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.rio-modnav-inner { display: flex; align-items: stretch; gap: var(--s5); height: 100%; min-width: max-content; padding: 0 var(--gutter); }
+.rio-modnav-item { display: inline-flex; align-items: center; gap: var(--s2); position: relative; color: var(--ink-2); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rio-modnav-item svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.rio-modnav-item:hover { color: var(--ink); }
+.rio-modnav-item[aria-current=&quot;true&quot;] { color: var(--blue); }
+.rio-modnav-item[aria-current=&quot;true&quot;]::after { content: &quot;&quot;; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--blue); border-radius: 2px 2px 0 0; }
+
+.rio-ws-body { flex: 1; display: flex; flex-direction: column; }
+.rio-ws-inner { flex: 1; display: flex; flex-direction: column; gap: var(--s4); width: min(100% - 2 * var(--gutter), var(--content)); margin: 0 auto; padding: var(--s5) 0 var(--s6); }
+.rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
+.rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
+/* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
+.rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
+.rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
+.rio-alert--danger { border-color: #e0a7a2; background: var(--red-soft); color: #782f2b; }
+.rio-alert ul { margin: 0; padding-left: 1.2em; }
+.rio-appfoot { background: var(--surface); border-top: 1px solid var(--border); }
+.rio-appfoot-inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding: var(--s3) var(--gutter); font-size: 14px; color: var(--ink-2); }
+.rio-appfoot .rio-brand-word { color: var(--ink); font-weight: 700; }
+.rio-appfoot-links { display: flex; flex-wrap: wrap; gap: var(--s4); }
+.rio-appfoot-links a { color: var(--ink-2); text-decoration: none; }
+.rio-appfoot-links a:hover { color: var(--blue); }
+.rio-appfoot-meta { margin-left: auto; color: var(--ink-3); font-size: 13px; }
+
+/* ---------------------------------------------------------- page head (unboxed) */
+.rio-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0; color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.rio-crumbs a { color: var(--ink-2); }
+.rio-crumb-sep { color: var(--border-strong); }
+.rio-crumb-current { color: var(--ink); font-weight: 700; }
+/* v3 — the page head follows RustIO main (00b933c, .page-head): a grid
+   &quot;title action&quot; / &quot;lead lead&quot;; the page&#x27;s primary action sits one gap after
+   the title, centred on the title line; the lead beneath. The template&#x27;s
+   wrapper &lt;div&gt; around h1 + lead is lifted into the grid with display:
+   contents. The v2 band-with-rule came from PR #5 only and is dropped. */
+.rio-masthead-top { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); grid-template-areas: &quot;title cta&quot; &quot;desc desc&quot;; align-items: center; column-gap: var(--s5); row-gap: 0; margin: calc(-1 * var(--s2)) 0 var(--s2); }
+.rio-masthead-top &gt; div:not(.rio-masthead-cta) { display: contents; }
+.rio-masthead-top h1 { grid-area: title; margin: 0; }
+.rio-masthead-cta { grid-area: cta; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); justify-self: start; }
+.rio-masthead-desc { grid-area: desc; max-width: 680px; margin: var(--s2) 0 0; color: var(--ink-2); font-size: 15px; }
+
+/* ---------------------------------------------------------- buttons */
+.rio-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--ctl); padding: 0 var(--s4); border: 1px solid transparent; border-radius: var(--radius-btn); font-size: 14px; font-weight: 680; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer; }
+.rio-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+.rio-btn--primary { background: var(--blue); color: #fff; }
+.rio-btn--primary:hover { background: var(--blue-dark); color: #fff; }
+.rio-btn--secondary, .rio-btn--ghost { background: var(--surface); border-color: var(--border-strong); color: var(--ink); }
+.rio-btn--secondary:hover, .rio-btn--ghost:hover { border-color: var(--blue-line); color: var(--blue); }
+.rio-btn--subtle { background: transparent; color: var(--blue); }
+.rio-btn--subtle:hover { background: var(--blue-soft); color: var(--blue-dark); }
+.rio-btn--subtle.rio-danger-ink { color: var(--red); }
+.rio-btn--subtle.rio-danger-ink:hover { background: var(--red-soft); color: var(--red); }
+.rio-btn--danger { background: var(--red-soft); color: var(--red); border-color: #ce8580; }
+.rio-btn--danger:hover { background: #ffe4e1; border-color: var(--red); color: var(--red); }
+.rio-btn--sm { min-height: var(--ctl-sm); padding: 0 var(--s3); font-size: 13px; font-weight: 650; border-radius: var(--radius-sm); }
+.rio-btn.is-active { border-color: #7890af; background: #f4f8fd; color: var(--blue-dark); }
+.rio-chev { width: 12px !important; height: 12px !important; opacity: .7; }
+.rio-dropdown-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-sm); background: var(--blue-line); color: var(--blue-dark); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.rio-action-link { display: inline-flex; align-items: center; gap: var(--s1); min-height: var(--ctl-sm); padding: 0 var(--s2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--blue); font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.rio-action-link:hover { background: var(--blue-soft); color: var(--blue-dark); }
+.rio-action-link svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.rio-action-link--danger { color: var(--red); }
+.rio-action-link--danger:hover { background: var(--red-soft); color: var(--red); }
+.rio-action-link--muted { color: var(--ink-2); }
+.rio-action-link--muted:hover { background: var(--surface-soft); color: var(--ink); }
+.rio-row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--s1); white-space: nowrap; opacity: 1; }
+
+/* ---------------------------------------------------------- find row + data surface */
+.rio-cmdbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); }
+.rio-search { position: relative; display: block; flex: 0 1 340px; min-width: 220px; }
+.rio-search .rio-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--ink-hint); pointer-events: none; }
+.rio-search-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; }
+.rio-input { width: 100%; height: var(--ctl); padding: 0 var(--s3); color: var(--ink); background: var(--surface); border: 1px solid var(--field-line); border-radius: var(--radius-btn); font-size: 15px; font-weight: 500; }
+.rio-input:focus { border-color: var(--blue); outline: 3px solid var(--focus); outline-offset: 2px; }
+.rio-input[aria-invalid=&quot;true&quot;] { border-color: var(--red); background: var(--red-soft); }
+.rio-search .rio-input { padding-left: 38px; }
+textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3); line-height: 1.5; resize: vertical; }
+.rio-select-wrap { display: block; }
+.rio-cmdbar-count { color: var(--ink-2); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rio-cmdbar-count b { color: var(--ink-body); font-weight: 700; }
+.rio-active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font-size: 14px; color: var(--ink-2); }
+.rio-active-filters-label { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mono); }
+.rio-active-pill { display: inline-flex; align-items: center; gap: var(--s1); padding: 3px var(--s1) 3px var(--s2); border: 1px solid #7890af; border-radius: var(--radius-sm); background: #f4f8fd; color: var(--blue-dark); font-size: 13px; font-weight: 600; }
+.rio-active-pill-x { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: var(--ink-2); text-decoration: none; }
+.rio-active-pill-x:hover { background: var(--blue-line); color: var(--blue-dark); }
+
+.rio-board { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.rio-board-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding: var(--s2) var(--s4); border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; background: var(--surface-head); }
+.rio-board-head .rio-board-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.rio-view-modes { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-btn); background: var(--surface); overflow: hidden; }
+.rio-view-mode { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--ctl-sm); padding: 0 var(--s3); color: var(--ink); font-size: 13px; font-weight: 650; text-decoration: none; }
+.rio-view-mode + .rio-view-mode { border-left: 1px solid var(--border); }
+.rio-view-mode:hover { background: var(--surface-soft); color: var(--blue); }
+.rio-view-mode.is-active { background: var(--blue-soft); color: var(--blue-dark); box-shadow: inset 0 0 0 1px var(--blue-line); }
+.rio-sortnote { color: var(--ink-2); font-size: 14px; font-weight: 500; }
+.rio-bulkbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); padding: var(--s2) var(--s4); border-bottom: 1px solid var(--blue-line); background: var(--blue-soft); color: var(--blue-dark); font-size: 14px; font-weight: 600; }
+.rio-bulkbar-actions { margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: var(--s1); }
+/* v2 — position: relative so an absolutely positioned descendant (the .rio-sr-only labels in the actions head) is clipped by the scroller instead of widening the document. */
+.rio-tablewrap { position: relative; overflow-x: auto; border-radius: 0 0 var(--radius) var(--radius); clear: both; }
+/* ALIGN — identity columns whose values are single unbreakable tokens hug their content (RustIO main .cell-fit / column_hugs). */
+.rio-cell-fit { width: 1%; white-space: nowrap; }
+.rio-perm-cell__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.rio-dtable, .rio-table { width: 100%; border-collapse: collapse; text-align: left; }
+.rio-dtable th, .rio-table th { height: var(--th-h); padding: 0 var(--s4); background: var(--surface-head); color: var(--ink-body); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.rio-dtable th a, .rio-table th a { color: inherit; text-decoration: none; }
+.rio-dtable th.is-sort-desc, .rio-dtable th.is-sort-asc { background: #e9eef6; color: var(--ink); }
+.rio-dtable td, .rio-table td { height: var(--td-h); padding: 0 var(--s4); border-bottom: 1px solid var(--border); color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1.4; vertical-align: middle; }
+.rio-dtable tbody tr:last-child td, .rio-table tbody tr:last-child td { border-bottom: 0; }
+.rio-dtable tbody tr:hover, .rio-table tbody tr:hover { background: var(--surface-soft); }
+.rio-dtable tbody tr[aria-selected=&quot;true&quot;] { background: var(--blue-soft); }
+.rio-cell-primary, .rio-prod-name { color: var(--blue); font-weight: 680; text-decoration: underline; text-decoration-color: var(--blue-line); }
+.rio-prod-cat, .rio-cell-sub { display: block; color: var(--ink-2); font-size: 14px; font-weight: 500; }
+.rio-cell-meta, .rio-hist-when { color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.rio-hist-ip { font-family: var(--mono); font-size: 13px; color: var(--ink-3); }
+.col-check { width: 1%; }
+.col-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+.col-act, .rio-dtable .col-act { width: 1%; text-align: right; white-space: nowrap; padding-right: var(--s3); }
+.col-price, .col-rows, .rio-cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+/* v2 — a cell is treated by its kind, which the template already emits as
+   rio-td--{{ f.kind }}: date-like and boolean cells never wrap, digits are
+   tabular everywhere. IMPROVE RUSTIO-ADMIN — not on RustIO main. */
+.rio-td--date, .rio-td--datetime, .rio-td--checkbox, .rio-td--boolean, .rio-th--date, .rio-th--datetime, .rio-cell-meta { white-space: nowrap; }
+.rio-dtable td, .rio-table td { font-variant-numeric: tabular-nums; }
+/* v3 — the actions column stays reachable when the board scrolls. */
+/* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
+   while the table fits its scroller and only acts once the board scrolls. */
+.rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
+.rio-tablewrap th.col-act { background: var(--surface-head); }
+.rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+/* v3 — Compact follows RustIO main (.record-compact-item): no column head,
+   40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
+   tokens are dropped. */
+.rio-board-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s4); border-top: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); background: var(--surface-head); color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.rio-board-foot strong { color: var(--ink-body); }
+.rio-pagination { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+.rio-page { display: inline-flex; align-items: center; justify-content: center; min-width: var(--ctl); min-height: var(--ctl); padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-soft); color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rio-page[aria-current=&quot;page&quot;] { border-color: var(--blue-line); background: var(--blue-soft); color: var(--blue); }
+.rio-page.is-disabled { opacity: .45; pointer-events: none; }
+.rio-empty { padding: var(--s6) var(--s5); text-align: center; }
+.rio-empty-title { margin-bottom: var(--s1); color: var(--ink); font-size: 16px; font-weight: 700; }
+.rio-empty p { margin: 0 auto; max-width: 52ch; color: var(--ink-2); font-size: 15px; }
+.rio-empty-cta { margin-top: var(--s4); }
+.rio-history-date-divider th { height: 36px; background: var(--surface-soft); color: var(--ink-mono); }
+.rio-history-diff { display: grid; gap: 2px; margin: var(--s1) 0 0; font-size: 14px; }
+.rio-history-diff__row { display: flex; align-items: baseline; gap: var(--s2); }
+.rio-history-diff__label { min-width: 90px; color: var(--ink-3); font-family: var(--mono); font-size: 13px; }
+.rio-history-diff dd { margin: 0; }
+.rio-history-diff__old { color: var(--red); text-decoration: line-through; }
+.rio-history-diff__new { color: var(--green); }
+.rio-history-diff__arrow { color: var(--ink-3); }
+.rio-by { display: inline-flex; align-items: center; gap: var(--s2); color: var(--ink); text-decoration: none; }
+
+/* ---------------------------------------------------------- badges (pills become badges) */
+.rio-pill, .rio-badge, .rio-role, .av-badge { display: inline-flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s2); border: 1px solid transparent; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+.rio-pill::before, .av-badge::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: &quot;&quot;; }
+.rio-pill--on, .rio-pill--success, .rio-pill--badge-success, .av-badge--success { background: var(--green-soft); color: var(--green); }
+.rio-pill--off, .rio-pill--neutral, .rio-pill--badge-neutral, .av-badge--neutral { background: var(--grey-soft); color: var(--grey); }
+.rio-pill--warning, .rio-pill--badge-warning, .av-badge--warning { background: var(--amber-soft); color: var(--amber); }
+.rio-pill--danger, .rio-pill--badge-danger, .av-badge--danger { background: var(--red-soft); color: var(--red); }
+.rio-pill--info { background: var(--blue-soft); color: var(--blue); }
+.rio-role { background: var(--grey-soft); color: var(--grey); font-family: var(--mono); font-weight: 700; }
+
+/* ---------------------------------------------------------- forms */
+.rio-form { display: grid; gap: var(--s4); }
+.rio-fieldset { margin: 0; padding: var(--s5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-fieldset { min-width: 0; } /* v2 — fieldsets default to min-inline-size: min-content, which let the permission matrix widen the page at 390 */
+.rio-fieldset + .rio-fieldset { margin-top: 0; }
+.rio-fieldset-legend, .rio-fieldset &gt; legend { float: left; width: 100%; margin: 0 0 var(--s4); padding: 0; color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-fieldset--system { background: var(--surface-soft); }
+.rio-fieldset-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--s4); clear: both; }
+.rio-field { display: grid; gap: var(--s1); }
+.rio-field--full, .rio-field--textarea { grid-column: 1 / -1; }
+.rio-label { color: var(--ink); font-size: 14px; font-weight: 600; }
+.rio-req { color: var(--red); font-weight: 800; }
+.rio-help { margin: 0; color: var(--ink-hint); font-size: 14px; }
+.rio-error { margin: 0; padding: 0; list-style: none; color: var(--red); font-size: 14px; font-weight: 650; }
+.rio-check { display: flex; align-items: center; gap: var(--s3); min-height: var(--ctl); padding: 0 var(--s3); border: 1px solid var(--field-line); border-radius: var(--radius-btn); background: var(--surface); color: var(--ink); font-size: 15px; cursor: pointer; }
+.rio-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
+.rio-field--checkbox { align-self: end; }
+.rio-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s2); padding-top: var(--s4); border-top: 1px solid var(--border); }
+.rio-action-bar-end { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+.rio-checkbox-list { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; clear: both; }
+.rio-checkbox { display: flex; align-items: flex-start; gap: var(--s2); font-size: 15px; color: var(--ink); }
+.rio-checkbox input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--blue); }
+.rio-meta { color: var(--ink-2); font-size: 14px; }
+.rio-inline-section { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-inline-section__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); background: var(--surface-head); border-radius: var(--radius) var(--radius) 0 0; }
+.rio-inline-section__header h2 { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mono); }
+.rio-inline-meta { color: var(--ink-2); font-size: 14px; }
+.rio-inline-section .rio-board-foot { border-radius: 0 0 var(--radius) var(--radius); }
+
+/* ---------------------------------------------------------- permissions matrix */
+.rio-perm-matrix { width: 100%; border-collapse: collapse; clear: both; }
+.rio-perm-matrix th, .rio-perm-matrix td { padding: 0 var(--s3); height: var(--th-h); border-bottom: 1px solid var(--border); text-align: center; }
+.rio-perm-matrix thead th { background: var(--surface-head); color: var(--ink-body); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-perm-matrix tbody tr:last-child th, .rio-perm-matrix tbody tr:last-child td { border-bottom: 0; }
+.rio-perm-matrix__model { text-align: left !important; color: var(--ink); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.rio-perm-matrix tbody tr:hover { background: var(--surface-soft); }
+.rio-perm-cell input { width: 18px; height: 18px; accent-color: var(--blue); margin: 0; }
+.rio-perm-na { color: var(--ink-3); }
+.rio-perm-row-all { min-height: 28px; padding: 0 var(--s2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--blue); font-size: 13px; font-weight: 650; cursor: pointer; }
+.rio-perm-row-all:hover { background: var(--blue-soft); }
+
+/* ---------------------------------------------------------- sessions */
+.rio-sess-list { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-sess-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: var(--s5); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); }
+.rio-sess-card:last-child { border-bottom: 0; }
+.rio-sess-card--current { background: var(--surface-soft); }
+.rio-sess-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); }
+.rio-sess-title { color: var(--ink); font-size: 15px; font-weight: 680; }
+.rio-sess-meta { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); margin: 2px 0 0; color: var(--ink-2); font-size: 14px; }
+.rio-sess-meta div { display: inline-flex; gap: var(--s1); }
+.rio-sess-meta dt { color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-sess-meta dd { margin: 0; }
+.rio-sess-foot { display: inline-flex; }
+.rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+/* ---------------------------------------------------------- API surface */
+.rio-api-grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); }
+.rio-api-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); min-width: 0; }
+.rio-api-card__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); padding: var(--s4) var(--s4) var(--s3); }
+/* IMPROVE RUSTIO-ADMIN — 12rem identity floor + break-word; not on RustIO main (.record-card-identity is a plain wrapping flex row). */
+.rio-api-card__title { flex: 1 1 12rem; min-width: 12rem; font-size: 16px; font-weight: 700; color: var(--ink); overflow-wrap: break-word; }
+.rio-api-card__title a { color: var(--ink); text-decoration: none; }
+.rio-api-card__sub { color: var(--ink-2); font-weight: 500; font-size: 14px; }
+.rio-api-card__count { flex: none; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.rio-api-endpoints { border-top: 1px solid var(--border); }
+.rio-api-ep { display: flex; align-items: center; gap: var(--s3); min-height: var(--th-h); padding: 0 var(--s4); border-bottom: 1px solid var(--border); }
+.rio-api-verb { flex: none; min-width: 48px; text-align: center; padding: 2px var(--s2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.rio-api-verb--get { background: var(--green-soft); color: var(--green); }
+.rio-api-verb--post { background: var(--blue-soft); color: var(--blue); }
+.rio-api-verb--del { background: var(--red-soft); color: var(--red); }
+.rio-api-path { font-family: var(--mono); font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rio-api-ep__action { margin-left: auto; color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.rio-api-fields { padding: var(--s3) var(--s4) var(--s4); background: var(--surface-soft); border-radius: 0 0 var(--radius) var(--radius); }
+.rio-api-fields__label { margin-bottom: var(--s2); color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-api-ftable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.rio-api-ftable td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+.rio-api-ftable tr:last-child td { border-bottom: 0; }
+.rio-api-fname { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.rio-api-ftype { color: var(--ink-2); }
+.rio-api-fnull { text-align: right; color: var(--ink-3); font-size: 13px; }
+.rio-api-fnull--yes { color: var(--amber); font-weight: 600; }
+
+/* ---------------------------------------------------------- adaptive view modes (list / cards / compact) */
+.av-list--list .av-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: var(--s5); min-height: 64px; padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); color: var(--ink); text-decoration: none; }
+.av-list--list .av-row:last-child { border-bottom: 0; }
+.av-row:hover { background: var(--surface-soft); }
+.av-primary { color: var(--blue); font-size: 15px; font-weight: 680; text-decoration: underline; text-decoration-color: var(--blue-line); }
+.av-secondary, .av-ts { color: var(--ink-2); font-size: 14px; }
+.av-list--cards { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); padding: 0; }
+.av-list--cards .av-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); padding: var(--s4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink); text-decoration: none; }
+.av-list--cards .av-primary { flex: 1 1 12rem; min-width: 12rem; font-size: 16px; font-weight: 700; color: var(--ink); text-decoration: none; overflow-wrap: break-word; }
+.av-list--cards .av-badge { flex: none; }
+.av-list--cards .av-secondary, .av-list--cards .av-ts { flex: 0 0 100%; }
+.av-list--compact .av-row { display: flex; align-items: center; gap: var(--s3); min-height: var(--th-h); padding: var(--s1) var(--s4); border-bottom: 1px solid var(--border); color: var(--ink); text-decoration: none; }
+.av-list--compact .av-row:last-child { border-bottom: 0; }
+.av-list--compact .av-primary { flex: 0 1 auto; min-width: 0; }
+.av-list--compact .av-secondary, .av-list--compact .av-ts { display: none; }
+.av-list--compact .rio-row-actions { margin-left: auto; }
+
+/* ---------------------------------------------------------- dashboard */
+.rio-ledger { display: flex; flex-wrap: wrap; gap: var(--s4); }
+.rio-ledger-item { display: grid; gap: var(--s2); width: 240px; max-width: 100%; padding: var(--s5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-ledger-num { color: var(--ink); font-size: 33px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.rio-ledger-label { color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---------------------------------------------------------- narrow */
+@media (max-width: 1040px) {
+  .rio-console { grid-template-columns: minmax(0,1fr); }
+  .rio-rail { grid-column: 1; flex-direction: row; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rail-line); }
+  .rio-rail-head, .rio-rail-sep, .rio-rail-caption, .rio-rail-spacer { display: none; }
+  .rio-rail-btn { flex: none; }
+  .rio-ws { grid-column: 1; }
+  :root { --gutter: 24px; }
+  .rio-fieldset-grid { grid-template-columns: minmax(0,1fr); }
+  .rio-ws-search { flex: 1 1 160px; }
+}
+@media (max-width: 760px) {
+  .rio-masthead-top { grid-template-columns: minmax(0,1fr); grid-template-areas: &quot;title&quot; &quot;cta&quot; &quot;desc&quot;; }
+  .rio-ws-actions .rio-usermenu-name { display: none; }
+  .rio-appfoot-meta { margin-left: 0; }
+}
+@media (max-width: 480px) {
+  :root { --gutter: 16px; }
+  .rio-wshead-inner { flex-wrap: wrap; height: auto; padding-top: var(--s2); padding-bottom: var(--s2); }
+  .rio-wshead-utility { height: auto; }
+  .rio-ws-search { order: 3; flex: 1 1 100%; margin: 0; }
+  .rio-masthead-cta { justify-self: stretch; }
+  .rio-masthead-cta .rio-btn { width: 100%; }
+  .rio-search { flex: 1 1 100%; }
+  .rio-form-actions { display: grid; }
+  .rio-form-actions .rio-btn { width: 100%; }
+  .rio-action-bar-end { margin-left: 0; }
+  .rio-sess-card { grid-template-columns: minmax(0,1fr); row-gap: var(--s2); }
+  .rio-ledger-item { width: 100%; }
+}
+
+/* ---------------------------------------------------------- v2 additions: detail page (user_view), tabs, dl, timeline */
+.rio-tabs { display: flex; flex-wrap: wrap; gap: var(--s1); margin: 0 0 var(--s4); border-bottom: 1px solid var(--border); }
+.rio-tab { display: inline-flex; align-items: center; height: var(--ctl); padding: 0 var(--s3); margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--ink-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rio-tab:hover { color: var(--ink); }
+.rio-tab--active { color: var(--blue); border-bottom-color: var(--blue); }
+.rio-detail-card { padding: var(--s4) var(--s5); }
+.rio-dl { display: grid; grid-template-columns: minmax(140px, max-content) minmax(0, 1fr); column-gap: var(--s5); row-gap: 0; margin: 0; }
+.rio-dl dt { color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.rio-dl dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--ink-body); font-size: 15px; }
+.rio-dl dd.rio-dl-meta { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rio-dl dt:nth-last-of-type(1), .rio-dl dd:last-of-type { border-bottom: 0; }
+.rio-card-section { margin: var(--s5) 0 var(--s2); padding-top: var(--s4); border-top: 1px solid var(--border); color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-timeline { margin: 0; padding: 0; list-style: none; }
+.rio-timeline-item { display: grid; grid-template-columns: 7rem minmax(0,1fr); column-gap: var(--s4); padding: var(--s2) 0; border-bottom: 1px solid var(--border); color: var(--ink-body); font-size: 15px; }
+.rio-timeline-item:last-child { border-bottom: 0; }
+.rio-timeline-item &gt; .rio-meta { color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.rio-meta { color: var(--ink-2); font-size: 14px; }
+.rio-cell-nowrap { white-space: nowrap; }
+.rio-cell-ua { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rio-dtable--detail th:first-child, .rio-dtable--detail td:first-child { padding-left: var(--s5); }
+/* filter panel contents (chips, fk autocomplete, multi-select, date range) — the controls keep a floor, never an auto width */
+.rio-dropdown { position: relative; display: inline-block; }
+.rio-dropdown-panel { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; min-width: 240px; padding: var(--s3); border: 1px solid var(--border); border-radius: var(--radius-btn); background: var(--surface); box-shadow: var(--shadow-lg); }
+.rio-dropdown-panel.is-open-demo { position: static; display: inline-block; margin-top: var(--s2); }
+.rio-dropdown-label { display: block; margin-bottom: var(--s2); color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-chip-row { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.rio-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-body); font-size: 13px; font-weight: 600; text-decoration: none; }
+.rio-chip.is-active { background: var(--blue-soft); border-color: var(--blue-line); color: var(--blue-dark); }
+.rio-multi-select-options { margin: 0 0 var(--s2); padding: 0; list-style: none; }
+.rio-multi-select-option { display: flex; align-items: center; gap: var(--s2); min-height: 30px; font-size: 14px; color: var(--ink-body); }
+.rio-fk-autocomplete-wrap .rio-input { min-width: 240px; }
+.rio-fk-autocomplete-actions, .rio-multi-select-actions, .rio-date-range-actions { display: flex; gap: var(--s2); margin-top: var(--s2); }
+.rio-date-range { display: grid; gap: var(--s2); }
+.rio-date-range-field { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+/* form: textarea and the inline section head on the form measure */
+.rio-form textarea.rio-input { height: auto; min-height: 120px; padding: var(--s2) var(--s3); line-height: 1.45; }
+&lt;/style&gt;&lt;/head&gt;
+&lt;body class=&quot;rio-canvas rio-console&quot;&gt;&lt;nav class=&quot;rio-rail&quot; aria-label=&quot;Section navigation&quot;&gt;&lt;div class=&quot;rio-rail-head&quot;&gt;&lt;span class=&quot;rio-rail-mark&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;rio-rail-word&quot;&gt;Shop&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;rio-rail-caption&quot;&gt;Administration&lt;/div&gt;&lt;a class=&quot;rio-rail-btn&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;9&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-rail-label&quot;&gt;Users&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-rail-btn&quot; href=&quot;#&quot; aria-current=&quot;page&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;8&quot; cy=&quot;9&quot; r=&quot;3&quot;/&gt;&lt;circle cx=&quot;16&quot; cy=&quot;9&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M2 20a6 6 0 0 1 12 0M10 20a6 6 0 0 1 12 0&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-rail-label&quot;&gt;Groups&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-rail-btn&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;9&quot;/&gt;&lt;path d=&quot;M12 7v5l3 2&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-rail-label&quot;&gt;History&lt;/span&gt;&lt;/a&gt;&lt;div class=&quot;rio-rail-spacer&quot;&gt;&lt;/div&gt;&lt;/nav&gt;&lt;div class=&quot;rio-ws&quot;&gt;&lt;header class=&quot;rio-wshead&quot; role=&quot;banner&quot;&gt;
+  &lt;div class=&quot;rio-wshead-utility&quot;&gt;&lt;div class=&quot;rio-wshead-inner&quot;&gt;
+    &lt;span class=&quot;rio-devpill rio-devpill--dev&quot;&gt;Development&lt;/span&gt;
+    &lt;button type=&quot;button&quot; class=&quot;rio-ws-search&quot; aria-label=&quot;Search records (Command-K)&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;11&quot; cy=&quot;11&quot; r=&quot;7&quot;/&gt;&lt;path d=&quot;m20 20-3.5-3.5&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-ws-search-label&quot;&gt;Search Shop…&lt;/span&gt;&lt;span class=&quot;rio-kbd&quot;&gt;⌘K&lt;/span&gt;&lt;/button&gt;
+    &lt;div class=&quot;rio-ws-actions&quot;&gt;
+      &lt;a class=&quot;rio-iconbtn&quot; href=&quot;#&quot; aria-label=&quot;Notifications&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z&quot;/&gt;&lt;path d=&quot;M10.5 19a1.7 1.7 0 0 0 3 0&quot;/&gt;&lt;/svg&gt;&lt;/a&gt;
+      &lt;a class=&quot;rio-btn rio-btn--subtle rio-btn--sm&quot; href=&quot;#&quot;&gt;Docs&lt;/a&gt;
+      &lt;div class=&quot;rio-usermenu&quot;&gt;&lt;button class=&quot;rio-usermenu-btn&quot; type=&quot;button&quot; aria-haspopup=&quot;true&quot; aria-expanded=&quot;false&quot;&gt;&lt;span class=&quot;rio-usermenu-avatar&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;rio-usermenu-name&quot;&gt;admin@shop.local&lt;/span&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;m6 9 6 6 6-6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;&lt;/div&gt;
+  &lt;nav class=&quot;rio-modnav&quot; aria-label=&quot;Modules&quot;&gt;&lt;div class=&quot;rio-modnav-inner&quot;&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;7&quot; height=&quot;9&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;14&quot; y=&quot;3&quot; width=&quot;7&quot; height=&quot;5&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;14&quot; y=&quot;12&quot; width=&quot;7&quot; height=&quot;9&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;3&quot; y=&quot;16&quot; width=&quot;7&quot; height=&quot;5&quot; rx=&quot;1&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Dashboard&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;ellipse cx=&quot;12&quot; cy=&quot;5&quot; rx=&quot;8&quot; ry=&quot;3&quot;/&gt;&lt;path d=&quot;M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Models&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot; aria-current=&quot;true&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;9&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Administration&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Security&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z&quot;/&gt;&lt;/svg&gt;&lt;span&gt;System&lt;/span&gt;&lt;/a&gt;&lt;/div&gt;&lt;/nav&gt;
+&lt;/header&gt;&lt;div class=&quot;rio-ws-body&quot;&gt;&lt;div class=&quot;rio-ws-inner rio-page--wide&quot;&gt;&lt;main id=&quot;main&quot; style=&quot;display:contents&quot;&gt;&lt;nav class=&quot;rio-crumbs&quot; aria-label=&quot;Breadcrumb&quot;&gt;&lt;a href=&quot;#&quot;&gt;Home&lt;/a&gt;&lt;span class=&quot;rio-crumb-sep&quot;&gt;·&lt;/span&gt;&lt;a href=&quot;#&quot;&gt;Groups&lt;/a&gt;&lt;span class=&quot;rio-crumb-sep&quot;&gt;·&lt;/span&gt;&lt;span class=&quot;rio-crumb-current&quot;&gt;Warehouse&lt;/span&gt;&lt;/nav&gt;&lt;div class=&quot;rio-masthead-top&quot;&gt;&lt;div&gt;&lt;h1&gt;Edit group&lt;/h1&gt;&lt;p class=&quot;rio-masthead-desc&quot;&gt;Editing &lt;strong&gt;Warehouse&lt;/strong&gt; — change membership and attached permissions.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;&lt;form class=&quot;rio-form&quot;&gt;
+&lt;fieldset class=&quot;rio-fieldset&quot;&gt;&lt;legend class=&quot;rio-fieldset-legend&quot;&gt;Group&lt;/legend&gt;&lt;div class=&quot;rio-fieldset-grid&quot;&gt;&lt;div class=&quot;rio-field&quot;&gt;&lt;label class=&quot;rio-label&quot;&gt;Name &lt;span class=&quot;rio-req&quot;&gt;*&lt;/span&gt;&lt;/label&gt;&lt;input class=&quot;rio-input&quot; value=&quot;Warehouse&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rio-field&quot;&gt;&lt;label class=&quot;rio-label&quot;&gt;Description&lt;/label&gt;&lt;input class=&quot;rio-input&quot; value=&quot;Stock and fulfilment operators&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/fieldset&gt;
+&lt;fieldset class=&quot;rio-fieldset&quot;&gt;&lt;legend class=&quot;rio-fieldset-legend&quot;&gt;Permissions&lt;/legend&gt;&lt;p class=&quot;rio-help&quot; style=&quot;margin:0 0 12px&quot;&gt;Members receive every ticked permission. A row toggle grants all four verbs on one model; a column toggle grants one verb on every model.&lt;/p&gt;&lt;div class=&quot;rio-tablewrap&quot;&gt;&lt;table class=&quot;rio-perm-matrix&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Model&lt;/th&gt;&lt;th&gt;view&lt;/th&gt;&lt;th&gt;add&lt;/th&gt;&lt;th&gt;change&lt;/th&gt;&lt;th&gt;delete&lt;/th&gt;&lt;th&gt;All&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Products&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Categories&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Customers&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Orders&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Order items&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Payments&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;tfoot&gt;&lt;tr class=&quot;rio-perm-matrix__foot&quot;&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;&lt;span class=&quot;rio-meta&quot;&gt;20 of 24 granted&lt;/span&gt;&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tfoot&gt;&lt;/table&gt;&lt;/div&gt;&lt;/fieldset&gt;
+&lt;fieldset class=&quot;rio-fieldset&quot;&gt;&lt;legend class=&quot;rio-fieldset-legend&quot;&gt;Members&lt;/legend&gt;&lt;div class=&quot;rio-tablewrap&quot;&gt;&lt;table class=&quot;rio-dtable rio-dtable--compact&quot;&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-cell-primary&quot; href=&quot;#&quot;&gt;elin.sandberg@shop.local&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;rio-role&quot;&gt;administrator&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Remove&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-cell-primary&quot; href=&quot;#&quot;&gt;jonas.ek@shop.local&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;rio-role&quot;&gt;staff&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Remove&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-cell-primary&quot; href=&quot;#&quot;&gt;maria.lind@shop.local&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;rio-role&quot;&gt;viewer&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Remove&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;&lt;div class=&quot;rio-board-foot&quot;&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;+ Add member&lt;/a&gt;&lt;/div&gt;&lt;/fieldset&gt;
+&lt;div class=&quot;rio-form-actions&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--primary&quot;&gt;Save changes&lt;/button&gt;&lt;a class=&quot;rio-btn rio-btn--secondary&quot; href=&quot;#&quot;&gt;Cancel&lt;/a&gt;&lt;span class=&quot;rio-action-bar-end&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3&quot;/&gt;&lt;/svg&gt; Delete group&lt;/a&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;/form&gt;&lt;/main&gt;&lt;/div&gt;&lt;footer class=&quot;rio-appfoot&quot; role=&quot;contentinfo&quot;&gt;&lt;div class=&quot;rio-appfoot-inner&quot;&gt;&lt;span class=&quot;rio-brand-word&quot;&gt;Shop&lt;/span&gt;&lt;span class=&quot;rio-appfoot-links&quot;&gt;&lt;a href=&quot;#&quot;&gt;Audit log&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;API surface&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Health&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Docs&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Sessions&lt;/a&gt;&lt;/span&gt;&lt;span class=&quot;rio-appfoot-meta&quot;&gt;admin@shop.local · 2026-10-09 09:41 UTC&lt;/span&gt;&lt;/div&gt;&lt;/footer&gt;&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div></div><ul style='margin-top:16px'><li><span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span> The matrix, row-level All, column-level All, the granted count, membership.</li><li><span class="st st-visual">ALIGN WITH RUSTIO</span> Fieldset bands, 40px head and rows, 18px boxes on the primary; one action bar with Delete group as red text at the far end.</li><li><span class="st st-existing">KEEP</span> Every checkbox name, hidden input, POST shape, sr-only label.</li></ul></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>At 390</h2></div><div class="frame narrow"><div class="frame-bar"><span>/admin</span><span class="w">390</span></div><div class="frame-body"><iframe class="shot" title="permissions v3" style="width:390px" srcdoc="&lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&lt;title&gt;Edit group · Shop&lt;/title&gt;&lt;style&gt;/* ============================================================
+   rustio-admin in the RustIO Composition 3.1 grammar — MOCK STYLESHEET v3 (RustIO main 00b933c authoritative)
+   Design study only. Not product CSS; nothing here is proposed verbatim.
+   Class names are rustio-admin&#x27;s own (.rio-*) so every rule maps back to
+   a real template. Token block: canonical RustIO names carry the values;
+   the --rio-* names are aliases, which is the mapping proposal made
+   concrete. Light only.
+   ============================================================ */
+:root {
+  color-scheme: light;
+  /* --- canonical (RustIO Composition 3.1 values, verbatim) --- */
+  --page: #f1f1ee; --surface: #ffffff; --surface-soft: #f7f9fc; --surface-head: #f1f4f8;
+  --rail-bg: #f4f6f9; --rail-line: #d3dbe5;
+  --blue: #1f5797; --blue-dark: #174578; --blue-soft: #dfeafb; --blue-line: #b7cdea; --focus: #2f7bd6;
+  --ink: #171B22; --ink-body: #202733; --ink-2: #3F4A59; --ink-hint: #4C5868; --ink-mono: #334052; --ink-3: #596779;
+  --border: #d5dce5; --border-strong: #b9c5d3; --field-line: #848f9e;
+  --green: #19724b; --green-soft: #e8f6ee; --amber: #935b0a; --amber-soft: #fff4df; --red: #a23f3a; --red-soft: #fff0ee;
+  --grey: #4c5868; --grey-soft: #f2f4f7;
+  --shadow-sm: 0 1px 2px rgba(22,32,56,.06);
+  --shadow: 0 1px 0 rgba(255,255,255,.6), 0 24px 50px -24px rgba(22,32,56,.45), 0 8px 20px -12px rgba(22,32,56,.25);
+  --radius: 14px; --radius-btn: 8px; --radius-sm: 6px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
+  --masthead: 56px; --rail: 240px; --gutter: 32px;
+  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+
+  /* --- rustio-admin aliases (the token mapping, as it would land) --- */
+  --rio-bg: var(--page); --rio-surface: var(--surface); --rio-sunken: var(--surface-soft);
+  --rio-raised: var(--surface-head); --rio-overlay: var(--surface); --rio-surface-tint: var(--surface-head);
+  --rio-line: var(--border); --rio-line-strong: var(--border-strong);
+  --rio-rail-bg: var(--rail-bg); --rio-rail-line: var(--rail-line);
+  --rio-text-hi: var(--ink); --rio-text: var(--ink-body); --rio-text-mute: var(--ink-2); --rio-text-faint: var(--ink-3);
+  --rio-rust: var(--blue); --rio-rust-hover: var(--blue-dark); --rio-rust-tint: var(--blue-soft); --rio-rust-tint-2: var(--blue-line);
+  --rio-rust-solid: var(--blue); --rio-rust-solid-hover: var(--blue-dark); --rio-on-solid: #fff; --rio-accent-focus: var(--focus);
+  --rio-success: var(--green); --rio-success-tint: var(--green-soft); --rio-warn: var(--amber); --rio-warn-tint: var(--amber-soft);
+  --rio-danger: var(--red); --rio-danger-tint: var(--red-soft);
+  --rio-pill-on-bg: var(--green-soft); --rio-pill-on-text: var(--green); --rio-pill-off-bg: var(--grey-soft); --rio-pill-off-text: var(--grey);
+  /* product-specific, no canonical equivalent — kept as rustio-admin tokens */
+  --rio-modulebar-h: 40px; --rio-shadow-lg: 0 6px 16px -8px rgba(24,39,61,.16), 0 2px 5px rgba(24,39,61,.07);
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+body { margin: 0; min-height: 100vh; background: var(--page); color: var(--ink-body); font-family: var(--sans); font-size: 16px; font-weight: 500; line-height: 1.55; -webkit-font-smoothing: antialiased; font-variant-numeric: lining-nums tabular-nums; }
+a { color: var(--blue); text-underline-offset: 3px; }
+a:hover { color: var(--blue-dark); }
+button, input, select { font: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .92em; padding: 1px 6px; border-radius: var(--radius-sm); background: var(--surface-head); color: var(--ink); }
+.rio-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+h1,h2,h3 { margin: 0; color: var(--ink); }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+h2 { font-size: 18px; font-weight: 700; line-height: 1.3; }
+h3 { font-size: 16px; font-weight: 700; line-height: 1.35; }
+svg { display: block; }
+
+/* ---------------------------------------------------------- shell */
+.rio-console { display: grid; grid-template-columns: var(--rail) minmax(0,1fr); min-height: 100vh; }
+.rio-rail { grid-column: 1; display: flex; flex-direction: column; gap: 4px; padding: 0 var(--s3) var(--s6); background: var(--rail-bg); border-right: 1px solid var(--rail-line); }
+.rio-rail-head { display: flex; align-items: center; gap: var(--s3); height: var(--masthead); padding: 0 var(--s3); margin-bottom: calc(var(--rio-modulebar-h) + var(--s5)); }
+.rio-rail-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: var(--radius-sm); background: var(--blue); color: #fff; font-size: 14px; font-weight: 800; }
+.rio-rail-word { color: var(--ink); font-weight: 700; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rio-rail-caption { margin: 0 0 var(--s2); padding: 0 var(--s3); color: var(--ink-mono); text-transform: uppercase; font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+.rio-rail-sep { height: 1px; background: var(--rail-line); margin: var(--s3) 0; }
+.rio-rail-btn { display: flex; min-height: var(--ctl); align-items: center; gap: var(--s2); padding: 0 var(--s3); border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--ink); font-size: 15px; font-weight: 500; text-decoration: none; }
+.rio-rail-btn svg { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; color: var(--ink-2); }
+.rio-rail-btn:hover { border-color: var(--blue-line); background: var(--surface); color: var(--blue); }
+.rio-rail-btn[aria-current=&quot;page&quot;] { background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+.rio-rail-btn[aria-current=&quot;page&quot;] svg { color: var(--blue); }
+.rio-rail-spacer { flex: 1; }
+
+.rio-ws { grid-column: 2; display: flex; flex-direction: column; min-width: 0; }
+.rio-wshead { background: var(--surface); border-bottom: 1px solid var(--border); }
+.rio-wshead-utility { height: var(--masthead); }
+.rio-wshead-inner { display: flex; align-items: center; gap: var(--s4); height: 100%; padding: 0 var(--gutter); }
+.rio-devpill { display: inline-flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s2); border: 1px solid #e3c981; border-radius: var(--radius-sm); background: var(--amber-soft); color: #5c3f13; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.rio-ws-search { flex: 0 1 420px; margin: 0 auto; display: flex; align-items: center; gap: var(--s2); height: var(--ctl-util); padding: 0 var(--s3); border: 1px solid var(--field-line); border-radius: var(--radius-btn); background: var(--surface); color: var(--ink-hint); font-size: 14px; cursor: pointer; text-align: left; }
+.rio-ws-search svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; }
+.rio-ws-search-label { flex: 1; }
+.rio-kbd { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-soft); color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+.rio-ws-actions { display: flex; align-items: center; gap: var(--s2); }
+.rio-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: var(--ctl-util); height: var(--ctl-util); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--ink-2); }
+.rio-iconbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.rio-iconbtn:hover { background: var(--surface-soft); color: var(--ink); }
+.rio-usermenu-btn { display: inline-flex; align-items: center; gap: var(--s2); height: var(--ctl-util); padding: 0 var(--s2) 0 var(--s1); border: 1px solid var(--field-line); border-radius: var(--radius-btn); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+.rio-usermenu-avatar { width: 24px; height: 24px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); font-size: 13px; font-weight: 800; }
+.rio-usermenu-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; color: var(--ink-2); }
+.rio-modnav { height: var(--rio-modulebar-h); background: var(--surface-soft); border-top: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.rio-modnav-inner { display: flex; align-items: stretch; gap: var(--s5); height: 100%; min-width: max-content; padding: 0 var(--gutter); }
+.rio-modnav-item { display: inline-flex; align-items: center; gap: var(--s2); position: relative; color: var(--ink-2); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rio-modnav-item svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.rio-modnav-item:hover { color: var(--ink); }
+.rio-modnav-item[aria-current=&quot;true&quot;] { color: var(--blue); }
+.rio-modnav-item[aria-current=&quot;true&quot;]::after { content: &quot;&quot;; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--blue); border-radius: 2px 2px 0 0; }
+
+.rio-ws-body { flex: 1; display: flex; flex-direction: column; }
+.rio-ws-inner { flex: 1; display: flex; flex-direction: column; gap: var(--s4); width: min(100% - 2 * var(--gutter), var(--content)); margin: 0 auto; padding: var(--s5) 0 var(--s6); }
+.rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
+.rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
+/* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
+.rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
+.rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
+.rio-alert--danger { border-color: #e0a7a2; background: var(--red-soft); color: #782f2b; }
+.rio-alert ul { margin: 0; padding-left: 1.2em; }
+.rio-appfoot { background: var(--surface); border-top: 1px solid var(--border); }
+.rio-appfoot-inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding: var(--s3) var(--gutter); font-size: 14px; color: var(--ink-2); }
+.rio-appfoot .rio-brand-word { color: var(--ink); font-weight: 700; }
+.rio-appfoot-links { display: flex; flex-wrap: wrap; gap: var(--s4); }
+.rio-appfoot-links a { color: var(--ink-2); text-decoration: none; }
+.rio-appfoot-links a:hover { color: var(--blue); }
+.rio-appfoot-meta { margin-left: auto; color: var(--ink-3); font-size: 13px; }
+
+/* ---------------------------------------------------------- page head (unboxed) */
+.rio-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0; color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.rio-crumbs a { color: var(--ink-2); }
+.rio-crumb-sep { color: var(--border-strong); }
+.rio-crumb-current { color: var(--ink); font-weight: 700; }
+/* v3 — the page head follows RustIO main (00b933c, .page-head): a grid
+   &quot;title action&quot; / &quot;lead lead&quot;; the page&#x27;s primary action sits one gap after
+   the title, centred on the title line; the lead beneath. The template&#x27;s
+   wrapper &lt;div&gt; around h1 + lead is lifted into the grid with display:
+   contents. The v2 band-with-rule came from PR #5 only and is dropped. */
+.rio-masthead-top { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); grid-template-areas: &quot;title cta&quot; &quot;desc desc&quot;; align-items: center; column-gap: var(--s5); row-gap: 0; margin: calc(-1 * var(--s2)) 0 var(--s2); }
+.rio-masthead-top &gt; div:not(.rio-masthead-cta) { display: contents; }
+.rio-masthead-top h1 { grid-area: title; margin: 0; }
+.rio-masthead-cta { grid-area: cta; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); justify-self: start; }
+.rio-masthead-desc { grid-area: desc; max-width: 680px; margin: var(--s2) 0 0; color: var(--ink-2); font-size: 15px; }
+
+/* ---------------------------------------------------------- buttons */
+.rio-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--ctl); padding: 0 var(--s4); border: 1px solid transparent; border-radius: var(--radius-btn); font-size: 14px; font-weight: 680; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer; }
+.rio-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+.rio-btn--primary { background: var(--blue); color: #fff; }
+.rio-btn--primary:hover { background: var(--blue-dark); color: #fff; }
+.rio-btn--secondary, .rio-btn--ghost { background: var(--surface); border-color: var(--border-strong); color: var(--ink); }
+.rio-btn--secondary:hover, .rio-btn--ghost:hover { border-color: var(--blue-line); color: var(--blue); }
+.rio-btn--subtle { background: transparent; color: var(--blue); }
+.rio-btn--subtle:hover { background: var(--blue-soft); color: var(--blue-dark); }
+.rio-btn--subtle.rio-danger-ink { color: var(--red); }
+.rio-btn--subtle.rio-danger-ink:hover { background: var(--red-soft); color: var(--red); }
+.rio-btn--danger { background: var(--red-soft); color: var(--red); border-color: #ce8580; }
+.rio-btn--danger:hover { background: #ffe4e1; border-color: var(--red); color: var(--red); }
+.rio-btn--sm { min-height: var(--ctl-sm); padding: 0 var(--s3); font-size: 13px; font-weight: 650; border-radius: var(--radius-sm); }
+.rio-btn.is-active { border-color: #7890af; background: #f4f8fd; color: var(--blue-dark); }
+.rio-chev { width: 12px !important; height: 12px !important; opacity: .7; }
+.rio-dropdown-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-sm); background: var(--blue-line); color: var(--blue-dark); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.rio-action-link { display: inline-flex; align-items: center; gap: var(--s1); min-height: var(--ctl-sm); padding: 0 var(--s2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--blue); font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer; }
+.rio-action-link:hover { background: var(--blue-soft); color: var(--blue-dark); }
+.rio-action-link svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.rio-action-link--danger { color: var(--red); }
+.rio-action-link--danger:hover { background: var(--red-soft); color: var(--red); }
+.rio-action-link--muted { color: var(--ink-2); }
+.rio-action-link--muted:hover { background: var(--surface-soft); color: var(--ink); }
+.rio-row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--s1); white-space: nowrap; opacity: 1; }
+
+/* ---------------------------------------------------------- find row + data surface */
+.rio-cmdbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); }
+.rio-search { position: relative; display: block; flex: 0 1 340px; min-width: 220px; }
+.rio-search .rio-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--ink-hint); pointer-events: none; }
+.rio-search-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; }
+.rio-input { width: 100%; height: var(--ctl); padding: 0 var(--s3); color: var(--ink); background: var(--surface); border: 1px solid var(--field-line); border-radius: var(--radius-btn); font-size: 15px; font-weight: 500; }
+.rio-input:focus { border-color: var(--blue); outline: 3px solid var(--focus); outline-offset: 2px; }
+.rio-input[aria-invalid=&quot;true&quot;] { border-color: var(--red); background: var(--red-soft); }
+.rio-search .rio-input { padding-left: 38px; }
+textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3); line-height: 1.5; resize: vertical; }
+.rio-select-wrap { display: block; }
+.rio-cmdbar-count { color: var(--ink-2); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rio-cmdbar-count b { color: var(--ink-body); font-weight: 700; }
+.rio-active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font-size: 14px; color: var(--ink-2); }
+.rio-active-filters-label { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mono); }
+.rio-active-pill { display: inline-flex; align-items: center; gap: var(--s1); padding: 3px var(--s1) 3px var(--s2); border: 1px solid #7890af; border-radius: var(--radius-sm); background: #f4f8fd; color: var(--blue-dark); font-size: 13px; font-weight: 600; }
+.rio-active-pill-x { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: var(--ink-2); text-decoration: none; }
+.rio-active-pill-x:hover { background: var(--blue-line); color: var(--blue-dark); }
+
+.rio-board { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.rio-board-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); padding: var(--s2) var(--s4); border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; background: var(--surface-head); }
+.rio-board-head .rio-board-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.rio-view-modes { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-btn); background: var(--surface); overflow: hidden; }
+.rio-view-mode { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--ctl-sm); padding: 0 var(--s3); color: var(--ink); font-size: 13px; font-weight: 650; text-decoration: none; }
+.rio-view-mode + .rio-view-mode { border-left: 1px solid var(--border); }
+.rio-view-mode:hover { background: var(--surface-soft); color: var(--blue); }
+.rio-view-mode.is-active { background: var(--blue-soft); color: var(--blue-dark); box-shadow: inset 0 0 0 1px var(--blue-line); }
+.rio-sortnote { color: var(--ink-2); font-size: 14px; font-weight: 500; }
+.rio-bulkbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); padding: var(--s2) var(--s4); border-bottom: 1px solid var(--blue-line); background: var(--blue-soft); color: var(--blue-dark); font-size: 14px; font-weight: 600; }
+.rio-bulkbar-actions { margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: var(--s1); }
+/* v2 — position: relative so an absolutely positioned descendant (the .rio-sr-only labels in the actions head) is clipped by the scroller instead of widening the document. */
+.rio-tablewrap { position: relative; overflow-x: auto; border-radius: 0 0 var(--radius) var(--radius); clear: both; }
+/* ALIGN — identity columns whose values are single unbreakable tokens hug their content (RustIO main .cell-fit / column_hugs). */
+.rio-cell-fit { width: 1%; white-space: nowrap; }
+.rio-perm-cell__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.rio-dtable, .rio-table { width: 100%; border-collapse: collapse; text-align: left; }
+.rio-dtable th, .rio-table th { height: var(--th-h); padding: 0 var(--s4); background: var(--surface-head); color: var(--ink-body); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.rio-dtable th a, .rio-table th a { color: inherit; text-decoration: none; }
+.rio-dtable th.is-sort-desc, .rio-dtable th.is-sort-asc { background: #e9eef6; color: var(--ink); }
+.rio-dtable td, .rio-table td { height: var(--td-h); padding: 0 var(--s4); border-bottom: 1px solid var(--border); color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1.4; vertical-align: middle; }
+.rio-dtable tbody tr:last-child td, .rio-table tbody tr:last-child td { border-bottom: 0; }
+.rio-dtable tbody tr:hover, .rio-table tbody tr:hover { background: var(--surface-soft); }
+.rio-dtable tbody tr[aria-selected=&quot;true&quot;] { background: var(--blue-soft); }
+.rio-cell-primary, .rio-prod-name { color: var(--blue); font-weight: 680; text-decoration: underline; text-decoration-color: var(--blue-line); }
+.rio-prod-cat, .rio-cell-sub { display: block; color: var(--ink-2); font-size: 14px; font-weight: 500; }
+.rio-cell-meta, .rio-hist-when { color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.rio-hist-ip { font-family: var(--mono); font-size: 13px; color: var(--ink-3); }
+.col-check { width: 1%; }
+.col-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+.col-act, .rio-dtable .col-act { width: 1%; text-align: right; white-space: nowrap; padding-right: var(--s3); }
+.col-price, .col-rows, .rio-cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+/* v2 — a cell is treated by its kind, which the template already emits as
+   rio-td--{{ f.kind }}: date-like and boolean cells never wrap, digits are
+   tabular everywhere. IMPROVE RUSTIO-ADMIN — not on RustIO main. */
+.rio-td--date, .rio-td--datetime, .rio-td--checkbox, .rio-td--boolean, .rio-th--date, .rio-th--datetime, .rio-cell-meta { white-space: nowrap; }
+.rio-dtable td, .rio-table td { font-variant-numeric: tabular-nums; }
+/* v3 — the actions column stays reachable when the board scrolls. */
+/* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
+   while the table fits its scroller and only acts once the board scrolls. */
+.rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
+.rio-tablewrap th.col-act { background: var(--surface-head); }
+.rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+/* v3 — Compact follows RustIO main (.record-compact-item): no column head,
+   40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
+   tokens are dropped. */
+.rio-board-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s4); border-top: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); background: var(--surface-head); color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.rio-board-foot strong { color: var(--ink-body); }
+.rio-pagination { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+.rio-page { display: inline-flex; align-items: center; justify-content: center; min-width: var(--ctl); min-height: var(--ctl); padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-soft); color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rio-page[aria-current=&quot;page&quot;] { border-color: var(--blue-line); background: var(--blue-soft); color: var(--blue); }
+.rio-page.is-disabled { opacity: .45; pointer-events: none; }
+.rio-empty { padding: var(--s6) var(--s5); text-align: center; }
+.rio-empty-title { margin-bottom: var(--s1); color: var(--ink); font-size: 16px; font-weight: 700; }
+.rio-empty p { margin: 0 auto; max-width: 52ch; color: var(--ink-2); font-size: 15px; }
+.rio-empty-cta { margin-top: var(--s4); }
+.rio-history-date-divider th { height: 36px; background: var(--surface-soft); color: var(--ink-mono); }
+.rio-history-diff { display: grid; gap: 2px; margin: var(--s1) 0 0; font-size: 14px; }
+.rio-history-diff__row { display: flex; align-items: baseline; gap: var(--s2); }
+.rio-history-diff__label { min-width: 90px; color: var(--ink-3); font-family: var(--mono); font-size: 13px; }
+.rio-history-diff dd { margin: 0; }
+.rio-history-diff__old { color: var(--red); text-decoration: line-through; }
+.rio-history-diff__new { color: var(--green); }
+.rio-history-diff__arrow { color: var(--ink-3); }
+.rio-by { display: inline-flex; align-items: center; gap: var(--s2); color: var(--ink); text-decoration: none; }
+
+/* ---------------------------------------------------------- badges (pills become badges) */
+.rio-pill, .rio-badge, .rio-role, .av-badge { display: inline-flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s2); border: 1px solid transparent; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+.rio-pill::before, .av-badge::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: &quot;&quot;; }
+.rio-pill--on, .rio-pill--success, .rio-pill--badge-success, .av-badge--success { background: var(--green-soft); color: var(--green); }
+.rio-pill--off, .rio-pill--neutral, .rio-pill--badge-neutral, .av-badge--neutral { background: var(--grey-soft); color: var(--grey); }
+.rio-pill--warning, .rio-pill--badge-warning, .av-badge--warning { background: var(--amber-soft); color: var(--amber); }
+.rio-pill--danger, .rio-pill--badge-danger, .av-badge--danger { background: var(--red-soft); color: var(--red); }
+.rio-pill--info { background: var(--blue-soft); color: var(--blue); }
+.rio-role { background: var(--grey-soft); color: var(--grey); font-family: var(--mono); font-weight: 700; }
+
+/* ---------------------------------------------------------- forms */
+.rio-form { display: grid; gap: var(--s4); }
+.rio-fieldset { margin: 0; padding: var(--s5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-fieldset { min-width: 0; } /* v2 — fieldsets default to min-inline-size: min-content, which let the permission matrix widen the page at 390 */
+.rio-fieldset + .rio-fieldset { margin-top: 0; }
+.rio-fieldset-legend, .rio-fieldset &gt; legend { float: left; width: 100%; margin: 0 0 var(--s4); padding: 0; color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-fieldset--system { background: var(--surface-soft); }
+.rio-fieldset-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--s4); clear: both; }
+.rio-field { display: grid; gap: var(--s1); }
+.rio-field--full, .rio-field--textarea { grid-column: 1 / -1; }
+.rio-label { color: var(--ink); font-size: 14px; font-weight: 600; }
+.rio-req { color: var(--red); font-weight: 800; }
+.rio-help { margin: 0; color: var(--ink-hint); font-size: 14px; }
+.rio-error { margin: 0; padding: 0; list-style: none; color: var(--red); font-size: 14px; font-weight: 650; }
+.rio-check { display: flex; align-items: center; gap: var(--s3); min-height: var(--ctl); padding: 0 var(--s3); border: 1px solid var(--field-line); border-radius: var(--radius-btn); background: var(--surface); color: var(--ink); font-size: 15px; cursor: pointer; }
+.rio-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
+.rio-field--checkbox { align-self: end; }
+.rio-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-top: var(--s2); padding-top: var(--s4); border-top: 1px solid var(--border); }
+.rio-action-bar-end { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+.rio-checkbox-list { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; clear: both; }
+.rio-checkbox { display: flex; align-items: flex-start; gap: var(--s2); font-size: 15px; color: var(--ink); }
+.rio-checkbox input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--blue); }
+.rio-meta { color: var(--ink-2); font-size: 14px; }
+.rio-inline-section { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-inline-section__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); background: var(--surface-head); border-radius: var(--radius) var(--radius) 0 0; }
+.rio-inline-section__header h2 { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mono); }
+.rio-inline-meta { color: var(--ink-2); font-size: 14px; }
+.rio-inline-section .rio-board-foot { border-radius: 0 0 var(--radius) var(--radius); }
+
+/* ---------------------------------------------------------- permissions matrix */
+.rio-perm-matrix { width: 100%; border-collapse: collapse; clear: both; }
+.rio-perm-matrix th, .rio-perm-matrix td { padding: 0 var(--s3); height: var(--th-h); border-bottom: 1px solid var(--border); text-align: center; }
+.rio-perm-matrix thead th { background: var(--surface-head); color: var(--ink-body); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-perm-matrix tbody tr:last-child th, .rio-perm-matrix tbody tr:last-child td { border-bottom: 0; }
+.rio-perm-matrix__model { text-align: left !important; color: var(--ink); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.rio-perm-matrix tbody tr:hover { background: var(--surface-soft); }
+.rio-perm-cell input { width: 18px; height: 18px; accent-color: var(--blue); margin: 0; }
+.rio-perm-na { color: var(--ink-3); }
+.rio-perm-row-all { min-height: 28px; padding: 0 var(--s2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--blue); font-size: 13px; font-weight: 650; cursor: pointer; }
+.rio-perm-row-all:hover { background: var(--blue-soft); }
+
+/* ---------------------------------------------------------- sessions */
+.rio-sess-list { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-sess-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: var(--s5); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); }
+.rio-sess-card:last-child { border-bottom: 0; }
+.rio-sess-card--current { background: var(--surface-soft); }
+.rio-sess-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); }
+.rio-sess-title { color: var(--ink); font-size: 15px; font-weight: 680; }
+.rio-sess-meta { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); margin: 2px 0 0; color: var(--ink-2); font-size: 14px; }
+.rio-sess-meta div { display: inline-flex; gap: var(--s1); }
+.rio-sess-meta dt { color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-sess-meta dd { margin: 0; }
+.rio-sess-foot { display: inline-flex; }
+.rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+/* ---------------------------------------------------------- API surface */
+.rio-api-grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); }
+.rio-api-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); min-width: 0; }
+.rio-api-card__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); padding: var(--s4) var(--s4) var(--s3); }
+/* IMPROVE RUSTIO-ADMIN — 12rem identity floor + break-word; not on RustIO main (.record-card-identity is a plain wrapping flex row). */
+.rio-api-card__title { flex: 1 1 12rem; min-width: 12rem; font-size: 16px; font-weight: 700; color: var(--ink); overflow-wrap: break-word; }
+.rio-api-card__title a { color: var(--ink); text-decoration: none; }
+.rio-api-card__sub { color: var(--ink-2); font-weight: 500; font-size: 14px; }
+.rio-api-card__count { flex: none; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.rio-api-endpoints { border-top: 1px solid var(--border); }
+.rio-api-ep { display: flex; align-items: center; gap: var(--s3); min-height: var(--th-h); padding: 0 var(--s4); border-bottom: 1px solid var(--border); }
+.rio-api-verb { flex: none; min-width: 48px; text-align: center; padding: 2px var(--s2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.rio-api-verb--get { background: var(--green-soft); color: var(--green); }
+.rio-api-verb--post { background: var(--blue-soft); color: var(--blue); }
+.rio-api-verb--del { background: var(--red-soft); color: var(--red); }
+.rio-api-path { font-family: var(--mono); font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rio-api-ep__action { margin-left: auto; color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.rio-api-fields { padding: var(--s3) var(--s4) var(--s4); background: var(--surface-soft); border-radius: 0 0 var(--radius) var(--radius); }
+.rio-api-fields__label { margin-bottom: var(--s2); color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-api-ftable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.rio-api-ftable td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+.rio-api-ftable tr:last-child td { border-bottom: 0; }
+.rio-api-fname { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.rio-api-ftype { color: var(--ink-2); }
+.rio-api-fnull { text-align: right; color: var(--ink-3); font-size: 13px; }
+.rio-api-fnull--yes { color: var(--amber); font-weight: 600; }
+
+/* ---------------------------------------------------------- adaptive view modes (list / cards / compact) */
+.av-list--list .av-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: var(--s5); min-height: 64px; padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); color: var(--ink); text-decoration: none; }
+.av-list--list .av-row:last-child { border-bottom: 0; }
+.av-row:hover { background: var(--surface-soft); }
+.av-primary { color: var(--blue); font-size: 15px; font-weight: 680; text-decoration: underline; text-decoration-color: var(--blue-line); }
+.av-secondary, .av-ts { color: var(--ink-2); font-size: 14px; }
+.av-list--cards { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); padding: 0; }
+.av-list--cards .av-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); padding: var(--s4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink); text-decoration: none; }
+.av-list--cards .av-primary { flex: 1 1 12rem; min-width: 12rem; font-size: 16px; font-weight: 700; color: var(--ink); text-decoration: none; overflow-wrap: break-word; }
+.av-list--cards .av-badge { flex: none; }
+.av-list--cards .av-secondary, .av-list--cards .av-ts { flex: 0 0 100%; }
+.av-list--compact .av-row { display: flex; align-items: center; gap: var(--s3); min-height: var(--th-h); padding: var(--s1) var(--s4); border-bottom: 1px solid var(--border); color: var(--ink); text-decoration: none; }
+.av-list--compact .av-row:last-child { border-bottom: 0; }
+.av-list--compact .av-primary { flex: 0 1 auto; min-width: 0; }
+.av-list--compact .av-secondary, .av-list--compact .av-ts { display: none; }
+.av-list--compact .rio-row-actions { margin-left: auto; }
+
+/* ---------------------------------------------------------- dashboard */
+.rio-ledger { display: flex; flex-wrap: wrap; gap: var(--s4); }
+.rio-ledger-item { display: grid; gap: var(--s2); width: 240px; max-width: 100%; padding: var(--s5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.rio-ledger-num { color: var(--ink); font-size: 33px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.rio-ledger-label { color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---------------------------------------------------------- narrow */
+@media (max-width: 1040px) {
+  .rio-console { grid-template-columns: minmax(0,1fr); }
+  .rio-rail { grid-column: 1; flex-direction: row; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rail-line); }
+  .rio-rail-head, .rio-rail-sep, .rio-rail-caption, .rio-rail-spacer { display: none; }
+  .rio-rail-btn { flex: none; }
+  .rio-ws { grid-column: 1; }
+  :root { --gutter: 24px; }
+  .rio-fieldset-grid { grid-template-columns: minmax(0,1fr); }
+  .rio-ws-search { flex: 1 1 160px; }
+}
+@media (max-width: 760px) {
+  .rio-masthead-top { grid-template-columns: minmax(0,1fr); grid-template-areas: &quot;title&quot; &quot;cta&quot; &quot;desc&quot;; }
+  .rio-ws-actions .rio-usermenu-name { display: none; }
+  .rio-appfoot-meta { margin-left: 0; }
+}
+@media (max-width: 480px) {
+  :root { --gutter: 16px; }
+  .rio-wshead-inner { flex-wrap: wrap; height: auto; padding-top: var(--s2); padding-bottom: var(--s2); }
+  .rio-wshead-utility { height: auto; }
+  .rio-ws-search { order: 3; flex: 1 1 100%; margin: 0; }
+  .rio-masthead-cta { justify-self: stretch; }
+  .rio-masthead-cta .rio-btn { width: 100%; }
+  .rio-search { flex: 1 1 100%; }
+  .rio-form-actions { display: grid; }
+  .rio-form-actions .rio-btn { width: 100%; }
+  .rio-action-bar-end { margin-left: 0; }
+  .rio-sess-card { grid-template-columns: minmax(0,1fr); row-gap: var(--s2); }
+  .rio-ledger-item { width: 100%; }
+}
+
+/* ---------------------------------------------------------- v2 additions: detail page (user_view), tabs, dl, timeline */
+.rio-tabs { display: flex; flex-wrap: wrap; gap: var(--s1); margin: 0 0 var(--s4); border-bottom: 1px solid var(--border); }
+.rio-tab { display: inline-flex; align-items: center; height: var(--ctl); padding: 0 var(--s3); margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--ink-2); font-size: 14px; font-weight: 600; text-decoration: none; }
+.rio-tab:hover { color: var(--ink); }
+.rio-tab--active { color: var(--blue); border-bottom-color: var(--blue); }
+.rio-detail-card { padding: var(--s4) var(--s5); }
+.rio-dl { display: grid; grid-template-columns: minmax(140px, max-content) minmax(0, 1fr); column-gap: var(--s5); row-gap: 0; margin: 0; }
+.rio-dl dt { color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.rio-dl dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--ink-body); font-size: 15px; }
+.rio-dl dd.rio-dl-meta { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rio-dl dt:nth-last-of-type(1), .rio-dl dd:last-of-type { border-bottom: 0; }
+.rio-card-section { margin: var(--s5) 0 var(--s2); padding-top: var(--s4); border-top: 1px solid var(--border); color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-timeline { margin: 0; padding: 0; list-style: none; }
+.rio-timeline-item { display: grid; grid-template-columns: 7rem minmax(0,1fr); column-gap: var(--s4); padding: var(--s2) 0; border-bottom: 1px solid var(--border); color: var(--ink-body); font-size: 15px; }
+.rio-timeline-item:last-child { border-bottom: 0; }
+.rio-timeline-item &gt; .rio-meta { color: var(--ink-2); font-size: 14px; white-space: nowrap; }
+.rio-meta { color: var(--ink-2); font-size: 14px; }
+.rio-cell-nowrap { white-space: nowrap; }
+.rio-cell-ua { max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rio-dtable--detail th:first-child, .rio-dtable--detail td:first-child { padding-left: var(--s5); }
+/* filter panel contents (chips, fk autocomplete, multi-select, date range) — the controls keep a floor, never an auto width */
+.rio-dropdown { position: relative; display: inline-block; }
+.rio-dropdown-panel { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; min-width: 240px; padding: var(--s3); border: 1px solid var(--border); border-radius: var(--radius-btn); background: var(--surface); box-shadow: var(--shadow-lg); }
+.rio-dropdown-panel.is-open-demo { position: static; display: inline-block; margin-top: var(--s2); }
+.rio-dropdown-label { display: block; margin-bottom: var(--s2); color: var(--ink-mono); font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.rio-chip-row { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.rio-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink-body); font-size: 13px; font-weight: 600; text-decoration: none; }
+.rio-chip.is-active { background: var(--blue-soft); border-color: var(--blue-line); color: var(--blue-dark); }
+.rio-multi-select-options { margin: 0 0 var(--s2); padding: 0; list-style: none; }
+.rio-multi-select-option { display: flex; align-items: center; gap: var(--s2); min-height: 30px; font-size: 14px; color: var(--ink-body); }
+.rio-fk-autocomplete-wrap .rio-input { min-width: 240px; }
+.rio-fk-autocomplete-actions, .rio-multi-select-actions, .rio-date-range-actions { display: flex; gap: var(--s2); margin-top: var(--s2); }
+.rio-date-range { display: grid; gap: var(--s2); }
+.rio-date-range-field { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+/* form: textarea and the inline section head on the form measure */
+.rio-form textarea.rio-input { height: auto; min-height: 120px; padding: var(--s2) var(--s3); line-height: 1.45; }
+&lt;/style&gt;&lt;/head&gt;
+&lt;body class=&quot;rio-canvas rio-console&quot;&gt;&lt;nav class=&quot;rio-rail&quot; aria-label=&quot;Section navigation&quot;&gt;&lt;div class=&quot;rio-rail-head&quot;&gt;&lt;span class=&quot;rio-rail-mark&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;rio-rail-word&quot;&gt;Shop&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;rio-rail-caption&quot;&gt;Administration&lt;/div&gt;&lt;a class=&quot;rio-rail-btn&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;9&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-rail-label&quot;&gt;Users&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-rail-btn&quot; href=&quot;#&quot; aria-current=&quot;page&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;8&quot; cy=&quot;9&quot; r=&quot;3&quot;/&gt;&lt;circle cx=&quot;16&quot; cy=&quot;9&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M2 20a6 6 0 0 1 12 0M10 20a6 6 0 0 1 12 0&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-rail-label&quot;&gt;Groups&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-rail-btn&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;9&quot;/&gt;&lt;path d=&quot;M12 7v5l3 2&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-rail-label&quot;&gt;History&lt;/span&gt;&lt;/a&gt;&lt;div class=&quot;rio-rail-spacer&quot;&gt;&lt;/div&gt;&lt;/nav&gt;&lt;div class=&quot;rio-ws&quot;&gt;&lt;header class=&quot;rio-wshead&quot; role=&quot;banner&quot;&gt;
+  &lt;div class=&quot;rio-wshead-utility&quot;&gt;&lt;div class=&quot;rio-wshead-inner&quot;&gt;
+    &lt;span class=&quot;rio-devpill rio-devpill--dev&quot;&gt;Development&lt;/span&gt;
+    &lt;button type=&quot;button&quot; class=&quot;rio-ws-search&quot; aria-label=&quot;Search records (Command-K)&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;11&quot; cy=&quot;11&quot; r=&quot;7&quot;/&gt;&lt;path d=&quot;m20 20-3.5-3.5&quot;/&gt;&lt;/svg&gt;&lt;span class=&quot;rio-ws-search-label&quot;&gt;Search Shop…&lt;/span&gt;&lt;span class=&quot;rio-kbd&quot;&gt;⌘K&lt;/span&gt;&lt;/button&gt;
+    &lt;div class=&quot;rio-ws-actions&quot;&gt;
+      &lt;a class=&quot;rio-iconbtn&quot; href=&quot;#&quot; aria-label=&quot;Notifications&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z&quot;/&gt;&lt;path d=&quot;M10.5 19a1.7 1.7 0 0 0 3 0&quot;/&gt;&lt;/svg&gt;&lt;/a&gt;
+      &lt;a class=&quot;rio-btn rio-btn--subtle rio-btn--sm&quot; href=&quot;#&quot;&gt;Docs&lt;/a&gt;
+      &lt;div class=&quot;rio-usermenu&quot;&gt;&lt;button class=&quot;rio-usermenu-btn&quot; type=&quot;button&quot; aria-haspopup=&quot;true&quot; aria-expanded=&quot;false&quot;&gt;&lt;span class=&quot;rio-usermenu-avatar&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;rio-usermenu-name&quot;&gt;admin@shop.local&lt;/span&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;m6 9 6 6 6-6&quot;/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;&lt;/div&gt;
+  &lt;nav class=&quot;rio-modnav&quot; aria-label=&quot;Modules&quot;&gt;&lt;div class=&quot;rio-modnav-inner&quot;&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;7&quot; height=&quot;9&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;14&quot; y=&quot;3&quot; width=&quot;7&quot; height=&quot;5&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;14&quot; y=&quot;12&quot; width=&quot;7&quot; height=&quot;9&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;3&quot; y=&quot;16&quot; width=&quot;7&quot; height=&quot;5&quot; rx=&quot;1&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Dashboard&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;ellipse cx=&quot;12&quot; cy=&quot;5&quot; rx=&quot;8&quot; ry=&quot;3&quot;/&gt;&lt;path d=&quot;M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Models&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot; aria-current=&quot;true&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;9&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Administration&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Security&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z&quot;/&gt;&lt;/svg&gt;&lt;span&gt;System&lt;/span&gt;&lt;/a&gt;&lt;/div&gt;&lt;/nav&gt;
+&lt;/header&gt;&lt;div class=&quot;rio-ws-body&quot;&gt;&lt;div class=&quot;rio-ws-inner rio-page--wide&quot;&gt;&lt;main id=&quot;main&quot; style=&quot;display:contents&quot;&gt;&lt;nav class=&quot;rio-crumbs&quot; aria-label=&quot;Breadcrumb&quot;&gt;&lt;a href=&quot;#&quot;&gt;Home&lt;/a&gt;&lt;span class=&quot;rio-crumb-sep&quot;&gt;·&lt;/span&gt;&lt;a href=&quot;#&quot;&gt;Groups&lt;/a&gt;&lt;span class=&quot;rio-crumb-sep&quot;&gt;·&lt;/span&gt;&lt;span class=&quot;rio-crumb-current&quot;&gt;Warehouse&lt;/span&gt;&lt;/nav&gt;&lt;div class=&quot;rio-masthead-top&quot;&gt;&lt;div&gt;&lt;h1&gt;Edit group&lt;/h1&gt;&lt;p class=&quot;rio-masthead-desc&quot;&gt;Editing &lt;strong&gt;Warehouse&lt;/strong&gt; — change membership and attached permissions.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;&lt;form class=&quot;rio-form&quot;&gt;
+&lt;fieldset class=&quot;rio-fieldset&quot;&gt;&lt;legend class=&quot;rio-fieldset-legend&quot;&gt;Group&lt;/legend&gt;&lt;div class=&quot;rio-fieldset-grid&quot;&gt;&lt;div class=&quot;rio-field&quot;&gt;&lt;label class=&quot;rio-label&quot;&gt;Name &lt;span class=&quot;rio-req&quot;&gt;*&lt;/span&gt;&lt;/label&gt;&lt;input class=&quot;rio-input&quot; value=&quot;Warehouse&quot;&gt;&lt;/div&gt;&lt;div class=&quot;rio-field&quot;&gt;&lt;label class=&quot;rio-label&quot;&gt;Description&lt;/label&gt;&lt;input class=&quot;rio-input&quot; value=&quot;Stock and fulfilment operators&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/fieldset&gt;
+&lt;fieldset class=&quot;rio-fieldset&quot;&gt;&lt;legend class=&quot;rio-fieldset-legend&quot;&gt;Permissions&lt;/legend&gt;&lt;p class=&quot;rio-help&quot; style=&quot;margin:0 0 12px&quot;&gt;Members receive every ticked permission. A row toggle grants all four verbs on one model; a column toggle grants one verb on every model.&lt;/p&gt;&lt;div class=&quot;rio-tablewrap&quot;&gt;&lt;table class=&quot;rio-perm-matrix&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Model&lt;/th&gt;&lt;th&gt;view&lt;/th&gt;&lt;th&gt;add&lt;/th&gt;&lt;th&gt;change&lt;/th&gt;&lt;th&gt;delete&lt;/th&gt;&lt;th&gt;All&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Products&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Products delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Categories&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Categories delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Customers&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Customers delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Orders&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Orders delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Order items&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Order items delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;Payments&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments view&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments add&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot; checked&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments change&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;label class=&quot;rio-perm-cell&quot;&gt;&lt;input type=&quot;checkbox&quot;&gt;&lt;span class=&quot;rio-perm-cell__sr&quot;&gt;Payments delete&lt;/span&gt;&lt;/label&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;tfoot&gt;&lt;tr class=&quot;rio-perm-matrix__foot&quot;&gt;&lt;th class=&quot;rio-perm-matrix__model&quot;&gt;&lt;span class=&quot;rio-meta&quot;&gt;20 of 24 granted&lt;/span&gt;&lt;/th&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td class=&quot;rio-perm-matrix__cell&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;rio-perm-row-all&quot;&gt;All&lt;/button&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tfoot&gt;&lt;/table&gt;&lt;/div&gt;&lt;/fieldset&gt;
+&lt;fieldset class=&quot;rio-fieldset&quot;&gt;&lt;legend class=&quot;rio-fieldset-legend&quot;&gt;Members&lt;/legend&gt;&lt;div class=&quot;rio-tablewrap&quot;&gt;&lt;table class=&quot;rio-dtable rio-dtable--compact&quot;&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-cell-primary&quot; href=&quot;#&quot;&gt;elin.sandberg@shop.local&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;rio-role&quot;&gt;administrator&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Remove&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-cell-primary&quot; href=&quot;#&quot;&gt;jonas.ek@shop.local&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;rio-role&quot;&gt;staff&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Remove&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-cell-primary&quot; href=&quot;#&quot;&gt;maria.lind@shop.local&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;rio-role&quot;&gt;viewer&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Remove&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;&lt;div class=&quot;rio-board-foot&quot;&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;+ Add member&lt;/a&gt;&lt;/div&gt;&lt;/fieldset&gt;
+&lt;div class=&quot;rio-form-actions&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--primary&quot;&gt;Save changes&lt;/button&gt;&lt;a class=&quot;rio-btn rio-btn--secondary&quot; href=&quot;#&quot;&gt;Cancel&lt;/a&gt;&lt;span class=&quot;rio-action-bar-end&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3&quot;/&gt;&lt;/svg&gt; Delete group&lt;/a&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;/form&gt;&lt;/main&gt;&lt;/div&gt;&lt;footer class=&quot;rio-appfoot&quot; role=&quot;contentinfo&quot;&gt;&lt;div class=&quot;rio-appfoot-inner&quot;&gt;&lt;span class=&quot;rio-brand-word&quot;&gt;Shop&lt;/span&gt;&lt;span class=&quot;rio-appfoot-links&quot;&gt;&lt;a href=&quot;#&quot;&gt;Audit log&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;API surface&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Health&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Docs&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Sessions&lt;/a&gt;&lt;/span&gt;&lt;span class=&quot;rio-appfoot-meta&quot;&gt;admin@shop.local · 2026-10-09 09:41 UTC&lt;/span&gt;&lt;/div&gt;&lt;/footer&gt;&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div></div><p style='margin-top:16px'><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> <code>.rio-fieldset {{ min-width: 0 }}</code> — a fieldset's default <code>min-inline-size: min-content</code> otherwise widens the page.</p></div>
+<div class="foot">Design study v3 (2026-10-09) · rustio-admin <code>d4b61fa</code> · RustIO <code>main @ 00b933c</code> (PR #6 squash-merged; authoritative). PR #5 is unmerged and not authoritative. CURRENT frames render rustio-admin's real template markup against its real 30-fragment stylesheet; PREVIOUS PROPOSAL frames use the v2 mock stylesheet (<code>../v2/build/ra_mock_v2.css</code>); UPDATED PROPOSAL frames use the v3 mock stylesheet (<code>../build/ra_mock_v3.css</code>). Nothing here is product CSS; no runtime file was changed.</div></div>
+<script>
+(function(){
+  function fit(f){
+    try{
+      var d=f.contentDocument; if(!d||!d.documentElement) return;
+      var h=Math.max(d.documentElement.scrollHeight,d.body?d.body.scrollHeight:0);
+      f.style.height=(h+2)+'px';
+    }catch(e){}
+  }
+  var frames=document.querySelectorAll('iframe.shot');
+  frames.forEach(function(f){ f.addEventListener('load',function(){fit(f);setTimeout(function(){fit(f)},150)}); fit(f); });
+  window.addEventListener('load',function(){frames.forEach(fit)});
+})();
+</script>
+</body></html>
