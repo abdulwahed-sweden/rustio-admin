@@ -4,101 +4,114 @@
    block, no `[data-theme]` block, no pre-paint theme script. The
    admin renders one calm, light surface everywhere.
 
+   ALIAS LAYER. Every value lives in `tokens/canonical.css` — the
+   shared RustIO semantic core. The `--rio-*` names below are the
+   framework's public token contract: `AdminTheme`, `rio-theme` and
+   downstream stylesheets target them, so they are permanent and
+   components keep consuming `var(--rio-*)`.
+
    One accent only: RustIO Blue — a restrained, professional
-   #1F5797. It replaces the former burnt-copper "rust" accent on
-   every normal primary action. Red is reserved for genuinely
-   destructive actions.
+   #1F5797 (`--blue`). Red is reserved for genuinely destructive
+   actions. Focus is a separate role (`--focus`) and is never
+   retargeted by an accent override.
 
    Two accent roles are kept, on purpose:
    · --rio-rust*       — the accent for TEXT, links, dots, borders, tints.
    · --rio-rust-solid* — the FILLED button accent, paired with
                          --rio-on-solid (white).
-
-   The `--rio-rust*` names are retained deliberately: they are the
-   established token contract that project-level `AdminTheme`
-   overrides and downstream stylesheets already target. Renaming
-   them would break every branding override for no visual gain.
    ============================================================ */
 
 :root {
   color-scheme: light;
 
   /* Surfaces (elevation ladder) */
-  --rio-bg:            #F1F1EE; /* page — warm paper */
-  --rio-surface:       #FFFFFF; /* cards, panels, table body */
-  --rio-raised:        #F1F4F8; /* hover / raised / table head */
-  --rio-overlay:       #FFFFFF; /* modals, popovers */
-  --rio-sunken:        #F7F9FC; /* inset / code wells / soft fills */
-  --rio-surface-tint:  #F1F4F8; /* inline code / kbd chip */
+  --rio-bg:            var(--page);
+  --rio-surface:       var(--surface);
+  --rio-raised:        var(--surface-head); /* hover / raised / table head */
+  --rio-sunken:        var(--surface-soft); /* inset / code wells / soft fills */
+  --rio-overlay:       var(--surface);      /* product token: modals, popovers */
+  --rio-surface-tint:  var(--surface-head); /* product token: inline code / kbd */
 
-  /* Lines — soft card border vs strong input border */
-  --rio-line:          #D5DCE5;
-  --rio-line-strong:   #B9C5D3;
+  /* Lines — soft card border vs strong border */
+  --rio-line:          var(--border);
+  --rio-line-strong:   var(--border-strong);
 
   /* Contextual navigation rail — light and calm, never near-black */
-  --rio-rail-bg:       #F4F6F9;
-  --rio-rail-line:     #D3DBE5;
+  --rio-rail-bg:       var(--rail-bg);
+  --rio-rail-line:     var(--rail-line);
 
   /* Canvas dot-grid — off by contract; kept so overrides resolve */
   --rio-dot:           rgba(32, 39, 51, 0.04);
 
-  /* --- Ink — neutral black ----------------------------------------
-     A true neutral ramp: no blue cast, no warm cast. Mapped onto the
-     framework's four existing text roles rather than a second set of
-     names — these are what every component, every `AdminTheme`
-     override and every downstream stylesheet already targets.
+  /* --- Ink ---------------------------------------------------------
+     The framework's four text roles map onto the canonical ramp.
+     `--rio-text-faint` carried two jobs; the canonical core separates
+     them, so two further aliases are published:
 
-       role              value     used for
-       --rio-text-hi     #000000   titles, identifiers, table usernames
-       --rio-text        #0B0C0E   body, form + table values, nav labels
-       --rio-text-mute   #30343A   descriptions, breadcrumbs, metadata
-       --rio-text-faint  #4B535C   tertiary detail, footer meta, placeholders
+       role               canonical    used for
+       --rio-text-hi      --ink        titles, identifiers, table usernames
+       --rio-text         --ink-body   body, form + table values, nav labels
+       --rio-text-mute    --ink-2      descriptions, breadcrumbs, in-cell detail
+       --rio-text-faint   --ink-hint   hints, help text, placeholders
+       --rio-text-meta    --ink-3      tertiary technical metadata ONLY
+       --rio-text-mono    --ink-mono   mono micro-labels, rail section labels
 
-     Only the top of the ramp is pure black, and only for the things
-     that carry the page's authority. Everything else steps down. */
-  --rio-text-hi:       #000000;
-  --rio-text:          #0B0C0E;
-  --rio-text-mute:     #30343A;
-  --rio-text-faint:    #4B535C;
+     Nothing operational may be paler than `--ink-hint`. */
+  --rio-text-hi:       var(--ink);
+  --rio-text:          var(--ink-body);
+  --rio-text-mute:     var(--ink-2);
+  --rio-text-faint:    var(--ink-hint);
+  --rio-text-meta:     var(--ink-3);
+  --rio-text-mono:     var(--ink-mono);
   --rio-text-onrust:   #FFFFFF;
 
   /* Accent: RustIO Blue (as text/border/dot) */
-  --rio-rust:          #1F5797;
-  --rio-rust-hover:    #174578;
-  --rio-rust-active:   #123A66;
-  --rio-rust-tint:     #DFEAFB; /* primary-soft */
-  --rio-rust-tint-2:   #B7CDEA; /* primary-line */
-  --rio-rust-ring:     rgba(47, 123, 214, 0.40);
-  --rio-accent-focus:  #2F7BD6; /* focused-field border + focus ring */
+  --rio-rust:          var(--blue);
+  --rio-rust-hover:    var(--blue-dark);
+  --rio-rust-active:   #123A66; /* product token: no canonical counterpart */
+  --rio-rust-tint:     var(--blue-soft);
+  --rio-rust-tint-2:   var(--blue-line);
+  --rio-rust-ring:     rgba(47, 123, 214, 0.40); /* legacy glow; retired in use */
+  --rio-accent-focus:  var(--focus); /* focused-field border + focus ring */
 
   /* Accent: filled-button blue + on-color */
-  --rio-rust-solid:        #1F5797;
-  --rio-rust-solid-hover:  #174578;
+  --rio-rust-solid:        var(--blue);
+  --rio-rust-solid-hover:  var(--blue-dark);
   --rio-rust-solid-active: #123A66;
   --rio-on-solid:          #FFFFFF;
 
-  /* Status — calm, never a rainbow */
-  --rio-gold:          #8A5A0B;
-  --rio-gold-tint:     rgba(138, 90, 11, 0.10);
-  --rio-success:       #16704A;
-  --rio-success-tint:  rgba(22, 112, 74, 0.10);
-  --rio-warn:          #8A5A0B;
-  --rio-warn-tint:     rgba(138, 90, 11, 0.10);
-  --rio-danger:        #B42318;
-  --rio-danger-hover:  #912018;
-  --rio-danger-tint:   rgba(180, 35, 24, 0.10);
+  /* Status — calm, never a rainbow. Soft fills are opaque. */
+  --rio-gold:          var(--amber);
+  --rio-gold-tint:     var(--amber-soft);
+  --rio-success:       var(--green);
+  --rio-success-tint:  var(--green-soft);
+  --rio-success-line:  var(--green-line);
+  --rio-warn:          var(--amber);
+  --rio-warn-tint:     var(--amber-soft);
+  --rio-danger:        var(--red);
+  --rio-danger-hover:  #8A322E; /* product token: pressed destructive */
+  --rio-danger-tint:   var(--red-soft);
+  --rio-danger-line:   var(--red-line);
+  --rio-neutral:       var(--grey);
+  --rio-neutral-tint:  var(--grey-soft);
+  --rio-neutral-line:  var(--grey-line);
 
-  /* Status pills */
-  --rio-pill-on-bg:    #E3F3EC;
-  --rio-pill-on-text:  #16704A;
-  --rio-pill-off-bg:   #ECEFF4;
-  --rio-pill-off-text: #30343A;
+  /* Control boundaries */
+  --rio-field-line:    var(--field-line);
+  --rio-filter-line:   var(--filter-line);
+  --rio-filter-fill:   var(--filter-fill);
+
+  /* Status pills — the status-badge pairs */
+  --rio-pill-on-bg:    var(--green-soft);
+  --rio-pill-on-text:  var(--green);
+  --rio-pill-off-bg:   var(--grey-soft);
+  --rio-pill-off-text: var(--grey);
 
   /* Syntax tints (calm, accent-led) */
-  --rio-syntax-key:    #1F5797;
-  --rio-syntax-str:    #16704A;
-  --rio-syntax-num:    #8A5A0B;
-  --rio-syntax-fn:     #0B0C0E;
-  --rio-syntax-comment:#4B535C;
-  --rio-syntax-punc:   #30343A;
+  --rio-syntax-key:    var(--blue);
+  --rio-syntax-str:    var(--green);
+  --rio-syntax-num:    var(--amber);
+  --rio-syntax-fn:     var(--ink-body);
+  --rio-syntax-comment:var(--ink-hint);
+  --rio-syntax-punc:   var(--ink-2);
 }

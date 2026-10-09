@@ -53,6 +53,8 @@ use crate::templates::Templates;
 /// without recompiling the framework.
 const ADMIN_CSS: &str = concat!(
     // ---- tokens -----------------------------------------------
+    include_str!("../../assets/static/admin/tokens/canonical.css"),
+    "\n",
     include_str!("../../assets/static/admin/tokens/colors.css"),
     "\n",
     include_str!("../../assets/static/admin/tokens/spacing.css"),

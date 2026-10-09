@@ -1,22 +1,30 @@
 /* ============================================================
    RustIO — Elevation tokens
-   LIGHT ONLY. Soft, low-spread shadows over a warm paper canvas;
-   no dark-theme variants (the admin has one theme).
+   LIGHT ONLY. ALIAS LAYER — values in `tokens/canonical.css`.
 
-   The card shadow is the contract value: 0 2px 5px rgba(24,39,61,.07).
-   Everything else is a proportional step off it.
+   FLAT BY DEFAULT (VISUAL-CONTRACT.md §1.6). A white card on the page
+   ground with a 1px border is already separated; the shadow under it
+   communicated no hierarchy. `--rio-shadow-sm` is reserved for cards
+   in a grid; `--rio-shadow-xl` dresses the auth card alone;
+   `--rio-shadow-lg` is a product token for transient overlays
+   (dropdown panels, popovers) and has no canonical counterpart.
+
+   `--rio-shadow-md`, `--rio-shadow-card` and `--rio-shadow-inset` are
+   retired: they resolve to `none` so any rule still naming them lays
+   flat instead of silently keeping the old elevation.
    ============================================================ */
 
 :root {
-  --rio-shadow-sm:  0 1px 2px rgba(24, 39, 61, 0.06);
-  --rio-shadow-md:  0 2px 5px rgba(24, 39, 61, 0.07);
-  --rio-shadow-lg:  0 6px 16px -8px rgba(24, 39, 61, 0.16),
-                    0 2px 5px rgba(24, 39, 61, 0.07);
-  --rio-shadow-xl:  0 20px 40px -18px rgba(24, 39, 61, 0.22),
-                    0 4px 10px -4px rgba(24, 39, 61, 0.10);
-  --rio-shadow-inset: inset 0 1px 1px rgba(24, 39, 61, 0.03);
-  /* The approved card elevation — used by boards, panels, popovers. */
-  --rio-shadow-card:  0 2px 5px rgba(24, 39, 61, 0.07);
+  --rio-shadow-sm:  var(--shadow-sm);
+  --rio-shadow-lg:  0 6px 16px -8px rgba(22, 32, 56, 0.16),
+                    0 2px 5px rgba(22, 32, 56, 0.07);
+  --rio-shadow-xl:  var(--shadow);
+
+  /* Retired — flat. Kept so every reference resolves. */
+  --rio-shadow-md:    none;
+  --rio-shadow-card:  none;
+  --rio-shadow-inset: none;
+
   /* Top highlight is a no-op on light surfaces; kept so the token resolves. */
   --rio-highlight-top: 0 0 0 0 transparent; /* @kind shadow */
 }

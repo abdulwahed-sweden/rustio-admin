@@ -1,24 +1,27 @@
 /* ============================================================
  * rustio-admin / tokens / compat
  *
- * Alias layer: a handful of admin pages (api surface, docs, csv-import
- * result, and a few page headers) carry self-contained inline <style>
- * blocks that reference the framework's earlier token names. Rather
- * than hand-rewrite each, this sheet maps every legacy name onto its
- * live DS token, so those pages render with the current Teal palette,
- * stone neutrals, and type scale. New code should use the canonical
- * tokens directly — this exists only so the inline-styled pages stay
- * correct without a second visual system.
+ * Legacy-name alias layer: a handful of admin pages (api surface,
+ * docs, csv-import result, and a few page headers) carry
+ * self-contained inline <style> blocks that reference the framework's
+ * earlier token names. Rather than hand-rewrite each, this sheet maps
+ * every legacy name onto its live token, so those pages render with
+ * the current RustIO Blue palette, the canonical ink ramp and the
+ * Composition 3.1 scale. New code should use the `--rio-*` tokens
+ * directly — this exists only so the inline-styled pages stay correct
+ * without a second visual system.
+ *
+ * The canonical core itself is `tokens/canonical.css`.
  * ============================================================ */
 
 :root {
-  /* Spacing */
-  --rio-s1: var(--rio-space-4);
-  --rio-s2: var(--rio-space-8);
-  --rio-s3: var(--rio-space-12);
-  --rio-s4: var(--rio-space-16);
-  --rio-s5: var(--rio-space-20);
-  --rio-s6: var(--rio-space-32);
+  /* Spacing — the canonical six */
+  --rio-s1: var(--s1);
+  --rio-s2: var(--s2);
+  --rio-s3: var(--s3);
+  --rio-s4: var(--s4);
+  --rio-s5: var(--s5);
+  --rio-s6: var(--s6);
 
   /* Font sizes — Visual Contract v2.0 scale (px it renders) */
   --rio-fs-display: 2.25rem; /* 36 — page title (contract §2) */
@@ -38,38 +41,38 @@
   --rio-lh-ui: 1.5;
 
   /* Text roles */
-  --rio-text-strong: var(--rio-text-hi);
-  --rio-text-muted: var(--rio-text-mute);
-  --rio-text-subtle: var(--rio-text-faint);
+  --rio-text-strong: var(--ink);
+  --rio-text-muted: var(--ink-2);
+  --rio-text-subtle: var(--ink-hint);
 
   /* Surfaces + lines */
-  --rio-surface-2: var(--rio-sunken);
-  --rio-surface-3: var(--rio-raised);
-  --rio-surface-chrome: #11202b;          /* dark code slab (both themes) */
-  --rio-border: var(--rio-line);
-  --rio-border-soft: var(--rio-line);
-  --rio-border-strong: var(--rio-line-strong);
+  --rio-surface-2: var(--surface-soft);
+  --rio-surface-3: var(--surface-head);
+  --rio-surface-chrome: #11202b;          /* dark code slab — a deliberate inversion */
+  --rio-border: var(--border);
+  --rio-border-soft: var(--border);
+  --rio-border-strong: var(--border-strong);
 
   /* Radius + shadow */
-  --rio-radius: var(--rio-radius-md);
+  --rio-radius: var(--radius);
   --rio-shadow: var(--rio-shadow-sm);
-  /* --rio-shadow-inset / --rio-shadow-card live in tokens/shadows.css so they
-     carry per-theme values (heavier alpha on dark). */
+  /* --rio-shadow-inset / --rio-shadow-card resolve to `none` in
+     tokens/shadows.css — Composition 3.1 is flat by default. */
 
-  /* Accent (Rust) + secondary (amber) */
-  --rio-accent: var(--rio-rust);
-  --rio-accent-hover: var(--rio-rust-hover);
+  /* Accent (RustIO Blue) + secondary (amber) */
+  --rio-accent: var(--blue);
+  --rio-accent-hover: var(--blue-dark);
   --rio-accent-ring: var(--rio-rust-ring);
-  --rio-accent-soft: var(--rio-rust-tint);
-  --rio-accent-border: var(--rio-rust-tint-2);
-  --rio-accent-rgb: 184, 67, 24;
-  --rio-accent2: var(--rio-gold);
-  --rio-accent2-soft: var(--rio-gold-tint);
-  --rio-accent2-ink: var(--rio-gold);
+  --rio-accent-soft: var(--blue-soft);
+  --rio-accent-border: var(--blue-line);
+  --rio-accent-rgb: 31, 87, 151;
+  --rio-accent2: var(--amber);
+  --rio-accent2-soft: var(--amber-soft);
+  --rio-accent2-ink: var(--amber);
 
-  /* Borders — contract distinguishes the soft card border from the strong
-     input border; --rio-line / --rio-line-strong already carry those values. */
-  --rio-border-input: var(--rio-line-strong);
+  /* The input boundary is its own canonical token, deepened for
+     SC 1.4.11 — a filled field needs more than the card border. */
+  --rio-border-input: var(--field-line);
 
   /* Status fills */
   --rio-warning: var(--rio-warn);
