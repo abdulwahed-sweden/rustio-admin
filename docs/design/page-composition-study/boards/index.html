@@ -1,0 +1,132 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page composition — redesigned on the frozen theme · rustio-admin page composition study</title><style>
+/* --- Reference-page chrome. Deliberately plain: this file is a design
+   reference read from a repository, not a product screen. The RustIO product
+   styles live below, scoped to .rio, and are the actual contract. --- */
+:root{
+  --pg:#f6f7f9;--pg-2:#ffffff;--pg-line:#dfe4ea;--pg-ink:#171B22;--pg-ink-2:#3F4A59;
+  --pg-accent:#1f5797;
+  --g1:4px;--g2:8px;--g3:12px;--g4:16px;--g5:24px;--g6:32px;--g7:48px;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pg-ink);font-family:var(--sans);
+  font-size:16px;font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:var(--g7) var(--g5) 96px}
+a{color:var(--pg-accent)}
+:focus-visible{outline:3px solid #2f7bd6;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--g2);margin-bottom:var(--g5);
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.crumbs a{color:var(--pg-accent);text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+h1{margin:0 0 var(--g3);font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+h2{margin:0;font-size:18px;font-weight:700;line-height:1.3}
+h3{margin:0 0 var(--g2);font-size:16px;font-weight:700;line-height:1.35}
+.lede{max-width:74ch;color:var(--pg-ink-2);font-size:16px;font-weight:500}
+.sec{margin-top:var(--g7)}
+.sec-head{display:flex;align-items:baseline;gap:var(--g3);padding-bottom:var(--g2);
+  margin-bottom:var(--g4);border-bottom:1px solid var(--pg-line)}
+.sec-key{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--pg-accent);letter-spacing:.06em}
+/* `:where()` contributes no specificity, so these documentation colours can
+   never outrank a product rule inside a board render. Without it `.sec p`
+   (0-1-1) silently beats `.rio-card-title` (0-1-0) and mono labels lose their
+   colour. */
+.sec :where(p,li){color:var(--pg-ink-2);max-width:78ch}
+.sec ul{margin:0;padding-left:1.15em;display:grid;gap:var(--g2)}
+.note{padding:var(--g3) var(--g4);border-left:3px solid var(--pg-line);background:#fff;
+  border-radius:0 8px 8px 0;font-size:15px;color:var(--pg-ink-2)}
+code{font-family:var(--mono);font-size:.9em;background:#eef1f5;border:1px solid var(--pg-line);
+  border-radius:4px;padding:1px 5px;color:#174578}
+table.doc{width:100%;border-collapse:collapse;font-size:15px;background:#fff;
+  border:1px solid var(--pg-line);border-radius:10px;overflow:hidden}
+table.doc th{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#202733;text-align:left;padding:12px 14px;
+  background:#f1f4f8;border-bottom:1px solid var(--pg-line)}
+table.doc :where(td){padding:11px 14px;border-bottom:1px solid var(--pg-line);color:var(--pg-ink-2);vertical-align:top}
+table.doc :where(td:first-child){color:var(--pg-ink);font-weight:600}
+table.doc :where(tr:last-child td){border-bottom:0}
+.scroll{overflow-x:auto}
+.st{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid;
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;line-height:1.7}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st-existing{color:#4c5868;border-color:#c7cfd9;background:#f1f3f6}
+.st-visual{color:#174578;border-color:#b7cdea;background:#eaf2fd}
+.st-wiring{color:#7a4c08;border-color:#e3c981;background:#fff6e6}
+.st-future{color:#5b3f87;border-color:#c3b1e0;background:#f4f0fb;border-style:dashed}
+.props{display:grid;gap:1px;background:var(--pg-line);border:1px solid var(--pg-line);
+  border-radius:10px;overflow:hidden}
+.prop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--g4);padding:var(--g4);background:#fff;align-items:start}
+.prop h3{margin-bottom:4px;font-size:15px}
+.prop :where(p){margin:0;font-size:15px;color:var(--pg-ink-2)}
+.prop.is-future{background:repeating-linear-gradient(135deg,#fbfaff,#fbfaff 10px,#f5f2fb 10px,#f5f2fb 20px)}
+.explore{border:2px dashed #c3b1e0;border-radius:12px;padding:var(--g5);background:#faf8fd;margin-top:var(--g5)}
+.explore .hd{display:flex;align-items:center;gap:var(--g3);margin-bottom:var(--g3);flex-wrap:wrap}
+.explore .dim{filter:saturate(.3) opacity(.6);pointer-events:none}
+/* A board render sits in a frame and scrolls inside it, so the page body
+   never scrolls sideways at any width. */
+.frame{border:1px solid var(--pg-line);border-radius:12px;overflow:hidden;contain:paint;
+  background:#fff;max-width:100%}
+.frame-bar{display:flex;align-items:center;gap:var(--g3);padding:10px var(--g4);
+  border-bottom:1px solid var(--pg-line);background:#f1f4f8;font-family:var(--mono);
+  font-size:13px;color:#3F4A59}
+.frame-bar .w{margin-left:auto;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.frame-body>.rio{min-width:1040px}
+.frame.narrow{width:390px}
+.frame.narrow .frame-body>.rio{min-width:0}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);
+  font-size:14px;color:#596779}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+
+.wrap{max-width:1520px}
+/* Frames are same-origin iframes so admin.css's media queries respond to the
+   frame width, not the reader's window. A script sizes each to its content. */
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.shot{display:block;border:0;height:320px;max-width:none;background:#f1f1ee}
+.frame.narrow{width:390px;max-width:100%}
+.frame.w480{width:480px;max-width:100%}
+.frame.w760{width:760px;max-width:100%}
+.frame.w900{width:900px;max-width:100%}
+.frame.w1100{width:1100px;max-width:100%}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);font-size:14px;color:#596779}
+.flow{font-family:var(--mono);font-size:13px;line-height:1.6;background:#fff;border:1px solid var(--pg-line);border-radius:10px;padding:var(--g4) var(--g5);white-space:pre;overflow-x:auto;color:#202733}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:var(--g2) var(--g5);font-size:15px}
+.kv dt{font-family:var(--mono);font-size:13px;font-weight:700;color:#334052;letter-spacing:.04em}
+.kv dd{margin:0;color:var(--pg-ink-2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--g4)}
+.cards a{display:block;padding:var(--g4);border:1px solid var(--pg-line);border-radius:10px;background:#fff;color:var(--pg-ink);text-decoration:none}
+.cards a:hover{border-color:#b7cdea}
+.cards a strong{display:block;font-size:16px;margin-bottom:4px}
+.cards a span{font-size:14px;color:var(--pg-ink-2)}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+.pair{display:grid;gap:12px;margin-top:12px} .pair .lab{font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#596779;margin:16px 0 4px}
+.crit{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 24px;margin:8px 0 4px} .crit h3{margin:0 0 4px;font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#596779} .crit p,.crit li{margin:0;font-size:14px;line-height:1.5} .crit ul{margin:0;padding-left:18px}</style></head><body><div class="wrap">
+<nav class="crumbs"><strong>Index</strong> <span>·</span> <a href="Jobs-Data-Table.html">Jobs / Data table</a> <span>·</span> <a href="View-Modes.html">View modes</a> <span>·</span> <a href="Dense.html">Dense operational page</a> <span>·</span> <a href="Form.html">Form</a> <span>·</span> <a href="Dashboard.html">Dashboard</a> <span>·</span> <a href="Users.html">Users</a> <span>·</span> <a href="Groups-Permissions.html">Groups / Permissions</a> <span>·</span> <a href="Sessions.html">Sessions</a> <span>·</span> <a href="API-Surface.html">API surface</a> <span>·</span> <a href="History.html">History</a> <span>·</span> <a href="Empty-States.html">Empty states</a> <span>·</span> <a href="Narrow.html">Narrow / mobile</a> <span>·</span> <a href="Comparison.html">Comparison</a></nav><p class="cap">rustio-admin · page composition study · theme frozen, composition redesigned</p><h1>Page composition — redesigned on the frozen theme</h1><p class="lede">The visual system is accepted. What the pages still carry is the old composition: boxed heads, toolbars that duplicate the table, hidden workflow, forms that grey out their most important facts. This study critiques each page as it renders today and recomposes it with the same tokens, the same capabilities and the same shell.</p>
+<div class="sec"><div class="sec-head"><span class="sec-key">A</span><h2>What is frozen, what moves</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Frozen (not touched)</th><th>Redesigned (composition)</th></tr></thead><tbody><tr><td>colours · type ladder · font scale · token values · focus colour · radii · shadows · spacing scale · light-only direction</td><td>page structure · toolbar hierarchy · table scan path · filter/search/sort grouping · page-head relationships · form grouping and action placement · related sections · permission matrix presentation · sessions · API surface · history · dashboard · empty states · narrow reflow</td></tr><tr><td>two-row header · module navigation · contextual rail · ⌘K · account menu · notifications · footer</td><td>where a page's own controls sit and how they group</td></tr><tr><td>every capability: filters, sort, pagination, bulk actions, three save variants, inlines, permissions, sessions, API, history, health, DB browser, flags, docs, view designer, AdminTheme, rio-theme</td><td>how each one is arranged</td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>Strongest structural problems found</h2></div><div class="scroll"><table class="doc"><thead><tr><th>#</th><th>Problem</th><th>Where</th></tr></thead><tbody><tr><td>1</td><td><strong>The page's real work is hidden.</strong> On Jobs the seven workflow actions (Diagnosed → Collected) only exist inside a bulk bar that appears after a checkbox is ticked; the visible controls are Sort and rows-per-page. When a selection exists, two strips stack (bulk bar + sort strip).</td><td>Jobs</td></tr><tr><td>2</td><td><strong>A whole strip for controls the table already has.</strong> The grey data-surface head carries Sort / Direction / 50 per page. Column headers already sort; rows-per-page belongs with pagination. The strip costs 56px on every list and says nothing.</td><td>Jobs, every list</td></tr><tr><td>3</td><td><strong>Three filters, one hidden.</strong> The find row shows the first two filters and folds the third into "More filters" — a rule written for ten filters applied to three.</td><td>Jobs</td></tr><tr><td>4</td><td><strong>Facts shown as broken inputs.</strong> The form renders read-only fields (status, quote approved, overdue — the shop's three most important facts) as disabled, greyed controls at the bottom of the card.</td><td>Form</td></tr><tr><td>5</td><td><strong>The action bar in the middle of the page.</strong> Save sits between the fields and the related sections (Quotes, History), so the page's end is not where its action is; inline rows still use icon-only Edit/Delete.</td><td>Form</td></tr><tr><td>6</td><td><strong>Meaning-blind booleans.</strong> <code>overdue = yes</code> renders as a green pill; <code>status</code> renders as <code>in_progress</code>. The list cannot tell a good true from a bad one and shows the wire value for choices.</td><td>Jobs</td></tr><tr><td>7</td><td><strong>A registry dressed as a dashboard.</strong> Four stat tiles (Models, Total rows, Recent events, version) above a table whose rows repeat the app label and count fields; Docs is the page's blue button.</td><td>Dashboard</td></tr><tr><td>8</td><td><strong>The shop's permissions behind a disclosure.</strong> The five workflow permissions (diagnose, quote, approve, repair, collect) are collapsed under "Other permissions (5)"; the matrix is a bordered table inside a bordered card.</td><td>Groups</td></tr><tr><td>9</td><td><strong>Five facts, one card each.</strong> Sessions are stacked cards with a four-column definition list and a footer per session; the current one is a large blue block.</td><td>Sessions</td></tr><tr><td>10</td><td><strong>Identical endpoint blocks per model.</strong> Every API card repeats the same five endpoint rows with a glyph tile; the fields table is the only thing that differs.</td><td>API surface</td></tr><tr><td>11</td><td><strong>Narrow pages spend the screen on chrome.</strong> At 390 the list page stacks two full-width head buttons, three lines of filters and a two-line sort strip before the first row.</td><td>Narrow</td></tr><tr><td>12</td><td><strong>Leads that say nothing.</strong> "All jobs in FixShop.", "Operator accounts — role, last sign-in, and MFA enrolment" (columns the table does not have), and a users grid whose head rule is broken into segments.</td><td>Lists</td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">C</span><h2>Strongest proposed improvements</h2></div><div class="scroll"><table class="doc"><thead><tr><th>#</th><th>Improvement</th><th>Class</th></tr></thead><tbody><tr><td>1</td><td>The selection strip replaces the head slot and carries the workflow in two groups — the ladder, then the destructive pair — never stacking on another strip</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>2</td><td>No head strip in Table mode: columns sort, rows-per-page joins the count and pagination in the foot. The strip appears only when it has a job (view modes, or the sort an adaptive layout needs)</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>3</td><td>Up to four filters inline; "More filters" only beyond four; one Clear on the active-filter line</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>4</td><td>Form on the standard measure: the card (728) with its action bar as the card's own foot; read-only fields as a facts panel and the related sections as surfaces in an aside — the family's form-layout, which rustio-admin's <code>readonly_fields</code> and <code>inlines</code> already supply</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>5</td><td>Booleans in generic lists read as <code>yes</code> / <code>—</code> marks, not green/grey pills; choice values are humanised and worn as a neutral badge</td><td><span class="st st-visual">TEMPLATE + CSS</span> (colour by meaning: <span class="st st-wiring">REQUIRES WIRING</span>)</td></tr><tr><td>6</td><td>Dashboard: one facts line under the title, the model list as the one surface with a title band; Docs demoted to a quiet link</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>7</td><td>Group editor on the standard measure as one card with two bands; the matrix flat inside it; the workflow permissions open as a checklist grid</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>8</td><td>Sessions as one list, one row per session: device · ip · three times · trust · action</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>9</td><td>API surface as one flat section per model: endpoints left, fields right, no glyph</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>10</td><td>Narrow: head actions as small controls on the title line, search full width, filters in one scrolling row, foot wraps</td><td><span class="st st-existing">CSS ONLY</span></td></tr><tr><td>11</td><td>Lists drop the generic lead; the users grid becomes an ordinary table with a hugging identity cell</td><td><span class="st st-visual">TEMPLATE + CSS</span></td></tr><tr><td>12</td><td>History: no avatars, sticky date groups, calmer when/ip columns</td><td><span class="st st-existing">CSS ONLY</span></td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">D</span><h2>What stayed exactly as it is</h2></div><p><span class="st st-future">UNCHANGED</span> The shell (rail, two-row header, ⌘K trigger, account menu, notifications, footer); the page head grid (title, action beside it); the find-row search field; the filter dropdown panels and active-filter pills; column heads and sort affordance; row heights and cell rules; quiet text row actions and the sticky actions column; the sign-out buttons on Sessions; the auth pages; health, DB browser, feature flags, docs viewer, view designer, branding, MFA, notifications — untouched by this study.</p></div><div class="sec"><div class="sec-head"><span class="sec-key">E</span><h2>Boards</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Board</th><th>Shows</th></tr></thead><tbody><tr><td><a href="Jobs-Data-Table.html">Jobs / Data table</a></td><td>the priority page: critique, then CURRENT vs REDESIGNED, selected state, the strip rules</td></tr><tr><td><a href="View-Modes.html">View modes</a></td><td>List, Cards, Compact with the head strip that earns its place</td></tr><tr><td><a href="Dense.html">Dense operational page</a></td><td>61 jobs, two active filters, page 1 of 3</td></tr><tr><td><a href="Form.html">Form</a></td><td>Edit job: facts panel, related sections, one card with its own foot</td></tr><tr><td><a href="Dashboard.html">Dashboard</a></td><td>Site administration</td></tr><tr><td><a href="Users.html">Users</a></td><td>Users</td></tr><tr><td><a href="Groups-Permissions.html">Groups / Permissions</a></td><td>Edit group with the permission matrix</td></tr><tr><td><a href="Sessions.html">Sessions</a></td><td>Active sessions</td></tr><tr><td><a href="API-Surface.html">API surface</a></td><td>API surface</td></tr><tr><td><a href="History.html">History</a></td><td>History</td></tr><tr><td><a href="Empty-States.html">Empty states</a></td><td>fresh and filtered</td></tr><tr><td><a href="Narrow.html">Narrow / mobile</a></td><td>the key pages at 390</td></tr><tr><td><a href="Comparison.html">Comparison</a></td><td>every page CURRENT vs REDESIGNED, and the change table</td></tr></tbody></table></div></div>
+<div class="foot">Page composition study (2026-10-09) · rustio-admin <code>design/phase-0-visual-contract @ b5fa45c</code>, <code>examples/fixshop</code>. CURRENT frames are the real templates rendered with fixshop contexts against the real 32-fragment stylesheet bundle. REDESIGNED frames use the same real shell (<code>_base.html</code>, topbar, rail, footer) with redesigned page content, against the same untouched bundle plus <code>../build/composition.css</code> — a layer that introduces no new colour, type size, control height, radius, shadow or spacing value. Nothing here is product code; no runtime file was changed.</div></div>
+<script>
+(function(){
+  function fit(f){
+    try{
+      var d=f.contentDocument; if(!d||!d.documentElement) return;
+      var h=Math.max(d.documentElement.scrollHeight,d.body?d.body.scrollHeight:0);
+      f.style.height=(h+2)+'px';
+    }catch(e){}
+  }
+  var frames=document.querySelectorAll('iframe.shot');
+  frames.forEach(function(f){ f.addEventListener('load',function(){fit(f);setTimeout(function(){fit(f)},150)}); fit(f); });
+  window.addEventListener('load',function(){frames.forEach(fit)});
+})();
+</script>
+</body></html>

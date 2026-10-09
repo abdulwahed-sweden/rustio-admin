@@ -1,0 +1,169 @@
+/* ============================================================================
+   rustio-admin — PAGE COMPOSITION LAYER (design artefact, not product CSS)
+   Appended after the untouched 32-fragment bundle. Uses only the frozen
+   --rio-* tokens: no new colour, type size, control height, radius, shadow
+   or spacing value is introduced. Every rule here is composition.
+   ============================================================================ */
+
+/* ---- page head: lists drop the generic lead; the count lives on the find row */
+.rio-c-list .rio-masthead-top { margin-block-end: var(--rio-space-16); }
+
+/* ---- FIND row: finding controls, one row, grouped ------------------------- */
+.rio-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8) var(--rio-space-12); margin-block-end: var(--rio-space-16); }
+.rio-find-search { flex: 0 1 340px; min-inline-size: 220px; }
+.rio-find-search .rio-input { block-size: var(--rio-ctl); padding-inline-start: 36px; }
+.rio-find-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); }
+.rio-find-count { margin-inline-start: var(--rio-space-4); color: var(--rio-text-mute); font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rio-find-count strong { color: var(--rio-text-hi); }
+/* active filters stay their own line, but Clear is the one reset */
+.rio-c-list .rio-active-filters { margin-block: 0 var(--rio-space-16); }
+
+/* ---- data surface ------------------------------------------------------- */
+/* the head strip exists only when it has a job: view modes, or the sort the
+   adaptive layouts need. In Table mode the columns sort themselves. */
+.rio-board-head--views { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8) var(--rio-space-16); padding: var(--rio-space-8) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); background: var(--rio-raised); }
+.rio-board-head--views .rio-sortnote { color: var(--rio-text-mute); font-size: var(--rio-text-14); }
+.rio-board-head--views .rio-board-tools { margin-inline-start: auto; display: inline-flex; gap: var(--rio-space-8); }
+/* selection strip: replaces the head slot, never stacks on it */
+.rio-board-sel { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8) var(--rio-space-12); padding: var(--rio-space-8) var(--rio-space-16); background: var(--rio-rust-tint); border-block-end: 1px solid var(--rio-rust-tint-2); min-inline-size: 0; }
+.rio-board-sel-count { font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); white-space: nowrap; }
+.rio-board-sel-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-4); }
+.rio-board-sel-group + .rio-board-sel-group { padding-inline-start: var(--rio-space-12); border-inline-start: 1px solid var(--rio-rust-tint-2); }
+.rio-board-sel-danger { margin-inline-start: var(--rio-space-4); }
+.rio-board-sel .rio-btn--quiet { color: var(--rio-rust); }
+/* foot: count, rows-per-page and pagination belong together */
+.rio-board-foot--ops { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8) var(--rio-space-16); min-block-size: var(--rio-table-foot-h, 56px); padding: var(--rio-space-8) var(--rio-space-16); border-block-start: 1px solid var(--rio-line); background: var(--rio-sunken); }
+.rio-board-foot--ops .rio-pagination { margin-inline-start: auto; }
+.rio-board-foot-per { display: inline-flex; align-items: center; gap: var(--rio-space-4); }
+
+/* ---- operational table ---------------------------------------------------- */
+.rio-dtable--ops .col-check { inline-size: 40px; padding-inline: var(--rio-space-16) 0; }
+.rio-dtable--ops th.col-check { padding-inline: var(--rio-space-16) 0; }
+.rio-dtable--ops .rio-cell-primary { font-family: var(--rio-font-mono); font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); letter-spacing: 0; }
+.rio-dtable--ops td.rio-td--select .rio-pill { text-transform: none; }
+.rio-mark { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-mark--off { color: var(--rio-text-faint); font-weight: var(--rio-weight-regular); }
+.rio-dtable--ops td.rio-td--date { color: var(--rio-text); }
+/* the sticky actions column keeps its surface; the divider line only when it
+   actually covers content is not expressible in CSS, so it stays. The column
+   is narrower: two quiet actions, 8px apart, no outer padding beyond the gutter */
+.rio-dtable--ops td.col-act { padding-inline-end: var(--rio-space-12); }
+.rio-dtable--ops .rio-row-actions { gap: var(--rio-space-4); }
+.rio-cell-sub { display: block; margin-block-start: 2px; font-size: var(--rio-text-13); color: var(--rio-text-mute); font-family: var(--rio-font-body); font-weight: var(--rio-weight-regular); }
+/* empty states inside the surface: the filtered one and the fresh one differ in one line */
+.rio-empty--filtered .rio-empty-title::after { content: none; }
+
+/* ---- form: the record page ------------------------------------------------ */
+.rio-c-form .rio-ws-inner, .rio-ws-inner.rio-page--record { max-inline-size: var(--rio-page-standard); }
+.rio-form-layout { display: grid; grid-template-columns: minmax(0, var(--rio-page-form)) minmax(280px, 1fr); gap: var(--rio-space-24); align-items: start; }
+.rio-form-layout--single { grid-template-columns: minmax(0, var(--rio-page-form)); }
+.rio-form-main { min-inline-size: 0; }
+.rio-form-aside { min-inline-size: 0; display: flex; flex-direction: column; gap: var(--rio-space-16); }
+/* one card: sections as bands, the action bar as the card's foot */
+.rio-form-card { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); overflow: hidden; }
+.rio-form-card .rio-fieldset { border: 0; border-radius: 0; box-shadow: none; padding: var(--rio-space-24) var(--rio-space-24) var(--rio-space-24); margin: 0; }
+/* the band rule is a shadow, not a border, and the legend is floated into the
+   content flow: a native <legend> otherwise straddles the fieldset's top edge */
+.rio-form-card .rio-fieldset + .rio-fieldset { box-shadow: 0 -1px 0 var(--rio-line); }
+.rio-form-card .rio-fieldset-legend { float: left; inline-size: 100%; display: block; margin: 0 0 var(--rio-space-12); padding: 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-text-mono); }
+.rio-form-card .rio-form-actions { margin: 0; padding: var(--rio-space-16) var(--rio-space-24); border-block-start: 1px solid var(--rio-line); background: var(--rio-sunken); }
+/* inputs sized by what they hold, not by the column they sit in */
+.rio-form-card .rio-input[type="date"], .rio-form-card .rio-input[type="datetime-local"], .rio-form-card .rio-input[type="number"] { max-inline-size: 240px; }
+.rio-form-card .rio-fieldset-grid, .rio-form-card .rio-tablewrap { clear: both; }
+.rio-form-card .rio-fieldset-grid { row-gap: var(--rio-space-20); }
+.rio-form-card .rio-field { gap: var(--rio-space-8); }
+/* readonly facts: shown, not greyed */
+.rio-facts { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); padding: var(--rio-space-16) var(--rio-space-20); }
+.rio-facts-title, .rio-aside-title { margin: 0 0 var(--rio-space-8); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-text-mono); }
+.rio-facts dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--rio-space-8) var(--rio-space-16); margin: 0; font-size: var(--rio-text-14); }
+.rio-facts dt { color: var(--rio-text-mute); }
+.rio-facts dd { margin: 0; color: var(--rio-text-hi); font-variant-numeric: tabular-nums; }
+.rio-facts-note { margin: var(--rio-space-12) 0 0; font-size: var(--rio-text-13); color: var(--rio-text-faint); }
+/* related sections in the aside: one surface each, head · rows · foot */
+.rio-related { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); overflow: hidden; }
+.rio-related-head { display: flex; align-items: baseline; gap: var(--rio-space-8); padding: var(--rio-space-12) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+.rio-related-head h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-related-head .rio-inline-meta { color: var(--rio-text-mute); font-size: var(--rio-text-13); }
+.rio-related-head .rio-related-add { margin-inline-start: auto; }
+.rio-related .rio-dtable td { block-size: auto; padding-block: var(--rio-space-8); font-size: var(--rio-text-14); }
+.rio-related-foot { padding: var(--rio-space-8) var(--rio-space-16); border-block-start: 1px solid var(--rio-line); background: var(--rio-sunken); font-size: var(--rio-text-13); }
+@media (max-width: 1040px) { .rio-form-layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- dashboard ------------------------------------------------------------ */
+.rio-dash-facts { display: flex; flex-wrap: wrap; gap: var(--rio-space-4) var(--rio-space-16); margin: 0 0 var(--rio-space-16); color: var(--rio-text-mute); font-size: var(--rio-text-14); }
+.rio-dash-facts strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); font-variant-numeric: tabular-nums; }
+.rio-dash-facts a { color: var(--rio-rust); text-decoration: none; }
+.rio-dtable--models td.col-rows { inline-size: 120px; }
+.rio-dtable--models td.col-browse { inline-size: 170px; }
+.rio-dtable--models .rio-cell-primary { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); text-decoration: none; }
+.rio-dtable--models .rio-cell-primary:hover { color: var(--rio-rust); }
+.rio-dtable--models td.col-fields { inline-size: auto; color: var(--rio-text-mute); font-family: var(--rio-font-body); font-size: var(--rio-text-14); }
+.rio-board-title { display: flex; align-items: baseline; gap: var(--rio-space-8); padding: var(--rio-space-12) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+.rio-board-title h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-board-title .rio-meta { margin-inline-start: auto; }
+
+/* ---- users: a plain table with a hugging identity ------------------------- */
+.rio-dtable--people .rio-cell-user { white-space: nowrap; }
+.rio-dtable--people .rio-cell-user .rio-cell-id { margin-inline-start: var(--rio-space-8); font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); }
+
+/* ---- permissions ---------------------------------------------------------- */
+.rio-form-card .rio-perm-matrix { border: 0; border-radius: 0; }
+.rio-form-card .rio-perm-matrix thead th { background: var(--rio-raised); font-family: var(--rio-font-mono); font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps); color: var(--rio-text-mono); }
+.rio-form-card .rio-perm-matrix th, .rio-form-card .rio-perm-matrix td { padding: 0 var(--rio-space-12); block-size: var(--rio-th-h); }
+.rio-form-card .rio-perm-matrix__model { padding-inline-start: 0; }
+.rio-perm-extras--open { margin-block-start: var(--rio-space-20); }
+.rio-perm-extras--open summary { list-style: none; cursor: default; pointer-events: none; margin: 0 0 var(--rio-space-8); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-text-mono); }
+.rio-perm-extras--open .rio-checkbox-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--rio-space-8) var(--rio-space-24); }
+
+/* ---- sessions: a list, one row per session --------------------------------- */
+.rio-sess-rows { list-style: none; margin: 0; padding: 0; background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); overflow: hidden; }
+.rio-sess-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: var(--rio-space-16); min-block-size: 64px; padding: var(--rio-space-12) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+.rio-sess-row:last-child { border-block-end: 0; }
+.rio-sess-row--current { background: var(--rio-sunken); }
+.rio-sess-row-id { min-inline-size: 0; }
+.rio-sess-row-device { font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-sess-row-device .rio-sess-you { margin-inline-start: var(--rio-space-8); font-size: var(--rio-text-13); font-weight: var(--rio-weight-regular); color: var(--rio-text-mute); }
+.rio-sess-row-meta { display: flex; flex-wrap: wrap; gap: var(--rio-space-4) var(--rio-space-12); margin-block-start: 2px; font-size: var(--rio-text-13); color: var(--rio-text-mute); font-variant-numeric: tabular-nums; }
+.rio-sess-row-meta .rio-ip { font-family: var(--rio-font-mono); }
+.rio-sess-row-action { min-inline-size: 72px; display: flex; justify-content: flex-end; }
+.rio-sess-bulk--after { margin-block-start: var(--rio-space-16); }
+@media (max-width: 760px) { .rio-sess-row { grid-template-columns: minmax(0, 1fr) auto; } .rio-sess-row-action { grid-column: 1 / -1; justify-content: flex-start; } }
+
+/* ---- API surface: one section per model, flat -------------------------------- */
+.rio-api-sections { display: flex; flex-direction: column; gap: var(--rio-space-16); }
+.rio-api-section { background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm); overflow: hidden; }
+.rio-api-section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-8); padding: var(--rio-space-12) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+.rio-api-section-head h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-api-section-head .rio-api-base { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-api-section-head .rio-meta { margin-inline-start: auto; }
+.rio-api-section-body { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr); }
+.rio-api-ep-list { padding: var(--rio-space-12) var(--rio-space-16); border-inline-end: 1px solid var(--rio-line); display: flex; flex-direction: column; gap: var(--rio-space-4); }
+.rio-api-ep-list .rio-api-ep { padding: var(--rio-space-4) 0; border: 0; gap: var(--rio-space-8); }
+.rio-api-ep-list .rio-api-verb { min-inline-size: 44px; }
+.rio-api-ep-list .rio-api-path { font-size: var(--rio-text-13); }
+.rio-api-ep-list .rio-api-ep__action { font-size: var(--rio-text-13); color: var(--rio-text-faint); }
+.rio-api-section .rio-api-fields { padding: var(--rio-space-8) var(--rio-space-16) var(--rio-space-12); }
+.rio-api-section .rio-api-fields__label { display: none; }
+.rio-api-section .rio-api-ftable td { padding: var(--rio-space-4) 0; font-size: var(--rio-text-13); }
+@media (max-width: 900px) { .rio-api-section-body { grid-template-columns: 1fr; } .rio-api-ep-list { border-inline-end: 0; border-block-end: 1px solid var(--rio-line); } }
+
+/* ---- history: calmer rows ---------------------------------------------------- */
+.rio-table--audit .rio-avatar { display: none; }
+.rio-table--audit .rio-by { color: var(--rio-text); text-decoration: none; }
+.rio-table--audit .rio-by:hover { color: var(--rio-rust); }
+.rio-table--audit .rio-history-diff { margin-block-start: 2px; }
+.rio-table--audit .rio-hist-when { color: var(--rio-text-mute); font-size: var(--rio-text-14); white-space: nowrap; }
+.rio-table--audit .rio-hist-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); }
+.rio-table--audit tr.rio-history-date-divider th { position: sticky; inset-block-start: var(--rio-th-h); z-index: 1; }
+
+/* ---- narrow ------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .rio-c-list .rio-masthead-top { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title action" "lead lead"; }
+  .rio-c-list .rio-masthead-top > .rio-masthead-cta { justify-self: end; margin: 0; }
+  .rio-c-list .rio-masthead-cta .rio-btn { block-size: var(--rio-ctl-sm); padding-inline: var(--rio-space-12); font-size: var(--rio-text-13); }
+  .rio-find-search { flex: 1 1 100%; }
+  .rio-find-filters { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-block-end: 2px; }
+  .rio-find-filters::-webkit-scrollbar { display: none; }
+  .rio-find-filters .rio-btn { flex: none; }
+  .rio-board-foot--ops .rio-pagination { margin-inline-start: 0; inline-size: 100%; }
+}
