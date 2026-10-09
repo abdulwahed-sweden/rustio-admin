@@ -130,6 +130,12 @@
 /* A table never widens the page. It scrolls inside its own board. */
 .rio-board { min-inline-size: 0; }
 .rio-tablewrap {
+  /* `position: relative` is load-bearing twice over: it is the containing
+     block for the absolutely positioned `.rio-sr-only` label inside the
+     actions column head — without it that label resolves against the page
+     and widens the document at narrow widths — and it scopes the sticky
+     actions column to this scroller. */
+  position: relative;
   inline-size: 100%;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
@@ -232,7 +238,14 @@
   display: flex; align-items: center; min-inline-size: 0;
   padding: 0; block-size: auto; border-block-end: 0;
 }
-.rio-dtable--users .col-act { justify-content: flex-end; inline-size: auto; }
+/* The users grid lays its rows out with `display: grid`, so the sticky
+   actions column does not apply (and is not needed — the tracks already
+   fit). Reset it rather than leaving a half-applied rule. */
+.rio-dtable--users .col-act {
+  justify-content: flex-end; inline-size: auto;
+  position: static; box-shadow: none; background: transparent;
+}
+.rio-dtable--users thead .col-act { background: transparent; }
 /* Actions are always visible in a grid row: the hover-reveal that the
    legacy table used hides an authorized control behind a pointer. */
 .rio-dtable--users .rio-row-actions { opacity: 1; }

@@ -171,6 +171,86 @@
 .rio-table--striped tbody tr:nth-child(even) { background: transparent; }
 .rio-table--compact th { block-size: var(--rio-th-h); padding: 0 var(--rio-space-12); }
 .rio-table--compact td { block-size: var(--rio-th-h); padding: 0 var(--rio-space-12); }
+/* ============================================================
+   Cell behaviour
+   ============================================================ */
+
+/* Identity columns whose every value is a single unbreakable token hug
+   their content instead of taking an equal share of the table
+   (VISUAL-CONTRACT.md §9.2 — RustIO's `.cell-fit`). Which columns hug is
+   a data decision, as RustIO decides it in `column_hugs`; this is the
+   class that expresses it. */
+.rio-cell-fit { inline-size: 1%; white-space: nowrap; }
+
+/* Numeric cells right-align on tabular digits so the magnitudes line up
+   (RustIO's `.cell-num`). */
+.rio-cell-num,
+.rio-dtable td.rio-td--number,
+.rio-table td.rio-td--number {
+  text-align: end;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-dtable th.rio-th--number,
+.rio-table th.rio-th--number { text-align: end; }
+
+/* A date, a time and a boolean are fixed-shape values: wrapping them
+   mid-token buys no space and costs legibility. The widths they want are
+   predictable, so they stay on one line with tabular digits.
+
+   RustIO applies this per column, by hand (`.cell-num`, `.nowrap`,
+   `.record-list-time`, the audit table). rustio-admin already emits the
+   field's kind on every cell, so it applies automatically — same
+   behaviour, no per-column decision to forget. */
+.rio-dtable td.rio-td--date,
+.rio-dtable td.rio-td--datetime,
+.rio-dtable td.rio-td--time,
+.rio-table td.rio-td--date,
+.rio-table td.rio-td--datetime,
+.rio-table td.rio-td--time {
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-dtable td.rio-td--checkbox,
+.rio-table td.rio-td--checkbox { white-space: nowrap; }
+
+/* ============================================================
+   Sticky actions column
+
+   The row's actions are the first thing lost when a wide table scrolls,
+   which is exactly backwards: scrolling right is how an operator reads
+   the far columns, and Edit / Delete should still be reachable when they
+   get there. The column pins to the trailing edge at every width — inert
+   while the table fits, because there is nothing to scroll.
+
+   It only works with its companions. `border-collapse` is `separate`
+   here, but a sticky cell still needs to paint its own ground or the
+   rows scroll THROUGH it, and it needs the ground to follow the row's
+   state or the pinned cell stops looking like part of its row. The
+   1px shadow replaces the border the cell loses at the scroll seam, and
+   the head cell stacks above the sticky `thead` so the corner is right.
+   ============================================================ */
+.rio-dtable th.col-act,
+.rio-dtable td.col-act,
+.rio-table th.col-act,
+.rio-table td.col-act {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 1;
+  background: var(--rio-surface);
+  box-shadow: -1px 0 0 var(--rio-line);
+}
+.rio-dtable th.col-act,
+.rio-table th.col-act {
+  z-index: 2; /* above the sticky thead (z-index: 2) at the corner */
+  background: var(--rio-raised);
+}
+.rio-dtable tbody tr:hover td.col-act,
+.rio-table tbody tr:hover td.col-act { background: var(--rio-sunken); }
+.rio-dtable tbody tr[aria-selected="true"] td.col-act,
+.rio-dtable tbody tr[aria-selected="true"]:hover td.col-act,
+.rio-table tbody tr[aria-selected="true"] td.col-act,
+.rio-table tbody tr[aria-selected="true"]:hover td.col-act { background: var(--rio-rust-tint); }
+
 .rio-table .rio-cell-strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }
 .rio-table .rio-cell-mono { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); font-variant-numeric: lining-nums tabular-nums; }
 .rio-table .rio-cell-price { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }

@@ -24,6 +24,10 @@
  * the legend interrupts the border line. White surface, 14px radius, soft
  * border, soft shadow, generous 32px padding. */
 .rio-fieldset {
+  /* `<fieldset>` defaults to `min-inline-size: min-content`, so it refuses
+     to shrink below its widest child. With the permission matrix inside
+     one, that widens the whole page at 390. */
+  min-inline-size: 0;
   border: 1px solid var(--rio-line);
   border-radius: 14px;
   background: var(--rio-surface);
