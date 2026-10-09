@@ -168,3 +168,41 @@
   .rio-docpage-card { max-width: none; }
   .rio-doc-toc { display: none; }
 }
+
+/* ---- API surface as sections (apis_index.html) ----------------------
+   One flat section per model: head (name · base path · field count),
+   endpoints on the left, fields on the right. */
+.rio-api-sections { display: flex; flex-direction: column; gap: var(--rio-space-16); }
+.rio-api-section {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm);
+  overflow: hidden;
+}
+.rio-api-section-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-8);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-api-section-head h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-api-section-head h2 a { color: inherit; text-decoration: none; }
+.rio-api-section-head h2 a:hover { color: var(--rio-rust); }
+.rio-api-base { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-api-section-head .rio-meta { margin-inline-start: auto; }
+.rio-api-section-body { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr); }
+.rio-api-ep-list {
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border-inline-end: 1px solid var(--rio-line);
+  display: flex; flex-direction: column; gap: var(--rio-space-4);
+}
+.rio-api-ep-list .rio-api-ep { padding: var(--rio-space-4) 0; border: 0; gap: var(--rio-space-8); }
+.rio-api-ep-list .rio-api-verb { min-inline-size: 44px; }
+.rio-api-ep-list .rio-api-path { font-size: var(--rio-text-13); }
+.rio-api-ep-list .rio-api-ep__action { font-size: var(--rio-text-13); color: var(--rio-text-faint); }
+.rio-api-section .rio-api-fields { padding: var(--rio-space-8) var(--rio-space-16) var(--rio-space-12); }
+.rio-api-section .rio-api-ftable td { padding: var(--rio-space-4) 0; font-size: var(--rio-text-13); }
+@media (max-width: 900px) {
+  .rio-api-section-body { grid-template-columns: 1fr; }
+  .rio-api-ep-list { border-inline-end: 0; border-block-end: 1px solid var(--rio-line); }
+}

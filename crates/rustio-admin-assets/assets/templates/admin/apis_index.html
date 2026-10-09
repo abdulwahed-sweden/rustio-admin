@@ -1,63 +1,58 @@
 {% extends "admin/_base.html" %}
-
-{# API-surface page: one card per model, each with colored HTTP method
- # badges (GET=read, POST=write, delete=danger), an endpoint list, and a
- # fields table. Chrome matches the console masthead; styling lives in
- # pages/tools.css (`.rio-api-*`). #}
-
-{# A data page: wide tables take the wide measure. #}
-{% block page_measure %}rio-page--wide{% endblock %}
+{# One flat section per model: name and base path in the head, the five
+   endpoints on the left, the fields on the right. Same data, same paths,
+   same field table as the cards it replaces — without a glyph tile and a
+   ragged two-up grid. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top">
   <div>
     <h1>{{ page_title }}</h1>
     <p class="rio-masthead-desc">
-      Every registered project model is reachable via JSON content negotiation. Read paths accept
-      <code>Accept: application/json</code> or <code>?format=json</code>; write paths return JSON
-      envelopes on the same URLs the HTML forms post to.
+      Every registered model is reachable as JSON on the URLs the HTML forms use:
+      send <code>Accept: application/json</code> or <code>?format=json</code>; write paths return JSON envelopes.
     </p>
   </div>
   <div class="rio-masthead-cta">
+    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/apis/playground">Open playground →</a>
     <a class="rio-btn rio-btn--secondary rio-btn--md" href="{{ openapi_url }}">OpenAPI 3.0 spec</a>
     <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/apis/sdk.ts">TypeScript SDK</a>
-    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/apis/playground">Open playground →</a>
   </div>
 </div>
 
 {% if apis %}
-<div class="rio-api-grid">
+<div class="rio-api-sections">
   {% for m in apis %}
-  <article class="rio-api-card">
-    <header class="rio-api-card__head">
-      <span class="rio-api-card__glyph">{{ icon("table", class="rio-icon") }}</span>
-      <span class="rio-api-card__title"><a href="/admin/{{ m.admin_name }}">{{ m.display_name }}</a> <span class="rio-api-card__sub">· {{ m.singular_name }}</span></span>
-      <span class="rio-api-card__count">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
-    </header>
-
-    <div class="rio-api-endpoints">
-      <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--get">GET</span><span class="rio-api-path">{{ m.list_path }}</span><span class="rio-api-ep__action">List rows</span></div>
-      <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--post">POST</span><span class="rio-api-path">{{ m.list_path }}</span><span class="rio-api-ep__action">Create</span></div>
-      <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--get">GET</span><span class="rio-api-path">{{ m.detail_path }}</span><span class="rio-api-ep__action">Detail</span></div>
-      <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--post">POST</span><span class="rio-api-path">{{ m.detail_path }}/edit</span><span class="rio-api-ep__action">Update</span></div>
-      <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--del">POST</span><span class="rio-api-path">{{ m.detail_path }}/delete</span><span class="rio-api-ep__action">Delete</span></div>
+  <section class="rio-api-section" aria-labelledby="api-{{ m.admin_name }}">
+    <div class="rio-api-section-head">
+      <h2 id="api-{{ m.admin_name }}"><a href="/admin/{{ m.admin_name }}">{{ m.display_name }}</a></h2>
+      <span class="rio-api-base">{{ m.list_path }}</span>
+      <span class="rio-meta">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
     </div>
-
-    <div class="rio-api-fields">
-      <div class="rio-api-fields__label">Fields</div>
-      <table class="rio-api-ftable">
-        <tbody>
-          {% for f in m.fields %}
-          <tr>
-            <td class="rio-api-fname">{{ f.name }}</td>
-            <td class="rio-api-ftype">{{ f.type_label }}</td>
-            <td class="rio-api-fnull{% if f.nullable %} rio-api-fnull--yes{% endif %}">{% if f.nullable %}nullable{% else %}required{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="rio-api-section-body">
+      <div class="rio-api-ep-list">
+        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--get">GET</span><span class="rio-api-path">{{ m.list_path }}</span><span class="rio-api-ep__action">List rows</span></div>
+        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--post">POST</span><span class="rio-api-path">{{ m.list_path }}</span><span class="rio-api-ep__action">Create</span></div>
+        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--get">GET</span><span class="rio-api-path">{{ m.detail_path }}</span><span class="rio-api-ep__action">Detail</span></div>
+        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--post">POST</span><span class="rio-api-path">{{ m.detail_path }}/edit</span><span class="rio-api-ep__action">Update</span></div>
+        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--del">POST</span><span class="rio-api-path">{{ m.detail_path }}/delete</span><span class="rio-api-ep__action">Delete</span></div>
+      </div>
+      <div class="rio-api-fields">
+        <table class="rio-api-ftable">
+          <tbody>
+            {% for f in m.fields %}
+            <tr>
+              <td class="rio-api-fname">{{ f.name }}</td>
+              <td class="rio-api-ftype">{{ f.type_label }}</td>
+              <td class="rio-api-fnull{% if f.nullable %} rio-api-fnull--yes{% endif %}">{% if f.nullable %}nullable{% else %}required{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </article>
+  </section>
   {% endfor %}
 </div>
 {% else %}
