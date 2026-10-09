@@ -212,6 +212,33 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
   .rio-ws-inner { inline-size: calc(100% - 32px); }
 }
 
+/* ---- Narrow: the utility strip must fit, not scroll the page --------
+   Brand pill + ⌘K trigger + bell + Docs + account menu is more than a
+   phone has room for, and none of them could shrink: the search had a
+   280px floor and the actions were `flex: none` by default, so the strip
+   pushed the DOCUMENT sideways at every page. The utility row is chrome —
+   it gives way first. */
+@media (max-width: 760px) {
+  .rio-wshead-utility { min-inline-size: 0; }
+  .rio-wshead-inner { gap: var(--rio-space-8); min-inline-size: 0; }
+  /* The trigger keeps its icon and gives up its label and shortcut hint
+     rather than forcing the row wider than the viewport. */
+  .rio-ws-search { flex: 1 1 auto; min-inline-size: 0; max-inline-size: none; margin: 0; }
+  .rio-ws-search-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rio-ws-search .rio-kbd { display: none; }
+  .rio-ws-actions { flex: none; min-inline-size: 0; gap: var(--rio-space-4); }
+}
+
+@media (max-width: 480px) {
+  /* Below 480 the environment pill and the Docs link are the two things
+     an operator on a phone needs least; the account menu and the bell
+     stay, because signing out and seeing an alert are not optional. */
+  .rio-wshead-utility .rio-devpill { display: none; }
+  .rio-ws-actions .rio-ws-doclink { display: none; }
+  .rio-ws-search-label { display: none; }
+  .rio-ws-search { flex: 0 0 auto; }
+}
+
 /* ---- Editorial masthead + ledger ----
    The masthead's COMPOSITION (the title/action/lead grid, the lead's face)
    lives in components/page-header.css. Only the gap below the head and the
