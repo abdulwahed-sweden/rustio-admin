@@ -377,9 +377,12 @@
 }
 
 /* ---- Operational table ------------------------------------------------ */
-/* The checkbox is a 40px gutter, not a column with an opinion. */
-.rio-dtable--ops .col-check,
-.rio-dtable--ops th.col-check { inline-size: 40px; padding-inline: var(--rio-space-16) 0; }
+/* The checkbox is a 40px gutter, not a column with an opinion. Two class
+   names on the table: `layout/console.css` sets the base `.rio-dtable
+   .col-check` to 52px and loads after this fragment, so an equal-weight
+   selector here would lose on source order. */
+.rio-dtable.rio-dtable--ops .col-check,
+.rio-dtable.rio-dtable--ops th.col-check { inline-size: 40px; padding-inline: var(--rio-space-16) 0; }
 /* The identity is a machine token — a ticket, a reference. Mono and
    semibold, hugging its content so it never takes an equal share of a
    nine-column table. */
