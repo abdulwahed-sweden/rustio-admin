@@ -862,6 +862,13 @@ pub(crate) struct ListField {
     /// `"checkbox"` / `"datetime"`. The list template dispatches on
     /// this rather than duck-typing on the cell's string shape.
     pub kind: &'static str,
+    /// Whether the column is a `#[rustio(choices = …)]` field. The
+    /// widget vocabulary cannot say so — a choices `String` is a
+    /// `"text"` widget like any other — but a value drawn from a fixed
+    /// set reads as a state, not as prose, so the list wears it as a
+    /// badge. Display only: search, filters and sort still use the
+    /// stored value.
+    pub has_choices: bool,
     /// Sort hint for sortable column headers in `list.html`.
     /// `"asc"` → header link toggles to descending;
     /// `"desc"` → header link clears the sort (back to default);
@@ -1823,6 +1830,7 @@ pub(crate) fn list_ctx(
                 name: f.name.to_string(),
                 label: f.label.to_string(),
                 kind: f.field_type.widget(),
+                has_choices: f.choices.is_some(),
                 sort_active,
                 sort_link,
             }
@@ -5686,6 +5694,11 @@ mod adaptive_list_tests {
             display_name => "Customers",
             singular_name => "Customer",
             read_only => false,
+            // A real `ListCtx` always carries the paging fields; the foot
+            // computes its "Showing m–n of N" range from them.
+            page => 1usize,
+            per_page => 25usize,
+            total_rows => 1usize,
             fields => vec![context! { name => "full_name", kind => "text", label => "Full Name", sort_active => "", sort_link => "#" }],
             // ListRowCtx always carries highlights/links maps (often empty).
             rows => vec![context! {
@@ -5722,6 +5735,10 @@ mod adaptive_list_tests {
             rows => vec![context! { id => 42 }], // truthy so the board enters its row branch
             total_rows => 1,
             total_pages => 1,
+            // A real `ListCtx` always carries the paging fields; the foot
+            // computes its "Showing m–n of N" range from them.
+            page => 1usize,
+            per_page => 25usize,
             adaptive => Value::from_serialize(adaptive.unwrap()),
             mode_links => Value::from_serialize(&links),
         });

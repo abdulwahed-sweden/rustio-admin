@@ -320,11 +320,15 @@
   padding: 12px 16px; border-block-start: 1px solid var(--rio-line);
 }
 
-/* Bulk-action bar (appears when rows are selected) */
-/* Selection bar. Count and Clear read as one unit at the start; the
-   actions group sits at the end and wraps onto its own line rather
-   than marching off the edge of a busy list. */
-.rio-bulkbar {
+/* ---- Selection strip --------------------------------------------------
+   Appears in the surface's head slot when rows are selected, so selection
+   and arrangement never stack into two strips.
+
+   The actions are two groups separated by a rule: everything that moves a
+   record forward, then the ones that end it. A ladder of seven buttons
+   where the last one deletes is a misclick waiting to happen; the rule is
+   the pause. */
+.rio-board-sel {
   display: flex; align-items: center; flex-wrap: wrap;
   gap: var(--rio-space-8) var(--rio-space-12);
   padding: var(--rio-space-8) var(--rio-space-16);
@@ -332,15 +336,70 @@
   background: var(--rio-rust-tint);
   min-inline-size: 0;
 }
-.rio-bulkbar-count { font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); color: var(--rio-rust); }
-.rio-bulkbar-actions {
-  display: flex; flex-wrap: wrap; align-items: center;
-  gap: var(--rio-space-8);
-  margin-inline-start: auto;
+.rio-board-sel-count {
+  font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold);
+  color: var(--rio-rust); white-space: nowrap;
 }
+.rio-board-sel-group {
+  display: inline-flex; flex-wrap: wrap; align-items: center;
+  gap: var(--rio-space-4);
+}
+.rio-board-sel-group + .rio-board-sel-group {
+  padding-inline-start: var(--rio-space-12);
+  border-inline-start: 1px solid var(--rio-rust-tint-2);
+}
+.rio-board-sel-danger { margin-inline-start: auto; }
+/* On the tinted ground the quiet face needs the accent, not the default. */
+.rio-board-sel .rio-btn--quiet { color: var(--rio-rust); }
+.rio-board-sel .rio-btn--quiet.is-danger { color: var(--rio-danger); }
 @media (max-width: 760px) {
-  .rio-bulkbar-actions { margin-inline-start: 0; inline-size: 100%; }
+  .rio-board-sel-danger { margin-inline-start: 0; }
+  .rio-board-sel-group + .rio-board-sel-group {
+    padding-inline-start: 0; border-inline-start: 0;
+  }
 }
+
+/* ---- Operations foot --------------------------------------------------
+   What you are looking at, how much of it fits on a page, and where to go
+   next — one row, because they are one question. Rows-per-page lives here
+   rather than in the head: it is an operation on the result, like the page
+   you are on. */
+.rio-board-foot--ops {
+  justify-content: flex-start;
+  gap: var(--rio-space-8) var(--rio-space-16);
+  background: var(--rio-sunken);
+}
+.rio-board-foot--ops .rio-pagination { margin-inline-start: auto; }
+.rio-board-foot-text { white-space: nowrap; }
+.rio-board-foot-per { display: inline-flex; align-items: center; }
+@media (max-width: 760px) {
+  .rio-board-foot--ops .rio-pagination { margin-inline-start: 0; inline-size: 100%; }
+}
+
+/* ---- Operational table ------------------------------------------------ */
+/* The checkbox is a 40px gutter, not a column with an opinion. */
+.rio-dtable--ops .col-check,
+.rio-dtable--ops th.col-check { inline-size: 40px; padding-inline: var(--rio-space-16) 0; }
+/* The identity is a machine token — a ticket, a reference. Mono and
+   semibold, hugging its content so it never takes an equal share of a
+   nine-column table. */
+.rio-dtable--ops .rio-cell-primary {
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-semibold);
+  letter-spacing: 0;
+}
+/* A choice value is a state, worn as a badge; it keeps its own casing. */
+.rio-dtable--ops td .rio-pill--neutral { text-transform: none; }
+.rio-dtable--ops td.col-act { padding-inline-end: var(--rio-space-12); }
+.rio-dtable--ops .rio-row-actions { gap: var(--rio-space-4); }
+
+/* ---- Boolean marks ----------------------------------------------------
+   A generic list cannot know whether `true` is good news: "overdue: yes"
+   is bad, "active: yes" is not. So it states the fact and stops colouring
+   it. The coloured on/off pills stay for the pages that do know. */
+.rio-mark { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-mark--off { color: var(--rio-text-faint); font-weight: var(--rio-weight-regular); }
 
 /* Filters bar */
 .rio-filters { display: flex; align-items: center; gap: var(--rio-space-8); flex-wrap: wrap; }
