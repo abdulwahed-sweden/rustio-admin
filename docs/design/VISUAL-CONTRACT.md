@@ -123,7 +123,8 @@ the established token contract (§1 preamble); the *name* is historical, the
 (`#2F7BD6`) is deliberately not `--blue`: sharing the primary-button colour made
 a focused control read as a button. `#2F7BD6` is ~1.72× lighter than `--blue` and
 clears 3:1 against every surface the ring can sit beside. The ring is a **solid
-3px outline with a 3px offset** — the v2.x 4px translucent glow
+3px outline at a 2px offset** (`outline: 3px solid var(--focus);
+outline-offset: 2px`) — the v2.x 4px translucent glow
 (`--rio-accent-ring`) is retired, having reached only ~1.54:1 as a 28% wash.
 
 The accent is reserved for affordances — primary buttons, focus, active state,
@@ -297,7 +298,7 @@ password"**, not "Old password".
 ## 5. Inputs, textareas, selects
 
 **`--ctl` = 38px** min height. `--field-line` border, `--radius-btn` (8px), 15px
-text. Focus: `--focus` border plus the solid 3px outline at 3px offset (§1.3) —
+text. Focus: `--focus` border plus the solid 3px outline at 2px offset (§1.3) —
 no inset shadow, no translucent ring. Mono placeholders for code identifiers
 (slug, flag key). Textareas sit at a reading height rather than `--ctl`.
 
@@ -478,7 +479,7 @@ Verify each touched page **light/LTR**, then **light/RTL**, at 1440px and 390px:
 - Section pattern matches its §3 case (band for multi-section forms,
   eyebrow-heading for list/table sections, bare for single-group create cards).
 - Flat cards on the §1.1 surfaces, `--radius` 14, 1px `--border`.
-- 38px controls (§5) with the solid 3px offset focus ring; 31px small controls;
+- 38px controls (§5) with the solid 3px focus ring at 2px offset; 31px small controls;
   32px masthead utility controls.
 - Blue `accent-color` on every checkbox and radio.
 - The §8 button/action-bar taxonomy; quiet, always-visible row actions.

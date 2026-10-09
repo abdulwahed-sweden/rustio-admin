@@ -264,6 +264,58 @@ fn the_page_header_halves_are_a_matched_pair() {
     );
 }
 
+/// The canonical token core and the `--rio-*` alias layer are the token
+/// strategy (VISUAL-CONTRACT.md §1): canonical names carry RustIO's values,
+/// every `--rio-*` name is a permanent alias onto one, and components only
+/// ever consume `var(--rio-*)`.
+///
+/// Two ways that quietly breaks: a canonical name stops being declared (every
+/// alias resolving through it becomes invalid and the component silently
+/// renders unstyled), or a component reaches past the alias layer for a
+/// canonical name directly (and a project override of the `--rio-*` name
+/// stops reaching it). This test pins both.
+#[test]
+fn every_rio_alias_resolves_to_a_declared_canonical_token() {
+    let root = assets_root().join("static/admin");
+    let canonical_src =
+        std::fs::read_to_string(root.join("tokens/canonical.css")).expect("canonical.css ships");
+
+    // Names declared in the canonical core.
+    let declared: Vec<String> = canonical_src
+        .lines()
+        .filter_map(|l| {
+            let l = l.trim();
+            l.strip_prefix("--")
+                .and_then(|r| r.split_once(':'))
+                .map(|(name, _)| format!("--{name}"))
+        })
+        .collect();
+    assert!(
+        declared.len() > 40,
+        "expected the full canonical set, found {}",
+        declared.len()
+    );
+
+    // Every var(--x) used by the alias files must be declared canonically
+    // (or be another --rio-* alias).
+    for alias_file in ["colors.css", "spacing.css", "radius.css", "shadows.css"] {
+        let src = std::fs::read_to_string(root.join("tokens").join(alias_file))
+            .unwrap_or_else(|_| panic!("{alias_file} ships"));
+        for (i, _) in src.match_indices("var(--") {
+            let rest = &src[i + 4..];
+            let name = &rest[..rest.find([')', ',']).expect("unterminated var()")];
+            if name.starts_with("--rio-") {
+                continue; // alias referring to another alias
+            }
+            assert!(
+                declared.iter().any(|d| d == name),
+                "{alias_file} aliases `{name}`, which tokens/canonical.css does \
+                 not declare — the alias would resolve to nothing"
+            );
+        }
+    }
+}
+
 /// A unique scratch directory under the target dir. Avoids a dev-dependency
 /// on `tempfile` for three call sites.
 fn tempdir() -> PathBuf {

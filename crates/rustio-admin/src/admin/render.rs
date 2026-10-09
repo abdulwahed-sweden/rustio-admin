@@ -99,6 +99,10 @@ pub(crate) struct BaseContext {
     /// Accent colour in `#rrggbb` form, only `Some` when the project
     /// patched it. `None` means *no override — admin.css owns it*.
     pub accent_hex: Option<String>,
+    /// Hover and pressed shades computed from `accent_hex`, so a project
+    /// override keeps a three-state button instead of one flat colour.
+    pub accent_hover_hex: Option<String>,
+    pub accent_active_hex: Option<String>,
     /// Same colour as a space-separated RGB triplet (`"30 107 168"`)
     /// for use inside `rgb(... / opacity)` expressions. `None` paired
     /// with `accent_hex == None`.
@@ -145,6 +149,38 @@ pub(crate) fn hex_to_rgb_triplet(hex: &str) -> String {
     let b = u8::from_str_radix(&h[4..6], 16).unwrap_or(26);
     format!("{r} {g} {b}")
 }
+
+/// Darken an `#rrggbb` accent toward black by `factor`, returning
+/// `#rrggbb`. On any parse failure returns the input untouched, so a
+/// config typo degrades to "no shade" rather than to a broken colour.
+///
+/// A project that sets `AdminTheme::accent_color` used to get that one
+/// hex written into all six `--rio-rust*` names, which flattened hover
+/// and active: the button looked identical before, during and after a
+/// press. The framework's own pair is the reference for the ratio —
+/// `--blue` `#1F5797` to `--blue-dark` `#174578` is a scale of ~0.78,
+/// and the pressed `#123A66` ~0.64 — so the same two steps are applied
+/// to whatever accent a project supplies.
+///
+/// This is deliberately a few lines here rather than a call into
+/// `rio-theme`: that crate is build-time only and the runtime must never
+/// link it.
+pub(crate) fn shade_hex(hex: &str, factor: f32) -> String {
+    let h = hex.trim_start_matches('#');
+    if h.len() != 6 || !h.chars().all(|c| c.is_ascii_hexdigit()) {
+        return hex.to_string();
+    }
+    let ch = |i: usize| -> u8 {
+        let v = u8::from_str_radix(&h[i..i + 2], 16).unwrap_or(0);
+        (f32::from(v) * factor).round().clamp(0.0, 255.0) as u8
+    };
+    format!("#{:02X}{:02X}{:02X}", ch(0), ch(2), ch(4))
+}
+
+/// The hover shade of a project accent (~0.78 of it).
+pub(crate) const ACCENT_HOVER_SCALE: f32 = 0.78;
+/// The pressed shade of a project accent (~0.64 of it).
+pub(crate) const ACCENT_ACTIVE_SCALE: f32 = 0.64;
 
 /// Environment label resolved from `RUSTIO_ENV` (if set) else
 /// derived from build kind. Cached process-wide: one env read at
@@ -203,6 +239,8 @@ impl BaseContext {
             is_demo_session,
             demo_label,
             has_theme_overrides: theme.has_overrides(),
+            accent_hover_hex: accent_hex.as_deref().map(|h| shade_hex(h, ACCENT_HOVER_SCALE)),
+            accent_active_hex: accent_hex.as_deref().map(|h| shade_hex(h, ACCENT_ACTIVE_SCALE)),
             accent_hex,
             accent_rgb,
             theme_bg: theme.bg.clone(),
@@ -4723,6 +4761,84 @@ mod tests {
     /// path reformats instead, and the UTC suffix names the zone the
     /// value was always in.
     #[test]
+    /// A project accent gets three distinct states, not one flat colour
+    /// repeated six times. The ratios track the framework's own pair:
+    /// `#1F5797` → `#174578` hover → `#123A66` pressed.
+    #[test]
+    fn a_themed_accent_keeps_a_hover_and_a_pressed_shade() {
+        let accent = "#1F5797";
+        let hover = shade_hex(accent, ACCENT_HOVER_SCALE);
+        let active = shade_hex(accent, ACCENT_ACTIVE_SCALE);
+        assert_ne!(hover, accent, "hover must differ from the base accent");
+        assert_ne!(active, hover, "pressed must differ from hover");
+        // Each step is darker than the last on every channel.
+        let lum = |h: &str| {
+            let h = h.trim_start_matches('#');
+            (0..3)
+                .map(|i| u32::from(u8::from_str_radix(&h[i * 2..i * 2 + 2], 16).unwrap()))
+                .sum::<u32>()
+        };
+        assert!(lum(&hover) < lum(accent), "hover is darker than the accent");
+        assert!(lum(&active) < lum(&hover), "pressed is darker than hover");
+        assert_eq!(shade_hex("#FFFFFF", 1.0), "#FFFFFF");
+    }
+
+    /// A malformed accent degrades to "no shade" rather than to a broken
+    /// colour — the admin chrome must survive a config typo.
+    #[test]
+    fn a_malformed_accent_is_returned_untouched() {
+        for bad in ["", "#12", "not-a-colour", "#GGGGGG", "#1F5797AA"] {
+            assert_eq!(shade_hex(bad, ACCENT_HOVER_SCALE), bad, "mangled {bad:?}");
+        }
+    }
+
+    /// The theme partial must target `:root`, never `html`. `:root` is a
+    /// pseudo-class (0,1,0) and `html` a type selector (0,0,1), and the
+    /// token files declare on `:root` — so an `html` block loses on
+    /// specificity regardless of source order and every project override
+    /// is silently dropped. That was a real, shipped bug; this pins the fix.
+    #[test]
+    fn the_theme_partial_overrides_on_root_not_html() {
+        let src = crate::embedded_template_source("admin/_theme.html")
+            .expect("the theme partial ships");
+        let style = src
+            .split_once("<style>")
+            .and_then(|(_, rest)| rest.split_once("</style>"))
+            .map(|(block, _)| block)
+            .expect("the partial emits a <style> block");
+        assert!(
+            style.contains(":root {"),
+            "the override block must select :root so it ties on specificity \
+             and wins on source order"
+        );
+        assert!(
+            !style.contains("html {"),
+            "an `html {{ … }}` override loses to the stylesheet's `:root` \
+             and is silently dropped"
+        );
+    }
+
+    /// Focus is its own semantic role and a project accent never retargets
+    /// it (VISUAL-CONTRACT.md §1.3, §15.2). RustIO's design.json injection
+    /// does set `--focus`; this product's divergence is deliberate, so it
+    /// is pinned rather than left to drift.
+    #[test]
+    fn a_project_theme_never_overrides_the_focus_token() {
+        let src = crate::embedded_template_source("admin/_theme.html")
+            .expect("the theme partial ships");
+        let style = src
+            .split_once("<style>")
+            .and_then(|(_, rest)| rest.split_once("</style>"))
+            .map(|(block, _)| block)
+            .expect("the partial emits a <style> block");
+        assert!(
+            !style.contains("--rio-accent-focus"),
+            "AdminTheme must not set --rio-accent-focus: the focus ring has \
+             its own verified contrast budget and a brand colour is not \
+             required to clear it"
+        );
+    }
+
     fn a_timestamp_cell_reads_as_a_date_not_a_wire_format() {
         assert_eq!(
             humanise_timestamp_cell("2026-09-04T02:01"),
