@@ -81,7 +81,9 @@
 .rio-sess-trust { margin-inline-start: auto; display: inline-flex; align-items: center; gap: var(--rio-space-8); font-family: var(--rio-font-body); font-weight: var(--rio-weight-semibold); font-size: var(--rio-text-12); padding: var(--rio-space-4) var(--rio-space-8); border-radius: var(--rio-radius-sm); background: var(--rio-neutral-tint); color: var(--rio-neutral); white-space: nowrap; }
 .rio-sess-trust::before { content: ""; inline-size: 6px; block-size: 6px; flex: none; border-radius: 50%; background: currentColor; }
 .rio-sess-card--current .rio-sess-trust { background: var(--rio-success-tint); color: var(--rio-success); }
-.rio-sess-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--rio-space-12); }
+/* The track has to hold a full `YYYY-MM-DD HH:MM UTC` without wrapping,
+   or a nowrap value overruns its column and collides with the next. */
+.rio-sess-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--rio-space-12) var(--rio-space-16); }
 .rio-sess-meta dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: var(--rio-tracking-caps); color: var(--rio-text-mono); font-weight: var(--rio-weight-bold); }
 .rio-sess-meta dd { margin: 2px 0 0; font-size: var(--rio-text-15); color: var(--rio-text); white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
 .rio-sess-foot { margin-block-start: var(--rio-space-12); padding-block-start: var(--rio-space-12); border-block-start: 1px solid var(--rio-line); display: flex; align-items: center; }

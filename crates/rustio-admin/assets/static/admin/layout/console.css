@@ -377,19 +377,14 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-prod-name:hover { color: var(--rio-rust); }
 .rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); display: block; }
 .rio-price { font-family: var(--rio-font-mono); font-size: var(--rio-text-15); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
-.rio-mono-tile {
-  /* Removed — identity is the link, not a coloured square with an
-     initial in it (VISUAL-CONTRACT.md §13). */
-  display: none;
-  background: var(--rio-sunken); border: 1px solid var(--rio-line);
-  display: grid; place-items: center;
-  font-family: var(--rio-font-display); font-size: 16px; font-weight: 700; color: var(--rio-rust);
-  background: var(--rio-rust-tint); border-color: transparent;
-}
+/* The monogram tile is gone: identity is the link, not a coloured square
+   with an initial in it (VISUAL-CONTRACT.md §13). Removed from the three
+   templates that emitted it rather than hidden, so nothing renders a
+   decorative element the design does not have. */
 
 /* status pill: use the canonical .rio-pill (--on/--off) from components/data.css */
 
-/* inline row actions (reveal on hover) */
+/* inline row actions */
 /* Always visible. The hover-reveal that used to live here hid an
    authorized control behind a pointer: undiscoverable by scanning,
    unreachable by touch (VISUAL-CONTRACT.md §9.4). */

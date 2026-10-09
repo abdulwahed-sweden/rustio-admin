@@ -117,7 +117,11 @@
 }
 .av-list--cards .av-secondary,
 .av-list--cards .av-ts {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  /* A long machine string (an email at a long domain, a URL) must wrap
+     inside the card instead of running under its edge. */
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 /* Dot separator between consecutive inline meta cells. */
 .av-list--cards .av-secondary + .av-secondary::before,
