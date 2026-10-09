@@ -1,47 +1,44 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
-{% block page_measure %}rio-page--standard{% endblock %}
+{# The entry page is a model registry; it reads as one. A facts line under
+   the title carries the four numbers the old stat tiles held, and the
+   models are the one surface, with a title band. Browse and Add stay as
+   quiet text actions on every row. #}
+{% block page_measure %}rio-page--standard rio-c-list{% endblock %}
 {% block content %}
-
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ index_title }}</span></nav>
-
 <div class="rio-masthead-top">
   <div>
     <h1>{{ index_title }}</h1>
-    <p class="rio-masthead-desc">Models, rows, and recent activity in {{ app_name }}.</p>
   </div>
   <div class="rio-masthead-cta">
     {% if identity.is_admin %}
     <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/history">{{ icon("clock") }} Audit log</a>
     {% endif %}
-    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/docs">Docs</a>
+    <a class="rio-btn rio-btn--subtle rio-btn--md" href="/admin/docs">Docs</a>
   </div>
 </div>
 
-{# ---- Editorial ledger ---- #}
-<div class="rio-ledger rio-dash-ledger" aria-label="At a glance">
-  <div class="rio-ledger-item"><span class="rio-ledger-num">{{ total_models }}</span><span class="rio-ledger-label">Models</span></div>
-  <div class="rio-ledger-item"><span class="rio-ledger-num">{{ total_rows }}</span><span class="rio-ledger-label">Total rows</span></div>
-  <div class="rio-ledger-item"><span class="rio-ledger-num">{{ recent_actions_count }}</span><span class="rio-ledger-label">Recent events</span></div>
-  <div class="rio-ledger-item rio-ledger-item--accent"><span class="rio-ledger-num rio-ledger-num--ver">v{{ framework_version }}</span><span class="rio-ledger-label">{{ environment_label }}</span></div>
-</div>
+<p class="rio-dash-facts" aria-label="At a glance">
+  <span><strong>{{ total_models }}</strong> model{% if total_models != 1 %}s{% endif %}</span>
+  <span><strong>{{ total_rows }}</strong> row{% if total_rows != 1 %}s{% endif %}</span>
+  <span>{% if identity.is_admin %}<a href="/admin/history">{% endif %}<strong>{{ recent_actions_count }}</strong> recent event{% if recent_actions_count != 1 %}s{% endif %}{% if identity.is_admin %}</a>{% endif %}</span>
+  <span>v{{ framework_version }} · {{ environment_label }}</span>
+</p>
 
-{# ---- Browse data board ---- #}
 {% if apps %}
 <div class="rio-board">
-  <table class="rio-dtable">
-    <thead><tr><th>Model</th><th class="col-fields">Fields</th><th class="col-rows">Rows</th><th class="col-browse">&nbsp;</th></tr></thead>
+  <div class="rio-board-title">
+    <h2>Models</h2>
+    {% if apps|length == 1 %}<span class="rio-meta">{{ apps[0].label }}</span>{% endif %}
+  </div>
+  <div class="rio-tablewrap">
+  <table class="rio-dtable rio-dtable--models">
+    <thead><tr><th>Model</th>{% if apps|length > 1 %}<th>App</th>{% endif %}<th class="col-fields">Fields</th><th class="col-rows">Rows</th><th class="col-browse">&nbsp;</th></tr></thead>
     <tbody>
       {% for app in apps %}{% for model in app.models %}
       <tr>
-        <td>
-          <div class="rio-prod">
-            <span class="rio-prod-text">
-              <a class="rio-prod-name" href="/admin/{{ model.admin_name }}">{{ model.display_name }}</a>
-              <span class="rio-prod-cat">{{ app.label }}</span>
-            </span>
-          </div>
-        </td>
+        <td><a class="rio-cell-primary" href="/admin/{{ model.admin_name }}">{{ model.display_name }}</a></td>
+        {% if apps|length > 1 %}<td class="rio-cell-meta">{{ app.label }}</td>{% endif %}
         <td class="col-fields">{{ model.field_count }} field{% if model.field_count != 1 %}s{% endif %}</td>
         <td class="col-rows"><span class="rio-rownum">{{ model.row_estimate }}</span></td>
         <td class="col-browse">
@@ -52,8 +49,6 @@
       {% endfor %}{% endfor %}
     </tbody>
   </table>
-  <div class="rio-board-foot">
-    <span class="rio-board-foot-text">Showing <strong>{{ total_models }}</strong> model{% if total_models != 1 %}s{% endif %} · <strong>{{ total_rows }}</strong> row{% if total_rows != 1 %}s{% endif %} total</span>
   </div>
 </div>
 {% else %}
@@ -65,5 +60,4 @@
   </div>
 </div>
 {% endif %}
-
 {% endblock %}

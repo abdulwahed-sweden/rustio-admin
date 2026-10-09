@@ -475,3 +475,14 @@
 .rio-board-foot-text { font-size: var(--rio-text-13); color: var(--rio-text-mute); }
 .rio-board-foot-text strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); }
 .rio-board--center { padding: var(--rio-space-48) var(--rio-card-pad-x); text-align: center; }
+
+/* ---- Surface title band ---------------------------------------------
+   A surface that is the page's one surface names itself: title at the
+   start, a meta note at the end, one rule beneath. */
+.rio-board-title {
+  display: flex; align-items: baseline; gap: var(--rio-space-8);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-board-title h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-board-title .rio-meta { margin-inline-start: auto; }
