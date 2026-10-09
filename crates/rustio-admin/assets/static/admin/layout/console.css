@@ -14,7 +14,7 @@
    labels are the point, and hiding them behind a tooltip only made
    the rail harder to scan. ------------------------------------- */
 .rio-rail {
-  inline-size: 232px; flex: none;
+  inline-size: var(--rio-rail-w); flex: none;
   display: flex; flex-direction: column;
   gap: 2px; padding: 0 var(--rio-space-12) var(--rio-space-16);
   background: var(--rio-rail-bg);
@@ -47,16 +47,17 @@
   margin: var(--rio-space-12) 0; flex: none;
 }
 .rio-rail-caption {
-  font-size: 0.875rem; font-weight: var(--rio-weight-semibold);
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--rio-text-mute);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps); text-transform: uppercase;
+  color: var(--rio-text-mono);
   padding: 0 calc(var(--rio-rail-inset) - var(--rio-space-12)) var(--rio-space-8);
   white-space: nowrap;
 }
 .rio-rail-spacer { flex: 1; min-block-size: 8px; }
 
 .rio-rail-btn {
-  inline-size: 100%; min-block-size: 40px;
+  inline-size: 100%; min-block-size: var(--rio-ctl);
   display: grid; grid-template-columns: 18px 1fr; align-items: center;
   justify-items: start; gap: var(--rio-space-12);
   padding: var(--rio-space-8) calc(var(--rio-rail-inset) - var(--rio-space-12));
@@ -77,13 +78,10 @@
   font-weight: var(--rio-weight-semibold);
 }
 .rio-rail-btn[aria-current="page"] svg { color: var(--rio-rust); }
-.rio-rail-btn[aria-current="page"]::before {
-  content: ""; position: absolute;
-  inset-inline-start: 0; inset-block: 8px;
-  inline-size: 3px; border-radius: 999px; background: var(--rio-rust);
-}
+/* Tint only. The 3px leading bar was a second signal for a state the
+   tint and the weight already carry (VISUAL-CONTRACT.md §10). */
 .rio-rail-label {
-  font-family: var(--rio-font-body); font-size: 0.9375rem;
+  font-family: var(--rio-font-body); font-size: var(--rio-text-15);
   font-weight: var(--rio-weight-medium); line-height: 1.35;
   min-inline-size: 0; overflow-wrap: anywhere;
 }
@@ -128,14 +126,14 @@
 .rio-ws-search {
   flex: 1; max-inline-size: 460px; margin: 0 auto;
   display: flex; align-items: center; gap: 10px;
-  block-size: 38px; padding: 0 12px;
+  block-size: var(--rio-ctl-util); padding: 0 var(--rio-space-12);
   background: var(--rio-sunken); border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-pill); color: var(--rio-text-faint);
+  border-radius: var(--rio-radius-control); color: var(--rio-text-faint);
   cursor: pointer; font-size: var(--rio-text-14); text-align: start;
   transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-ws-search:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
-.rio-ws-search:focus-visible { outline: 2px solid var(--rio-accent-focus); outline-offset: 2px; }
+.rio-ws-search:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 .rio-ws-search-label { flex: 1; text-align: start; }
 .rio-ws-search .rio-kbd { flex: none; }
 .rio-ws-actions { display: flex; align-items: center; gap: 8px; }
@@ -144,14 +142,14 @@
 .rio-usermenu { margin-inline-start: 4px; }
 .rio-usermenu-btn {
   display: inline-flex; align-items: center; gap: 9px;
-  block-size: 40px; padding: 0 10px 0 6px;
-  border: 1px solid var(--rio-line); border-radius: 999px;
+  block-size: var(--rio-ctl-util); padding: 0 var(--rio-space-8) 0 var(--rio-space-4);
+  border: 1px solid var(--rio-line); border-radius: var(--rio-radius-control);
   background: var(--rio-surface); color: var(--rio-text); cursor: pointer; font: inherit;
   transition: background-color var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-usermenu-btn:hover { background: var(--rio-raised); border-color: var(--rio-line-strong); }
 .rio-usermenu-avatar {
-  inline-size: 30px; block-size: 30px; border-radius: 50%; flex: none;
+  inline-size: 24px; block-size: 24px; border-radius: var(--rio-radius-sm); flex: none;
   display: grid; place-items: center;
   background: var(--rio-rust-tint); color: var(--rio-rust);
   font-family: var(--rio-font-mono); font-weight: 700; font-size: 14px;
@@ -257,17 +255,17 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
   box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
   overflow: hidden;
 }
-.rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
+.rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-15); }
 .rio-dtable thead th {
-  text-align: start; font-family: var(--rio-font-body); font-size: var(--rio-text-13);
-  font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--rio-text-mute); padding: 12px 22px;
-  background: var(--rio-surface); border-block-end: 1px solid var(--rio-line);
-  position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
+  text-align: start; block-size: var(--rio-th-h);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mono); padding: 0 var(--rio-space-16);
+  background: var(--rio-raised); border-block-end: 1px solid var(--rio-line);
+  position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 2;
 }
-/* Phase-1 readability: tighten the over-tall 72px row to a comfortable,
-   more scannable density (still clears the 2-line monogram product cell). */
-.rio-dtable tbody td { padding: 0 22px; block-size: 56px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
+.rio-dtable tbody td { padding: 0 var(--rio-space-16); block-size: var(--rio-td-h); border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
 .rio-dtable tbody tr:last-child td { border-block-end: 0; }
 .rio-dtable tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); position: relative; }
 .rio-dtable tbody tr:hover { background: var(--rio-raised); }

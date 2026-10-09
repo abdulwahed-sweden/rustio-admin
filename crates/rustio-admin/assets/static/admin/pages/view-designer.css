@@ -84,7 +84,7 @@
   padding: 4px 12px; border-radius: var(--rio-radius-pill); user-select: none;
 }
 .rio-vd-toggle input:checked + .rio-vd-toggle__face { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
-.rio-vd-toggle input:focus-visible + .rio-vd-toggle__face { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-vd-toggle input:focus-visible + .rio-vd-toggle__face { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 
 .rio-vd-prio { inline-size: 4rem; text-align: center; }
 .rio-vd-reorder { display: inline-flex; flex-direction: column; gap: 2px; }

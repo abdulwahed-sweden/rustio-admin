@@ -9,11 +9,11 @@
   align-items: center;
   justify-content: center;
   gap: var(--rio-space-8);
-  block-size: 44px;                 /* contract §8.1: every button 44px */
-  padding-inline: 20px;
+  block-size: var(--rio-ctl);       /* 38 — contract §8 */
+  padding-inline: var(--rio-space-16);
   font-family: var(--rio-font-body);
-  font-size: var(--rio-text-14);    /* 16px */
-  font-weight: var(--rio-weight-bold); /* 700 */
+  font-size: var(--rio-text-14);    /* 14 */
+  font-weight: var(--rio-weight-button); /* 680 */
   line-height: 1;
   border: 1px solid transparent;
   border-radius: var(--rio-radius-control); /* 8px */
@@ -27,17 +27,25 @@
               box-shadow var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-btn:focus-visible {
-  outline: 2px solid var(--rio-rust);
+  outline: 3px solid var(--rio-accent-focus);
   outline-offset: 2px;
 }
 
-/* Sizes — base IS the contract 44px; --md/--lg match it (no per-size opt-in to
-   reach 44px). --sm stays a deliberate compact exception for dense toolbars. */
-.rio-btn--sm { block-size: 36px; padding-inline: 14px; }
-.rio-btn--md { block-size: 44px; padding-inline: 20px; font-size: var(--rio-text-14); }
-.rio-btn--lg { block-size: 44px; padding-inline: 24px; font-size: var(--rio-text-15); }
+/* Two heights, not four. `--sm` is the family's small control (31px) and
+   carries the small label pair; `--md` and `--lg` are kept as aliases of
+   the base height so the 30-odd templates naming them keep working
+   without each opting into a size of its own. */
+.rio-btn--sm {
+  block-size: var(--rio-ctl-sm); /* 31 */
+  padding-inline: var(--rio-space-12);
+  border-radius: var(--rio-radius-sm);
+  font-size: var(--rio-text-12);  /* 13 */
+  font-weight: var(--rio-weight-button-sm); /* 650 */
+}
+.rio-btn--md { block-size: var(--rio-ctl); padding-inline: var(--rio-space-16); }
+.rio-btn--lg { block-size: var(--rio-ctl); padding-inline: var(--rio-space-16); }
 
-/* Primary — copper (solid fill, white text in BOTH themes) */
+/* Primary — RustIO Blue (solid fill, white text) */
 .rio-btn--primary {
   background: var(--rio-rust-solid);
   color: var(--rio-on-solid);
@@ -114,7 +122,7 @@
   text-decoration: none;
 }
 .rio-action-link:hover { text-decoration: underline; }
-.rio-action-link:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; border-radius: var(--rio-radius-sm); }
+.rio-action-link:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; border-radius: var(--rio-radius-sm); }
 .rio-action-link svg { inline-size: 1em; block-size: 1em; flex: none; }
 .rio-action-link--danger { color: var(--rio-danger); }   /* "Delete", "Delete group" */
 .rio-action-link--muted  { color: var(--rio-text-hi); }  /* "History" */
@@ -152,11 +160,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: var(--rio-ctl-util);
+  block-size: var(--rio-ctl-util);
   padding: 0;
   border: 1px solid transparent;
-  border-radius: var(--rio-radius-md);
+  border-radius: var(--rio-radius-control);
   background: transparent;
   color: var(--rio-text-mute);
   cursor: pointer;
@@ -164,9 +172,9 @@
 }
 .rio-iconbtn:hover { background: var(--rio-raised); color: var(--rio-text-hi); }
 .rio-iconbtn:active { background: var(--rio-sunken); }
-.rio-iconbtn:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
-.rio-iconbtn--sm { inline-size: 30px; block-size: 30px; }
-.rio-iconbtn--lg { inline-size: 44px; block-size: 44px; }
+.rio-iconbtn:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
+.rio-iconbtn--sm { inline-size: 28px; block-size: 28px; }
+.rio-iconbtn--lg { inline-size: var(--rio-ctl); block-size: var(--rio-ctl); }
 .rio-iconbtn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 /* Notification dot */
 .rio-iconbtn--dot { position: relative; }

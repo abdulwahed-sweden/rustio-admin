@@ -131,7 +131,7 @@ a:hover { color: var(--rio-rust-hover); }
    focus token (#2F7BD6) rather than the accent, so the ring stays
    legible even when a project rebrands --rio-rust. --- */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--rio-accent-focus);
+  outline: 3px solid var(--rio-accent-focus);
   outline-offset: 2px;
   border-radius: var(--rio-radius-sm);
 }
@@ -144,7 +144,7 @@ a:hover { color: var(--rio-rust-hover); }
   inset-inline-start: 8px;
   z-index: 100;
   padding: 10px 16px;
-  min-block-size: 44px;
+  min-block-size: var(--rio-ctl);
   display: inline-flex;
   align-items: center;
   background: var(--rio-surface);

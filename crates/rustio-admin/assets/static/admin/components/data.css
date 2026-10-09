@@ -18,16 +18,17 @@
 .rio-section-head { margin: 0; }
 .rio-section-head__eyebrow {
   margin: 0 0 var(--rio-space-4) 0;          /* s1 to the title */
-  font-size: var(--rio-text-12);              /* 14px */
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);              /* 13 */
   font-weight: var(--rio-weight-bold);        /* 700 */
   text-transform: uppercase;
-  letter-spacing: var(--rio-tracking-caps);   /* ~0.08em */
-  color: var(--rio-text-mute);
+  letter-spacing: var(--rio-tracking-caps);   /* .08em */
+  color: var(--rio-text-mono);
 }
 .rio-section-head__title {
   margin: 0 0 var(--rio-space-16) 0;          /* s4 to the card */
   font-family: var(--rio-font-display);
-  font-size: var(--rio-text-17);              /* ~17px */
+  font-size: var(--rio-text-20);              /* 18 */
   font-weight: var(--rio-weight-bold);        /* 700 */
   line-height: var(--rio-leading-tight);
   color: var(--rio-text-hi);
@@ -131,16 +132,19 @@
 .rio-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
 .rio-table th {
   text-align: start;
-  font-family: var(--rio-font-body);   /* contract §9: weight 800 needs Inter, not mono */
-  font-size: var(--rio-text-12);        /* 14px (floor) */
-  font-weight: 600;
-  letter-spacing: .06em;
+  /* Contract §9.1: a 40px head, 13px mono, uppercase at .08em, on the
+     head surface. The column head names the data; it is a micro-label. */
+  block-size: var(--rio-th-h);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);        /* 13 */
+  font-weight: var(--rio-weight-bold);  /* 700 */
+  letter-spacing: var(--rio-tracking-caps);
   text-transform: uppercase;
-  color: var(--rio-text-mute);
-  padding: var(--rio-space-16);         /* contract §9: --rio-s4 (16px) */
-  border-block-end: 1px solid var(--rio-line-strong);
-  background: var(--rio-surface);
-  position: sticky;                     /* kept — serves long tables (contract silent) */
+  color: var(--rio-text-mono);
+  padding: 0 var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+  background: var(--rio-surface-head, var(--rio-raised));
+  position: sticky;                     /* kept — serves long tables */
   inset-block-start: 0;
   white-space: nowrap;
 }
@@ -148,9 +152,13 @@
 .rio-table th[aria-sort]:hover { color: var(--rio-text-hi); }
 .rio-table th .rio-sort-ind { color: var(--rio-rust); margin-inline-start: 4px; }
 .rio-table td {
-  padding: var(--rio-space-16);         /* contract §9: --rio-s4 (16px) */
+  /* Contract §9.1: 48px minimum, 15px cells, 16px padding. */
+  block-size: var(--rio-td-h);
+  padding: 0 var(--rio-space-16);
   border-block-end: 1px solid var(--rio-line);
-  color: var(--rio-text-hi);            /* contract §9: cells in --rio-text-strong */
+  color: var(--rio-text-hi);
+  font-size: var(--rio-text-15);
+  line-height: var(--rio-leading-ui);
   vertical-align: middle;
 }
 .rio-table tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); }
@@ -161,8 +169,8 @@
    requests striping renders calm, undifferentiated rows. */
 .rio-table--zebra tbody tr:nth-child(even),
 .rio-table--striped tbody tr:nth-child(even) { background: transparent; }
-.rio-table--compact th { padding: 7px 14px; }
-.rio-table--compact td { padding: 7px 14px; }
+.rio-table--compact th { block-size: var(--rio-th-h); padding: 0 var(--rio-space-12); }
+.rio-table--compact td { block-size: var(--rio-th-h); padding: 0 var(--rio-space-12); }
 .rio-table .rio-cell-strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }
 .rio-table .rio-cell-mono { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); font-variant-numeric: lining-nums tabular-nums; }
 .rio-table .rio-cell-price { color: var(--rio-text-hi); font-weight: var(--rio-weight-medium); }
@@ -231,7 +239,7 @@
 .rio-statstrip-item {
   display: flex; flex-direction: column; gap: 4px;
   padding: 14px 18px;
-  min-block-size: 64px;
+  min-block-size: var(--rio-td-h);
   border-inline-start: 1px solid var(--rio-line);
 }
 .rio-statstrip-item:first-child { border-inline-start: 0; }
