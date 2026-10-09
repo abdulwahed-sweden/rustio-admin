@@ -3835,7 +3835,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -3912,7 +3912,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -4028,9 +4028,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -7975,7 +7978,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -8052,7 +8055,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -8168,9 +8171,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -12086,7 +12092,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -12163,7 +12169,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -12279,9 +12285,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -16185,7 +16194,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -16262,7 +16271,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -16378,9 +16387,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -20284,7 +20296,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -20361,7 +20373,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -20477,9 +20489,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -20697,7 +20712,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
     &lt;/div&gt;
   &lt;/div&gt;&lt;/div&gt;
   &lt;nav class=&quot;rio-modnav&quot; aria-label=&quot;Modules&quot;&gt;&lt;div class=&quot;rio-modnav-inner&quot;&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3&quot; y=&quot;3&quot; width=&quot;7&quot; height=&quot;9&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;14&quot; y=&quot;3&quot; width=&quot;7&quot; height=&quot;5&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;14&quot; y=&quot;12&quot; width=&quot;7&quot; height=&quot;9&quot; rx=&quot;1&quot;/&gt;&lt;rect x=&quot;3&quot; y=&quot;16&quot; width=&quot;7&quot; height=&quot;5&quot; rx=&quot;1&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Dashboard&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;ellipse cx=&quot;12&quot; cy=&quot;5&quot; rx=&quot;8&quot; ry=&quot;3&quot;/&gt;&lt;path d=&quot;M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Models&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;9&quot; cy=&quot;8&quot; r=&quot;4&quot;/&gt;&lt;path d=&quot;M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Administration&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot; aria-current=&quot;true&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z&quot;/&gt;&lt;/svg&gt;&lt;span&gt;Security&lt;/span&gt;&lt;/a&gt;&lt;a class=&quot;rio-modnav-item&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;3&quot;/&gt;&lt;path d=&quot;M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z&quot;/&gt;&lt;/svg&gt;&lt;span&gt;System&lt;/span&gt;&lt;/a&gt;&lt;/div&gt;&lt;/nav&gt;
-&lt;/header&gt;&lt;div class=&quot;rio-ws-body&quot;&gt;&lt;div class=&quot;rio-ws-inner rio-page--narrow&quot;&gt;&lt;main id=&quot;main&quot; style=&quot;display:contents&quot;&gt;&lt;nav class=&quot;rio-crumbs&quot; aria-label=&quot;Breadcrumb&quot;&gt;&lt;a href=&quot;#&quot;&gt;Home&lt;/a&gt;&lt;span class=&quot;rio-crumb-sep&quot;&gt;·&lt;/span&gt;&lt;span class=&quot;rio-crumb-current&quot;&gt;Active sessions&lt;/span&gt;&lt;/nav&gt;&lt;div class=&quot;rio-masthead-top&quot;&gt;&lt;div&gt;&lt;h1&gt;Active sessions&lt;/h1&gt;&lt;p class=&quot;rio-masthead-desc&quot;&gt;Every device currently signed in to your account. Revoke any session you don&#x27;t recognise.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;&lt;ul class=&quot;rio-sess-list&quot; role=&quot;list&quot;&gt;&lt;li class=&quot;rio-sess-card rio-sess-card--current&quot;&gt;&lt;div&gt;&lt;div class=&quot;rio-sess-top&quot;&gt;&lt;span class=&quot;rio-sess-title&quot;&gt;Current session&lt;/span&gt;&lt;span class=&quot;rio-pill rio-pill--on&quot;&gt;Trusted&lt;/span&gt;&lt;/div&gt;&lt;dl class=&quot;rio-sess-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;IP&lt;/dt&gt;&lt;dd&gt;185.12.44.9&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Device&lt;/dt&gt;&lt;dd&gt;Chrome · macOS&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Created&lt;/dt&gt;&lt;dd&gt;2026-10-09 08:02&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Last active&lt;/dt&gt;&lt;dd&gt;just now&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Expires&lt;/dt&gt;&lt;dd&gt;in 13 days&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;/div&gt;&lt;div class=&quot;rio-sess-foot&quot;&gt;&lt;span class=&quot;rio-meta&quot;&gt;This session — use “Sign out everywhere” to revoke it.&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li class=&quot;rio-sess-card&quot;&gt;&lt;div&gt;&lt;div class=&quot;rio-sess-top&quot;&gt;&lt;span class=&quot;rio-sess-title&quot;&gt;Other session&lt;/span&gt;&lt;span class=&quot;rio-pill rio-pill--off&quot;&gt;Trusted&lt;/span&gt;&lt;/div&gt;&lt;dl class=&quot;rio-sess-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;IP&lt;/dt&gt;&lt;dd&gt;185.12.44.9&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Device&lt;/dt&gt;&lt;dd&gt;Safari · iPhone&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Created&lt;/dt&gt;&lt;dd&gt;2026-10-07 18:40&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Last active&lt;/dt&gt;&lt;dd&gt;2 hours ago&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Expires&lt;/dt&gt;&lt;dd&gt;in 11 days&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;/div&gt;&lt;div class=&quot;rio-sess-foot&quot;&gt;&lt;form class=&quot;rio-sess-revoke&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary rio-btn--sm&quot;&gt;Revoke&lt;/button&gt;&lt;/form&gt;&lt;/div&gt;&lt;/li&gt;&lt;li class=&quot;rio-sess-card&quot;&gt;&lt;div&gt;&lt;div class=&quot;rio-sess-top&quot;&gt;&lt;span class=&quot;rio-sess-title&quot;&gt;Other session&lt;/span&gt;&lt;span class=&quot;rio-pill rio-pill--off&quot;&gt;New device&lt;/span&gt;&lt;/div&gt;&lt;dl class=&quot;rio-sess-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;IP&lt;/dt&gt;&lt;dd&gt;92.34.110.2&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Device&lt;/dt&gt;&lt;dd&gt;Firefox · Windows&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Created&lt;/dt&gt;&lt;dd&gt;2026-10-06 11:15&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Last active&lt;/dt&gt;&lt;dd&gt;3 days ago&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Expires&lt;/dt&gt;&lt;dd&gt;in 10 days&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;/div&gt;&lt;div class=&quot;rio-sess-foot&quot;&gt;&lt;form class=&quot;rio-sess-revoke&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary rio-btn--sm&quot;&gt;Revoke&lt;/button&gt;&lt;/form&gt;&lt;/div&gt;&lt;/li&gt;&lt;/ul&gt;&lt;div class=&quot;rio-sess-bulk&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary&quot;&gt;Sign out of every other device&lt;/button&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--danger&quot;&gt;Sign out everywhere&lt;/button&gt;&lt;/div&gt;&lt;/main&gt;&lt;/div&gt;&lt;footer class=&quot;rio-appfoot&quot; role=&quot;contentinfo&quot;&gt;&lt;div class=&quot;rio-appfoot-inner&quot;&gt;&lt;span class=&quot;rio-brand-word&quot;&gt;Shop&lt;/span&gt;&lt;span class=&quot;rio-appfoot-links&quot;&gt;&lt;a href=&quot;#&quot;&gt;Audit log&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;API surface&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Health&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Docs&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Sessions&lt;/a&gt;&lt;/span&gt;&lt;span class=&quot;rio-appfoot-meta&quot;&gt;admin@shop.local · 2026-10-09 09:41 UTC&lt;/span&gt;&lt;/div&gt;&lt;/footer&gt;&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div></div></div></div><div class="sec"><div class="sec-head"><span class="sec-key">F</span><h2>What the states say</h2></div><div class="scroll"><table class="doc"><thead><tr><th></th><th>CURRENT</th><th>v1</th><th>v2</th><th>v3 (main)</th></tr></thead><tbody><tr><td>Page head</td><td>Boxed white card, 36px title</td><td>Unboxed; action beside the 24px title</td><td>Band with a rule (PR #5)</td><td>Unboxed; action beside the 24px title — main's grid</td></tr><tr><td>List toolbar</td><td>44px hero search + 44px triggers</td><td>Find row + data-surface head</td><td>Same</td><td>Same — main's <code>.find</code> / <code>.data-head</code></td></tr><tr><td>Rows</td><td>56–64px, hover icons</td><td>48px, quiet text</td><td>+ cells by kind, hug, sticky</td><td>Same as v2; hug is main's, the rest are rustio-admin improvements</td></tr><tr><td>Form</td><td>672 centred, legend-on-border, 46px</td><td>1120 column</td><td>728 centred (credited to PR #5)</td><td>728 centred — intentional divergence from main's left-aligned card + aside</td></tr><tr><td>Compact</td><td>—</td><td>40px lines, no head</td><td>32 / 38 table (PR #5)</td><td>40px lines, no head — main</td></tr><tr><td>Timestamps</td><td>Four formats</td><td>—</td><td>One format (credited to PR #5)</td><td>One format — rustio-admin improvement</td></tr></tbody></table></div></div>
+&lt;/header&gt;&lt;div class=&quot;rio-ws-body&quot;&gt;&lt;div class=&quot;rio-ws-inner rio-page--narrow&quot;&gt;&lt;main id=&quot;main&quot; style=&quot;display:contents&quot;&gt;&lt;nav class=&quot;rio-crumbs&quot; aria-label=&quot;Breadcrumb&quot;&gt;&lt;a href=&quot;#&quot;&gt;Home&lt;/a&gt;&lt;span class=&quot;rio-crumb-sep&quot;&gt;·&lt;/span&gt;&lt;span class=&quot;rio-crumb-current&quot;&gt;Active sessions&lt;/span&gt;&lt;/nav&gt;&lt;div class=&quot;rio-masthead-top&quot;&gt;&lt;div&gt;&lt;h1&gt;Active sessions&lt;/h1&gt;&lt;p class=&quot;rio-masthead-desc&quot;&gt;Every device currently signed in to your account. Revoke any session you don&#x27;t recognise.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;&lt;ul class=&quot;rio-sess-list&quot; role=&quot;list&quot;&gt;&lt;li class=&quot;rio-sess-card rio-sess-card--current&quot;&gt;&lt;div&gt;&lt;div class=&quot;rio-sess-top&quot;&gt;&lt;span class=&quot;rio-sess-title&quot;&gt;Current session&lt;/span&gt;&lt;span class=&quot;rio-pill rio-pill--on&quot;&gt;Trusted&lt;/span&gt;&lt;/div&gt;&lt;dl class=&quot;rio-sess-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;IP&lt;/dt&gt;&lt;dd&gt;185.12.44.9&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Device&lt;/dt&gt;&lt;dd&gt;Chrome · macOS&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Created&lt;/dt&gt;&lt;dd&gt;2026-10-09 08:02&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Last active&lt;/dt&gt;&lt;dd&gt;just now&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Expires&lt;/dt&gt;&lt;dd&gt;in 13 days&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;/div&gt;&lt;div class=&quot;rio-sess-foot&quot;&gt;&lt;span class=&quot;rio-meta&quot;&gt;This session — use “Sign out everywhere” to revoke it.&lt;/span&gt;&lt;/div&gt;&lt;/li&gt;&lt;li class=&quot;rio-sess-card&quot;&gt;&lt;div&gt;&lt;div class=&quot;rio-sess-top&quot;&gt;&lt;span class=&quot;rio-sess-title&quot;&gt;Other session&lt;/span&gt;&lt;span class=&quot;rio-pill rio-pill--off&quot;&gt;Trusted&lt;/span&gt;&lt;/div&gt;&lt;dl class=&quot;rio-sess-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;IP&lt;/dt&gt;&lt;dd&gt;185.12.44.9&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Device&lt;/dt&gt;&lt;dd&gt;Safari · iPhone&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Created&lt;/dt&gt;&lt;dd&gt;2026-10-07 18:40&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Last active&lt;/dt&gt;&lt;dd&gt;2 hours ago&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Expires&lt;/dt&gt;&lt;dd&gt;in 11 days&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;/div&gt;&lt;div class=&quot;rio-sess-foot&quot;&gt;&lt;form class=&quot;rio-sess-revoke&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary rio-btn--sm&quot;&gt;Revoke&lt;/button&gt;&lt;/form&gt;&lt;/div&gt;&lt;/li&gt;&lt;li class=&quot;rio-sess-card&quot;&gt;&lt;div&gt;&lt;div class=&quot;rio-sess-top&quot;&gt;&lt;span class=&quot;rio-sess-title&quot;&gt;Other session&lt;/span&gt;&lt;span class=&quot;rio-pill rio-pill--off&quot;&gt;New device&lt;/span&gt;&lt;/div&gt;&lt;dl class=&quot;rio-sess-meta&quot;&gt;&lt;div&gt;&lt;dt&gt;IP&lt;/dt&gt;&lt;dd&gt;92.34.110.2&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Device&lt;/dt&gt;&lt;dd&gt;Firefox · Windows&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Created&lt;/dt&gt;&lt;dd&gt;2026-10-06 11:15&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Last active&lt;/dt&gt;&lt;dd&gt;3 days ago&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Expires&lt;/dt&gt;&lt;dd&gt;in 10 days&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;&lt;/div&gt;&lt;div class=&quot;rio-sess-foot&quot;&gt;&lt;form class=&quot;rio-sess-revoke&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary rio-btn--sm&quot;&gt;Revoke&lt;/button&gt;&lt;/form&gt;&lt;/div&gt;&lt;/li&gt;&lt;/ul&gt;&lt;div class=&quot;rio-sess-bulk&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary&quot;&gt;Sign out of every other device&lt;/button&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--danger&quot;&gt;Sign out everywhere&lt;/button&gt;&lt;/div&gt;&lt;/main&gt;&lt;/div&gt;&lt;footer class=&quot;rio-appfoot&quot; role=&quot;contentinfo&quot;&gt;&lt;div class=&quot;rio-appfoot-inner&quot;&gt;&lt;span class=&quot;rio-brand-word&quot;&gt;Shop&lt;/span&gt;&lt;span class=&quot;rio-appfoot-links&quot;&gt;&lt;a href=&quot;#&quot;&gt;Audit log&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;API surface&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Health&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Docs&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Sessions&lt;/a&gt;&lt;/span&gt;&lt;span class=&quot;rio-appfoot-meta&quot;&gt;admin@shop.local · 2026-10-09 09:41 UTC&lt;/span&gt;&lt;/div&gt;&lt;/footer&gt;&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div></div></div></div><div class="sec"><div class="sec-head"><span class="sec-key">F</span><h2>What the states say</h2></div><div class="scroll"><table class="doc"><thead><tr><th></th><th>CURRENT</th><th>v1</th><th>v2</th><th>v3 (main)</th></tr></thead><tbody><tr><td>Page head</td><td>Boxed white card, 36px title</td><td>Unboxed; action beside the 24px title</td><td>Band with a rule (PR #5)</td><td>Unboxed; action beside the 24px title — main's grid</td></tr><tr><td>List toolbar</td><td>44px hero search + 44px triggers</td><td>Find row + data-surface head</td><td>Same</td><td>Same — main's <code>.find</code> / <code>.data-head</code></td></tr><tr><td>Rows</td><td>56–64px, hover icons</td><td>48px, quiet text</td><td>+ cells by kind, hug, sticky</td><td>Same as v2; hug and numeric / nowrap behaviour are main's; applying them by cell kind and the sticky column are rustio-admin improvements</td></tr><tr><td>Form</td><td>672 centred, legend-on-border, 46px</td><td>1120 column</td><td>728 centred (credited to PR #5)</td><td>728 centred — intentional divergence from main's left-aligned card + aside</td></tr><tr><td>Compact</td><td>—</td><td>40px lines, no head</td><td>32 / 38 table (PR #5)</td><td>40px lines, no head — main</td></tr><tr><td>Timestamps</td><td>Model list and user detail <code>HH:MM UTC</code>; users list and sessions without the zone; history relative</td><td>—</td><td>One format (credited to PR #5)</td><td>One format — rustio-admin improvement; two call sites change</td></tr></tbody></table></div></div>
 <div class="foot">Design study v3 (2026-10-09) · rustio-admin <code>d4b61fa</code> · RustIO <code>main @ 00b933c</code> (PR #6 squash-merged; authoritative). PR #5 is unmerged and not authoritative. CURRENT frames render rustio-admin's real template markup against its real 30-fragment stylesheet; PREVIOUS PROPOSAL frames use the v2 mock stylesheet (<code>../v2/build/ra_mock_v2.css</code>); UPDATED PROPOSAL frames use the v3 mock stylesheet (<code>../build/ra_mock_v3.css</code>). Nothing here is product CSS; no runtime file was changed.</div></div>
 <script>
 (function(){

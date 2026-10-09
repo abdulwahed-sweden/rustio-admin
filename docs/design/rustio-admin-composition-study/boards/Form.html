@@ -3456,7 +3456,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -3533,7 +3533,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -3649,9 +3649,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -3882,7 +3885,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 &lt;div class=&quot;rio-form-actions&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--primary&quot;&gt;Save&lt;/button&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary&quot;&gt;Save and continue editing&lt;/button&gt;&lt;button type=&quot;submit&quot; class=&quot;rio-btn rio-btn--secondary&quot;&gt;Save and add another&lt;/button&gt;&lt;span class=&quot;rio-action-bar-end&quot;&gt;&lt;a class=&quot;rio-action-link rio-action-link--muted&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;9&quot;/&gt;&lt;path d=&quot;M12 7v5l3 2&quot;/&gt;&lt;/svg&gt; History&lt;/a&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3&quot;/&gt;&lt;/svg&gt; Delete&lt;/a&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;Cancel&lt;/a&gt;&lt;/span&gt;&lt;/div&gt;
 &lt;/form&gt;
 &lt;section class=&quot;rio-inline-section&quot;&gt;&lt;header class=&quot;rio-inline-section__header&quot;&gt;&lt;h2&gt;Product images&lt;/h2&gt;&lt;span class=&quot;rio-inline-meta&quot;&gt;3 rows&lt;/span&gt;&lt;/header&gt;&lt;table class=&quot;rio-dtable&quot;&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-prod-name&quot; href=&quot;#&quot;&gt;#7 — tent-front.jpg&lt;/a&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;Edit&lt;/a&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Delete&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-prod-name&quot; href=&quot;#&quot;&gt;#8 — tent-inside.jpg&lt;/a&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;Edit&lt;/a&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Delete&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;a class=&quot;rio-prod-name&quot; href=&quot;#&quot;&gt;#9 — tent-packed.jpg&lt;/a&gt;&lt;/td&gt;&lt;td class=&quot;col-act&quot;&gt;&lt;span class=&quot;rio-row-actions&quot;&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;Edit&lt;/a&gt;&lt;a class=&quot;rio-action-link rio-action-link--danger&quot; href=&quot;#&quot;&gt;Delete&lt;/a&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;div class=&quot;rio-board-foot&quot;&gt;&lt;a class=&quot;rio-action-link&quot; href=&quot;#&quot;&gt;+ Add new product image&lt;/a&gt;&lt;/div&gt;&lt;/section&gt;&lt;/main&gt;&lt;/div&gt;&lt;footer class=&quot;rio-appfoot&quot; role=&quot;contentinfo&quot;&gt;&lt;div class=&quot;rio-appfoot-inner&quot;&gt;&lt;span class=&quot;rio-brand-word&quot;&gt;Shop&lt;/span&gt;&lt;span class=&quot;rio-appfoot-links&quot;&gt;&lt;a href=&quot;#&quot;&gt;Audit log&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;API surface&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Health&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Docs&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Sessions&lt;/a&gt;&lt;/span&gt;&lt;span class=&quot;rio-appfoot-meta&quot;&gt;admin@shop.local · 2026-10-09 09:41 UTC&lt;/span&gt;&lt;/div&gt;&lt;/footer&gt;&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div></div></div><ul style="margin-top:16px">
-<li><span class="st st-div">INTENTIONAL DIVERGENCE</span> <strong>Measure</strong>: main renders the form card (680 + 2×24 = 728) left-aligned in the 1120 column beside a System aside for readonly fields. rustio-admin has no such aside and already centres its form on its own measure; v3 keeps that and widens it from 672 to 728 so the card is the same width as main's. v2 credited the number to PR #5; the mechanism is rustio-admin's own.</li>
+<li><span class="st st-div">INTENTIONAL DIVERGENCE</span> <strong>Measure</strong>: main renders the form card (680 + 2×24 = 728) left-aligned in the 1120 column — beside a System aside for readonly fields (<code>.form-layout</code>), or alone (<code>.form-layout--single</code>, the closest analogue to rustio-admin's form page). rustio-admin has no aside and already centres its form on its own measure; v3 keeps that and widens <code>--rio-page-form</code> from 672 to 728 so the card is the same width as main's. A product token: there is no canonical main-derived form-measure token.</li>
 <li><span class="st st-visual">ALIGN WITH RUSTIO</span> Page head as main's grid; the lead beneath. (v2's "form pages drop the rule" is gone with the band.)</li>
 <li><span class="st st-visual">ALIGN WITH RUSTIO</span> Legend-on-border → mono band heading; 38px controls; boolean as a 38px bordered row (main's <code>.field-boolean</code>).</li>
 <li><span class="st st-existing">KEEP</span> <span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span> The three save variants and the text actions; the inline related section.</li></ul></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>Validation state</h2></div><div class="frame"><div class="frame-bar"><span>/admin</span><span class="w">1440</span></div><div class="frame-body"><iframe class="shot" title="form-error v3" style="width:1440px" srcdoc="&lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&lt;title&gt;Edit product · Shop&lt;/title&gt;&lt;style&gt;/* ============================================================
@@ -3909,7 +3912,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -3986,7 +3989,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -4102,9 +4105,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -4358,7 +4364,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -4435,7 +4441,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -4551,9 +4557,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */

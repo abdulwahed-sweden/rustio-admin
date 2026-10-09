@@ -14,7 +14,7 @@ in the proposal column has been implemented.
 | Measures | wide 1480 / standard 1120 / narrow 920 / form 672; centred, 32px gutter | wide 1600 / 1120 / 920 / form 728; `--gutter` 32 · 24 · 16 | KEEP (mechanism) · ALIGN (wide, gutter) · INTENTIONAL DIVERGENCE (form, see Forms) |
 | Footer | full-width chrome | same; faces on the ramp; the time in the family format | KEEP · ALIGN |
 | Env pill, bell, Docs, account menu, ⌘K | present | present | KEEP UNIQUE |
-| AdminTheme override | one hex into six `--rio-rust*` names; focus untouched | hover / active shades from `rio-theme`; focus still untouched | IMPROVE · INTENTIONAL DIVERGENCE (`main` lets `rustio.design.json` set `--focus`) |
+| AdminTheme override | one hex into six `--rio-rust*` names; focus untouched | hover / active shades from `rio-theme`; focus still untouched | IMPROVE · INTENTIONAL DIVERGENCE (`main`'s `shell.rs` injects `--blue` / `--blue-dark` / `--focus` on every shell page and `session.rs` injects `--blue` / `--focus` on the sign-out page, all from `rustio.design.json`) |
 
 ## Page head
 
@@ -44,8 +44,9 @@ in the proposal column has been implemented.
 | Head | 15px uppercase | 40px, 13px mono (`main` `--th-h`) | ALIGN |
 | Row actions | icon-only, hover-revealed | quiet text, always visible (`main` `.button-quiet`) | ALIGN + IMPROVE |
 | Identity hug | users grid only | `.rio-cell-fit` where every value is one token (`main` `.cell-fit` / `column_hugs`) | ALIGN |
-| Cells by kind | kinds emitted, no rules | date / datetime / boolean nowrap; tabular digits; numeric right | IMPROVE |
-| Actions column on scroll | lost first | sticky inside `.rio-tablewrap`, every width | IMPROVE |
+| Cell behaviour | kinds emitted, no rules | numeric right-aligned with tabular digits; time cells nowrap — the behaviour of `main`'s `.cell-num`, `.record-list-time`, `.record-card-time`, `.table-audit` | ALIGN |
+| Cell rules by kind | — | the same behaviour applied automatically from `rio-td--date|datetime|boolean|integer|decimal` instead of per-column classes | IMPROVE |
+| Actions column on scroll | lost first | sticky inside `.rio-tablewrap` at every width, with the companion rules that make it correct: the cell carries its own surface in every row state (`--surface`; head `--surface-head`; hover `--surface-soft`; selected `--blue-soft`, also when hovered), a 1px `--border` shadow line on its left edge, `z-index: 1` on cells and `2` on the head cell so it stacks above rustio-admin's existing sticky `thead`, and `position: relative` on `.rio-tablewrap` | IMPROVE |
 | Compact | tighter rows | 40px lines, no head (`main` `.record-compact-item`) | ALIGN |
 | Empty state | padded, icon tile | flat, inside the surface (`main`) | ALIGN |
 
@@ -54,16 +55,17 @@ in the proposal column has been implemented.
 | | Current | Proposal | Class |
 |---|---|---|---|
 | List | rows | one surface, 64px rows, badge beside the primary (`main` `.record-list-*`) | ALIGN |
-| Cards | shadowed, radius 12 | flat, radius 14, 16px (`main` `.data--cards`) | ALIGN |
+| Cards | shadowed, radius 12 | flat, radius 14, 16px; `repeat(auto-fill, minmax(min(100%, 300px), 1fr))` with `main`'s `min(100%, 300px)` guard preserved (`main` `.card-grid` / `.data--cards`) | ALIGN |
 | Card identity | wraps freely | 12rem floor, `break-word` | IMPROVE |
-| `.av-badge` | own face | the one badge face | ALIGN |
+| `.av-badge` | own face | the status-badge face | ALIGN |
+| Count badges (`.rio-dropdown-badge`, tab counts) | own face | the second, bordered count face without a dot — `main`'s `.module-link .badge` | ALIGN |
 
 ## Forms
 
 | | Current | Proposal | Class |
 |---|---|---|---|
-| Measure | `rio-page--form` 672, centred | 728, centred. `main` renders a 728 card left-aligned in the 1120 column beside a System aside for readonly fields; rustio-admin has no aside and keeps its centred measure, matching the card width | INTENTIONAL DIVERGENCE |
-| Fieldset | legend on border | mono band inside the card; `min-width: 0` | ALIGN · IMPROVE |
+| Measure | `rio-page--form` 672, centred (`--rio-page-form`) | 728, centred, still on `--rio-page-form` (a product token; no canonical form-measure token exists on `main`). `main` renders a 728 card left-aligned in the 1120 column — `.form-layout` with a System aside for readonly fields, `.form-layout--single` without; the latter is the closest analogue. rustio-admin has no aside and keeps its centred measure, matching the card width | INTENTIONAL DIVERGENCE |
+| Fieldset | legend on border | mono band inside the card; `min-width: 0` (`pages/form.css`) | ALIGN · IMPROVE |
 | Inputs | 46px | 38px | ALIGN |
 | Boolean | inline | 38px bordered row (`main` `.field-boolean`) | ALIGN |
 | Action bar | three save variants + text actions | unchanged order, 38px | KEEP UNIQUE · ALIGN |
@@ -93,15 +95,16 @@ in the proposal column has been implemented.
 
 | Page | Current | Proposal |
 |---|---|---|
-| Model list cells | date only (PR #154) | `YYYY-MM-DD HH:MM UTC` |
-| Users list, sessions | `%Y-%m-%d %H:%M` | `YYYY-MM-DD HH:MM UTC` |
+| Model list cells | `YYYY-MM-DD HH:MM UTC` already — `humanise_timestamp_cell` in `admin/render.rs` rewrites the `%Y-%m-%dT%H:%M` wire value (PR #154); pinned by `a_timestamp_cell_reads_as_a_date_not_a_wire_format` | unchanged |
+| Users list (`admin/builtin.rs`, `created_at`) | `%Y-%m-%d %H:%M` — no zone | `%Y-%m-%d %H:%M UTC` |
+| Account sessions (`admin/render.rs`, `AccountSessionRowCtx.created_at`) | `%Y-%m-%d %H:%M` — no zone | `%Y-%m-%d %H:%M UTC` |
 | User detail, footer | `%Y-%m-%d %H:%M UTC` | unchanged |
 | History "when", "last seen", "expires" | relative | relative |
 
-Class: IMPROVE RUSTIO-ADMIN. The format is the one rustio-admin's user
-detail already uses and the one `main` uses on its history and audit pages;
-`main` has no cell-level rule, so this is not an alignment. The only Rust
-change in the proposal (Phase 5).
+Class: IMPROVE RUSTIO-ADMIN. Exactly two call sites change; the existing
+model-list rewrite and its test stay. `main` has no cell-level rule (its
+history and audit pages use the same format), so this is not an alignment.
+The only Rust change in the proposal (Phase 5).
 
 ## Product pages that only take scale and faces
 
@@ -111,10 +114,13 @@ controls, radii, badges and empty states.
 
 ## Found while verifying the boards (product-relevant, IMPROVE)
 
-- `.rio-sr-only` is `position: absolute`; inside an unpositioned
-  `.rio-tablewrap` it widens the document at narrow widths. Fix:
-  `.rio-tablewrap { position: relative }`.
+- `.rio-sr-only` (`base/base.css`) is `position: absolute`; inside an
+  unpositioned `.rio-tablewrap` it widens the document at narrow widths.
+  Fix: `.rio-tablewrap { position: relative }` in `pages/list.css`, where
+  `.rio-tablewrap` is defined (and mirrored in `pages/detail.css` if its
+  copy there is kept separate).
 - `<fieldset>` defaults to `min-inline-size: min-content`; with the matrix
   inside, the group editor widens the page at 390. Fix: `.rio-fieldset {
-  min-width: 0 }`.
+  min-width: 0 }` in `pages/form.css` (the `.rio-fieldset` box rules live
+  there; `base/base.css` only resets the element).
 - `tokens/compat.css` says "the current Teal palette". Comment only.

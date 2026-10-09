@@ -3442,7 +3442,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -3519,7 +3519,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -3635,9 +3635,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -3860,7 +3863,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 <li><span class="st st-visual">ALIGN WITH RUSTIO</span> Utility row 56 and module row 40; rail 240 with 38px items and no left bar; utility controls at 32px; 15px base; the ink ramp without pure black. All of it is main's <code>:root</code>.</li>
 <li><span class="st st-visual">ALIGN WITH RUSTIO</span> The page head is main's <code>.page-head</code>: the title with the primary action one gap after it, the lead beneath, no box. v2's band-with-rule was PR #5's and is <span class="st st-drop">DROP</span>.</li>
 <li><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> <code>_theme.html</code> writes one hex into six <code>--rio-rust*</code> names, so an overridden primary has no hover state; <code>rio-theme</code> already computes the shades. Independent of RustIO.</li>
-<li><span class="st st-div">INTENTIONAL DIVERGENCE</span> <code>AdminTheme</code> never retargets <code>--rio-accent-focus</code>; main's <code>rustio.design.json</code> injection sets <code>--focus</code> to the project accent. rustio-admin keeps its behaviour.</li></ul></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>Measures</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Measure</th><th>rustio-admin today</th><th>v3</th><th>Class</th></tr></thead><tbody><tr><td>wide</td><td>1480</td><td>1600 (main <code>--content-wide</code>)</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td></tr><tr><td>standard</td><td>1120</td><td>1120 (main <code>--content</code>)</td><td><span class="st st-existing">KEEP</span></td></tr><tr><td>narrow</td><td>920</td><td>920</td><td><span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span></td></tr><tr><td>form</td><td>672, centred</td><td>728, centred (main's card is 680 + 2×24 but left-aligned in the 1120 column beside a System aside)</td><td><span class="st st-div">INTENTIONAL DIVERGENCE</span></td></tr><tr><td>gutter</td><td>32 each side</td><td>32 · 24 ≤ 760 · 16 ≤ 480 (main <code>--gutter</code>)</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td></tr></tbody></table></div></div>
+<li><span class="st st-div">INTENTIONAL DIVERGENCE</span> <code>AdminTheme</code> never retargets <code>--rio-accent-focus</code>; on main, <code>shell.rs</code> injects <code>--blue</code> / <code>--blue-dark</code> / <code>--focus</code> from <code>rustio.design.json</code> on every shell page and <code>session.rs</code> injects <code>--blue</code> / <code>--focus</code> on the sign-out page. rustio-admin keeps its behaviour.</li><li><span class="st st-existing">KEEP</span> Class names: rustio-admin keeps its <code>.rio-*</code> vocabulary throughout; main's class names are referenced as the rule being matched, never imported or aliased.</li></ul></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>Measures</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Measure</th><th>rustio-admin today</th><th>v3</th><th>Class</th></tr></thead><tbody><tr><td>wide</td><td>1480</td><td>1600 (main <code>--content-wide</code>)</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td></tr><tr><td>standard</td><td>1120</td><td>1120 (main <code>--content</code>)</td><td><span class="st st-existing">KEEP</span></td></tr><tr><td>narrow</td><td>920</td><td>920</td><td><span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span></td></tr><tr><td>form</td><td>672, centred (<code>--rio-page-form</code>)</td><td>728, centred — a product token, no canonical equivalent. Closest main analogue: <code>.form-layout--single</code>, the 728 card left-aligned in the 1120 column</td><td><span class="st st-div">INTENTIONAL DIVERGENCE</span></td></tr><tr><td>gutter</td><td>32 each side</td><td>32 · 24 ≤ 760 · 16 ≤ 480 (main <code>--gutter</code>)</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td></tr></tbody></table></div></div>
 <div class="foot">Design study v3 (2026-10-09) · rustio-admin <code>d4b61fa</code> · RustIO <code>main @ 00b933c</code> (PR #6 squash-merged; authoritative). PR #5 is unmerged and not authoritative. CURRENT frames render rustio-admin's real template markup against its real 30-fragment stylesheet; PREVIOUS PROPOSAL frames use the v2 mock stylesheet (<code>../v2/build/ra_mock_v2.css</code>); UPDATED PROPOSAL frames use the v3 mock stylesheet (<code>../build/ra_mock_v3.css</code>). Nothing here is product CSS; no runtime file was changed.</div></div>
 <script>
 (function(){

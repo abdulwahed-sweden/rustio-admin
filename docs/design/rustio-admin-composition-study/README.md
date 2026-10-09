@@ -14,7 +14,7 @@ would be sequenced if the proposal is accepted.
 
 | | Commit | Date | Role |
 |---|---|---|---|
-| This study | v3 | 2026-10-09 | re-based on RustIO `main`; supersedes v2 on the points in `CRITIQUE.md` §H |
+| This study | v3, precision pass | 2026-10-09 | re-based on RustIO `main`; supersedes v2 on the points in `CRITIQUE.md` §H. The precision pass corrected the facts listed in `CRITIQUE.md` §I without changing the visual direction |
 | rustio-admin | `d4b61fa` (`main`) | 2026-09-17 | the product under study; unchanged since v1 |
 | **RustIO `main`** | **`00b933c`** | 2026-10-09 | **authoritative.** PR #6 squash-merged: "style(admin): recompose the admin — Composition 3.1 (#6)". Its `admin.css` is byte-identical to the PR #6 snapshot v2 compared against |
 | RustIO PR #5 `fix/admin-ui-system-redesign` | `884bf3b` | 2026-10-08 | **unmerged, not authoritative.** Kept in `reference/` for the record only |
@@ -50,6 +50,14 @@ IMPROVE RUSTIO-ADMIN or INTENTIONAL DIVERGENCE.
 | PRODUCT-SPECIFIC — KEEP UNIQUE | a capability RustIO does not have; keeps its composition, takes scale and faces |
 | DROP | a PR #5-only idea v2 carried; not on `main`; removed |
 | INTENTIONAL DIVERGENCE | a deliberate difference from `main`, with the reason stated |
+
+## Class-name policy
+
+rustio-admin keeps its own `.rio-*` class vocabulary throughout. `main`'s
+class names (`.page-head`, `.find`, `.data-head`, `.cell-num`, `.cell-fit`,
+`.button-quiet`, …) are cited as the *rule being matched*; they are never
+imported, mirrored or aliased into rustio-admin's stylesheet. Alignment is
+by rule and value, not by selector.
 
 ## What is where
 

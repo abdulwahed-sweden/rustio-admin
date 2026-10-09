@@ -36,7 +36,8 @@ RustIO main 00b933c   ← PR #6 squash-merged (Composition 3.1)
    form: one action area, .form-layout (card 728 + System aside) in --content 1120
    .cell-fit for hugging identity columns (column_hugs)
    --gutter 32 / 24 / 16; --content 1120; --content-wide 1600
-   rustio.design.json still injects --blue / --blue-dark / --focus per project
+   shell.rs injects --blue / --blue-dark / --focus from rustio.design.json (every shell page)
+   session.rs injects --blue / --focus (sign-out page)
 
 PR #5 884bf3b         ← unmerged; not authoritative (CRITIQUE.md §H)
 ```
@@ -65,16 +66,16 @@ one. Nothing in the shell architecture moves.
 | Page head | ALIGN | boxed card → `main`'s grid, action beside the 24px title, lead beneath |
 | Find row | ALIGN | `main`'s `.find`: search 38 × 340; triggers 31; count after the last control |
 | Data surface head | ALIGN | `main`'s `.data-head` |
-| Tables | ALIGN + IMPROVE | 48px rows, 40px mono heads (ALIGN); identity hug (ALIGN, `.cell-fit`); cells by kind, sticky actions (IMPROVE) |
+| Tables | ALIGN + IMPROVE | 48px rows, 40px mono heads, identity hug (`.cell-fit`), numeric / tabular / nowrap cell behaviour (`.cell-num`, `.record-*-time`, `.table-audit`) — ALIGN; applying it automatically by `rio-td--kind`, and the sticky actions column with its companion rules — IMPROVE |
 | Row actions | ALIGN + IMPROVE | quiet text, always visible |
-| Badges | ALIGN | one dot badge |
-| Forms | ALIGN · INTENTIONAL DIVERGENCE | bands, 38px controls, boolean row (ALIGN); centred 728 measure (DIVERGENCE) |
+| Badges | ALIGN | one status face (dot + word + soft fill); a second, bordered count face as `main`'s `.module-link .badge` — rustio-admin's `.rio-dropdown-badge` and tab counts |
+| Forms | ALIGN · INTENTIONAL DIVERGENCE | bands, 38px controls, boolean row (ALIGN); centred 728 measure on `--rio-page-form`, against `main`'s left-aligned `.form-layout--single` (DIVERGENCE) |
 | Cards | ALIGN + IMPROVE | flat, radius 14 (ALIGN); identity floor (IMPROVE) |
 | Compact | ALIGN | 40px lines, no head |
 | Sessions, account detail | ALIGN | one surface; 140px label column |
 | Permission matrix, API, history, health, DB browser, flags, docs, view designer | KEEP UNIQUE | scale and faces only |
-| Timestamps | IMPROVE | one format in cells |
-| AdminTheme override | IMPROVE · INTENTIONAL DIVERGENCE | hover shade (IMPROVE); never retargets focus (DIVERGENCE from `main`'s design.json injection) |
+| Timestamps | IMPROVE | one format in cells; the model list already has it; two call sites (users list, account sessions) change |
+| AdminTheme override | IMPROVE · INTENTIONAL DIVERGENCE | hover shade (IMPROVE); never retargets focus (DIVERGENCE from `main`, where `shell.rs` and `session.rs` inject `--focus` from `rustio.design.json`) |
 | Empty states | ALIGN | flat, inside the surface |
 | Responsive | KEEP | same reflow |
 | Type scale + control heights | the one D | 16/44 contract → 15/38 |
@@ -83,8 +84,12 @@ one. Nothing in the shell architecture moves.
 
 Shared semantic core + product-specific tokens. Canonical names carry the
 values; every `--rio-*` name is a permanent alias. `main` contributes
-`--gutter`; it has no `--form-measure` and no compact tokens (v2's rows for
-those are withdrawn). Full table: `TOKEN-MAPPING.md`.
+`--gutter`, `--masthead`, `--ctl` / `--ctl-sm` / `--ctl-util`, `--th-h` /
+`--td-h`, the ink ramp with `--ink-mono`, the grey / green / red / amber
+pairs with their `-line` variants, `--field-line`, `--filter-line` /
+`--filter-fill` and the two shadows. It has no form-measure token and no
+compact tokens; rustio-admin's form width stays its own `--rio-page-form`.
+Class names are not aliased: `.rio-*` stays. Full table: `TOKEN-MAPPING.md`.
 
 ## 5 · Primary colour
 
@@ -99,10 +104,10 @@ default is the family resemblance; the override mechanisms stay distinct.
 1. Page head: `main`'s grid, unboxed — ALIGN.
 2. Scale 15 / 38 / 31 / 48 — ALIGN.
 3. Quiet row actions, always visible — ALIGN + IMPROVE.
-4. One badge system — ALIGN.
+4. One status-badge face, plus the bordered count face — ALIGN.
 5. Find row + data-surface head — ALIGN.
-6. One timestamp format — IMPROVE.
-7. Cells by kind, sticky actions (IMPROVE); identity hug (ALIGN).
+6. One timestamp format in cells: two remaining call sites — IMPROVE.
+7. Numeric / tabular / nowrap cell behaviour and identity hug (ALIGN); automatic application by cell kind and the sticky actions column (IMPROVE).
 8. Sessions and account detail as surfaces — ALIGN.
 9. AdminTheme hover shade — IMPROVE.
 10. Flat empty states, no monogram tiles, Compact as 40px lines — ALIGN.
@@ -128,8 +133,10 @@ Timestamps remain the one Rust change.
 1. The contract conflict, decided in Phase 0.
 2. `--rio-*` names stay as aliases permanently.
 3. 36 → 24px titles; land the scale alone and look.
-4. Timestamps: a tested Rust change (the PR #154 list-timestamp test pins
-   the date-only output and must be retargeted).
+4. Timestamps: two one-line Rust changes (users list in `admin/builtin.rs`,
+   account sessions in `admin/render.rs`). The model-list rewrite and its
+   test (`a_timestamp_cell_reads_as_a_date_not_a_wire_format`) are already
+   right and stay as they are.
 5. `rio-theme` emitter and `TOKENS-EMIT-SPEC.md` need the alias pass.
 6. Documentation drift (`VISUAL-CONTRACT.md`, `DESIGN_DOCTRINE.md`,
    `compat.css` header, `admin-shop.png`); documented, not edited.

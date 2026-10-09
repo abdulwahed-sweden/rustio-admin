@@ -137,7 +137,7 @@ table.doc :where(tr:last-child td){border-bottom:0}
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -214,7 +214,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -330,9 +330,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -569,9 +572,9 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   &lt;div class=&quot;rio-board-foot&quot;&gt;&lt;span&gt;Showing &lt;strong&gt;1–20&lt;/strong&gt; of &lt;strong&gt;1,402&lt;/strong&gt; orders&lt;/span&gt;&lt;nav class=&quot;rio-pagination&quot; aria-label=&quot;Pagination&quot;&gt;&lt;a class=&quot;rio-page is-disabled&quot; href=&quot;#&quot;&gt;Previous&lt;/a&gt;&lt;a class=&quot;rio-page&quot; href=&quot;#&quot; aria-current=&quot;page&quot;&gt;1&lt;/a&gt;&lt;a class=&quot;rio-page&quot; href=&quot;#&quot;&gt;2&lt;/a&gt;&lt;a class=&quot;rio-page&quot; href=&quot;#&quot;&gt;3&lt;/a&gt;&lt;a class=&quot;rio-page&quot; href=&quot;#&quot;&gt;4&lt;/a&gt;&lt;a class=&quot;rio-page&quot; href=&quot;#&quot;&gt;5&lt;/a&gt;&lt;a class=&quot;rio-page&quot; href=&quot;#&quot;&gt;Next&lt;/a&gt;&lt;/nav&gt;&lt;/div&gt;
 &lt;/div&gt;&lt;/main&gt;&lt;/div&gt;&lt;footer class=&quot;rio-appfoot&quot; role=&quot;contentinfo&quot;&gt;&lt;div class=&quot;rio-appfoot-inner&quot;&gt;&lt;span class=&quot;rio-brand-word&quot;&gt;Shop&lt;/span&gt;&lt;span class=&quot;rio-appfoot-links&quot;&gt;&lt;a href=&quot;#&quot;&gt;Audit log&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;API surface&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Health&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Docs&lt;/a&gt;&lt;a href=&quot;#&quot;&gt;Sessions&lt;/a&gt;&lt;/span&gt;&lt;span class=&quot;rio-appfoot-meta&quot;&gt;admin@shop.local · 2026-10-09 09:41 UTC&lt;/span&gt;&lt;/div&gt;&lt;/footer&gt;&lt;/div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div></div><ul style="margin-top:16px">
 <li><span class="st st-visual">ALIGN WITH RUSTIO</span> The identity column hugs (main's <code>column_hugs</code> → <code>.cell-fit</code>): <code>INV-2026-0451</code> never breaks mid-string.</li>
-<li><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> Date-like and boolean cells never wrap (<code>rio-td--kind</code>, which the template already emits); tabular digits; numeric right. Not on main.</li>
-<li><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> Sticky actions column: Updated scrolls under Edit / Delete. Not on main.</li>
-<li><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> Placed and Updated both read <code>YYYY-MM-DD HH:MM UTC</code> — the format main uses on its own history and audit pages, and the one rustio-admin's user detail and footer already use; the model list (date only) and sessions (no zone) are brought to it.</li>
+<li><span class="st st-visual">ALIGN WITH RUSTIO</span> Numeric cells right-aligned with tabular digits and time cells that never wrap — main's <code>.cell-num</code>, <code>.record-list-time</code>, <code>.record-card-time</code>, <code>.table-audit</code> and <code>.actions</code> do exactly this. <span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> Applying it automatically from the cell kind the template already emits (<code>rio-td--date|datetime|boolean|integer|decimal</code>) instead of per-column classes.</li>
+<li><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> Sticky actions column: Updated scrolls under Edit / Delete. Not on main. It needs its companion rules to be correct: the cell carries its own surface in every row state (<code>--surface</code>, head <code>--surface-head</code>, hover <code>--surface-soft</code>, selected <code>--blue-soft</code>), a 1px <code>--border</code> shadow line on its left edge, <code>z-index</code> above the row and above a sticky head, and <code>position: relative</code> on <code>.rio-tablewrap</code>.</li>
+<li><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span> Placed and Updated read <code>YYYY-MM-DD HH:MM UTC</code> — which the model list <em>already</em> renders (<code>humanise_timestamp_cell</code>, PR #154). The two remaining sites that omit the zone are the users list (<code>builtin.rs</code>) and account sessions (<code>render.rs</code>); nothing else changes.</li>
 <li><span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span> Active-filter pills, the three filter kinds, the direction toggle, 100 / page.</li></ul></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>Compact at 1440</h2></div><div class="frame"><div class="frame-bar"><span>/admin</span><span class="w">1440</span></div><div class="frame-body"><iframe class="shot" title="orders-compact v3" style="width:1440px" srcdoc="&lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&lt;title&gt;Orders · Shop&lt;/title&gt;&lt;style&gt;/* ============================================================
    rustio-admin in the RustIO Composition 3.1 grammar — MOCK STYLESHEET v3 (RustIO main 00b933c authoritative)
    Design study only. Not product CSS; nothing here is proposed verbatim.
@@ -596,7 +599,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -673,7 +676,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -789,9 +792,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */
@@ -1049,7 +1055,7 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --ctl: 38px; --ctl-sm: 31px; --ctl-util: 32px; --th-h: 40px; --td-h: 48px;
   --masthead: 56px; --rail: 240px; --gutter: 32px;
-  --content: 1120px; --content-wide: 1600px; --form-measure: 728px; /* v3: compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
+  --content: 1120px; --content-wide: 1600px; --rio-page-form: 728px; /* --rio-page-form is a rustio-admin product token (no canonical main equivalent); compact tokens dropped (PR #5 only); Compact reuses --th-h as RustIO main does */
   --mono: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, &quot;JetBrains Mono&quot;, Menlo, Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
 
@@ -1126,7 +1132,7 @@ svg { display: block; }
 .rio-ws-inner.rio-page--wide { max-width: none; width: min(100% - 2 * var(--gutter), var(--content-wide)); }
 .rio-ws-inner.rio-page--narrow { width: min(100% - 2 * var(--gutter), 920px); }
 /* INTENTIONAL DIVERGENCE — the form keeps rustio-admin&#x27;s own centred form measure (page_measure), widened to 728 so the card matches RustIO main&#x27;s 680 + 2×24 card. Main left-aligns that card in the 1120 column beside a System aside rustio-admin does not have. */
-.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--form-measure)); }
+.rio-ws-inner.rio-page--form { width: min(100% - 2 * var(--gutter), var(--rio-page-form)); }
 .rio-alert { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid; border-radius: var(--radius); font-size: 15px; }
 .rio-alert--warn { border-color: #e7c27b; background: var(--amber-soft); color: #714707; }
 .rio-alert--info { border-color: var(--blue-line); background: #edf4fd; color: var(--blue-dark); }
@@ -1242,9 +1248,12 @@ textarea.rio-input { height: auto; min-height: 96px; padding: var(--s2) var(--s3
 /* IMPROVE RUSTIO-ADMIN — not on RustIO main. Unconditional: sticky is inert
    while the table fits its scroller and only acts once the board scrolls. */
 .rio-tablewrap th.col-act, .rio-tablewrap td.col-act { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -1px 0 0 var(--border); }
-.rio-tablewrap th.col-act { background: var(--surface-head); }
+/* companion rules — a sticky cell paints over the scrolled content, so it must
+   carry the surface it sits on in every row state, not inherit it */
+.rio-tablewrap th.col-act { z-index: 2; background: var(--surface-head); }
 .rio-tablewrap tbody tr:hover td.col-act { background: var(--surface-soft); }
 .rio-tablewrap tr[aria-selected=&quot;true&quot;] td.col-act { background: var(--blue-soft); }
+.rio-tablewrap tr[aria-selected=&quot;true&quot;]:hover td.col-act { background: var(--blue-soft); }
 /* v3 — Compact follows RustIO main (.record-compact-item): no column head,
    40px lines (--th-h reused), title · badge · actions. PR #5&#x27;s 32/38 table
    tokens are dropped. */

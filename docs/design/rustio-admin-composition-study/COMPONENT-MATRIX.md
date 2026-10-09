@@ -40,24 +40,26 @@ Every rustio-admin component, classified against RustIO `main @ 00b933c`.
 | Compact | ALIGN (`main` `.record-compact-item`: 40px lines, no head) | View modes · Dense | `components/adaptive-views.css` |
 | Compact tokens 32 / 38 (v2) | DROP | — | — |
 | Identity hug (`.rio-cell-fit`) | ALIGN (`main` `.cell-fit` / `column_hugs`) | Dense | `components/data.css`; later a `ConcreteOps` decision |
-| Cells by kind (nowrap, tabular, numeric right) | IMPROVE | Dense | `components/data.css` |
-| Row actions | ALIGN + IMPROVE (quiet text, always visible) | Data table · Users | `_row_actions.html`, `components/data.css` |
-| Sticky actions column | IMPROVE | Data table · Dense · Narrow | `components/data.css` |
-| `.rio-tablewrap { position: relative }` | IMPROVE | Narrow | `components/data.css` |
+| Numeric / tabular / nowrap cell behaviour | ALIGN (`main` `.cell-num`, `.record-*-time`, `.table-audit`, `.actions`) | Dense | `components/data.css` |
+| Cell rules applied automatically by `rio-td--{{ f.kind }}` | IMPROVE | Dense | `components/data.css` |
+| Row actions | ALIGN + IMPROVE (quiet text, always visible) | Data table · Users | `_row_actions.html`; the `opacity: 0` / hover-reveal rules live in `layout/console.css` and the users-grid override in `pages/list.css` |
+| Sticky actions column, with companion surface / head / hover / selected / shadow / stacking rules | IMPROVE | Data table · Dense · Narrow | `components/data.css` (the sticky `thead` it must stack above is there too) and `pages/list.css` (`.rio-tablewrap`) |
+| `.rio-tablewrap { position: relative }` | IMPROVE | Narrow | `pages/list.css` (where `.rio-tablewrap` is defined; `pages/detail.css` carries a second copy) |
 | Users grid | KEEP · ALIGN (faces) | Users & groups | `pages/list.css` |
 | Monogram tiles | ALIGN (removed) | Dashboard · Users | templates |
-| Pills, role chip, `.av-badge` | ALIGN (one badge) | every list | `components/feedback.css`, `adaptive-views.css` |
-| Adaptive List / Cards | ALIGN | View modes | `components/adaptive-views.css` |
+| Pills, role chip, `.av-badge` | ALIGN (the status-badge face) | every list | `components/data.css` (`.rio-pill`), `pages/list.css` (`.rio-role`), `components/adaptive-views.css` (`.av-badge`) |
+| Count badges (`.rio-dropdown-badge`, tab counts) | ALIGN (the second, bordered count face — `main` `.module-link .badge`) | Data table · Account | `pages/list.css`, `pages/detail.css` |
+| Adaptive List / Cards (cards keep `main`'s `min(100%, 300px)` track guard) | ALIGN | View modes | `components/adaptive-views.css` |
 | Card identity floor 12rem | IMPROVE | View modes · API | `adaptive-views.css`, `pages/tools.css` |
 | Empty states | ALIGN (flat) | — | `pages/states.css` |
 | Pagination | KEEP | Data table | — |
 | Ledger (dashboard) | ALIGN (flat tiles) | Dashboard | `pages/dashboard.css` |
 | Models board (dashboard) | ALIGN | Dashboard | `index.html`, `pages/dashboard.css` |
-| Fieldset | ALIGN (band) · IMPROVE (`min-width: 0`) | Form · Permissions | `components/forms.css` |
+| Fieldset | ALIGN (band) · IMPROVE (`min-width: 0`) | Form · Permissions | `pages/form.css` (`.rio-fieldset` box rules; `base/base.css` only resets the element) |
 | Inputs, selects, textareas | ALIGN (38px) | Form | `components/forms.css` |
 | Boolean field | ALIGN (`main` `.field-boolean`) | Form | `components/forms.css` |
 | Form action bar | UNIQUE · ALIGN (faces) | Form | `components/forms.css` |
-| Form measure (centred, 728) | DIVERGENCE (`main`: left-aligned card + System aside) | Form | `tokens/spacing.css` |
+| Form measure (centred, 728, `--rio-page-form`) | DIVERGENCE (`main`: left-aligned `.form-layout` / `.form-layout--single`) | Form | `tokens/spacing.css` |
 | Validation alert | ALIGN (flex) | Form | `components/feedback.css` |
 | Inline related sections | UNIQUE · ALIGN | Form | `pages/form.css` |
 | Permission matrix | UNIQUE · ALIGN (faces) | Permissions | `pages/permissions.css` |
@@ -68,8 +70,8 @@ Every rustio-admin component, classified against RustIO `main @ 00b933c`.
 | API surface cards | UNIQUE · ALIGN · IMPROVE (identity floor) | API surface | `pages/tools.css` |
 | History | UNIQUE · ALIGN | History | `pages/detail.css` |
 | Health, DB browser, flags, notifications, docs, view designer, branding, MFA, auth | UNIQUE · ALIGN (scale, faces) | — | `pages/*.css` |
-| Timestamps in cells | IMPROVE (one format) | Dense · Users · Account | formatters (Rust), templates |
-| AdminTheme override | IMPROVE (hover shade) · DIVERGENCE (never retargets focus; `main`'s design.json does) | Shell | `_theme.html`, `rio-theme` |
+| Timestamps in cells | IMPROVE (one format; the model list already has it) | Dense · Users · Account | `admin/builtin.rs` (users list `created_at`), `admin/render.rs` (`AccountSessionRowCtx.created_at`) |
+| AdminTheme override | IMPROVE (hover shade) · DIVERGENCE (never retargets focus; `main`'s `shell.rs` and `session.rs` inject `--focus` from design.json) | Shell | `_theme.html`, `rio-theme` |
 | `rio-theme` emitter | KEEP (behaviour) · ALIGN (alias names) | — | `crates/rio-theme`, `TOKENS-EMIT-SPEC.md` |
 | Filter select width, summary chevron (PR #5) | DROP | — | — |
 | Stale docs (`VISUAL-CONTRACT.md`, `DESIGN_DOCTRINE.md`, `compat.css` header, `admin-shop.png`) | IMPROVE (documented, not edited) | — | docs |
