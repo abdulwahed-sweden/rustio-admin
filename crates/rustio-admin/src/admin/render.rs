@@ -239,8 +239,12 @@ impl BaseContext {
             is_demo_session,
             demo_label,
             has_theme_overrides: theme.has_overrides(),
-            accent_hover_hex: accent_hex.as_deref().map(|h| shade_hex(h, ACCENT_HOVER_SCALE)),
-            accent_active_hex: accent_hex.as_deref().map(|h| shade_hex(h, ACCENT_ACTIVE_SCALE)),
+            accent_hover_hex: accent_hex
+                .as_deref()
+                .map(|h| shade_hex(h, ACCENT_HOVER_SCALE)),
+            accent_active_hex: accent_hex
+                .as_deref()
+                .map(|h| shade_hex(h, ACCENT_ACTIVE_SCALE)),
             accent_hex,
             accent_rgb,
             theme_bg: theme.bg.clone(),
@@ -4755,12 +4759,6 @@ pub(crate) fn must_change_password_form_sections(min_length: usize) -> Vec<FormS
 mod tests {
     use super::*;
 
-    /// The list page must not show operators the `datetime-local`
-    /// wire format. `display_values` has to emit it — the change form
-    /// puts that exact string in an `<input value=>` — so the list
-    /// path reformats instead, and the UTC suffix names the zone the
-    /// value was always in.
-    #[test]
     /// A project accent gets three distinct states, not one flat colour
     /// repeated six times. The ratios track the framework's own pair:
     /// `#1F5797` → `#174578` hover → `#123A66` pressed.
@@ -4799,8 +4797,8 @@ mod tests {
     /// is silently dropped. That was a real, shipped bug; this pins the fix.
     #[test]
     fn the_theme_partial_overrides_on_root_not_html() {
-        let src = crate::embedded_template_source("admin/_theme.html")
-            .expect("the theme partial ships");
+        let src =
+            crate::embedded_template_source("admin/_theme.html").expect("the theme partial ships");
         let style = src
             .split_once("<style>")
             .and_then(|(_, rest)| rest.split_once("</style>"))
@@ -4824,8 +4822,8 @@ mod tests {
     /// is pinned rather than left to drift.
     #[test]
     fn a_project_theme_never_overrides_the_focus_token() {
-        let src = crate::embedded_template_source("admin/_theme.html")
-            .expect("the theme partial ships");
+        let src =
+            crate::embedded_template_source("admin/_theme.html").expect("the theme partial ships");
         let style = src
             .split_once("<style>")
             .and_then(|(_, rest)| rest.split_once("</style>"))
@@ -4839,6 +4837,12 @@ mod tests {
         );
     }
 
+    /// The list page must not show operators the `datetime-local`
+    /// wire format. `display_values` has to emit it — the change form
+    /// puts that exact string in an `<input value=>` — so the list
+    /// path reformats instead, and the UTC suffix names the zone the
+    /// value was always in.
+    #[test]
     fn a_timestamp_cell_reads_as_a_date_not_a_wire_format() {
         assert_eq!(
             humanise_timestamp_cell("2026-09-04T02:01"),
