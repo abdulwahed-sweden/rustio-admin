@@ -1,11 +1,13 @@
 {% extends "admin/_base.html" %}
-{# A data page: lists and matrices take the wide measure. #}
-{% block page_measure %}rio-page--wide{% endblock %}
+{# The audit log, calmer: no avatar per row (the By link is the email),
+   when and ip as metadata, the date dividers sticky under the head. The
+   per-field diffs and the By filter are unchanged. #}
+{% block page_measure %}rio-page--wide rio-c-list{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">Full history of every authority mutation. Filter by user via the link in any row's "By" column.</p>
+  <p class="rio-masthead-desc">Every authority mutation, newest first. Click a name in <strong>By</strong> to filter to that operator.</p>
 </div></div>
 
 {% if user_filter_label %}
@@ -17,8 +19,8 @@
 
 <div class="rio-board">
   {% if history_entries %}
-  <div class="rio-table-scroll">
-  <table class="rio-table">
+  <div class="rio-tablewrap">
+  <table class="rio-table rio-table--audit">
     <thead><tr><th>When</th><th>Action</th><th>Record</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
     <tbody>
       {% for e in history_entries %}
@@ -27,7 +29,7 @@
         <td class="rio-hist-when" title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
         <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
         <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
-        <td><a class="rio-by" href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}"><span class="rio-avatar">{{ e.user_email | first | upper }}</span>{{ e.user_email }}</a></td>
+        <td><a class="rio-by" href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}">{{ e.user_email }}</a></td>
         <td>
           {{ e.summary }}
           {% if e.changes %}
@@ -53,7 +55,7 @@
   <div class="rio-empty">
     {{ icon("clock") }}
     <div class="rio-empty-title">No actions recorded</div>
-    <div>{% if user_filter_label %}No history entries for <strong>{{ user_filter_label }}</strong>. <a href="/admin/history">Clear filter</a> to see every actor.{% else %}Once operators start creating, editing, or deleting rows, the audit feed lights up here.{% endif %}</div>
+    <div>{% if user_filter_label %}No history entries for <strong>{{ user_filter_label }}</strong>. <a href="/admin/history">Clear filter</a> to see every actor.{% else %}Once operators start creating, editing, or deleting rows, the full audit trail appears here.{% endif %}</div>
   </div>
   {% endif %}
 </div>

@@ -165,3 +165,13 @@
    the contract pill globally (loads after data.css). */
 
 .rio-form-inline { display: inline; }
+
+/* ---- Audit log (log_entries.html) -----------------------------------
+   Calmer rows: the By link is the email, when and ip are metadata, the
+   date dividers stay under the head while the table scrolls. */
+.rio-table--audit .rio-by { color: var(--rio-text); text-decoration: none; }
+.rio-table--audit .rio-by:hover { color: var(--rio-rust); }
+.rio-table--audit .rio-hist-when { color: var(--rio-text-mute); font-size: var(--rio-text-14); white-space: nowrap; }
+.rio-table--audit .rio-hist-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); white-space: nowrap; }
+.rio-table--audit .rio-history-diff { margin-block-start: 2px; }
+.rio-table--audit tr.rio-history-date-divider th { position: sticky; inset-block-start: var(--rio-th-h); z-index: 1; }
