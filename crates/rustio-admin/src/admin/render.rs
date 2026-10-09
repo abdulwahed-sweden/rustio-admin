@@ -2327,6 +2327,13 @@ pub(crate) struct FormCtx {
     /// the existing fast path on `Request::form()` stays in
     /// effect.
     pub has_file_field: bool,
+    /// `true` when at least one field is read-only (`disabled` on the
+    /// form). Read-only fields are facts the operator cannot type —
+    /// a mirrored status, a timer-maintained flag — so the template
+    /// shows them in a facts panel beside the card instead of as
+    /// greyed-out inputs; with this or `inlines` the page takes the
+    /// standard measure to make room for the aside.
+    pub has_readonly: bool,
     pub flash: Option<FlashCtx>,
 }
 
@@ -2633,6 +2640,7 @@ pub(crate) fn form_ctx(
         group_fields_by_fieldsets(fields, entry.fieldsets)
     };
 
+    let has_readonly = sections.iter().any(|s| s.fields.iter().any(|f| f.disabled));
     FormCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: match mode {
@@ -2659,6 +2667,7 @@ pub(crate) fn form_ctx(
                 crate::admin::FieldType::FilePath | crate::admin::FieldType::OptionalFilePath
             )
         }),
+        has_readonly,
         flash: None,
     }
 }
@@ -5751,5 +5760,104 @@ mod adaptive_list_tests {
         assert!(!html.contains("rio-dtable"));
         assert!(!html.contains("rio-bulk-form"));
         assert!(!html.contains("secret"));
+    }
+}
+
+/// The record page (`form.html`) composition: read-only fields render as
+/// a facts panel beside the card, never as greyed inputs, and the page
+/// takes the standard measure only when it has an aside to fill.
+#[cfg(test)]
+mod record_page_tests {
+    use minijinja::{context, Environment, Value};
+
+    fn render(has_readonly: bool, inlines: Vec<Value>, status_disabled: bool) -> String {
+        let mut env = Environment::new();
+        env.add_function(
+            "icon",
+            |_name: String, _kwargs: minijinja::value::Kwargs| -> String { String::new() },
+        );
+        env.add_template(
+            "admin/_base.html",
+            "{% block page_measure %}{% endblock %}|{% block content %}{% endblock %}",
+        )
+        .unwrap();
+        for name in ["admin/form.html", "admin/includes/_form_field.html"] {
+            env.add_template(
+                name,
+                rustio_admin_assets::embedded_template_source(name).unwrap(),
+            )
+            .unwrap();
+        }
+        let field = |name: &str, widget: &str, disabled: bool| {
+            context! {
+                name => name, label => name, widget => widget, input_type => "text",
+                value => "in_progress", hint => Value::from(()), placeholder => Value::from(()),
+                required => false, options => Value::from(()), multiple => false, span => 1u8,
+                autocomplete => Value::from(()), autofocus => false, disabled => disabled,
+                maxlength => Value::from(()), searchable => false, has_more => false,
+                search_url => Value::from(()), errors => Vec::<String>::new(),
+                target_model => Value::from(()), checked => false,
+            }
+        };
+        env.get_template("admin/form.html")
+            .unwrap()
+            .render(context! {
+                admin_name => "jobs", display_name => "Jobs", singular_name => "Job",
+                mode => "edit", object_id => 1i64, errors => Vec::<String>::new(),
+                csrf_token => "t", read_only => false, has_file_field => false,
+                has_readonly => has_readonly, inlines => inlines,
+                sections => vec![context! { title => Value::from(()), fields => vec![
+                    field("item", "text", false),
+                    field("status", "select", status_disabled),
+                ] }],
+            })
+            .unwrap()
+    }
+
+    #[test]
+    fn a_readonly_field_is_a_fact_not_a_greyed_input() {
+        let html = render(true, vec![], true);
+        assert!(html.contains("rio-facts"), "the facts panel renders");
+        assert!(
+            !html.contains("name=\"status\""),
+            "the read-only field is not rendered as an input: {html}"
+        );
+        assert!(
+            html.contains("name=\"item\""),
+            "the editable field still is"
+        );
+        assert!(
+            html.contains("rio-page--standard"),
+            "with an aside the page takes the standard measure"
+        );
+    }
+
+    #[test]
+    fn without_an_aside_the_card_stays_on_the_form_measure() {
+        let html = render(false, vec![], false);
+        assert!(!html.contains("rio-facts"));
+        assert!(!html.contains("rio-form-aside"));
+        assert!(html.contains("rio-page--form"));
+        assert!(html.contains("rio-form-layout--single"));
+        assert!(html.contains("name=\"status\""));
+    }
+
+    #[test]
+    fn the_action_bar_is_the_cards_foot_and_keeps_every_variant() {
+        let html = render(true, vec![], true);
+        let card_open = html.find("rio-form-card").expect("one card");
+        let actions = html.find("rio-form-actions").expect("the action bar");
+        let form_close = html.find("</form>").expect("the form closes");
+        assert!(
+            card_open < actions && actions < form_close,
+            "the bar is inside the card"
+        );
+        for name in [
+            "name=\"_save\"",
+            "name=\"_continue\"",
+            "name=\"_addanother\"",
+        ] {
+            assert!(html.contains(name), "{name} survives");
+        }
     }
 }
