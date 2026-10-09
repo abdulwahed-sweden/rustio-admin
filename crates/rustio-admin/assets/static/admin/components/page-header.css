@@ -1,45 +1,54 @@
 /* ==========================================================================
-   Page header — the shared white surface at the top of every console page.
+   Page header — the breadcrumb → title → action → lead block at the top of
+   every console page.
    ==========================================================================
 
-   The region that carries breadcrumb → title → supporting text → page-level
-   actions. It reads as one card, matching `.rio-board` / `.rio-card`: the
-   same `--rio-surface` ground, the same `--rio-line` hairline, the same
-   `--rio-radius-xl` corners, the same `--rio-shadow-sm`, and the canonical
-   `--rio-card-pad-x` x-origin, so the header's edges line up with the table
-   or form card directly beneath it.
+   NOT A CARD. Composition 3.1 (VISUAL-CONTRACT.md §2.2) removes the white
+   surface that used to box this region: a card around the page head framed
+   the page's own title as though it were one more piece of content, and it
+   put a border between the title and the table it introduces. The head is
+   now type and space on the page ground, like RustIO's `.page-head`.
 
-   TWO MARKUP SHAPES, ONE SURFACE
-   ------------------------------
+   THE GRID
+   --------
+   The title and the primary action share one row, and the action sits ONE
+   GAP AFTER THE TITLE (`justify-self: start`) rather than pushed to the far
+   edge: an action 900px away from the thing it acts on is a worse target
+   and reads as unrelated chrome. The lead goes beneath both, capped at
+   680px so a long description stays one readable column.
+
+     "title  action"
+     "lead   lead"
+
+   TWO MARKUP SHAPES, ONE COMPOSITION
+   ----------------------------------
    The console grew two header contracts and both are in active use:
 
-     A. `.rio-page-header` (12 templates) — already a single wrapping
-        `<header>` around `.rio-breadcrumbs`, `h1`, `.rio-page-header__lead`
-        and `.rio-page-actions`. One box, styled directly.
+     A. `.rio-page-header` (12 templates) — one wrapping `<header>` around
+        `.rio-breadcrumbs`, `h1`, `.rio-page-header__lead` and
+        `.rio-page-actions`. Every child is a direct child, so the grid
+        carries a crumb row too:
 
-     B. `.rio-crumbs` + `.rio-masthead-top` (27 templates) — the same content
-        as two ADJACENT SIBLINGS with no wrapper. Rather than add a wrapper
-        element to 27 templates, the two halves are capped so they render as
-        one continuous surface: crumbs take the top corners and lose their
-        bottom margin, the masthead takes the bottom corners, and both carry
-        the inline hairlines. The join is invisible because the masthead
-        paints its own `--rio-surface` background over the crumbs' 1px
-        shadow (later sibling, later paint).
+          "crumb  crumb"
+          "title  action"
+          "lead   lead"
 
-   The two classes in shape B are a matched pair — every template that has
-   one has the other, exactly once — enforced by
-   `contract_assets::the_page_header_halves_are_a_matched_pair`, which is
-   what makes the unconditional capping below safe.
+     B. `.rio-crumbs` + `.rio-masthead-top` (27 templates) — the same
+        content as two ADJACENT SIBLINGS with no wrapper. The crumbs are
+        their own element, so they sit ABOVE the grid rather than in it,
+        and `.rio-masthead-top` carries the title/action/lead rows only.
+        Inside it the title and lead are wrapped in a bare `<div>`;
+        `display: contents` lifts them into the grid so they can take
+        their own areas without touching 27 templates.
 
-   CASCADE
-   -------
-   Imported after `components/navigation.css` so the `.rio-crumbs`
-   bottom-margin reset wins on source order at equal specificity. Nothing
-   in `layout/` or `pages/` sets background, border, radius, padding or
-   box-shadow on these selectors, so no later fragment is overridden —
-   only `pages/list.css` touches `.rio-masthead-top`, and only its
-   `margin-block-end`, which is the gap BELOW the surface and is
-   deliberately left alone.
+   Both shapes therefore render the same arrangement. Shape B's two classes
+   are still a matched pair — every template that has one has the other,
+   exactly once — enforced by
+   `contract_assets::the_page_header_halves_are_a_matched_pair`. The pair no
+   longer exists to cap a box; it exists because the crumb row and the title
+   row are two elements that together make one page head, and a template
+   carrying only one of them would render a head with no title or a title
+   with no trail.
 
    HEIGHT IS CONTENT-DRIVEN
    ------------------------
@@ -50,70 +59,106 @@
 /* ---- Shape A: the wrapped header ---------------------------------------- */
 
 .rio-page-header {
-  background: var(--rio-surface);
-  border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-xl);
-  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
-  padding: var(--rio-space-20) var(--rio-card-pad-x);
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  grid-template-areas:
+    "crumb crumb"
+    "title action"
+    "lead  lead";
+  align-items: center;
+  column-gap: var(--rio-space-24);
+  row-gap: 0;
+  margin-block-end: var(--rio-space-24);
 }
 
-/* ---- Shape B: the sibling pair, capped into one surface ----------------- */
-
-.rio-crumbs,
-.rio-masthead-top {
-  background: var(--rio-surface);
-  border-inline-start: 1px solid var(--rio-line);
-  border-inline-end: 1px solid var(--rio-line);
-  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+.rio-page-header > .rio-breadcrumbs { grid-area: crumb; }
+.rio-page-header > h1 { grid-area: title; margin: 0; }
+.rio-page-header > .rio-page-header__lead,
+.rio-page-header > p { grid-area: lead; }
+.rio-page-header > .rio-page-actions {
+  grid-area: action;
+  justify-self: start;
 }
 
-.rio-crumbs {
-  border-block-start: 1px solid var(--rio-line);
-  /* Logical corner properties keep the cap on the correct side in RTL. */
-  border-start-start-radius: var(--rio-radius-xl);
-  border-start-end-radius: var(--rio-radius-xl);
-  padding: var(--rio-space-20) var(--rio-card-pad-x) 0;
-  /* Closes the gap to the masthead so the two halves read as one box.
-     Overrides the s3 breadcrumb rhythm in components/navigation.css. */
-  margin-block-end: 0;
-}
+/* ---- Shape B: the sibling pair ------------------------------------------ */
 
 .rio-masthead-top {
-  border-block-end: 1px solid var(--rio-line);
-  border-end-start-radius: var(--rio-radius-xl);
-  border-end-end-radius: var(--rio-radius-xl);
-  /* Top padding is the breadcrumb → title rhythm; the crumbs half already
-     paid the surface's top inset. */
-  padding: var(--rio-space-12) var(--rio-card-pad-x) var(--rio-space-20);
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  grid-template-areas:
+    "title action"
+    "lead  lead";
+  align-items: center;
+  column-gap: var(--rio-space-24);
+  row-gap: 0;
 }
 
-/* The masthead's own `margin-block-end` (layout/console.css, and the
-   narrower `--rio-space-24` that pages/list.css sets for wide pages) is
-   the deliberate gap between this surface and the filter bar, table or
-   form below it. It is intentionally not touched here. */
+/* The bare wrapper around the title and the lead is lifted out of the way
+   so its children can take grid areas directly. The CTA wrapper is a real
+   layout box and keeps its own display. */
+.rio-masthead-top > div:not(.rio-masthead-cta) { display: contents; }
+
+.rio-masthead-top h1 { grid-area: title; margin: 0; }
+.rio-masthead-top .rio-masthead-desc { grid-area: lead; }
+.rio-masthead-top > .rio-masthead-cta {
+  grid-area: action;
+  justify-self: start;
+}
+
+/* ---- The lead ------------------------------------------------------------
+   15px on the secondary ink, capped at 680px, one gap below the title row
+   (VISUAL-CONTRACT.md §2.1). Declared for both shapes here so the two
+   cannot drift. */
+
+.rio-masthead-desc,
+.rio-page-header__lead,
+.rio-page-header > p {
+  max-inline-size: 680px;
+  margin: var(--rio-space-8) 0 0;
+  color: var(--rio-text-mute);
+  font-size: var(--rio-text-15);
+  line-height: var(--rio-leading-snug);
+}
 
 /* ---- Narrow screens ------------------------------------------------------
-   The title block and the action row stack inside the same surface instead
-   of overflowing it. `align-items: stretch` lets full-width buttons fill
-   the measure; `flex-wrap` on the CTA row keeps several actions tidy. */
+   Below 760 the head is one column and the action takes its own row under
+   the title. Below 480 the action fills the measure, because a button
+   beside a wrapped title on a phone reads as a fragment. */
 
 @media (max-width: 760px) {
-  .rio-crumbs,
-  .rio-masthead-top,
   .rio-page-header {
-    padding-inline: var(--rio-space-16);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "crumb"
+      "title"
+      "action"
+      "lead";
   }
 
-  .rio-masthead-top,
-  .rio-page-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--rio-space-16);
+  .rio-masthead-top {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "action"
+      "lead";
   }
 
-  .rio-masthead-cta,
-  .rio-page-actions {
-    flex-wrap: wrap;
-    padding-block-start: 0;
+  .rio-masthead-top > .rio-masthead-cta,
+  .rio-page-header > .rio-page-actions {
+    justify-self: start;
+    margin-block-start: var(--rio-space-12);
+  }
+}
+
+@media (max-width: 480px) {
+  .rio-masthead-top > .rio-masthead-cta,
+  .rio-page-header > .rio-page-actions {
+    justify-self: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .rio-masthead-cta .rio-btn,
+  .rio-page-actions .rio-btn {
+    flex: 1;
   }
 }

@@ -22,11 +22,13 @@
 
 /* Breadcrumbs (contract §2.1): link segments strong + 700, · separator muted,
    current segment muted + 400. */
-.rio-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); font-size: var(--rio-fs-sm); color: var(--rio-text-mute); margin-block-end: var(--rio-space-12); }
-.rio-crumbs a { color: var(--rio-text-hi); font-weight: 700; text-decoration: none; }
-.rio-crumbs a:hover { color: var(--rio-rust); }
-.rio-crumbs .rio-crumb-sep { color: var(--rio-text-mute); }
-.rio-crumbs .rio-crumb-current { color: var(--rio-text-mute); font-weight: var(--rio-weight-regular); }
+/* Breadcrumb — a 13px/600 trail (VISUAL-CONTRACT.md §2.1). The current
+   segment is the emphatic one; the links behind it stay secondary. */
+.rio-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold); color: var(--rio-text-mute); margin-block-end: var(--rio-space-8); }
+.rio-crumbs a { color: var(--rio-text-mute); font-weight: var(--rio-weight-semibold); text-decoration: none; }
+.rio-crumbs a:hover { color: var(--rio-rust-hover); }
+.rio-crumbs .rio-crumb-sep { color: var(--rio-line-strong); }
+.rio-crumbs .rio-crumb-current { color: var(--rio-text-hi); font-weight: var(--rio-weight-bold); }
 
 /* Pagination */
 .rio-pagination { display: flex; align-items: center; gap: 4px; }

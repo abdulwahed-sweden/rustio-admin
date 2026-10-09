@@ -227,12 +227,13 @@ fn the_admin_js_bundle_ships() {
 /// wrapper, so that fragment caps the two halves (top corners on the crumbs,
 /// bottom corners on the masthead) to render them as one surface.
 ///
-/// That capping is unconditional, which is only safe while the two classes
-/// are a matched pair: every template carrying one carries the other,
-/// exactly once. A template that grew a lone `.rio-crumbs` would render an
-/// open-bottomed box, and a lone `.rio-masthead-top` an open-topped one.
-/// Neither is a compile error, and neither shows up in a unit test — hence
-/// this check.
+/// Composition 3.1 removed the card, so the pair no longer caps a box — but
+/// the invariant still matters, for a different reason: the crumbs element
+/// and the masthead element are two halves of one page head, and
+/// `components/page-header.css` styles them as such. A template that grew a
+/// lone `.rio-crumbs` would render a trail with no title, and a lone
+/// `.rio-masthead-top` a title with no trail. Neither is a compile error,
+/// and neither shows up in a unit test — hence this check.
 #[test]
 fn the_page_header_halves_are_a_matched_pair() {
     let mut checked = 0usize;
@@ -246,13 +247,14 @@ fn the_page_header_halves_are_a_matched_pair() {
         assert_eq!(
             crumbs, masthead,
             "{name} has {crumbs} `rio-crumbs` and {masthead} `rio-masthead-top` — \
-             the page-header halves must appear together or the capped surface \
-             renders with an open edge (see components/page-header.css)"
+             the page-header halves must appear together or the page head \
+             renders without its title or without its trail \
+             (see components/page-header.css)"
         );
         assert_eq!(
             crumbs, 1,
-            "{name} repeats the page-header pair {crumbs} times; the capped \
-             surface assumes one header per page"
+            "{name} repeats the page-header pair {crumbs} times; the page head \
+             grid assumes one header per page"
         );
         checked += 1;
     }

@@ -212,12 +212,13 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
   .rio-ws-inner { inline-size: calc(100% - 32px); }
 }
 
-/* ---- Editorial masthead + ledger ---- */
-.rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-block-end: var(--rio-space-32); }
-.rio-masthead h1 { font-size: var(--rio-fs-display); line-height: 1.15; margin: 0 0 var(--rio-space-16); } /* contract §2.1: 36px */
-/* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
-.rio-masthead-desc { color: var(--rio-text); margin: 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
-.rio-masthead-cta { display: flex; align-items: center; gap: 10px; flex: none; padding-block-start: 6px; }
+/* ---- Editorial masthead + ledger ----
+   The masthead's COMPOSITION (the title/action/lead grid, the lead's face)
+   lives in components/page-header.css. Only the gap below the head and the
+   CTA row's own flex belong here; redeclaring `display` would win on source
+   order and undo the grid. */
+.rio-masthead-top { margin-block-end: var(--rio-space-24); }
+.rio-masthead-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); }
 
 .rio-ledger {
   display: flex; flex-wrap: wrap;

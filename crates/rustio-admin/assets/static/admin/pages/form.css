@@ -15,18 +15,9 @@
 .rio-content-shell { max-inline-size: 1040px; margin-inline: auto; }
 .rio-form { display: flex; flex-direction: column; gap: var(--rio-space-32); }
 
-/* Page title (contract §2.1): 36px / 800 / line-height 1.15, with the §10.4
- * rhythm (title → lead = s4). */
-.rio-form-shell .rio-masthead-top h1,
-.rio-page-header h1 {
-  font-family: var(--rio-font-body);
-  font-weight: 800;
-  font-size: var(--rio-fs-display);  /* 36px */
-  line-height: 1.15;
-  letter-spacing: -0.018em;
-  color: var(--rio-text-hi);
-  margin: 0 0 var(--rio-space-16);
-}
+/* The page title's size, weight and track are the ladder's (base/base.css
+ * h1) and its placement is the page-head grid's. A form page does not need
+ * a title of its own. */
 
 /* Section card with the label cutting the top border (contract §3,
  * legend-on-border). A native <fieldset>/<legend> produces this for free:
