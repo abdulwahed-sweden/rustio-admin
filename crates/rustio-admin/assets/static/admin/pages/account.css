@@ -92,3 +92,40 @@
 /* Per-session revoke — pushed to the row's end, danger-tinted label. */
 .rio-sess-revoke { margin-inline-start: auto; }
 .rio-sess-revoke .rio-btn { color: var(--rio-danger); }
+
+/* ---- Sessions as a list (account_sessions.html) ---------------------
+   One row per session: the device is the identity, the ip and the three
+   times are a meta line, the trust badge and the action at the edge. */
+.rio-sess-rows {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm);
+  overflow: hidden;
+}
+.rio-sess-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center; column-gap: var(--rio-space-16);
+  min-block-size: 64px;
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-sess-row:last-child { border-block-end: 0; }
+.rio-sess-row--current { background: var(--rio-sunken); }
+.rio-sess-row-id { min-inline-size: 0; }
+.rio-sess-row-device { font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-sess-you { margin-inline-start: var(--rio-space-8); font-size: var(--rio-text-13); font-weight: var(--rio-weight-regular); color: var(--rio-text-mute); }
+.rio-sess-row-meta {
+  display: flex; flex-wrap: wrap; gap: var(--rio-space-4) var(--rio-space-12);
+  margin-block-start: 2px;
+  font-size: var(--rio-text-13); color: var(--rio-text-mute);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-sess-row-meta .rio-ip { font-family: var(--rio-font-mono); }
+.rio-sess-row-action { min-inline-size: 72px; display: flex; justify-content: flex-end; }
+.rio-sess-row .rio-sess-revoke { margin-inline-start: 0; }
+@media (max-width: 760px) {
+  .rio-sess-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .rio-sess-row-action { grid-column: 1 / -1; justify-content: flex-start; }
+}

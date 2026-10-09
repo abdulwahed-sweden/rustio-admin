@@ -1,45 +1,43 @@
 {% extends "admin/_base.html" %}
-{# A reading page whose cards are deliberately narrower than the console.
- # The measure lives here, not on `.rio-sess-list`, so the page header and
- # the session cards share one set of inline edges. #}
+{# One list, one row per session: the device is the identity, the ip and
+   the three times are a meta line, the trust badge and the action sit at
+   the edge. The current session is tinted and says so. Revoke, "Sign out
+   of every other device" and "Sign out everywhere" are unchanged. #}
 {% block page_measure %}rio-page--narrow{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Active sessions</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">Every device currently signed in to your account. Revoke any session you don't recognise.</p>
+  <p class="rio-masthead-desc">Every device signed in to your account. Revoke any you don't recognise.</p>
 </div></div>
 
 {% if sessions %}
-<ul class="rio-sess-list" role="list">
+<ul class="rio-sess-rows" role="list">
   {% for s in sessions %}
-  <li class="rio-sess-card{% if s.is_current %} rio-sess-card--current{% endif %}">
-    <div class="rio-sess-top">
-      <span class="rio-sess-glyph">{{ icon("key") }}</span>
-      <span class="rio-sess-title">{% if s.is_current %}Current session{% else %}Other session{% endif %}</span>
-      <span class="rio-sess-trust">{{ s.trust_label }}</span>
+  <li class="rio-sess-row{% if s.is_current %} rio-sess-row--current{% endif %}">
+    <div class="rio-sess-row-id">
+      <div class="rio-sess-row-device">{{ s.ua_summary }}{% if s.is_current %}<span class="rio-sess-you">you, now</span>{% endif %}</div>
+      <div class="rio-sess-row-meta">
+        <span class="rio-ip">{{ s.ip }}</span>
+        <span>signed in {{ s.created_at }}</span>
+        <span>last active {{ s.last_seen_relative }}</span>
+        <span>expires {{ s.expires_relative }}</span>
+      </div>
     </div>
-    <dl class="rio-sess-meta">
-      <div><dt>IP</dt><dd>{{ s.ip }}</dd></div>
-      <div><dt>Device</dt><dd>{{ s.ua_summary }}</dd></div>
-      <div><dt>Created</dt><dd>{{ s.created_at }}</dd></div>
-      <div><dt>Last active</dt><dd>{{ s.last_seen_relative }}</dd></div>
-      <div><dt>Expires</dt><dd>{{ s.expires_relative }}</dd></div>
-    </dl>
-    <div class="rio-sess-foot">
+    <span class="rio-pill rio-pill--{% if s.is_current %}on{% else %}neutral{% endif %}">{{ s.trust_label }}</span>
+    <div class="rio-sess-row-action">
       {% if s.is_current %}
-      <span class="rio-sess-note">This session — use &ldquo;Sign out everywhere&rdquo; below to revoke it.</span>
+      <span class="rio-meta">This session</span>
       {% else %}
       <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline rio-sess-revoke">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-        <button type="submit" class="rio-btn rio-btn--secondary rio-btn--sm">{{ icon("trash") }} Revoke</button>
+        <button type="submit" class="rio-btn rio-btn--quiet rio-btn--sm is-danger">Revoke</button>
       </form>
       {% endif %}
     </div>
   </li>
   {% endfor %}
 </ul>
-
 <div class="rio-sess-bulk">
   <form method="post" action="/admin/account/sessions/revoke-others" class="rio-form-inline">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
