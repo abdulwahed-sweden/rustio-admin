@@ -178,14 +178,10 @@
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* Role/authority badge — readable without relying on colour alone. */
-.rio-role {
-  display: inline-flex; align-items: center;
-  padding: 3px 9px; border-radius: var(--rio-radius-pill);
-  background: var(--rio-sunken); border: 1px solid var(--rio-line);
-  color: var(--rio-text); font-size: 0.875rem;
-  font-weight: var(--rio-weight-medium); white-space: nowrap;
-}
+/* Role/authority badge — the shared status face (components/data.css);
+   only its colour pair belongs here. */
+.rio-role { background: var(--rio-neutral-tint); color: var(--rio-neutral); }
+.rio-role--administrator, .rio-role--developer { background: var(--rio-rust-tint); color: var(--rio-rust); }
 
 @media (max-width: 760px) {
   .rio-selbar-actions { margin-inline-start: 0; inline-size: 100%; }
@@ -246,9 +242,8 @@
   position: static; box-shadow: none; background: transparent;
 }
 .rio-dtable--users thead .col-act { background: transparent; }
-/* Actions are always visible in a grid row: the hover-reveal that the
-   legacy table used hides an authorized control behind a pointer. */
-.rio-dtable--users .rio-row-actions { opacity: 1; }
+/* The users grid pioneered always-visible actions; that is now the
+   default for every list (layout/console.css), so the override is gone. */
 
 /* Long addresses truncate inside their own track instead of pushing
    ROLE sideways. The full value stays in the DOM and in `title`. */

@@ -223,8 +223,8 @@
         <td class="col-act">
           {% if not read_only %}
           <span class="rio-row-actions">
-            <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row.id }}/edit" aria-label="Edit">{{ icon("pencil") }}</a>
-            <a class="rio-iconbtn rio-iconbtn--sm rio-danger-ink" href="/admin/{{ admin_name }}/{{ row.id }}/delete" aria-label="Delete">{{ icon("trash") }}</a>
+            <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/{{ admin_name }}/{{ row.id }}/edit">Edit</a>
+            <a class="rio-btn rio-btn--quiet rio-btn--sm is-danger" href="/admin/{{ admin_name }}/{{ row.id }}/delete">Delete</a>
           </span>
           {% endif %}
         </td>

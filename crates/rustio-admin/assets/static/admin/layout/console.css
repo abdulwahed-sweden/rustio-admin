@@ -334,7 +334,10 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-dtable .col-check { inline-size: 52px; }
 .rio-dtable .col-price { text-align: end; inline-size: 130px; }
 .rio-dtable .col-stock { inline-size: 160px; }
-.rio-dtable .col-act { inline-size: 96px; text-align: end; }
+/* Text actions need their own width rather than a fixed 96px minted for
+   two 30px icons. `width: 1%` with nowrap is the table idiom for "as
+   narrow as the content allows" (RustIO's `.actions`). */
+.rio-dtable .col-act { inline-size: 1%; white-space: nowrap; text-align: end; padding-inline-end: var(--rio-space-12); }
 
 /* primary (first) cell — the row's click-through to its edit page. */
 .rio-cell-primary { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; }
@@ -358,13 +361,12 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 /* status pill: use the canonical .rio-pill (--on/--off) from components/data.css */
 
 /* inline row actions (reveal on hover) */
-.rio-row-actions { display: inline-flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity var(--rio-dur-fast) var(--rio-ease); }
-.rio-dtable tbody tr:hover .rio-row-actions, .rio-row-actions:focus-within { opacity: 1; }
+/* Always visible. The hover-reveal that used to live here hid an
+   authorized control behind a pointer: undiscoverable by scanning,
+   unreachable by touch (VISUAL-CONTRACT.md §9.4). */
+.rio-row-actions { display: inline-flex; gap: var(--rio-space-4); justify-content: flex-end; }
 
 /* board footer */
 .rio-board-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--rio-space-12); padding: var(--rio-space-8) var(--rio-space-16); border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); font-size: var(--rio-text-14); color: var(--rio-text-mute); }
 .rio-board-foot strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); }
 
-@media (prefers-reduced-motion: reduce) {
-  .rio-row-actions { opacity: 1; }
-}

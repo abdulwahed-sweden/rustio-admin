@@ -34,43 +34,98 @@
   color: var(--rio-text-hi);
 }
 
-/* Badge — small status label */
+/* Badge — the status face under its older name. */
 .rio-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  font-family: var(--rio-font-mono);
+  gap: var(--rio-space-8);
+  padding: var(--rio-space-4) var(--rio-space-8);
+  font-family: var(--rio-font-body);
   font-size: var(--rio-text-12);
-  font-weight: var(--rio-weight-medium);
-  line-height: 1.5;
+  font-weight: var(--rio-weight-semibold);
+  line-height: 1.3;
+  white-space: nowrap;
   border-radius: var(--rio-radius-sm);
   border: 1px solid transparent;
 }
-.rio-badge--neutral { background: var(--rio-sunken); color: var(--rio-text-mute); border-color: var(--rio-line); }
-.rio-badge--copper  { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
+.rio-badge::before {
+  content: ""; inline-size: 6px; block-size: 6px; flex: none;
+  border-radius: 50%; background: currentColor;
+}
+.rio-badge--neutral { background: var(--rio-neutral-tint); color: var(--rio-neutral); }
+.rio-badge--copper  { background: var(--rio-rust-tint); color: var(--rio-rust); }
 .rio-badge--success { background: var(--rio-success-tint); color: var(--rio-success); }
 .rio-badge--warn    { background: var(--rio-warn-tint); color: var(--rio-warn); }
 .rio-badge--danger  { background: var(--rio-danger-tint); color: var(--rio-danger); }
 
-/* Status pill — the single canonical pill (contract §9). Solid tint, no dot.
-   --on / --off are the contract's enabled/disabled states; the semantic
-   variants serve the audit / health / notifications pages. */
-.rio-pill {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--rio-radius-pill);
-  font-size: var(--rio-fs-sm);   /* 15px */
-  font-weight: 700;
+/* ============================================================
+   THE STATUS FACE (VISUAL-CONTRACT.md §9.3)
+
+   A dot, a word and an opaque soft fill. The coloured 1px outline these
+   used to carry made every status a small framed object, and a table of
+   twenty of them a wall of frames — the fill and the dot already say the
+   same thing. The border stays, transparent, so geometry is unchanged.
+
+   One face, three class families: `.rio-pill` (tables), `.rio-role`
+   (authority) and `.av-badge` (adaptive views) were three systems that
+   grew separately and said the same thing three ways.
+   ============================================================ */
+.rio-pill,
+.rio-role,
+.av-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rio-space-8);
+  padding: var(--rio-space-4) var(--rio-space-8);
+  border: 1px solid transparent;
+  border-radius: var(--rio-radius-sm);
+  font-family: var(--rio-font-body);
+  font-size: var(--rio-text-12);   /* 13 */
+  font-weight: var(--rio-weight-semibold); /* 600 */
+  line-height: 1.3;
   white-space: nowrap;
+}
+.rio-pill::before,
+.rio-role::before,
+.av-badge::before {
+  content: "";
+  inline-size: 6px; block-size: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
 }
 .rio-pill--on  { background: var(--rio-pill-on-bg);  color: var(--rio-pill-on-text); }
 .rio-pill--off { background: var(--rio-pill-off-bg); color: var(--rio-pill-off-text); }
 .rio-pill--success, .rio-pill--badge-success { background: var(--rio-success-tint); color: var(--rio-success); }
 .rio-pill--danger,  .rio-pill--badge-danger  { background: var(--rio-danger-tint);  color: var(--rio-danger); }
-.rio-pill--warning, .rio-pill--badge-warning { background: var(--rio-warn-tint);     color: var(--rio-warn); }
-.rio-pill--info                              { background: var(--rio-rust-tint);     color: var(--rio-rust); }
-.rio-pill--neutral, .rio-pill--badge-neutral { background: var(--rio-sunken);        color: var(--rio-text-mute); }
+.rio-pill--warning, .rio-pill--badge-warning { background: var(--rio-warn-tint);    color: var(--rio-warn); }
+.rio-pill--info                              { background: var(--rio-rust-tint);    color: var(--rio-rust); }
+.rio-pill--neutral, .rio-pill--badge-neutral { background: var(--rio-neutral-tint);  color: var(--rio-neutral); }
+/* A bare `.rio-pill` with no variant is the neutral state. */
+.rio-pill:not([class*="rio-pill--"]) { background: var(--rio-neutral-tint); color: var(--rio-neutral); }
+
+/* ============================================================
+   THE COUNT FACE
+
+   A quantity, not a state: bordered, on the surface, mono, no dot.
+   RustIO keeps the same second face for its nav counts
+   (`.module-link .badge`).
+   ============================================================ */
+.rio-count-badge,
+.rio-dropdown-badge {
+  display: inline-grid; place-items: center;
+  min-inline-size: 20px;
+  padding: 0 var(--rio-space-4);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-sm);
+  background: var(--rio-surface);
+  color: var(--rio-text);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold);
+  line-height: 1.5;
+}
+.rio-count-badge::before, .rio-dropdown-badge::before { content: none; }
 
 /* Tag — removable chip */
 .rio-tag {

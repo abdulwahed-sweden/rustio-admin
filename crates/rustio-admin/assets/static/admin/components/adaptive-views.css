@@ -189,25 +189,15 @@
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* Badges — token tints mirroring `.rio-badge--*`, keyed by the view layer's
-   `SemanticClass` (neutral / info / success / warning / danger). */
+/* Badges — the shared status face (components/data.css); only the
+   semantic pairs keyed by the view layer's `SemanticClass` live here. */
 .av-badge {
-  display: inline-flex;
-  align-items: center;
   /* shrink to content even inside a stretched card column */
   align-self: flex-start;
-  gap: 5px;
-  padding: 2px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--rio-radius-sm);
-  font-family: var(--rio-font-mono);
-  font-size: var(--rio-text-12);
-  font-weight: var(--rio-weight-medium);
-  line-height: 1.5;
 }
 .av-badge--neutral {
-  background: var(--rio-sunken);
-  color: var(--rio-text-mute);
+  background: var(--rio-neutral-tint);
+  color: var(--rio-neutral);
 }
 .av-badge--info {
   background: var(--rio-rust-tint);

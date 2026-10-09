@@ -63,6 +63,24 @@
 .rio-btn--secondary:hover { background: var(--rio-raised); border-color: var(--rio-text-faint); }
 .rio-btn--secondary:active { background: var(--rio-sunken); }
 
+/* Quiet — RustIO's `.button-quiet`: the face for row actions and other
+   in-table affordances. Transparent ground and border so twenty of them in
+   a column read as text, not as twenty buttons; the accent carries the
+   affordance and the soft fill arrives on hover. */
+.rio-btn--quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rio-rust);
+  padding-inline: var(--rio-space-8);
+}
+.rio-btn--quiet:hover {
+  background: var(--rio-rust-tint);
+  border-color: transparent;
+  color: var(--rio-rust-hover);
+}
+.rio-btn--quiet.is-danger { color: var(--rio-danger); }
+.rio-btn--quiet.is-danger:hover { background: var(--rio-danger-tint); color: var(--rio-danger); }
+
 /* Ghost — transparent */
 .rio-btn--ghost {
   background: transparent;

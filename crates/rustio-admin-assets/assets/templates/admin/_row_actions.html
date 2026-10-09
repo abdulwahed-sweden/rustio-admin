@@ -1,6 +1,12 @@
-{# Shared row-actions — inline edit/delete icon buttons (reveal on
- # hover via .rio-row-actions, console.css). Imported as a macro so
- # every list page renders the same actions.
+{# Shared row-actions — quiet TEXT actions, always visible.
+ #
+ # They used to be icon-only and revealed on hover (`.rio-row-actions`,
+ # opacity 0 → 1). Both halves of that were wrong: a pencil and a bin ask
+ # the operator to decode two glyphs, and a hover-revealed control is
+ # undiscoverable by scanning and unreachable by touch. An authorized
+ # action should not be hidden behind a pointer.
+ #
+ # Imported as a macro so every list page renders the same actions.
  #
  # Usage:
  #   {% from "admin/_row_actions.html" import row_actions %}
@@ -8,7 +14,7 @@
  # #}
 {% macro row_actions(admin_name, row_id, edit_path="edit", delete_path="delete") -%}
 <span class="rio-row-actions">
-  <a class="rio-iconbtn rio-iconbtn--sm" href="/admin/{{ admin_name }}/{{ row_id }}/{{ edit_path }}" aria-label="Edit row {{ row_id }}">{{ icon("pencil") }}</a>
-  <a class="rio-iconbtn rio-iconbtn--sm rio-danger-ink" href="/admin/{{ admin_name }}/{{ row_id }}/{{ delete_path }}" aria-label="Delete row {{ row_id }}">{{ icon("trash") }}</a>
+  <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/{{ admin_name }}/{{ row_id }}/{{ edit_path }}">Edit</a>
+  <a class="rio-btn rio-btn--quiet rio-btn--sm is-danger" href="/admin/{{ admin_name }}/{{ row_id }}/{{ delete_path }}">Delete</a>
 </span>
 {%- endmacro %}
