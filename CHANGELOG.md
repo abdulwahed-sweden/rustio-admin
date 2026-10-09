@@ -8,6 +8,37 @@ leaves the alpha track.
 
 ## Unreleased
 
+### Changed
+
+- **Page composition on the frozen theme.** The record form, dashboard,
+  users and groups lists, group editor, active sessions, API surface and
+  history pages are recomposed per `docs/design/page-composition-study/`
+  (the same language the Jobs/list page already took). No token, colour,
+  type size, control height, radius or spacing value changes; no route,
+  handler, hidden input, RBAC gate or `data-rio-*` hook moves.
+  - **Form** (`form.html`): one card whose action bar is its own foot;
+    read-only fields render as a facts panel in an aside instead of
+    greyed-out inputs (the save path already re-injects their stored
+    values); related (inline) sections move into the same aside with
+    quiet text actions instead of icon-only buttons; the page takes the
+    standard measure only when it has an aside (`FormCtx::has_readonly`).
+    The generic lead is gone.
+  - **Dashboard** (`index.html`): the four stat tiles become one facts line
+    under the title; the models are the one surface with a title band;
+    Docs is a quiet control and Audit log the secondary action.
+  - **Users / Groups** (`users_list.html`, `groups_list.html`): the
+    `display: grid` users table becomes the ordinary operational table
+    (`.rio-dtable--ops .rio-dtable--people`) with a hugging identity and the
+    id as a mono suffix; the leads are gone.
+  - **Group editor** (`group_edit.html`): standard measure, one card with
+    two bands, the matrix flat inside it, the extra permissions open by
+    default as a checklist grid.
+  - **Sessions** (`account_sessions.html`): one list, one row per session.
+  - **API surface** (`apis_index.html`): one flat section per model,
+    endpoints beside fields, on the standard measure.
+  - **History** (`log_entries.html`): no avatar per row; metadata treated
+    as metadata; sticky date dividers.
+
 ### Removed
 
 - **The bundled example applications are gone.** `examples/clinic`,
