@@ -1,0 +1,526 @@
+/*
+ * RustIO Admin composition layer
+ * --------------------------------
+ * This file changes composition, not the design language. It is appended to
+ * the framework-owned admin.css at build time and intentionally uses only the
+ * tokens and primitives defined there.
+ *
+ * Why it exists: the component primitives are sound, but data pages were
+ * stretching small control clusters across a very wide workspace. Sparse
+ * records also made List/Cards look empty and action-heavy. These rules make
+ * those components degrade gracefully without inventing a second design
+ * system or route-specific patches.
+ */
+
+/* ---------- Shell and page measure ----------------------------------- */
+/* The working surface is centred inside the workspace the rail leaves
+   behind — not against the whole viewport, and not pinned to the rail edge.
+   Pinning it (margin-left: --s6, slack all on the right) read as an
+   application shoved against its own navigation with a dead field beside
+   it. Centring in the grid's second column gives symmetric breathing room
+   that only grows once the measure is capped, so a 1920 desktop spends
+   almost all of its width on content.
+   `.main` and `.app-footer` take the same two declarations, so the footer
+   can never drift out of alignment with the page above it. */
+@media (min-width: 761px) {
+  .main,
+  .app-footer {
+    width: min(calc(100% - (2 * var(--s6))), var(--content));
+    margin-inline: auto;
+  }
+
+  .content--wide > .main,
+  .content--wide > .app-footer {
+    width: min(calc(100% - (2 * var(--s6))), var(--content-wide));
+  }
+
+  /* The record form's measure. Without it the 728px card sat at the left
+     edge of the 1120px focused measure with 392px of nothing beside it —
+     the card was centred in nothing and the page looked off-axis. Giving
+     the page the card's own width puts the heading directly above the
+     card and lets the shell centre the pair. */
+  .content--form > .main,
+  .content--form > .app-footer {
+    width: min(calc(100% - (2 * var(--s6))), var(--form-measure));
+  }
+}
+
+/* The head rule binds a title to the action opposite it, and separates a
+   heading from the surface beneath. A single-card form page has neither: no
+   action, and the card's own top border 16px below already draws that line.
+   Two parallel rules doing one job is noise, so these pages drop it. */
+.content--form .page-head {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* Keep page actions connected to the heading instead of throwing tiny
+   clusters to opposite edges of a 1500px workspace. */
+/* The page head is a band, not two loose objects. Title and breadcrumb at
+   one end, the page's one primary action at the other, and a rule beneath
+   that spans the content measure.
+   The rule is what makes the pairing legible: parked immediately beside the
+   title the blue button crowded it and read as part of the heading, and
+   pushed to the far side with nothing joining them the two looked
+   unrelated. A shared baseline binds them at any distance, and it lines the
+   action up with the right edge of the toolbar and data surface below. */
+.page-head {
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  column-gap: var(--s5);
+  row-gap: var(--s3);
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--border);
+}
+
+/* A description belongs under the title, not beside it. Four heads
+   (password change and its done page, both suggestion screens) put the
+   `<p>` as a direct flex sibling of the `<h1>`, which squeezed the title
+   into two words per line once the page took a narrower measure. The
+   dashboard's hero head is `display: block` and already stacked, so it is
+   unaffected. */
+.page-head > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.page-head > div:first-child {
+  max-width: 760px;
+}
+
+.page-head-actions {
+  margin-left: auto;
+}
+
+/* The footer is system metadata, not a horizontal feature bar. */
+.app-footer {
+  border-top-color: transparent;
+  padding-top: var(--s2);
+}
+
+/* ---------- Overview stats ------------------------------------------- */
+/* A stat is a number and a word. A fixed column count stretched each one to
+   509px on a 1560px workspace, so three tiles became three slabs with a
+   33px numeral adrift in each. `auto-fill` with a cap keeps them tile-sized
+   and lets the count follow the viewport; `justify-content: start` keeps the
+   row left-anchored instead of spreading the gaps.
+   The raised three-layer shadow belongs to genuinely floating surfaces —
+   the auth card, an empty state. On a grid of tiles it reads as decoration,
+   so they take the flat grid shadow the record cards use. */
+.stat-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 280px));
+  justify-content: start;
+}
+
+.stat {
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Data toolbar --------------------------------------------- */
+.ops-row {
+  justify-content: flex-start;
+  column-gap: var(--s3);
+  row-gap: var(--s2);
+}
+
+/* The contract's search measure is 340px preferred / 220px minimum; the
+   base rule already sets that basis, so the composition layer has nothing
+   to add here beyond leaving it alone. */
+
+.ops-count {
+  margin-left: var(--s1);
+  padding-left: var(--s4);
+  border-left: 1px solid var(--border);
+}
+
+.ops-view .view-tools {
+  margin-left: var(--s2);
+  padding-left: var(--s4);
+  border-left: 1px solid var(--border);
+}
+
+.layout-switch > a {
+  min-height: var(--ctl-sm);
+  padding-inline: var(--s3);
+}
+
+/* ---------- Table ----------------------------------------------------- */
+/* Cells carry the ViewSpec role the List and Cards layouts already read, so
+   the table can treat a value by meaning instead of by column index.
+   Without it an 1558px-wide table still wrapped `2026-09-28T14:05:00Z`
+   across two lines and pushed every row from the 48px contract to 64px,
+   while the long free-text column took the slack it should have given up.
+   No new data: `ColumnView.role` is already in the context. */
+td[data-role="timestamp"],
+th[data-role="timestamp"],
+td[data-role="badge"] {
+  white-space: nowrap;
+}
+
+/* Digits line up column-to-column whether the value is a count, an amount
+   or an id. Harmless on text. */
+td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Row actions are utilities, not a second set of primary controls. */
+td.actions .button,
+th.actions .button {
+  min-height: var(--ctl-sm);
+  padding-inline: var(--s2);
+  background: transparent;
+}
+
+td.actions .button-secondary {
+  border-color: transparent;
+  color: var(--blue);
+}
+
+td.actions .button-danger {
+  border-color: transparent;
+  color: var(--red);
+}
+
+td.actions .button-secondary:hover {
+  border-color: var(--blue-line);
+  background: var(--blue-soft);
+}
+
+td.actions .button-danger:hover {
+  border-color: var(--red-line);
+  background: var(--red-soft);
+}
+
+/* On constrained workspaces the record data may scroll, but destructive and
+   edit actions stay reachable. On large screens the column behaves normally. */
+@media (max-width: 1100px) and (min-width: 761px) {
+  .table-wrap th.actions,
+  .table-wrap td.actions {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--surface);
+    box-shadow: -1px 0 0 var(--border);
+  }
+
+  .table-wrap th.actions {
+    z-index: 2;
+    background: var(--surface-head);
+  }
+
+  .table-wrap tbody tr:hover td.actions {
+    background: var(--surface-soft);
+  }
+}
+
+/* ---------- List ------------------------------------------------------ */
+/* A list row is for scanning identity and state. The decorative initials
+   consumed more attention than the actual title, especially on sparse
+   models.
+   The region spans the same measure as the toolbar above it, so a
+   one-record Users page reads as a complete surface rather than a narrow
+   strip hanging off a wider page — capping the list at the focused measure
+   made it visibly narrower than its own toolbar. */
+.record-list {
+  gap: var(--s2);
+}
+
+/* Identity takes the slack; state and actions close the row on the right.
+   A trailing free track instead left 61% of a 1600px row empty with every
+   value huddled into the left 39% — the row stopped reading as a row and
+   started reading as a short strip with a void after it. Anchoring content
+   at both ends is what makes a wide row look deliberate, and it puts the
+   actions in a column the eye can run down, which is the point of a list.
+   The 20rem floor keeps the identity region from collapsing on a narrow
+   workspace; `.record-list-main` caps the text measure so a long title
+   stays readable rather than running the full width. */
+.record-list-item {
+  grid-template-columns: minmax(20rem, 1fr) auto;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius-btn);
+}
+
+.record-avatar {
+  display: none;
+}
+
+.record-list-main {
+  max-width: 48rem;
+  gap: var(--s1);
+}
+
+.record-list-side {
+  display: flex;
+  min-width: 0;
+  align-self: center;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s3);
+  padding-left: 0;
+  border-left: 0;
+}
+
+.record-list-status,
+.record-list-actions {
+  flex-wrap: wrap;
+}
+
+.record-list-actions .button {
+  min-height: var(--ctl-sm);
+}
+
+/* ---------- Cards ----------------------------------------------------- */
+/* Cards stay card-sized instead of stretching until three tiny records fill a
+   1500px row. Rich models can add cards naturally; sparse models remain calm. */
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  justify-content: start;
+}
+
+.record-card {
+  box-shadow: none;
+}
+
+.record-card-head {
+  padding: var(--s4) var(--s4) var(--s3);
+}
+
+/* When the state group and the title both fit, the group sits top-right.
+   When they do not, it takes its own line rather than shrinking below its
+   content width and orphaning the last badge onto a second row — which is
+   what a hard percentage cap did at a 388px card. `margin-left: auto` keeps
+   it right-aligned in both cases. */
+.record-card-head {
+  flex-wrap: wrap;
+}
+
+/* No auto margin here. An auto margin consumes every pixel of free space
+   before flex-grow is considered, so the identity block stayed pinned at
+   its min-content width and a record number broke mid-string even though
+   152px sat unused beside it. The identity's own `flex: 1` pushes the
+   state group to the right on its own. */
+.record-card-badges {
+  max-width: 100%;
+}
+
+/* Identity wins the row. `overflow-wrap: anywhere` let a record number break
+   mid-string ("INV-2026-" / "0044") so the state group could keep its width;
+   `break-word` only breaks a word that cannot fit a line of its own, which
+   makes the title's min-content its longest word. The identity block then
+   claims that width and the state group wraps beneath instead. A
+   pathologically long single token still breaks rather than overflowing. */
+/* A concrete floor, not `auto`. `auto` resolves to the title's min-content
+   width, and `overflow-wrap: break-word` lets that fall below the whole
+   word — so a three-badge card left the identity 120px when its record
+   number needed 126 and the number broke mid-string. 12rem is wide enough
+   for an identifier and still fits the 320px card floor; when the state
+   group cannot also fit, it wraps to its own line instead of squeezing the
+   title, which is the trade this head should make. */
+.record-card-identity {
+  min-width: 12rem;
+}
+
+.record-card-title {
+  overflow-wrap: break-word;
+}
+
+.record-card-meta {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s3);
+  padding: 0 var(--s4) var(--s4);
+}
+
+.record-card-foot {
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+}
+
+.record-card-actions {
+  margin-left: auto;
+}
+
+.record-card-actions .button {
+  min-height: var(--ctl-sm);
+}
+
+/* ---------- Badges ---------------------------------------------------- */
+.badge {
+  gap: var(--s1);
+  padding: 2px var(--s2);
+}
+
+/* ---------- Forms ----------------------------------------------------- */
+/* One action area, in the form footer. The card's width comes from the page
+   measure now (`.content--form`), so it no longer restates it here; the base
+   rule's max-width remains as the fallback for a project that overrides
+   base_admin.html and loses the shell_width block. */
+
+.detail-single > .card {
+  padding: var(--s5);
+}
+
+/* SPEC: 16px between fields, 4px label-to-control. */
+.detail-single .form {
+  max-width: none;
+  gap: var(--s4);
+}
+
+.detail-single .form-actions {
+  margin-top: var(--s1);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--border);
+}
+
+/* A tick box has no entry in the control-height table — it is square and
+   sized to sit on a 14px label's line, not to the 38px control rhythm.
+   18px is that size; the clickable target comes from the row around it. */
+input[type="checkbox"],
+input[type="radio"],
+.checkbox {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Disclosure ------------------------------------------------ */
+/* `display: flex` on a `<summary>` removes the browser's disclosure
+   triangle, and nothing replaced it — so each collapsed value-label panel
+   in the view editor read as an empty bordered box with a heading and no
+   way to tell it opened. The chevron restores the affordance, and the
+   panel keeps its pointer cursor and keyboard behaviour from the element
+   itself. */
+.ve-values > summary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: var(--s1);
+  border-right: 2px solid var(--ink-2);
+  border-bottom: 2px solid var(--ink-2);
+  transform: rotate(-45deg);
+  transition: transform .15s ease;
+}
+
+.ve-values[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+/* ---------- Masthead -------------------------------------------------- */
+.sidebar-foot {
+  gap: var(--s2);
+}
+
+.signed-in {
+  color: var(--ink-2);
+}
+
+a.signed-in {
+  padding: var(--s1) var(--s2);
+  border-radius: var(--radius-sm);
+}
+
+a.signed-in:hover {
+  background: var(--surface-soft);
+}
+
+/* ---------- Responsive composition ---------------------------------- */
+@media (max-width: 1040px) {
+  .page-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .ops-count,
+  .ops-view .view-tools {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .ops-count {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-head {
+    display: flex;
+  }
+
+  .page-head-actions {
+    width: 100%;
+  }
+
+  .ops-search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .ops-view {
+    align-items: flex-start;
+  }
+
+  .view-tools {
+    flex-wrap: wrap;
+  }
+
+  .record-list-item {
+    grid-template-columns: 1fr;
+  }
+
+  .record-list-side {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: var(--s3);
+    border-top: 1px solid var(--border);
+  }
+
+  .card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-single > .card {
+    padding: var(--s5);
+  }
+}
+
+@media (max-width: 480px) {
+  /* The switcher wraps to two rows rather than dropping its labels.
+     Hiding them left four icon-only segments whose meaning a sighted
+     narrow-viewport user had to guess — the `aria-label` carried the name
+     for assistive tech only. Two rows of two keeps every segment ~45% wide,
+     which fits icon and word at 390px and keeps the targets large. */
+  .layout-switch {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .layout-switch > a {
+    flex: 1 1 45%;
+    justify-content: center;
+    padding-inline: var(--s2);
+  }
+
+  .view-tools {
+    width: 100%;
+  }
+
+  .record-list-side {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .record-card-head {
+    display: grid;
+  }
+
+  .record-card-badges {
+    justify-content: flex-start;
+  }
+
+  .detail-single > .card {
+    padding: var(--s4);
+  }
+}
