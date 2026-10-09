@@ -230,61 +230,16 @@
    what puts the USER header, the first user cell and the
    "Showing N accounts" footer on the same vertical line.
    ============================================================ */
-.rio-dtable--users { display: block; }
-.rio-dtable--users thead,
-.rio-dtable--users tbody { display: block; }
-
-.rio-dtable--users tr {
-  display: grid;
-  grid-template-columns:
-    minmax(420px, 1fr)  /* user identity — absorbs the remainder */
-    160px               /* role    */
-    120px               /* status  */
-    184px               /* created */
-    64px;               /* row actions */
-  column-gap: var(--rio-space-24);
-  align-items: center;
-  padding-inline: var(--rio-card-pad-x);
-}
-
-.rio-dtable--users thead tr { block-size: var(--rio-table-head-h); }
-.rio-dtable--users thead th {
-  display: flex; align-items: center; min-inline-size: 0;
-  padding: 0; block-size: 100%;
-  position: static; /* grid rows do not need the sticky table head */
-}
-
-/* One continuous separator per row, drawn on the row itself — cell
-   borders would break into fragments under every column gap. */
-.rio-dtable--users tbody tr {
-  min-block-size: var(--rio-row-h);
-  padding-block: var(--rio-space-12);
-  border-block-end: 1px solid var(--rio-line);
-}
-.rio-dtable--users tbody tr:last-child { border-block-end: 0; }
-.rio-dtable--users tbody td {
-  display: flex; align-items: center; min-inline-size: 0;
-  padding: 0; block-size: auto; border-block-end: 0;
-}
-/* The users grid lays its rows out with `display: grid`, so the sticky
-   actions column does not apply (and is not needed — the tracks already
-   fit). Reset it rather than leaving a half-applied rule. */
-.rio-dtable--users .col-act {
-  justify-content: flex-end; inline-size: auto;
-  position: static; box-shadow: none; background: transparent;
-}
-.rio-dtable--users thead .col-act { background: transparent; }
-/* The users grid pioneered always-visible actions; that is now the
-   default for every list (layout/console.css), so the override is gone. */
-
-/* Long addresses truncate inside their own track instead of pushing
-   ROLE sideways. The full value stays in the DOM and in `title`. */
-.rio-cell-user { min-inline-size: 0; }
-.rio-cell-user .rio-prod,
-.rio-cell-user .rio-prod-text { min-inline-size: 0; }
-.rio-cell-user .rio-prod { gap: var(--rio-space-12); } /* avatar -> text */
-.rio-cell-user .rio-prod-text {
-  display: flex; flex-direction: column; gap: var(--rio-space-4); /* email -> #id */
+/* ---- People tables (users, groups) ---------------------------------
+   The generic operational table (`.rio-dtable--ops`): the identity hugs,
+   with the id as a mono suffix on the same line. The `display: grid`
+   users table it replaces drew its head rule per cell and spent 72px on
+   one line of data. */
+.rio-dtable--people .rio-cell-user { white-space: nowrap; }
+.rio-dtable--people .rio-cell-id {
+  margin-inline-start: var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-13);
+  color: var(--rio-text-faint);
 }
 .rio-email {
   display: block; min-inline-size: 0;
@@ -337,8 +292,3 @@
 
 /* Narrow: the card scrolls inside `.rio-tablewrap`; the page never
    scrolls sideways. */
-@media (max-width: 1040px) {
-  .rio-dtable--users tr {
-    grid-template-columns: minmax(240px, 1fr) 160px 120px 184px 64px;
-  }
-}
