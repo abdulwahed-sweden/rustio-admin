@@ -51,3 +51,30 @@
 
 .rio-perm-extras { margin-block-start: var(--rio-space-16); }
 .rio-perm-extras summary { cursor: pointer; font-size: var(--rio-text-14); font-weight: var(--rio-weight-medium); color: var(--rio-rust); margin-block-end: var(--rio-space-12); }
+
+/* ---- Inside the record card (group_edit.html) ----------------------
+   The matrix sits flat: no inner border or radius, the head on the raised
+   surface with mono labels, 40px rows. The extra permissions open as a
+   titled checklist grid instead of a folded disclosure. */
+.rio-form-card .rio-perm-matrix { border: 0; border-radius: 0; }
+.rio-form-card .rio-perm-matrix thead th {
+  background: var(--rio-raised);
+  font-family: var(--rio-font-mono); font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps); color: var(--rio-text-mono);
+}
+.rio-form-card .rio-perm-matrix th,
+.rio-form-card .rio-perm-matrix td { padding: 0 var(--rio-space-12); block-size: var(--rio-th-h); }
+.rio-form-card .rio-perm-matrix__model { padding-inline-start: 0; }
+.rio-perm-extras--open { margin-block-start: var(--rio-space-20); }
+.rio-perm-extras--open summary {
+  list-style: none; cursor: default;
+  margin: 0 0 var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase; color: var(--rio-text-mono);
+}
+.rio-perm-extras--open summary::-webkit-details-marker { display: none; }
+.rio-perm-extras--open .rio-checkbox-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--rio-space-8) var(--rio-space-24);
+}
