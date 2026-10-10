@@ -3702,6 +3702,10 @@ pub(crate) struct FeatureFlagCtx {
     pub description: String,
     pub created_iso: String,
     pub updated_iso: String,
+    /// `updated_iso` as the console renders a timestamp — the wire
+    /// format belongs in a `title=`, not in a cell. Presentation only;
+    /// the ISO field is untouched so nothing that reads it changes.
+    pub updated_display: String,
 }
 
 pub(crate) fn feature_flags_ctx(
@@ -3728,6 +3732,7 @@ pub(crate) fn feature_flags_ctx(
                 description: f.description,
                 created_iso: f.created_at.to_rfc3339(),
                 updated_iso: f.updated_at.to_rfc3339(),
+                updated_display: f.updated_at.format("%Y-%m-%d %H:%M UTC").to_string(),
             })
             .collect(),
         flash,

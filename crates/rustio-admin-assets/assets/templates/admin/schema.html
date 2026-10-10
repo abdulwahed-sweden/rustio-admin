@@ -26,7 +26,8 @@
     {% for m in models %}
     <div class="rio-board" id="m-{{ m.admin_name }}">
       <div class="rio-board-title">
-        <h2>{{ m.display_name }} <code>{{ m.admin_name }}</code></h2>
+        <h2>{{ m.display_name }}</h2>
+        <span class="rio-meta"><code>{{ m.admin_name }}</code></span>
         <span class="rio-meta rio-board-title-action">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
       </div>
       <div class="rio-tablewrap">

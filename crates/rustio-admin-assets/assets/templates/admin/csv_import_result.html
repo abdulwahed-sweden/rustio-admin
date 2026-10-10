@@ -40,7 +40,7 @@
     <p class="rio-imp-note">Save as <code>migrations/&lt;next-number&gt;_add_{{ table }}_fields.sql</code>, then run <code>rustio-admin migrate apply</code>. Types are guessed from the column names — adjust before committing.</p>
   </fieldset>
   <fieldset class="rio-fieldset">
-    <legend class="rio-fieldset-legend">2 · Model struct (src/{{ admin_name }}.rs)</legend>
+    <legend class="rio-fieldset-legend">2 · Model struct <code>src/{{ admin_name }}.rs</code></legend>
     <pre class="rio-code"><code>{% for f in suggested_fields %}{{ f.rust_field }}
 {% endfor %}</code></pre>
   </fieldset>

@@ -26,7 +26,7 @@
           <td class="rio-cell-fit"><span class="rio-cell-primary">{{ f.key }}</span></td>
           <td>{% if f.enabled %}<span class="rio-mark">yes</span>{% else %}<span class="rio-mark rio-mark--off">&mdash;</span>{% endif %}</td>
           <td>{{ f.description }}</td>
-          <td class="rio-td--datetime"><span class="rio-meta">{{ f.updated_iso }}</span></td>
+          <td class="rio-td--datetime"><span class="rio-meta" title="{{ f.updated_iso }}">{{ f.updated_display }}</span></td>
           <td class="col-act">
             <form method="post" action="/admin/feature_flags/{{ f.key }}/toggle" class="rio-form-inline">
               <input type="hidden" name="_csrf" value="{{ csrf_token }}">

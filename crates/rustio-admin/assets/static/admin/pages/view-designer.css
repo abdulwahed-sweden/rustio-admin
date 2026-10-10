@@ -7,7 +7,11 @@
    ============================================================ */
 
 /* ---- Determinism flag + role chip ---- */
+/* The badge sits on its own line under the lead rather than inside the
+   lead's 680px cap, where it wrapped mid-phrase. */
+.rio-masthead-flags { margin: var(--rio-space-8) 0 0; }
 .rio-vd-flag {
+  white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px;
   margin-inline-start: var(--rio-space-8);
   font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
@@ -71,16 +75,27 @@
 /* Filter toggle pill (native checkbox hidden, face styled) */
 .rio-vd-toggle { position: relative; display: inline-flex; }
 .rio-vd-toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+/* One height for the whole row. The select, the toggle, the priority
+   field and the reorder pair were 38 / 27 / 38 / 58, so nothing in a
+   field row lined up with anything else. They all take the existing
+   small-control height. */
+.rio-vd-controls > * { block-size: var(--rio-ctl-sm); }
+.rio-vd-role, .rio-vd-prio { block-size: var(--rio-ctl-sm); min-block-size: 0; padding-block: 0; }
 .rio-vd-toggle__face {
+  display: inline-flex; align-items: center;
+  block-size: var(--rio-ctl-sm);
   font-size: var(--rio-text-13); color: var(--rio-text-mute);
   background: var(--rio-surface); border: 1px solid var(--rio-line-strong);
-  padding: 4px 12px; border-radius: var(--rio-radius-pill); user-select: none;
+  padding: 0 var(--rio-space-12); border-radius: var(--rio-radius-pill); user-select: none;
 }
 .rio-vd-toggle input:checked + .rio-vd-toggle__face { background: var(--rio-rust-tint); color: var(--rio-rust); border-color: var(--rio-rust-tint-2); }
 .rio-vd-toggle input:focus-visible + .rio-vd-toggle__face { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 
 .rio-vd-prio { inline-size: 4rem; text-align: center; }
-.rio-vd-reorder { display: inline-flex; flex-direction: column; gap: 2px; }
+/* Side by side, not stacked: a 58px column was the tallest thing in a
+   38px row and set the row's height on its own. */
+.rio-vd-reorder { display: inline-flex; gap: 2px; }
+.rio-vd-reorder .rio-iconbtn--sm { inline-size: var(--rio-ctl-sm); block-size: var(--rio-ctl-sm); }
 
 /* Narrow screens. A field row is a name plus four controls; below 760
    the controls take their own line under the name rather than

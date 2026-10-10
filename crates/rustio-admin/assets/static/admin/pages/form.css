@@ -247,6 +247,10 @@
   text-transform: uppercase;
   color: var(--rio-text-mono);
 }
+/* A legend is a micro-label and is upper-cased, but a file path is a
+   path: `src/customers.rs` is not `SRC/CUSTOMERS.RS`. */
+.rio-fieldset-legend code { text-transform: none; font-size: 0.95em; }
+
 .rio-form-card .rio-fieldset-grid,
 .rio-form-card .rio-tablewrap { clear: both; }
 .rio-form-card .rio-fieldset-grid { row-gap: var(--rio-space-20); }
@@ -289,6 +293,11 @@
 }
 .rio-facts dt { color: var(--rio-text-mute); }
 .rio-facts dd { margin: 0; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; overflow-wrap: anywhere; }
+/* A CLI invocation is one token. Breaking `rustio-admin doctor email
+   --to …` mid-word to save a few pixels makes it un-copyable; the cell
+   scrolls instead. */
+.rio-facts dd > code.rio-code { white-space: nowrap; overflow-wrap: normal; }
+.rio-facts dd:has(> code.rio-code) { overflow-x: auto; }
 .rio-facts-note { margin: var(--rio-space-12) 0 0; font-size: var(--rio-text-13); color: var(--rio-text-faint); }
 
 /* ---- Related sections: one surface each — head · rows · foot ---- */

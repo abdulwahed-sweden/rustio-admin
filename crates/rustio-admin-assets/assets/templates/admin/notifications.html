@@ -33,7 +33,7 @@
     <div class="rio-notif-row{% if n.unread %} rio-notif-row--unread{% endif %}">
       <span class="rio-notif-dot" aria-hidden="true"></span>
       <span class="rio-notif-msg">
-        {% if n.url %}<a href="{{ n.url }}">{{ n.message }}</a>{% else %}{{ n.message }}{% endif %}
+        {% if n.url %}<a class="rio-cell-primary" href="{{ n.url }}">{{ n.message }}</a>{% else %}{{ n.message }}{% endif %}
         {% if n.unread %}<span class="rio-sr-only">(unread)</span>{% endif %}
       </span>
       <span class="rio-notif-when" title="{{ n.created_iso }}">{{ n.when_relative }}</span>

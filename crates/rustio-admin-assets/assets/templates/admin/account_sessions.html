@@ -45,7 +45,7 @@
 <div class="rio-board rio-sess-others">
   <div class="rio-board-title">
     <h2>Other devices</h2>
-    <span class="rio-meta">{{ other_count }}</span>
+    <span class="rio-meta">{{ other_count }} session{% if other_count != 1 %}s{% endif %}</span>
     {% if other_count > 0 %}
     <form method="post" action="/admin/account/sessions/revoke-others" class="rio-form-inline rio-board-title-action">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">

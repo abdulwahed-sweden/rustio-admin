@@ -20,8 +20,8 @@
 
 <p class="rio-dash-facts">
   <span><strong>{{ event_count }}</strong> event{% if event_count != 1 %}s{% endif %}</span>
-  {% if created_by %}<span>created by <strong>{{ created_by }}</strong></span>{% endif %}
-  {% if created_at %}<span>on <strong>{{ created_at }}</strong></span>{% endif %}
+  {% if created_by %}<span>created by <strong>{{ created_by }}</strong>{% if created_at %} on <strong>{{ created_at }}</strong>{% endif %}</span>
+  {% elif created_at %}<span>created <strong>{{ created_at }}</strong></span>{% endif %}
   {% if last_change %}<span>last change <strong>{{ last_change }}</strong></span>{% endif %}
 </p>
 
