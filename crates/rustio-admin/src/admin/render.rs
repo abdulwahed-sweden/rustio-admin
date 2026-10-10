@@ -1229,6 +1229,17 @@ pub(crate) enum PageItem {
 /// that the list compresses to first, current ± 1, last with `…` in
 /// the gaps. The build_link closure handles URL composition so this
 /// helper stays unaware of search / filter / sort state.
+/// The numbered-page strip for the audit page. Thin wrapper so the
+/// handler does not need `build_page_items`' private visibility; the
+/// compression rules are identical to the list page's.
+pub(crate) fn audit_page_items(
+    current: usize,
+    total: usize,
+    build_link: impl Fn(usize) -> String,
+) -> Vec<PageItem> {
+    build_page_items(current, total, build_link)
+}
+
 fn build_page_items(
     current: usize,
     total: usize,
@@ -3208,6 +3219,13 @@ pub(crate) struct HistoryEntryCtx {
     pub model_admin_name: String,
     pub object_id: i64,
     pub summary: String,
+    /// `HH:MM` of the audit timestamp. The day is the band above the
+    /// row, so the row itself only needs the clock.
+    pub time_hm: String,
+    /// The request's UUID v7, shared by every row written under one
+    /// HTTP request. Shown in the opened event so an operator can tie
+    /// several rows back to one action.
+    pub correlation_id: Option<String>,
     pub ip_address: String,
     /// Per-field before/after diff extracted from
     /// `audit_action.metadata.changes`. Empty when the row carries
@@ -4196,6 +4214,14 @@ pub(crate) struct ObjectHistoryCtx {
     pub singular_name: String,
     pub object_id: i64,
     pub object_label: String,
+    /// Facts derived from the entries themselves — the feed is
+    /// newest-first, so the last entry is the creation and the first is
+    /// the most recent change. Three strings so the template states
+    /// them without re-deriving anything.
+    pub created_at: Option<String>,
+    pub created_by: Option<String>,
+    pub last_change: Option<String>,
+    pub event_count: usize,
     /// Sidebar nav models — read by `_sidebar.html` as
     /// `{{ entry.admin_name }}` / `{{ entry.display_name }}`.
     /// Kept under the conventional `entries` name to match every
@@ -4207,6 +4233,16 @@ pub(crate) struct ObjectHistoryCtx {
     pub flash: Option<FlashCtx>,
 }
 
+/// One choice in the audit page's Action / Model dropdowns: the stored
+/// value, a human label, and whether it is the applied one.
+#[derive(Serialize)]
+pub(crate) struct AuditFilterOption {
+    pub value: String,
+    pub label: String,
+    pub is_active: bool,
+    pub link: String,
+}
+
 #[derive(Serialize)]
 pub(crate) struct LogEntriesCtx {
     #[serde(flatten)]
@@ -4216,6 +4252,34 @@ pub(crate) struct LogEntriesCtx {
     pub entries: Vec<SidebarEntry>,
     pub history_entries: Vec<HistoryEntryCtx>,
     pub flash: Option<FlashCtx>,
+    /// The find row's current state, echoed back so the controls show
+    /// what is applied and the hidden inputs carry it across submits.
+    pub search_query: String,
+    pub action_filter: Option<String>,
+    pub model_filter: Option<String>,
+    pub from_filter: Option<String>,
+    pub to_filter: Option<String>,
+    /// The distinct values the two dropdowns offer, from the rows that
+    /// exist rather than from a hard-coded list.
+    pub action_options: Vec<AuditFilterOption>,
+    pub model_options: Vec<AuditFilterOption>,
+    /// Paging, matching the list page's vocabulary.
+    pub page: usize,
+    pub per_page: usize,
+    pub total_rows: usize,
+    pub total_pages: usize,
+    pub showing_from: usize,
+    pub showing_to: usize,
+    pub prev_page_link: Option<String>,
+    pub next_page_link: Option<String>,
+    pub page_items: Vec<PageItem>,
+    /// True when any filter or term is applied — drives the empty
+    /// state's wording and whether a reset is offered.
+    pub has_filters: bool,
+    pub clear_filters_link: String,
+    /// The raw `?user_id=` value, so the find row's hidden input can
+    /// carry the actor filter across a search submit.
+    pub user_filter: Option<i64>,
     /// When `Some(label)`, the page is showing audit entries
     /// filtered by `?user_id=N`. The label is the actor's email
     /// (or `#<id>` fallback) for the banner. `None` → no filter
@@ -4230,6 +4294,8 @@ pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCt
         .map(|a| {
             let changes = extract_changes_from_metadata(a.metadata.as_ref());
             let date_iso = a.timestamp.format("%Y-%m-%d").to_string();
+            let time_hm = a.timestamp.format("%H:%M").to_string();
+            let correlation_id = a.correlation_id.clone();
             let is_new_day = prev_date_iso.as_deref() != Some(date_iso.as_str());
             prev_date_iso = Some(date_iso.clone());
             HistoryEntryCtx {
@@ -4248,6 +4314,8 @@ pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCt
                 action_type: a.action_type,
                 object_id: a.object_id,
                 summary: a.summary,
+                time_hm,
+                correlation_id,
                 ip_address: a.ip_address.unwrap_or_default(),
                 changes,
             }

@@ -20,9 +20,6 @@
 .rio-health__row--warn td { background: var(--rio-warn-tint); }
 
 /* ---- Avatar + "by" ---- */
-.rio-avatar { inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--rio-radius-md); background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-12); }
-.rio-by { display: inline-flex; align-items: center; gap: var(--rio-space-8); color: var(--rio-text); text-decoration: none; }
-.rio-by:hover { color: var(--rio-rust); }
 
 /* ---- Date divider rows ---- */
 .rio-history-date-divider th, tr.lx-date th {
@@ -56,9 +53,6 @@
 .rio-masthead-desc code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-surface-2); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
 
 /* ---- Audit log (log_entries) cell helpers — replaces inline styles ---- */
-.rio-table-scroll { overflow: auto; }
-.rio-hist-when { white-space: nowrap; color: var(--rio-text-mute); }
-.rio-hist-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
 
 /* ---- API surface (apis_index) — moved out of the template's inline <style> ---- */
 .rio-api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--rio-s5); }
@@ -206,3 +200,68 @@
   .rio-api-section-body { grid-template-columns: 1fr; }
   .rio-api-ep-list { border-inline-end: 0; border-block-end: 1px solid var(--rio-line); }
 }
+
+/* ============================================================
+   AUDIT LOG  ·  /admin/history and /admin/<model>/<id>/history
+
+   One <details> per event. The <summary> is the row; the body is the
+   event. The day is a sticky band above its rows, so a row needs only
+   the clock — the exact timestamp, actor, address and correlation id
+   are in the body, read one at a time instead of competing for a
+   column each.
+   ============================================================ */
+.rio-audit { overflow: visible; }
+.rio-audit-day {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: baseline; gap: var(--rio-space-8);
+  padding: var(--rio-space-8) var(--rio-space-16);
+  background: var(--rio-sunken);
+  border-block-end: 1px solid var(--rio-line);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-text-mono);
+}
+.rio-audit-day .rio-meta { margin-inline-start: auto; font-family: var(--rio-font-body); letter-spacing: 0; text-transform: none; font-weight: var(--rio-weight-regular); }
+.rio-audit-row { border-block-end: 1px solid var(--rio-line); }
+.rio-audit-row:last-child { border-block-end: 0; }
+.rio-audit-row > summary {
+  list-style: none; cursor: pointer;
+  display: grid; align-items: center;
+  grid-template-columns: 52px max-content minmax(0, 1fr) max-content 20px;
+  gap: var(--rio-space-12);
+  min-block-size: var(--rio-row-h);
+  padding: var(--rio-space-8) var(--rio-space-16);
+}
+.rio-audit-row > summary::-webkit-details-marker { display: none; }
+.rio-audit-row > summary:hover { background: var(--rio-raised); }
+.rio-audit-row[open] > summary { background: var(--rio-raised); }
+.rio-audit-when { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); font-variant-numeric: tabular-nums; }
+.rio-audit-what { min-inline-size: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-4) var(--rio-space-8); }
+.rio-audit-what .rio-cell-primary { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); text-decoration: none; }
+.rio-audit-what .rio-cell-primary:hover { color: var(--rio-rust); }
+.rio-audit-sum { color: var(--rio-text); font-size: var(--rio-text-14); }
+.rio-audit-sum code { font-size: 0.92em; }
+.rio-audit-who { font-size: var(--rio-text-13); color: var(--rio-text-mute); text-decoration: none; white-space: nowrap; }
+.rio-audit-who:hover { color: var(--rio-rust); text-decoration: underline; }
+.rio-audit-chev { color: var(--rio-text-faint); transition: rotate var(--rio-dur-fast) var(--rio-ease); display: inline-flex; }
+.rio-audit-row[open] .rio-audit-chev { rotate: 90deg; }
+.rio-audit-detail {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--rio-space-16) var(--rio-space-32);
+  padding: var(--rio-space-12) var(--rio-space-16) var(--rio-space-16) calc(52px + var(--rio-space-16) + var(--rio-space-12));
+  background: var(--rio-raised);
+  border-block-start: 1px solid var(--rio-line);
+}
+.rio-audit-detail .rio-history-diff { margin: 0; }
+.rio-audit-detail .rio-history-diff__label { min-inline-size: 110px; }
+.rio-audit-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--rio-space-4) var(--rio-space-16); margin: 0; font-size: var(--rio-text-13); }
+.rio-audit-kv dt { color: var(--rio-text-mute); }
+.rio-audit-kv dd { margin: 0; color: var(--rio-text-hi); font-family: var(--rio-font-mono); overflow-wrap: anywhere; }
+.rio-audit-kv dd .rio-meta { font-family: var(--rio-font-body); }
+.rio-audit-empty-diff { color: var(--rio-text-faint); font-size: var(--rio-text-13); }
+@media (max-width: 760px) {
+  .rio-audit-row > summary { grid-template-columns: 52px max-content minmax(0, 1fr) 20px; grid-template-areas: "when pill who chev" "what what what what"; row-gap: var(--rio-space-4); }
+  .rio-audit-when { grid-area: when; } .rio-audit-row > summary > .rio-pill { grid-area: pill; }
+  .rio-audit-who { grid-area: who; justify-self: end; display: block; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .rio-audit-chev { grid-area: chev; } .rio-audit-what { grid-area: what; }
+  .rio-audit-detail { grid-template-columns: 1fr; padding-inline-start: var(--rio-space-16); }
+}
+

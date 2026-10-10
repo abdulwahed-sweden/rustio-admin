@@ -1,61 +1,134 @@
 {% extends "admin/_base.html" %}
-{# The audit log, calmer: no avatar per row (the By link is the email),
-   when and ip as metadata, the date dividers sticky under the head. The
-   per-field diffs and the By filter are unchanged. #}
+{# The audit log as an operational history.
+
+   One <details> per event: the summary IS the row, the body is the
+   event. No script — the disclosure is native. The day is a sticky band
+   above its rows, so a row only needs the clock time; the exact
+   timestamp, the actor, the address and the request's correlation id
+   live in the body, where they are read one at a time rather than
+   competing for a column each.
+
+   Diffs used to render inside the Summary cell, which made an edited
+   row three rows tall and pushed every other column out of alignment.
+   They are in the body now. #}
 {% block page_measure %}rio-page--wide rio-c-list{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">Every authority mutation, newest first. Click a name in <strong>By</strong> to filter to that operator.</p>
 </div></div>
+
+{# ---- Find row: term · action · model · period · count ---- #}
+<form class="rio-find rio-find--page" method="get" action="/admin/history" role="search">
+  <label class="rio-search rio-find-search">
+    <span class="rio-sr-only">Search the audit log</span>
+    {{ icon("search") }}
+    <input class="rio-input" type="search" name="q" value="{{ search_query }}" placeholder="Search summaries, models, actors…">
+  </label>
+
+  <div class="rio-find-filters">
+    {% if action_options %}
+    <div class="rio-dropdown" data-rio-dropdown>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--sm rio-dropdown-toggle{% if action_filter %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false">{{ icon("sliders") }} {% if action_filter %}{{ action_filter }}{% else %}Action{% endif %} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Action"><div class="rio-dropdown-section"><div class="rio-dropdown-menu">
+        {% for o in action_options %}<a href="{{ o.link }}" class="rio-menu-item{% if o.is_active %} is-active{% endif %}">{{ o.label }}</a>{% endfor %}
+      </div></div></div>
+    </div>
+    {% endif %}
+
+    {% if model_options %}
+    <div class="rio-dropdown" data-rio-dropdown>
+      <button type="button" class="rio-btn rio-btn--secondary rio-btn--sm rio-dropdown-toggle{% if model_filter %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false">{{ icon("table") }} {% if model_filter %}{{ model_filter }}{% else %}Model{% endif %} {{ icon("chevron-down", class="rio-chev") }}</button>
+      <div class="rio-dropdown-panel rio-menu" role="dialog" aria-label="Model"><div class="rio-dropdown-section"><div class="rio-dropdown-menu">
+        {% for o in model_options %}<a href="{{ o.link }}" class="rio-menu-item{% if o.is_active %} is-active{% endif %}">{{ o.label }}</a>{% endfor %}
+      </div></div></div>
+    </div>
+    {% endif %}
+
+    <label class="rio-audit-period">
+      <span class="rio-sr-only">From date</span>
+      <input class="rio-input rio-input--date" type="date" name="from" value="{{ from_filter|default(value='') }}">
+    </label>
+    <label class="rio-audit-period">
+      <span class="rio-sr-only">To date</span>
+      <input class="rio-input rio-input--date" type="date" name="to" value="{{ to_filter|default(value='') }}">
+    </label>
+    <button type="submit" class="rio-btn rio-btn--secondary rio-btn--sm">Apply</button>
+  </div>
+
+  {% if user_filter %}<input type="hidden" name="user_id" value="{{ user_filter }}">{% endif %}
+  {% if has_filters %}<a class="rio-btn rio-btn--subtle rio-btn--sm" href="{{ clear_filters_link }}">{{ icon("rotate-ccw") }} Reset</a>{% endif %}
+  <span class="rio-find-count">Showing <strong>{{ showing_from }}&ndash;{{ showing_to }}</strong> of <strong>{{ total_rows }}</strong></span>
+</form>
 
 {% if user_filter_label %}
 <div class="rio-active-filters" aria-label="Active history filters">
   <span class="rio-active-filters-label">Filtered</span>
-  <span class="rio-active-pill"><span class="rio-active-pill-key">By:</span> {{ user_filter_label }} <a href="/admin/history" class="rio-active-pill-x" aria-label="Clear user filter">×</a></span>
+  <span class="rio-active-pill"><span class="rio-active-pill-key">By:</span> {{ user_filter_label }} <a href="{{ clear_filters_link }}" class="rio-active-pill-x" aria-label="Clear user filter">×</a></span>
 </div>
 {% endif %}
 
-<div class="rio-board">
+<div class="rio-board rio-audit">
   {% if history_entries %}
-  <div class="rio-tablewrap">
-  <table class="rio-table rio-table--audit">
-    <thead><tr><th>When</th><th>Action</th><th>Record</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
-    <tbody>
-      {% for e in history_entries %}
-      {% if e.is_new_day %}<tr class="rio-history-date-divider"><th colspan="6" scope="rowgroup">{{ e.date_iso }}</th></tr>{% endif %}
-      <tr>
-        <td class="rio-hist-when" title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
-        <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
-        <td><a href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a></td>
-        <td><a class="rio-by" href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}">{{ e.user_email }}</a></td>
-        <td>
-          {{ e.summary }}
-          {% if e.changes %}
-          <dl class="rio-history-diff" aria-label="Changed fields">
-            {% for c in e.changes %}
-            <div class="rio-history-diff__row" data-field="{{ c.field }}">
-              <dt class="rio-history-diff__label">{{ c.label }}</dt>
-              <dd>{% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
-              <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
-              <dd>{% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
-            </div>
-            {% endfor %}
-          </dl>
-          {% endif %}
-        </td>
-        <td class="rio-hist-ip">{{ e.ip_address }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% for e in history_entries %}
+  {% if e.is_new_day %}
+  <div class="rio-audit-day">{{ e.date_iso }}</div>
+  {% endif %}
+  <details class="rio-audit-row">
+    <summary>
+      <span class="rio-audit-when">{{ e.time_hm }}</span>
+      <span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span>
+      <span class="rio-audit-what">
+        <a class="rio-cell-primary" href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/edit">{{ e.model_name }} #{{ e.object_id }}</a>
+        <span class="rio-audit-sum">{{ e.summary }}</span>
+      </span>
+      <a class="rio-audit-who" href="/admin/history?user_id={{ e.user_id }}" title="Show only actions by {{ e.user_email }}">{{ e.user_email }}</a>
+      <span class="rio-audit-chev" aria-hidden="true">{{ icon("chevron-right") }}</span>
+    </summary>
+    <div class="rio-audit-detail">
+      <div>
+        {% if e.changes %}
+        <dl class="rio-history-diff" aria-label="Changed fields">
+          {% for c in e.changes %}
+          <div class="rio-history-diff__row" data-field="{{ c.field }}">
+            <dt class="rio-history-diff__label">{{ c.label }}</dt>
+            <dd>{% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
+            <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
+            <dd>{% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
+          </div>
+          {% endfor %}
+        </dl>
+        {% else %}
+        <p class="rio-audit-empty-diff">No field-level changes recorded for this event.</p>
+        {% endif %}
+      </div>
+      <dl class="rio-audit-kv">
+        <dt>When</dt><dd>{{ e.timestamp_iso }} <span class="rio-meta">({{ e.when_relative }})</span></dd>
+        <dt>Actor</dt><dd>{{ e.user_email }} <span class="rio-meta">(user #{{ e.user_id }})</span></dd>
+        {% if e.ip_address %}<dt>From</dt><dd>{{ e.ip_address }}</dd>{% endif %}
+        {% if e.correlation_id %}<dt>Request</dt><dd>{{ e.correlation_id }}</dd>{% endif %}
+        <dt>Event</dt><dd>{{ e.action_type }}</dd>
+        <dt>Record</dt><dd><a class="rio-action-link" href="/admin/{{ e.model_admin_name }}/{{ e.object_id }}/history">Record history</a></dd>
+      </dl>
+    </div>
+  </details>
+  {% endfor %}
+
+  <div class="rio-board-foot rio-board-foot--ops">
+    <span class="rio-board-foot-text">Showing <strong>{{ showing_from }}&ndash;{{ showing_to }}</strong> of <strong>{{ total_rows }}</strong></span>
+    {% if total_pages > 1 %}
+    <nav class="rio-pagination" aria-label="Pagination">
+      {% if prev_page_link %}<a class="rio-page" href="{{ prev_page_link }}" aria-label="Previous">{{ icon("arrow-left") }}</a>{% endif %}
+      {% for item in page_items %}{% if item.kind == "ellipsis" %}<span class="rio-page rio-page--ellipsis">…</span>{% elif item.is_active %}<span class="rio-page" aria-current="page">{{ item.number }}</span>{% else %}<a class="rio-page" href="{{ item.link }}">{{ item.number }}</a>{% endif %}{% endfor %}
+      {% if next_page_link %}<a class="rio-page rio-page--next" href="{{ next_page_link }}">Next {{ icon("arrow-right") }}</a>{% endif %}
+    </nav>
+    {% endif %}
   </div>
   {% else %}
-  <div class="rio-empty">
-    {{ icon("clock") }}
-    <div class="rio-empty-title">No actions recorded</div>
-    <div>{% if user_filter_label %}No history entries for <strong>{{ user_filter_label }}</strong>. <a href="/admin/history">Clear filter</a> to see every actor.{% else %}Once operators start creating, editing, or deleting rows, the full audit trail appears here.{% endif %}</div>
+  <div class="rio-empty{% if has_filters %} rio-empty--filtered{% endif %}">
+    <div class="rio-empty-title">{% if has_filters %}No events match{% else %}No actions recorded{% endif %}</div>
+    <div>{% if has_filters %}Nothing in the audit trail matches the current filters.{% else %}Once operators start creating, editing, or deleting rows, the full audit trail appears here.{% endif %}</div>
+    {% if has_filters %}<div class="rio-empty-cta"><a class="rio-btn rio-btn--secondary rio-btn--md" href="{{ clear_filters_link }}">{{ icon("rotate-ccw") }} Clear all</a></div>{% endif %}
   </div>
   {% endif %}
 </div>

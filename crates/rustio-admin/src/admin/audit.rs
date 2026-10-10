@@ -177,6 +177,11 @@ pub struct AdminAction {
     /// to surface per-field diffs on Update rows. `None` when the
     /// audit row has no metadata column.
     pub metadata: Option<serde_json::Value>,
+    /// The request's UUID v7, shared by every audit row written under
+    /// one HTTP request (`middleware::correlation_id`). It is what lets
+    /// an operator tie "the group changed AND three sessions were
+    /// revoked" back to one action; the audit page surfaces it.
+    pub correlation_id: Option<String>,
 }
 
 // public:
@@ -631,6 +636,131 @@ impl AuditEvent {
 /// `model_filter` matches `model_name` exactly; `action_filter`
 /// matches `action_type` exactly; `user_filter` matches the actor's
 /// `user_id`. All filters compose with AND.
+/// Filters for the audit page. Every field is optional; `None` means
+/// "do not narrow on this".
+///
+/// Separate from [`recent`] on purpose: `recent` backs the dashboard's
+/// ten-row feed and the health page and wants to stay a one-liner, while
+/// the audit page needs a term, a period, a count and an offset.
+// public:
+#[derive(Debug, Default, Clone)]
+pub struct AuditQuery<'a> {
+    pub search: Option<&'a str>,
+    pub model: Option<&'a str>,
+    pub action: Option<&'a str>,
+    pub user_id: Option<i64>,
+    /// Inclusive `YYYY-MM-DD` lower bound on the UTC timestamp.
+    pub from: Option<&'a str>,
+    /// Inclusive `YYYY-MM-DD` upper bound (the whole day is included).
+    pub to: Option<&'a str>,
+    pub limit: i64,
+    pub offset: i64,
+}
+
+/// One page of audit rows plus the total the filter matches.
+///
+/// The count is a second query rather than a window function: the page
+/// sizes are small and `COUNT(*)` over the same `WHERE` is the plan the
+/// index already serves.
+pub async fn page(db: &Db, q: &AuditQuery<'_>) -> Result<(Vec<AdminAction>, i64)> {
+    // One clause builder for both statements so the count can never
+    // drift from the rows it is counting.
+    let mut clauses: Vec<String> = Vec::new();
+    let mut idx: usize = 1;
+    if q.search.is_some() {
+        clauses.push(format!(
+            "(a.summary ILIKE ${idx} OR a.model_name ILIKE ${idx} OR u.email ILIKE ${idx})"
+        ));
+        idx += 1;
+    }
+    if q.model.is_some() {
+        clauses.push(format!("a.model_name = ${idx}"));
+        idx += 1;
+    }
+    if q.action.is_some() {
+        clauses.push(format!("a.action_type = ${idx}"));
+        idx += 1;
+    }
+    if q.user_id.is_some() {
+        clauses.push(format!("a.user_id = ${idx}"));
+        idx += 1;
+    }
+    if q.from.is_some() {
+        clauses.push(format!("a.timestamp >= ${idx}::date"));
+        idx += 1;
+    }
+    if q.to.is_some() {
+        // `< to + 1 day` so the upper bound includes the whole day.
+        clauses.push(format!("a.timestamp < (${idx}::date + 1)"));
+        idx += 1;
+    }
+    let where_sql = if clauses.is_empty() {
+        String::new()
+    } else {
+        format!(" WHERE {}", clauses.join(" AND "))
+    };
+
+    let like = q.search.map(|t| format!("%{t}%"));
+    fn bind_all<'q>(
+        mut qy: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+        q: &AuditQuery<'_>,
+        like: Option<String>,
+    ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+        if let Some(t) = like {
+            qy = qy.bind(t);
+        }
+        if let Some(m) = q.model {
+            qy = qy.bind(m.to_string());
+        }
+        if let Some(a) = q.action {
+            qy = qy.bind(a.to_string());
+        }
+        if let Some(u) = q.user_id {
+            qy = qy.bind(u);
+        }
+        if let Some(f) = q.from {
+            qy = qy.bind(f.to_string());
+        }
+        if let Some(t) = q.to {
+            qy = qy.bind(t.to_string());
+        }
+        qy
+    }
+
+    let rows_sql = format!(
+        "SELECT a.id, a.user_id, u.email AS user_email, a.action_type,
+                a.model_name, a.object_id, a.timestamp, a.ip_address, a.summary,
+                a.metadata, a.correlation_id
+         FROM rustio_admin_actions a
+         LEFT JOIN rustio_users u ON u.id = a.user_id{where_sql}
+         ORDER BY a.timestamp DESC, a.id DESC
+         LIMIT ${idx} OFFSET ${}",
+        idx + 1
+    );
+    let rows = bind_all(sqlx::query(sqlx::AssertSqlSafe(rows_sql)), q, like.clone())
+        .bind(q.limit)
+        .bind(q.offset)
+        .fetch_all(db.pool())
+        .await?;
+
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM rustio_admin_actions a
+         LEFT JOIN rustio_users u ON u.id = a.user_id{where_sql}"
+    );
+    // Run as a row query, not `query_scalar`, so it shares one closure
+    // type with the rows query above — the binds cannot drift apart.
+    let total: i64 = match bind_all(sqlx::query(sqlx::AssertSqlSafe(count_sql)), q, like)
+        .fetch_one(db.pool())
+        .await
+    {
+        Ok(row) => row.try_get::<i64, _>(0).unwrap_or(0),
+        Err(_) => 0,
+    };
+
+    let actions = rows.iter().map(row_to_action).collect::<Result<Vec<_>>>()?;
+    Ok((actions, total))
+}
+
 pub async fn recent(
     db: &Db,
     limit: i64,
@@ -717,6 +847,15 @@ fn row_to_action(r: &sqlx::postgres::PgRow) -> Result<AdminAction> {
         // `serde_json::Value`. Rows written before the migration
         // (no column yet) get `None` naturally via the option type.
         metadata: r.try_get("metadata").ok(),
+        // Only `page()` selects this column; the other two queries
+        // predate it and get `None` from the failed lookup.
+        // The column is TEXT (audit.rs:60) and only `page()` selects it;
+        // the other two queries predate it and get `None` from the
+        // failed lookup rather than an error.
+        correlation_id: r
+            .try_get::<Option<String>, _>("correlation_id")
+            .ok()
+            .flatten(),
     })
 }
 

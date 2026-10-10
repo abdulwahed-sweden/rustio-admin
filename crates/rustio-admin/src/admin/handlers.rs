@@ -2840,6 +2840,15 @@ pub(crate) async fn show_object_history(
         .unwrap_or_default();
 
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    // The feed is newest-first, so the last entry is the creation and
+    // the first is the most recent change. Three facts from the rows
+    // already fetched — no extra query.
+    let entries_ctx = render::map_audit_actions(actions);
+    let event_count = entries_ctx.len();
+    let created_at = entries_ctx.last().map(|e| e.timestamp_iso.clone());
+    let created_by = entries_ctx.last().map(|e| e.user_email.clone());
+    let last_change = entries_ctx.first().map(|e| e.when_relative.clone());
+
     let view = render::ObjectHistoryCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
             .with_unread_count(unread)
@@ -2850,6 +2859,10 @@ pub(crate) async fn show_object_history(
         singular_name: entry.singular_name.to_string(),
         object_id: id,
         object_label: label,
+        created_at,
+        created_by,
+        last_change,
+        event_count,
         entries: ctx
             .admin
             .entries()
@@ -2857,7 +2870,7 @@ pub(crate) async fn show_object_history(
             .filter(|e| !e.core)
             .map(render::SidebarEntry::from)
             .collect(),
-        history_entries: render::map_audit_actions(actions),
+        history_entries: entries_ctx,
         flash: None,
     };
     let body = ctx
@@ -3553,18 +3566,103 @@ pub(crate) async fn show_log_entries(
     req: &Request,
 ) -> Result<Response> {
     ensure_audit_ready(&ctx.db).await;
-    // Per-actor filter: `?user_id=N` narrows the audit feed to one
-    // operator's actions. Non-numeric / non-positive values drop
-    // silently — the feed renders unfiltered rather than 4xx-ing on a
-    // bad URL.
+    // The audit page's find row: a term, three narrowing filters, a
+    // period, and a page. Every one is optional and every bad value
+    // drops silently — a mistyped URL renders the unfiltered feed
+    // rather than a 4xx, as the `?user_id=` filter already did.
     let qs = req.query();
+    let pick = |k: &str| -> Option<String> {
+        qs.get(k)
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    };
+    let search = pick("q");
+    let action_filter = pick("action");
+    let model_filter = pick("model");
+    // `YYYY-MM-DD` only; anything else is ignored rather than passed
+    // to Postgres as a cast that would error.
+    let is_date = |v: &String| {
+        v.len() == 10
+            && v.as_bytes().iter().enumerate().all(|(i, c)| {
+                if i == 4 || i == 7 {
+                    *c == b'-'
+                } else {
+                    c.is_ascii_digit()
+                }
+            })
+    };
+    let from_filter = pick("from").filter(is_date);
+    let to_filter = pick("to").filter(is_date);
     let user_filter: Option<i64> = qs
         .get("user_id")
         .and_then(|s| s.trim().parse::<i64>().ok())
         .filter(|n| *n > 0);
-    let actions = audit::recent(&ctx.db, 100, None, None, user_filter)
-        .await
-        .unwrap_or_default();
+
+    const PER_PAGE: usize = 50;
+    let page = qs
+        .get("page")
+        .and_then(|s| s.trim().parse::<usize>().ok())
+        .filter(|n| *n >= 1)
+        .unwrap_or(1);
+
+    let query = audit::AuditQuery {
+        search: search.as_deref(),
+        model: model_filter.as_deref(),
+        action: action_filter.as_deref(),
+        user_id: user_filter,
+        from: from_filter.as_deref(),
+        to: to_filter.as_deref(),
+        limit: PER_PAGE as i64,
+        offset: ((page - 1) * PER_PAGE) as i64,
+    };
+    let (actions, total) = audit::page(&ctx.db, &query).await.unwrap_or_default();
+    let total_rows = total.max(0) as usize;
+    let total_pages = total_rows.div_ceil(PER_PAGE).max(1);
+
+    // Rebuild the query string for a link that changes one parameter,
+    // so paging keeps the filters and a filter keeps the term.
+    let base_params: Vec<(&str, String)> = [
+        ("q", search.clone()),
+        ("action", action_filter.clone()),
+        ("model", model_filter.clone()),
+        ("from", from_filter.clone()),
+        ("to", to_filter.clone()),
+        ("user_id", user_filter.map(|u| u.to_string())),
+    ]
+    .into_iter()
+    .filter_map(|(k, v)| v.map(|v| (k, v)))
+    .collect();
+    let link_with = |extra: Option<(&str, String)>| -> String {
+        let mut parts: Vec<String> = base_params
+            .iter()
+            .filter(|(k, _)| extra.as_ref().map(|(ek, _)| ek != k).unwrap_or(true))
+            .map(|(k, v)| format!("{k}={}", urlencoding::encode(v)))
+            .collect();
+        if let Some((k, v)) = extra {
+            if !v.is_empty() {
+                parts.push(format!("{k}={}", urlencoding::encode(&v)));
+            }
+        }
+        if parts.is_empty() {
+            "/admin/history".to_string()
+        } else {
+            format!("/admin/history?{}", parts.join("&"))
+        }
+    };
+    let page_link = |n: usize| -> String {
+        if n <= 1 {
+            link_with(None)
+        } else {
+            link_with(Some(("page", n.to_string())))
+        }
+    };
+
+    // The dropdowns offer the values that exist, not a hard-coded list.
+    let action_options =
+        build_audit_options(&ctx.db, "action_type", action_filter.as_deref(), &link_with).await;
+    let model_options =
+        build_audit_options(&ctx.db, "model_name", model_filter.as_deref(), &link_with).await;
+
     // Resolve the filtered user's display label (email) so the
     // active-filter banner can render "Showing actions by <email>"
     // instead of a bare id. A missing user falls back to `#<id>`.
@@ -3580,6 +3678,14 @@ pub(crate) async fn show_log_entries(
     } else {
         None
     };
+
+    let shown = actions.len();
+    let has_filters = search.is_some()
+        || action_filter.is_some()
+        || model_filter.is_some()
+        || from_filter.is_some()
+        || to_filter.is_some()
+        || user_filter.is_some();
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::LogEntriesCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
@@ -3595,10 +3701,81 @@ pub(crate) async fn show_log_entries(
             .collect(),
         history_entries: render::map_audit_actions(actions),
         flash: None,
+        search_query: search.clone().unwrap_or_default(),
+        action_filter: action_filter.clone(),
+        model_filter: model_filter.clone(),
+        from_filter: from_filter.clone(),
+        to_filter: to_filter.clone(),
+        action_options,
+        model_options,
+        page,
+        per_page: PER_PAGE,
+        total_rows,
+        total_pages,
+        showing_from: if shown == 0 {
+            0
+        } else {
+            (page - 1) * PER_PAGE + 1
+        },
+        showing_to: (page - 1) * PER_PAGE + shown,
+        prev_page_link: (page > 1).then(|| page_link(page - 1)),
+        next_page_link: (page < total_pages).then(|| page_link(page + 1)),
+        page_items: render::audit_page_items(page, total_pages, page_link),
+        has_filters,
+        clear_filters_link: "/admin/history".to_string(),
+        user_filter,
         user_filter_label,
     };
     let body = ctx.templates.render("admin/log_entries.html", &view)?;
     Ok(Response::html(body))
+}
+
+/// The distinct values of one audit column, newest-first by frequency,
+/// as dropdown options with their links pre-baked.
+///
+/// Reads from the rows that exist rather than from a hard-coded list,
+/// so a project's own `ActionType` variants appear without a code
+/// change. Capped at 30: beyond that a dropdown is the wrong control.
+async fn build_audit_options(
+    db: &Db,
+    column: &str,
+    active: Option<&str>,
+    link_with: &impl Fn(Option<(&str, String)>) -> String,
+) -> Vec<render::AuditFilterOption> {
+    let param = if column == "action_type" {
+        "action"
+    } else {
+        "model"
+    };
+    let sql = format!(
+        "SELECT {column} AS v, COUNT(*) AS n FROM rustio_admin_actions
+         WHERE {column} IS NOT NULL AND {column} <> ''
+         GROUP BY {column} ORDER BY n DESC, v ASC LIMIT 30"
+    );
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .fetch_all(db.pool())
+        .await
+        .unwrap_or_default();
+    use sqlx::Row as _;
+    rows.iter()
+        .filter_map(|r| r.try_get::<String, &str>("v").ok())
+        .map(|value| render::AuditFilterOption {
+            label: humanise_audit_value(&value),
+            is_active: active == Some(value.as_str()),
+            link: link_with(Some((param, value.clone()))),
+            value,
+        })
+        .collect()
+}
+
+/// `password_reset` → `Password reset`; a model name is left alone
+/// because it is already the display name the audit row stored.
+fn humanise_audit_value(v: &str) -> String {
+    let mut out = v.replace('_', " ");
+    if let Some(first) = out.get_mut(0..1) {
+        first.make_ascii_uppercase();
+    }
+    out
 }
 
 // ---- Self-service password change ---------------------------------------
