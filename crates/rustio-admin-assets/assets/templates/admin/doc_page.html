@@ -1,35 +1,39 @@
 {% extends "admin/_base.html" %}
+{# A reading surface.
 
-{# Doc viewer: console masthead + a two-column reading layout. The
- # rendered markdown (`body_html`) sits in a constrained reading column
- # (`.rio-doc-prose`, ~66ch for comfortable line length); a sticky
- # "On this page" table of contents (`.rio-doc-toc`) fills the space
- # beside it on wide screens. The TOC is built client-side from the
- # doc's h2/h3 headings — see admin.js `initDocToc` — so this template
- # only ships the empty slot. Progressive enhancement: without JS the
- # prose still reads fine and the TOC stays hidden. Styling lives in
- # pages/tools.css. The markdown's own leading <h1> is hidden (CSS) so
- # the title isn't shown twice. #}
+   The prose used to sit in a shadowed card with a 12rem TOC and a lone
+   back-link in the card foot — no way to reach another document without
+   going back to the index first. Three columns now: the docs themselves
+   on the left, the prose unboxed in the middle at a reading measure, the
+   on-page nav on the right. The foot offers the next document.
 
-{# A reading/detail page: the standard measure. #}
-{% block page_measure %}rio-page--standard{% endblock %}
+   `.rio-doc-prose` typography and `initDocToc` are unchanged. #}
+{% block page_measure %}rio-page--wide{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/docs">Framework docs</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ doc_title }}</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ doc_title }}</h1>
 </div></div>
 
-<div class="rio-docpage">
-  <article class="rio-docpage-card">
+<div class="rio-docs">
+  <nav class="rio-docs-nav" aria-label="Framework documents">
+    <p class="rio-docs-nav-title">Documents</p>
+    {% for d in docs %}
+    <a class="rio-docs-nav-link" href="/admin/docs/{{ d.slug }}"{% if d.is_current %} aria-current="page"{% endif %}>{{ d.title }}</a>
+    {% endfor %}
+  </nav>
+
+  <article>
     <div class="rio-doc-prose" data-rio-doc-prose>
       {{ body_html | safe }}
     </div>
-    <div class="rio-doc-foot">
-      <a class="rio-doc-back" href="/admin/docs">← All framework docs</a>
+    <div class="rio-docs-foot">
+      {% if prev %}<a class="rio-action-link" href="/admin/docs/{{ prev.slug }}">{{ icon("arrow-left") }} {{ prev.title }}</a>{% else %}<a class="rio-action-link" href="/admin/docs">{{ icon("arrow-left") }} Framework docs</a>{% endif %}
+      {% if next %}<a class="rio-action-link rio-action-bar-end" href="/admin/docs/{{ next.slug }}">Next: {{ next.title }} {{ icon("arrow-right") }}</a>{% endif %}
     </div>
   </article>
 
-  <aside class="rio-doc-toc" data-rio-doc-toc hidden>
+  <aside class="rio-docs-toc rio-doc-toc" data-rio-doc-toc hidden>
     <p class="rio-doc-toc__title">On this page</p>
     <nav class="rio-doc-toc__nav" aria-label="On this page"></nav>
   </aside>

@@ -3330,6 +3330,22 @@ pub(crate) struct DocPageCtx {
     /// trusted boundary — markdown source is framework-owned,
     /// never user-supplied.
     pub body_html: String,
+    /// Every embedded doc, so the page can carry its own navigation
+    /// instead of a lone back-link. The current one is marked.
+    pub docs: Vec<DocNavCtx>,
+    /// The documents either side of this one in the declared order,
+    /// so the foot can offer the next thing to read.
+    pub prev: Option<DocSummaryCtx>,
+    pub next: Option<DocSummaryCtx>,
+}
+
+/// A doc in the page's own nav: the summary plus whether it is the one
+/// being read.
+#[derive(Serialize)]
+pub(crate) struct DocNavCtx {
+    pub slug: &'static str,
+    pub title: &'static str,
+    pub is_current: bool,
 }
 
 pub(crate) fn docs_index_ctx(
@@ -3362,6 +3378,10 @@ pub(crate) fn doc_page_ctx(
     csrf_token: String,
     doc: &crate::admin::docs::EmbeddedDoc,
 ) -> DocPageCtx {
+    // The declared order in `EMBEDDED_DOCS` is the reading order, so
+    // prev/next are just this doc's neighbours in that list.
+    let all = crate::admin::docs::EMBEDDED_DOCS;
+    let here = all.iter().position(|d| d.slug == doc.slug);
     DocPageCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: format!("Docs — {}", doc.title),
@@ -3373,6 +3393,25 @@ pub(crate) fn doc_page_ctx(
             .collect(),
         doc_title: doc.title,
         body_html: crate::admin::docs::render_markdown(doc.source),
+        docs: all
+            .iter()
+            .map(|d| DocNavCtx {
+                slug: d.slug,
+                title: d.title,
+                is_current: d.slug == doc.slug,
+            })
+            .collect(),
+        prev: here
+            .and_then(|i| i.checked_sub(1))
+            .and_then(|i| all.get(i))
+            .map(|d| DocSummaryCtx {
+                slug: d.slug,
+                title: d.title,
+            }),
+        next: here.and_then(|i| all.get(i + 1)).map(|d| DocSummaryCtx {
+            slug: d.slug,
+            title: d.title,
+        }),
     }
 }
 

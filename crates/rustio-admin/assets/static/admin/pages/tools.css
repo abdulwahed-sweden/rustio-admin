@@ -60,17 +60,6 @@
 @media (max-width: 720px) { .rio-api-grid { grid-template-columns: 1fr; } }
 
 /* ---- Docs index (docs_index) — moved out of the template's inline <style> ---- */
-.rio-doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--rio-s4); }
-.rio-doc-card { display: flex; align-items: center; gap: var(--rio-s4); padding: var(--rio-s5); background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
-.rio-doc-card:hover { border-color: var(--rio-accent); transform: translateY(-2px); box-shadow: var(--rio-shadow-lg); }
-.rio-doc-card__glyph { width: 46px; height: 46px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
-.rio-doc-card__glyph .rio-icon { width: 22px; height: 22px; }
-.rio-doc-card__body { min-width: 0; display: flex; flex-direction: column; }
-.rio-doc-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); transition: color .14s ease; }
-.rio-doc-card:hover .rio-doc-card__title { color: var(--rio-accent); }
-.rio-doc-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rio-doc-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-subtle); transition: transform .14s ease, color .14s ease; }
-.rio-doc-card:hover .rio-doc-card__arrow { transform: translateX(3px); color: var(--rio-accent); }
 
 /* ---- Doc page viewer (doc_page) — moved out of the template's inline <style> ---- */
 /* Doc page: a constrained reading column + a sticky "On this page" nav
@@ -78,8 +67,6 @@
  * never runs a fatiguing line length, and the TOC fills the space that
  * used to sit empty to its right. Left-aligned so the card's left edge
  * lines up with the masthead title. */
-.rio-docpage { display: grid; grid-template-columns: auto minmax(0, 12rem); gap: var(--rio-s6); align-items: start; justify-content: start; }
-.rio-docpage-card { max-width: 44rem; min-width: 0; background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); padding: var(--rio-s6); }
 .rio-doc-prose { max-width: none; color: var(--rio-text); font-size: var(--rio-fs-base); line-height: 1.7; }
 /* Anchor jumps from the TOC land below the top of the scroll area
  * (the topbar sits outside it) with a little breathing room. */
@@ -109,9 +96,6 @@
 .rio-doc-prose blockquote p:last-child { margin-bottom: 0; }
 .rio-doc-prose hr { border: 0; border-top: 1px solid var(--rio-border); margin: var(--rio-s6) 0; }
 .rio-doc-prose img { max-width: 100%; height: auto; border-radius: var(--rio-radius); }
-.rio-doc-foot { margin-top: var(--rio-s5); }
-.rio-doc-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--rio-accent2-ink, var(--rio-accent)); font-weight: var(--rio-fw-semibold); font-size: var(--rio-fs-sm); }
-.rio-doc-back:hover { color: var(--rio-accent2, var(--rio-accent)); }
 
 /* "On this page" — sticky on-page table of contents, populated by
  * admin.js `initDocToc`. Hidden until JS reveals it (and only when the
@@ -127,8 +111,6 @@
 
 /* Narrow screens: single column, drop the side nav, let the card fill. */
 @media (max-width: 900px) {
-  .rio-docpage { grid-template-columns: 1fr; }
-  .rio-docpage-card { max-width: none; }
   .rio-doc-toc { display: none; }
 }
 

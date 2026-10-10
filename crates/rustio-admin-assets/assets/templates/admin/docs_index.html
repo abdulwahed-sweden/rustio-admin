@@ -1,44 +1,39 @@
 {% extends "admin/_base.html" %}
-
-{# Framework-docs index: a responsive grid of doc cards with a glyph,
- # title, and source path. Chrome matches the console masthead; styling
- # lives in pages/tools.css (`.rio-doc-*`). #}
-
-{# A reading/detail page: the standard measure. #}
+{# The docs index: a numbered reading list, not three hover-lifting
+   glyph cards. Three links do not need a card grid; they need an order
+   and a path. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">
-    Read the framework's own documentation inside the admin chrome. Source lives at
-    <code>docs/*.md</code> in the <code>rustio-admin</code> repository; rendered server-side via pulldown-cmark.
-  </p>
 </div></div>
 
+<p class="rio-dash-facts">
+  <span><strong>{{ docs|length }}</strong> document{% if docs|length != 1 %}s{% endif %}</span>
+  <span>rendered server-side from <code>docs/*.md</code></span>
+  <span>rustio-admin <strong>{{ framework_version }}</strong></span>
+</p>
+
 {% if docs %}
-<div class="rio-doc-grid">
-  {% for d in docs %}
-  <a href="/admin/docs/{{ d.slug }}" class="rio-doc-card">
-    <span class="rio-doc-card__glyph">{{ icon("bookmark", class="rio-icon") }}</span>
-    <span class="rio-doc-card__body">
-      <span class="rio-doc-card__title">{{ d.title }}</span>
-      <span class="rio-doc-card__path">/admin/docs/{{ d.slug }}</span>
-    </span>
-    <span class="rio-doc-card__arrow" aria-hidden="true">→</span>
-  </a>
-  {% endfor %}
+<div class="rio-board">
+  <div class="rio-board-title"><h2>Documents</h2></div>
+  <ol class="rio-docs-list">
+    {% for d in docs %}
+    <li>
+      <a class="rio-docs-item" href="/admin/docs/{{ d.slug }}">
+        <span class="rio-docs-item-title">{{ d.title }}</span>
+        <span class="rio-docs-item-path">/admin/docs/{{ d.slug }}</span>
+      </a>
+      <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/docs/{{ d.slug }}">Read</a>
+    </li>
+    {% endfor %}
+  </ol>
 </div>
 {% else %}
-<div class="rio-card rio-card--quiet">
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No embedded docs registered</h3>
-    <p class="rio-empty-state__lead">
-      Drop a markdown file under <code>crates/rustio-admin/assets/docs/</code>
-      and register it in <code>src/admin/docs.rs</code> — it appears here next build.
-    </p>
-  </div>
-</div>
+<div class="rio-board"><div class="rio-empty">
+  <div class="rio-empty-title">No embedded docs registered</div>
+  <div>Drop a markdown file under <code>crates/rustio-admin/assets/docs/</code> and register it in <code>src/admin/docs.rs</code> — it appears here next build.</div>
+</div></div>
 {% endif %}
 {% endblock %}
