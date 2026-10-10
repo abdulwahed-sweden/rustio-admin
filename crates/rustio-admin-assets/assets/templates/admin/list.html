@@ -99,13 +99,12 @@
 
 {# ---- Find row: search · filters · (Reset) · count ---- #}
 <div class="rio-find">
-  <form method="get" action="/admin/{{ admin_name }}" class="rio-search rio-find-search{% if search_query %} rio-search--filled{% endif %}" role="search">
+  <form method="get" action="/admin/{{ admin_name }}" class="rio-search rio-find-search" role="search">
     <span class="rio-search-icon">{{ icon("search") }}</span>
     <input class="rio-input" type="search" name="q" value="{{ search_query }}" placeholder="Search {{ display_name|lower }}…" aria-label="Search">
     {% for pair in active_filter_pairs %}<input type="hidden" name="{{ pair[0] }}" value="{{ pair[1] }}">{% endfor %}
     {% if active_sort_field %}<input type="hidden" name="sort" value="{{ active_sort_field }}"><input type="hidden" name="dir" value="{{ active_sort_dir }}">{% endif %}
     {% if active_per_page_override %}<input type="hidden" name="per_page" value="{{ active_per_page_override }}">{% endif %}
-    <button type="submit" class="rio-search-go" tabindex="-1">Search</button>
   </form>
 
   {% if filters %}

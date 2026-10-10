@@ -82,70 +82,12 @@ textarea.rio-input {
   color: var(--rio-text-faint);
   pointer-events: none;
 }
-/* Large variant — the prominent list search */
-.rio-search--lg .rio-input { block-size: var(--rio-ctl); padding-inline-start: 38px; font-size: var(--rio-text-15); border-radius: var(--rio-radius-control); }
-.rio-search--lg .rio-search-icon { inset-inline-start: 15px; inline-size: 18px; block-size: 18px; }
-
-/* Hero variant — the page's visual focal point.
-   Stronger 1.5px frame, soft lift, and a clear accent focus ring so any user
-   spots it instantly. A "Search" action button reveals on hover / focus. */
-.rio-search--hero .rio-input {
-  block-size: var(--rio-ctl);
-  border-width: 1px;
-  border-color: var(--rio-field-line);
-  background: var(--rio-surface);
-  padding-inline-start: 38px;
-  padding-inline-end: 116px; /* room for clear + reveal button */
-  font-size: var(--rio-text-14);
-  transition: border-color var(--rio-dur-base) var(--rio-ease),
-              box-shadow var(--rio-dur-base) var(--rio-ease);
-}
-.rio-search--hero .rio-search-icon { color: var(--rio-text-mute); inset-inline-start: 14px; inline-size: 17px; block-size: 17px; transition: color var(--rio-dur-base) var(--rio-ease); }
-.rio-search--hero:hover .rio-input { border-color: var(--rio-line-strong); }
-.rio-search--hero:focus-within .rio-input {
-  outline: 3px solid var(--rio-accent-focus);
-  outline-offset: 2px;
-  border-color: var(--rio-accent-focus);
-}
-.rio-search--hero:focus-within .rio-search-icon { color: var(--rio-text-mute); }
-
-/* Reveal-on-hover "Search" button — slides in from the trailing edge.
-   When the field has text (--filled) it shifts left to clear the × button. */
-.rio-search-go {
-  position: absolute;
-  inset-inline-end: 6px;
-  inset-block-start: 50%;
-  display: inline-flex; align-items: center; gap: 6px;
-  block-size: var(--rio-ctl-sm); padding: 0 var(--rio-space-12);
-  font-family: var(--rio-font-body);
-  font-size: var(--rio-text-12); font-weight: var(--rio-weight-button-sm);
-  color: var(--rio-on-solid);
-  background: var(--rio-rust-solid);
-  border: 0; border-radius: var(--rio-radius-sm);
-  cursor: pointer; white-space: nowrap;
-  opacity: 0;
-  transform: translateY(-50%) translateX(8px) scale(0.96);
-  transform-origin: center right;
-  pointer-events: none;
-  transition: opacity var(--rio-dur-base) var(--rio-ease),
-              transform var(--rio-dur-base) var(--rio-ease),
-              background var(--rio-dur-fast) var(--rio-ease);
-}
-.rio-search--hero:hover .rio-search-go,
-.rio-search--hero:focus-within .rio-search-go {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0) scale(1);
-  pointer-events: auto;
-}
-.rio-search-go:hover { background: var(--rio-rust-solid-hover); }
-.rio-search-go:active { background: var(--rio-rust-solid-active); }
-.rio-search-go svg { inline-size: 15px; block-size: 15px; }
-.rio-search--filled .rio-search-go { inset-inline-end: 40px; }
-@media (prefers-reduced-motion: reduce) {
-  .rio-search-go { transition: opacity var(--rio-dur-fast) var(--rio-ease); transform: translateY(-50%); }
-  .rio-search--hero:hover .rio-search-go,
-  .rio-search--hero:focus-within .rio-search-go { transform: translateY(-50%); }
-}
+/* The list's find row uses the base `.rio-search` at `--rio-ctl`. The
+   `--lg` and `--hero` variants are gone with the hero search they dressed,
+   and so is the reveal-on-hover "Search" button: `--hero` was the only
+   thing that ever revealed it, so once the find row dropped that class the
+   button was a submit control nothing could show and nobody could press.
+   The form submits on Enter, as it always did. */
 
 /* Clear (×) button — sits at the trailing edge whenever there's a query */
 .rio-search-clear {
@@ -175,7 +117,6 @@ textarea.rio-input {
 .rio-search--button:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
 .rio-search--button:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 .rio-search-placeholder { font-size: var(--rio-text-14); }
-.rio-search--hero .rio-input::placeholder { color: var(--rio-text-faint); }
 
 /* ============================================================
    Boolean field — a 38px bordered row (VISUAL-CONTRACT.md §5)
