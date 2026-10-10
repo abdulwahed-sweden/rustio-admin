@@ -4085,7 +4085,10 @@ pub(crate) fn health_ctx(
         }
     }
     let all_ok = warn_count == 0 && error_count == 0;
-    let ctx_checks: Vec<HealthCheckCtx> = checks
+    // Failing first. A status page is read top-down for what is wrong;
+    // a passing check that sorts above a failing one costs the operator
+    // the scan. Stable within a severity, so the declared order holds.
+    let mut ctx_checks: Vec<HealthCheckCtx> = checks
         .into_iter()
         .map(|c| HealthCheckCtx {
             label: c.label,
@@ -4093,6 +4096,11 @@ pub(crate) fn health_ctx(
             message: c.message,
         })
         .collect();
+    ctx_checks.sort_by_key(|c| match c.status {
+        "error" => 0u8,
+        "warn" => 1,
+        _ => 2,
+    });
     HealthCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: "Health",

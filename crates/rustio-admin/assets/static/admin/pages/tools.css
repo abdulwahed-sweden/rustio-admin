@@ -15,9 +15,6 @@
  * (mono, dotted) was removed so there is one pill system. */
 
 /* ---- Health page ---- */
-.rio-health__summary { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-16); }
-.rio-health__row--error td { background: var(--rio-danger-tint); }
-.rio-health__row--warn td { background: var(--rio-warn-tint); }
 
 /* ---- Avatar + "by" ---- */
 
