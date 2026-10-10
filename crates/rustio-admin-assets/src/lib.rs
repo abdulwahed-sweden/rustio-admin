@@ -221,6 +221,10 @@ pub const EMBEDDED_TEMPLATES: &[(&str, &str)] = &[
         "admin/reset_password.html",
         include_str!("../assets/templates/admin/reset_password.html"),
     ),
+    (
+        "admin/search.html",
+        include_str!("../assets/templates/admin/search.html"),
+    ),
     // Organisational recovery (R2)
     //
     // These pages are rendered by `admin/admin_recovery_handlers.rs`

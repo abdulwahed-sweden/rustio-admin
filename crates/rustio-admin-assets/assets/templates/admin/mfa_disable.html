@@ -4,12 +4,12 @@
 {% block content %}
 <div class="rio-form-shell">
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <span>Disable two-factor</span>
-  </nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Disable two-factor</span></nav>
+<div class="rio-masthead-top">
+<div>
   <h1>Disable two-factor authentication</h1>
-</header>
+</div>
+</div>
 
 {% if error %}
 <div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>

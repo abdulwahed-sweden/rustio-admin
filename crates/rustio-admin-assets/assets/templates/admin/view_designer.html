@@ -1,36 +1,45 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
+{# The designer index: a table, which is what a list of models each with
+   a state and one action is. The hand-drawn card list it replaces was a
+   table without the alignment. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">
-    Record how each model is displayed as a saved, versioned <code>ViewSpec</code>.
-    The renderer reads the saved spec deterministically; inference only seeds a draft to edit.
-    <span class="rio-vd-flag">deterministic · no AI at runtime</span>
-  </p>
 </div></div>
 
+<p class="rio-dash-facts">
+  <span><strong>{{ models|length }}</strong> model{% if models|length != 1 %}s{% endif %}</span>
+  <span>the renderer reads the saved <code>ViewSpec</code>; inference only seeds a draft</span>
+  <span>deterministic · no AI at runtime</span>
+</p>
+
 {% if models %}
-<ul class="rio-vd-picker">
-  {% for m in models %}
-  <li class="rio-vd-pick">
-    <a class="rio-vd-pick__main" href="/admin/dev/view-designer/{{ m.admin_name }}">
-      <span class="rio-vd-pick__name">{{ m.display_name }}</span>
-      <code class="rio-vd-pick__slug">{{ m.admin_name }}</code>
-    </a>
-    {% if m.is_saved %}<span class="rio-pill rio-pill--on">saved</span>{% else %}<span class="rio-pill rio-pill--off">draft</span>{% endif %}
-    <a class="rio-btn rio-btn--secondary rio-btn--sm" href="/admin/dev/view-designer/{{ m.admin_name }}">Design →</a>
-  </li>
-  {% endfor %}
-</ul>
-{% else %}
-<div class="rio-card rio-card--quiet">
-  <div class="rio-empty-state">
-    <h3 class="rio-empty-state__title">No project models registered</h3>
-    <p class="rio-empty-state__lead">Register a model with <code>Admin::model::&lt;M&gt;()</code> to design its view.</p>
+<div class="rio-board">
+  <div class="rio-board-title"><h2>Models</h2></div>
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops">
+      <thead><tr><th>Model</th><th>Slug</th><th>Spec</th><th class="col-act"><span class="rio-sr-only">Actions</span></th></tr></thead>
+      <tbody>
+        {% for m in models %}
+        <tr>
+          <td class="rio-cell-fit"><a class="rio-cell-primary" href="/admin/dev/view-designer/{{ m.admin_name }}">{{ m.display_name }}</a></td>
+          <td class="rio-cell-meta"><code>{{ m.admin_name }}</code></td>
+          <td>{% if m.is_saved %}<span class="rio-pill rio-pill--on">saved</span>{% else %}<span class="rio-pill rio-pill--neutral">draft</span>{% endif %}</td>
+          <td class="col-act"><span class="rio-row-actions">
+            <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/dev/view-designer/{{ m.admin_name }}">Design</a>
+          </span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
+{% else %}
+<div class="rio-board"><div class="rio-empty">
+  <div class="rio-empty-title">No project models registered</div>
+  <div>Register a model with <code>Admin::model::&lt;M&gt;()</code> to design its view.</div>
+</div></div>
 {% endif %}
 {% endblock %}

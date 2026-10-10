@@ -413,7 +413,13 @@
       const n = resultItems.length;
       selectedIndex = ((idx % n) + n) % n;
       resultItems.forEach((el, i) => {
-        el.classList.toggle("is-selected", i === selectedIndex);
+        const on = i === selectedIndex;
+        el.classList.toggle("is-selected", on);
+        // The highlighted row says what Enter does; the rest say
+        // where they go. One hint changes rather than every row
+        // carrying the key.
+        const hint = el.querySelector(".rio-search-palette__result-hint");
+        if (hint) hint.textContent = on ? "\u21b5 open" : "edit";
       });
       resultItems[selectedIndex].scrollIntoView({ block: "nearest" });
       // Screen-reader announcement of the visually-highlighted
@@ -433,6 +439,17 @@
         empty.className = "rio-search-palette__empty";
         empty.textContent = "No results.";
         list.appendChild(empty);
+        const term = input.value.trim();
+        if (term) {
+          const foot = document.createElement("li");
+          foot.className = "rio-search-palette__foot";
+          foot.setAttribute("role", "presentation");
+          const all = document.createElement("a");
+          all.href = "/admin/search?q=" + encodeURIComponent(term);
+          all.textContent = "Search every model for \u201c" + term + "\u201d \u2192";
+          foot.appendChild(all);
+          list.appendChild(foot);
+        }
         return;
       }
       // Group by model_label preserving server-side order. The
@@ -456,6 +473,12 @@
         heading.className = "rio-search-palette__group-label";
         heading.id = headingId;
         heading.textContent = label;
+        // The count tells the operator whether the palette is showing
+        // everything this model matched or only the first few.
+        const n = document.createElement("span");
+        n.className = "rio-meta";
+        n.textContent = String(rows.length);
+        heading.appendChild(n);
         group.appendChild(heading);
         rows.forEach((r) => {
           const a = document.createElement("a");
@@ -471,11 +494,34 @@
           text.className = "rio-search-palette__result-label";
           text.textContent = r.label;
           a.appendChild(text);
+          // Say what activating this row does. The highlighted one
+          // shows the key; the rest say where they go.
+          const hint = document.createElement("span");
+          hint.className = "rio-search-palette__result-hint";
+          hint.textContent = "edit";
+          a.appendChild(hint);
           group.appendChild(a);
           resultItems.push(a);
         });
         list.appendChild(group);
       });
+      // A foot that names the keys and offers the result page, which
+      // is where "see everything that matched" lives.
+      const foot = document.createElement("li");
+      foot.className = "rio-search-palette__foot";
+      foot.setAttribute("role", "presentation");
+      const keys = document.createElement("span");
+      keys.innerHTML =
+        '<span class="rio-kbd">\u2191</span><span class="rio-kbd">\u2193</span> move' +
+        ' <span class="rio-kbd">\u21b5</span> open' +
+        ' <span class="rio-kbd">Esc</span> close';
+      foot.appendChild(keys);
+      const all = document.createElement("a");
+      all.href = "/admin/search?q=" + encodeURIComponent(input.value.trim());
+      all.textContent = "All results for \u201c" + input.value.trim() + "\u201d \u2192";
+      foot.appendChild(all);
+      list.appendChild(foot);
+
       // Default the highlight to the first result so Enter has an
       // unambiguous target right away.
       setSelected(0);

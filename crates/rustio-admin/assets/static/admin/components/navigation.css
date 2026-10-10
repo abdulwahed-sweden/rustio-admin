@@ -78,6 +78,14 @@
 .rio-appfoot-links a { color: var(--rio-text-mute); text-decoration: none; }
 .rio-appfoot-links a:hover { color: var(--rio-text-hi); }
 .rio-appfoot-meta { margin-inline-start: auto; font-family: var(--rio-font-body); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
+/* The meta is pushed to the far edge by `margin-inline-start: auto` and does
+   not wrap, so on a phone it rode 113px past the viewport and every console
+   page scrolled sideways. Below 760 the row wraps and the meta takes its own
+   full-width line instead of being pushed off the end of one. */
+@media (max-width: 760px) {
+  .rio-appfoot-inner { flex-wrap: wrap; }
+  .rio-appfoot-meta { margin-inline-start: 0; flex-basis: 100%; }
+}
 
 /* Environment badge. Quiet by default — it states the stage, it does
    not compete with the search or the module row beside it. Only a
@@ -210,8 +218,11 @@
 .rio-search-palette__input::-webkit-search-cancel-button { display: none; }
 .rio-search-palette__results { list-style: none; margin: 0; padding: 8px; overflow: auto; }
 .rio-search-palette__group { display: block; margin-block-end: 4px; }
+/* The result count is a child of this label, so without a gap the two
+   run together — "CUSTOMERS2". */
 .rio-search-palette__group-label {
-  display: block; padding: 8px 12px 4px;
+  display: flex; align-items: baseline; gap: var(--rio-space-8);
+  padding: 8px 12px 4px;
   font-size: var(--rio-text-12); font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--rio-text-mute);
 }

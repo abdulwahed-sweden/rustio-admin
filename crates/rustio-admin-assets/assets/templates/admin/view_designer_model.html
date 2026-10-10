@@ -1,30 +1,29 @@
 {% extends "admin/_base.html" %}
-{# A data page: wide tables take the wide measure. #}
+{# The wide measure: a field row carries a role select, a filter toggle,
+   a priority field and two reorder buttons beside the field name, and the
+   preview beneath it renders at the width the list page will. #}
 {% block page_measure %}rio-page--wide{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/dev/view-designer">View designer</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ display_name }}</span></nav>
 <div class="rio-masthead-top">
   <div>
     <h1>Composition editor</h1>
-    <p class="rio-masthead-desc">
-      Define how {{ display_name }} renders — the editor only produces a <code>ViewSpec</code>.
-      <span class="rio-vd-flag">deterministic · no AI at runtime</span>
-    </p>
+    <p class="rio-masthead-desc">Define how {{ display_name }} renders — the editor only produces a <code>ViewSpec</code>.</p>
+    <p class="rio-masthead-flags"><span class="rio-vd-flag">deterministic · no AI at runtime</span></p>
   </div>
   <div class="rio-masthead-cta">
     <span class="rio-vd-chip">Primary developer</span>
-    <button type="submit" form="vdform" class="rio-btn rio-btn--primary rio-btn--md">Save ViewSpec</button>
   </div>
 </div>
 
 {% if flash %}<div class="rio-alert rio-alert--{{ flash.kind }}" role="status">{{ flash.message }}</div>{% endif %}
 
 {# ---- Live preview (server-rendered through the runtime render core) ---- #}
-<section class="rio-vd-preview" aria-label="Live preview">
-  <header class="rio-vd-preview__head">
-    <span class="rio-vd-preview__title">Live preview <span class="rio-meta">· {{ preview.mode }} mode</span></span>
-    <span class="rio-vd-flag rio-vd-flag--quiet">deterministic · no AI</span>
-  </header>
+<div class="rio-board rio-vd-preview">
+  <div class="rio-board-title">
+    <h2>Live preview</h2>
+    <span class="rio-meta">{{ preview.mode }} mode · reflects the last saved state</span>
+  </div>
   <div class="rio-vd-filters">
     <span class="rio-vd-filters__label">Filters</span>
     {% for f in fields %}{% if f.filterable %}<span class="rio-vd-chip rio-vd-chip--filter">{{ f.label }}</span>{% endif %}{% endfor %}
@@ -38,14 +37,14 @@
       {% endfor %}
     </div>
   </div>
-  <p class="rio-vd-note">Reflects the last <strong>saved</strong> state — save to refresh the preview.</p>
-</section>
+</div>
 
-<form id="vdform" method="post" action="/admin/dev/view-designer/{{ admin_name }}/save" data-rio-vd>
+<form id="vdform" method="post" action="/admin/dev/view-designer/{{ admin_name }}/save" class="rio-form rio-form-card" data-rio-vd>
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 
   {# ---- Modes ---- #}
-  <section class="rio-vd-modes" aria-label="Modes">
+  <fieldset class="rio-fieldset rio-vd-modes">
+    <legend class="rio-fieldset-legend">Modes</legend>
     <label class="rio-vd-mode-default">
       <span>Default mode</span>
       <select name="default_mode" class="rio-input">
@@ -61,14 +60,12 @@
       </label>
       {% endfor %}
     </div>
-  </section>
+  </fieldset>
 
   {# ---- Fields as rows ---- #}
-  <section class="rio-vd-fields" aria-label="Fields">
-    <header class="rio-vd-fields__head">
-      <h2 class="rio-vd-fields__title">Fields</h2>
-      <span class="rio-meta">Set a role · toggle filter · reorder</span>
-    </header>
+  <fieldset class="rio-fieldset">
+    <legend class="rio-fieldset-legend">Fields</legend>
+    <p class="rio-field-hint">Set a role, toggle its filter, reorder.</p>
     <ul class="rio-vd-rows">
       {% for field in fields %}
       <li class="rio-vd-row" data-rio-vd-row>
@@ -96,14 +93,12 @@
       </li>
       {% endfor %}
     </ul>
-  </section>
+  </fieldset>
 
   {# ---- Compositions (merge fields into one cell) ---- #}
-  <section class="rio-vd-comp" aria-label="Compositions">
-    <header class="rio-vd-fields__head">
-      <h2 class="rio-vd-fields__title">Merge fields into one cell</h2>
-      <span class="rio-meta">Optional — combine a primary with secondaries (e.g. name over email)</span>
-    </header>
+  <fieldset class="rio-fieldset rio-vd-comp">
+    <legend class="rio-fieldset-legend">Compositions</legend>
+    <p class="rio-field-hint">Optional — merge fields into one cell by combining a primary with secondaries (name over email, say).</p>
     {% for slot in comp_slots %}
     <fieldset class="rio-vd-slot">
       <legend>Composition {{ slot.index }}</legend>
@@ -134,19 +129,15 @@
       </div>
     </fieldset>
     {% endfor %}
-  </section>
+  </fieldset>
 
-  <div class="rio-vd-save"><button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Save ViewSpec</button></div>
+  <div class="rio-form-actions"><button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Save ViewSpec</button></div>
 </form>
 
 {# ---- Generated ViewSpec (the single source of truth) ---- #}
-<section class="rio-vd-json" aria-label="Generated ViewSpec">
-  <header class="rio-vd-json__bar">
-    <span class="rio-vd-json__dots" aria-hidden="true"><i></i><i></i><i></i></span>
-    <span class="rio-vd-json__name">{{ admin_name }}.viewspec.json</span>
-    <span class="rio-vd-json__hint">generated from the editor above</span>
-  </header>
-  <pre class="rio-vd-json__body"><code>{{ spec_json }}</code></pre>
-  <footer class="rio-vd-json__foot">{% if is_saved %}Saved{% else %}Draft — not yet saved{% endif %} · Ready.</footer>
-</section>
+<aside class="rio-facts rio-vd-spec">
+  <h2 class="rio-facts-title">Generated ViewSpec</h2>
+  <pre class="rio-code"><code>{{ spec_json }}</code></pre>
+  <p class="rio-facts-note">{% if is_saved %}Saved{% else %}Draft — not yet saved{% endif %} · <code>{{ admin_name }}.viewspec.json</code></p>
+</aside>
 {% endblock %}

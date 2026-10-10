@@ -3,21 +3,17 @@
 {% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
+<div class="rio-form-layout rio-form-layout--single">
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> ·
-    <a href="/admin/users">Users</a> ·
-    <a href="/admin/users/{{ target_user_id }}/edit">{{ target_email }}</a> ·
-    <span>Lock</span>
-  </nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><a href="/admin/users/{{ target_user_id }}/edit">{{ target_email }}</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Lock</span></nav>
+<div class="rio-masthead-top">
+<div>
   <h1>Lock account</h1>
-  <p class="rio-page-header__lead">
-    Applies a manual lock to <strong>{{ target_email }}</strong>. Sessions
+  <p class="rio-masthead-desc">Applies a manual lock to <strong>{{ target_email }}</strong>. Sessions
     revoke immediately; sign-in is refused until the lock expires (or an
-    admin unlocks the account).
-  </p>
-</header>
+    admin unlocks the account).</p>
+</div>
+</div>
 
 {% if errors %}
 <div class="rio-alert rio-alert--danger" role="alert">
@@ -25,11 +21,12 @@
 </div>
 {% endif %}
 
-<form method="post" action="/admin/users/{{ target_user_id }}/lock" class="rio-form">
+<form method="post" action="/admin/users/{{ target_user_id }}/lock" class="rio-form rio-form-card">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 
   <fieldset class="rio-fieldset">
     <legend>Duration</legend>
+    <div class="rio-radio-list">
     <label class="rio-radio">
       <input type="radio" name="duration" value="15min"{% if duration == "15min" %} checked{% endif %}>
       <span><strong>15 minutes</strong></span>
@@ -76,6 +73,7 @@
       Reason
       <span class="rio-meta">(audited; minimum 8 characters)</span>
     </label>
+    </div>
     <textarea
       id="rio-reason"
       name="reason"
@@ -98,5 +96,6 @@
   </div>
 </form>
 
+</div>
 </div>
 {% endblock %}

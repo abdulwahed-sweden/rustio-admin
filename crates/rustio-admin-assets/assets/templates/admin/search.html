@@ -1,0 +1,95 @@
+{% extends "admin/_base.html" %}
+{# The search PAGE — not the ⌘K palette.
+
+   The palette jumps to one record: five per model, gated on `change`
+   because it links to the edit page, Enter opens the highlighted one.
+   This page shows and compares every match: grouped per model with
+   counts, gated on `view` because every link it offers is view-gated,
+   and each group hands off to that model's own list with the term
+   carried, where the filters, sort, pages and bulk actions live.
+
+   Three states: no query, no results, results. #}
+{% block page_measure %}rio-page--standard rio-c-list{% endblock %}
+{% block content %}
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Search</span></nav>
+<div class="rio-masthead-top"><div>
+  <h1>Search</h1>
+</div></div>
+
+<form class="rio-find rio-find--page" method="get" action="/admin/search" role="search">
+  <label class="rio-search rio-find-search">
+    <span class="rio-sr-only">Search every model</span>
+    {{ icon("search") }}
+    <input class="rio-input" type="search" name="q" value="{{ query }}" placeholder="Search every model…" autofocus>
+  </label>
+  {% if scope != "all" %}<input type="hidden" name="scope" value="{{ scope }}">{% endif %}
+  <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Search</button>
+</form>
+
+{% if scopes and query %}
+<nav class="rio-scope" aria-label="Search scope">
+  <a href="{{ all_link }}"{% if scope == "all" %} aria-current="true"{% endif %}>All</a>
+  {% for s in scopes %}
+  <a href="{{ s.link }}"{% if s.is_active %} aria-current="true"{% endif %}>{{ s.display_name }}{% if s.count > 0 %} <span class="rio-meta">{{ s.count }}</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+{% if has_query %}
+  {% if groups %}
+  <p class="rio-dash-facts">
+    <span><strong>{{ result_count }}</strong> result{% if result_count != 1 %}s{% endif %} in <strong>{{ model_count }}</strong> model{% if model_count != 1 %}s{% endif %} for &ldquo;{{ query }}&rdquo;</span>
+    <span>searches the fields each model declares searchable</span>
+  </p>
+
+  {% for g in groups %}
+  <div class="rio-board rio-search-group">
+    <div class="rio-board-title">
+      <h2>{{ g.display_name }}</h2>
+      <span class="rio-meta">{{ g.shown }} of {{ g.total }}</span>
+      <a class="rio-action-link rio-board-title-action" href="{{ g.list_link }}">Search inside {{ g.display_name }} {{ icon("arrow-right") }}</a>
+    </div>
+    <div class="rio-tablewrap">
+      <table class="rio-dtable rio-dtable--ops">
+        <thead><tr><th>Record</th><th>Context</th><th class="col-act"><span class="rio-sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {% for r in g.rows %}
+          <tr>
+            <td class="rio-cell-fit"><a class="rio-cell-primary" href="{{ r.edit_url }}">{{ r.label }}</a></td>
+            <td class="rio-cell-meta">{{ r.cells | join(" · ") }}</td>
+            <td class="col-act"><span class="rio-row-actions">
+              <a class="rio-btn rio-btn--quiet rio-btn--sm" href="{{ r.edit_url }}">Edit</a>
+              <a class="rio-btn rio-btn--quiet rio-btn--sm" href="{{ r.history_url }}">History</a>
+            </span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div class="rio-board"><div class="rio-empty rio-empty--filtered">
+    <div class="rio-empty-title">No results for &ldquo;{{ query }}&rdquo;</div>
+    <div>Try a shorter term, or a different spelling. Each model searches only the fields it declares searchable.</div>
+    {% if scopes %}
+    <div class="rio-search-empty-models">
+      {% for s in scopes %}<a class="rio-btn rio-btn--secondary rio-btn--sm" href="{{ s.list_link }}">Search inside {{ s.display_name }}</a>{% endfor %}
+    </div>
+    {% endif %}
+  </div></div>
+  {% endif %}
+{% else %}
+<div class="rio-board"><div class="rio-empty">
+  <div class="rio-empty-title">Search every model</div>
+  <div>Type a term above to search the fields each model declares searchable. Results are grouped by model, with a way into each model's own filtered list.</div>
+  {% if scopes %}
+  <div class="rio-search-empty-models">
+    {% for s in scopes %}<a class="rio-btn rio-btn--secondary rio-btn--sm" href="/admin/{{ s.admin_name }}">{{ s.display_name }}</a>{% endfor %}
+  </div>
+  {% endif %}
+  <p class="rio-search-hint">Looking to jump straight to one record? Press <span class="rio-kbd">⌘</span><span class="rio-kbd">K</span>.</p>
+</div></div>
+{% endif %}
+{% endblock %}

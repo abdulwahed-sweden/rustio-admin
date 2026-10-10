@@ -636,6 +636,10 @@ pub(crate) struct AccountSessionsCtx {
     pub page_title: &'static str,
     pub entries: Vec<SidebarEntry>,
     pub sessions: Vec<AccountSessionRowCtx>,
+    /// Sessions other than this one. The page bands and the bulk
+    /// action key off it, so it is counted once here rather than
+    /// filtered twice in the template.
+    pub other_count: usize,
 }
 
 #[derive(Serialize)]
@@ -657,7 +661,7 @@ pub(crate) fn account_sessions_ctx(
     current_session_id: Option<i64>,
     csrf_token: String,
 ) -> AccountSessionsCtx {
-    let rows = sessions
+    let rows: Vec<AccountSessionRowCtx> = sessions
         .into_iter()
         .map(|s| AccountSessionRowCtx {
             session_id: s.session_id,
@@ -671,8 +675,10 @@ pub(crate) fn account_sessions_ctx(
         })
         .collect();
 
+    let other_count = rows.iter().filter(|r| !r.is_current).count();
     AccountSessionsCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
+        other_count,
         page_title: "Active sessions",
         entries: admin
             .entries()
@@ -1229,6 +1235,17 @@ pub(crate) enum PageItem {
 /// that the list compresses to first, current ± 1, last with `…` in
 /// the gaps. The build_link closure handles URL composition so this
 /// helper stays unaware of search / filter / sort state.
+/// The numbered-page strip for the audit page. Thin wrapper so the
+/// handler does not need `build_page_items`' private visibility; the
+/// compression rules are identical to the list page's.
+pub(crate) fn audit_page_items(
+    current: usize,
+    total: usize,
+    build_link: impl Fn(usize) -> String,
+) -> Vec<PageItem> {
+    build_page_items(current, total, build_link)
+}
+
 fn build_page_items(
     current: usize,
     total: usize,
@@ -3208,6 +3225,13 @@ pub(crate) struct HistoryEntryCtx {
     pub model_admin_name: String,
     pub object_id: i64,
     pub summary: String,
+    /// `HH:MM` of the audit timestamp. The day is the band above the
+    /// row, so the row itself only needs the clock.
+    pub time_hm: String,
+    /// The request's UUID v7, shared by every row written under one
+    /// HTTP request. Shown in the opened event so an operator can tie
+    /// several rows back to one action.
+    pub correlation_id: Option<String>,
     pub ip_address: String,
     /// Per-field before/after diff extracted from
     /// `audit_action.metadata.changes`. Empty when the row carries
@@ -3279,6 +3303,76 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
     }
 }
 
+/// The `/admin/search` page.
+///
+/// Distinct from the `⌘K` palette on purpose (see `SPEC-COMPLETION.md`):
+/// the palette jumps to one record and gates on `change` because it
+/// links to the edit page; this page shows and compares every match and
+/// gates on `view`, because every link it offers is view-gated.
+#[derive(Serialize)]
+pub(crate) struct SearchPageCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    /// The term as typed, echoed into the field and the copy.
+    pub query: String,
+    /// `all` or an `admin_name` — which models were searched.
+    pub scope: String,
+    /// One group per model that returned at least one row.
+    pub groups: Vec<SearchGroupCtx>,
+    /// Every searchable model, for the scope row and the no-query
+    /// state's entry points — including the ones with no match.
+    pub scopes: Vec<SearchScopeCtx>,
+    pub result_count: usize,
+    pub model_count: usize,
+    /// True once a term long enough to search has been submitted.
+    pub has_query: bool,
+    /// The scope row's "All" link — the current term with no scope.
+    /// Built here rather than in the template because percent-encoding
+    /// the term is the handler's job (minijinja ships no `urlencode`
+    /// filter in this build).
+    pub all_link: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SearchScopeCtx {
+    pub admin_name: String,
+    pub display_name: String,
+    pub count: usize,
+    pub is_active: bool,
+    /// Narrow this page to that one model.
+    pub link: String,
+    /// Hand off to that model's own list with the term carried — the
+    /// no-results state's way out.
+    pub list_link: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SearchGroupCtx {
+    pub admin_name: String,
+    pub display_name: String,
+    /// Rows shown versus rows that matched — the band states both when
+    /// the page is capped.
+    pub shown: usize,
+    pub total: usize,
+    /// `/admin/<model>?q=<term>` — the hand-off to that model's own
+    /// filtered list, with its filters, sort, pages and bulk actions.
+    pub list_link: String,
+    pub rows: Vec<SearchRowCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SearchRowCtx {
+    pub id: i64,
+    pub label: String,
+    /// The same display cells the list page would show, minus the
+    /// identity column that is already the label.
+    pub cells: Vec<String>,
+    pub edit_url: String,
+    pub history_url: String,
+}
+
 #[derive(Serialize)]
 pub(crate) struct DocsIndexCtx {
     #[serde(flatten)]
@@ -3292,6 +3386,13 @@ pub(crate) struct DocsIndexCtx {
 pub(crate) struct DocSummaryCtx {
     pub slug: &'static str,
     pub title: &'static str,
+    /// The document's opening sentence, flattened to plain text — see
+    /// [`crate::admin::docs::summary`]. Derived, so the index can never
+    /// describe a document as something it no longer is.
+    pub summary: String,
+    /// How many `##` sections it holds, so the shape of a document is
+    /// legible before it is opened.
+    pub sections: usize,
 }
 
 #[derive(Serialize)]
@@ -3301,11 +3402,39 @@ pub(crate) struct DocPageCtx {
     pub page_title: String,
     pub entries: Vec<SidebarEntry>,
     pub doc_title: &'static str,
+    /// The URL key, which is also the markdown file's stem — the head
+    /// names the source it is rendering.
+    pub slug: &'static str,
+    /// `##` sections in this document.
+    ///
+    /// The head states the source and the shape rather than repeating
+    /// the document's opening sentence: `docs::summary` IS that
+    /// sentence, so a lead here would print the first paragraph twice,
+    /// and hoisting it instead would silently drop the rest of a
+    /// paragraph the summary truncated. The index, where the reader has
+    /// not yet seen the prose, is where the summary belongs.
+    pub sections: usize,
     /// Pre-rendered HTML fragment from `docs::render_markdown`.
     /// The template marks it `|safe` because this is the
     /// trusted boundary — markdown source is framework-owned,
     /// never user-supplied.
     pub body_html: String,
+    /// Every embedded doc, so the page can carry its own navigation
+    /// instead of a lone back-link. The current one is marked.
+    pub docs: Vec<DocNavCtx>,
+    /// The documents either side of this one in the declared order,
+    /// so the foot can offer the next thing to read.
+    pub prev: Option<DocSummaryCtx>,
+    pub next: Option<DocSummaryCtx>,
+}
+
+/// A doc in the page's own nav: the summary plus whether it is the one
+/// being read.
+#[derive(Serialize)]
+pub(crate) struct DocNavCtx {
+    pub slug: &'static str,
+    pub title: &'static str,
+    pub is_current: bool,
 }
 
 pub(crate) fn docs_index_ctx(
@@ -3324,11 +3453,19 @@ pub(crate) fn docs_index_ctx(
             .collect(),
         docs: crate::admin::docs::EMBEDDED_DOCS
             .iter()
-            .map(|d| DocSummaryCtx {
-                slug: d.slug,
-                title: d.title,
-            })
+            .map(DocSummaryCtx::from)
             .collect(),
+    }
+}
+
+impl From<&'static crate::admin::docs::EmbeddedDoc> for DocSummaryCtx {
+    fn from(d: &'static crate::admin::docs::EmbeddedDoc) -> Self {
+        Self {
+            slug: d.slug,
+            title: d.title,
+            summary: crate::admin::docs::summary(d.source),
+            sections: crate::admin::docs::section_count(d.source),
+        }
     }
 }
 
@@ -3338,6 +3475,10 @@ pub(crate) fn doc_page_ctx(
     csrf_token: String,
     doc: &crate::admin::docs::EmbeddedDoc,
 ) -> DocPageCtx {
+    // The declared order in `EMBEDDED_DOCS` is the reading order, so
+    // prev/next are just this doc's neighbours in that list.
+    let all = crate::admin::docs::EMBEDDED_DOCS;
+    let here = all.iter().position(|d| d.slug == doc.slug);
     DocPageCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: format!("Docs — {}", doc.title),
@@ -3348,7 +3489,22 @@ pub(crate) fn doc_page_ctx(
             .map(SidebarEntry::from)
             .collect(),
         doc_title: doc.title,
+        slug: doc.slug,
+        sections: crate::admin::docs::section_count(doc.source),
         body_html: crate::admin::docs::render_markdown(doc.source),
+        docs: all
+            .iter()
+            .map(|d| DocNavCtx {
+                slug: d.slug,
+                title: d.title,
+                is_current: d.slug == doc.slug,
+            })
+            .collect(),
+        prev: here
+            .and_then(|i| i.checked_sub(1))
+            .and_then(|i| all.get(i))
+            .map(DocSummaryCtx::from),
+        next: here.and_then(|i| all.get(i + 1)).map(DocSummaryCtx::from),
     }
 }
 
@@ -3546,6 +3702,10 @@ pub(crate) struct FeatureFlagCtx {
     pub description: String,
     pub created_iso: String,
     pub updated_iso: String,
+    /// `updated_iso` as the console renders a timestamp — the wire
+    /// format belongs in a `title=`, not in a cell. Presentation only;
+    /// the ISO field is untouched so nothing that reads it changes.
+    pub updated_display: String,
 }
 
 pub(crate) fn feature_flags_ctx(
@@ -3572,6 +3732,7 @@ pub(crate) fn feature_flags_ctx(
                 description: f.description,
                 created_iso: f.created_at.to_rfc3339(),
                 updated_iso: f.updated_at.to_rfc3339(),
+                updated_display: f.updated_at.format("%Y-%m-%d %H:%M UTC").to_string(),
             })
             .collect(),
         flash,
@@ -4061,7 +4222,10 @@ pub(crate) fn health_ctx(
         }
     }
     let all_ok = warn_count == 0 && error_count == 0;
-    let ctx_checks: Vec<HealthCheckCtx> = checks
+    // Failing first. A status page is read top-down for what is wrong;
+    // a passing check that sorts above a failing one costs the operator
+    // the scan. Stable within a severity, so the declared order holds.
+    let mut ctx_checks: Vec<HealthCheckCtx> = checks
         .into_iter()
         .map(|c| HealthCheckCtx {
             label: c.label,
@@ -4069,6 +4233,11 @@ pub(crate) fn health_ctx(
             message: c.message,
         })
         .collect();
+    ctx_checks.sort_by_key(|c| match c.status {
+        "error" => 0u8,
+        "warn" => 1,
+        _ => 2,
+    });
     HealthCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
         page_title: "Health",
@@ -4196,6 +4365,14 @@ pub(crate) struct ObjectHistoryCtx {
     pub singular_name: String,
     pub object_id: i64,
     pub object_label: String,
+    /// Facts derived from the entries themselves — the feed is
+    /// newest-first, so the last entry is the creation and the first is
+    /// the most recent change. Three strings so the template states
+    /// them without re-deriving anything.
+    pub created_at: Option<String>,
+    pub created_by: Option<String>,
+    pub last_change: Option<String>,
+    pub event_count: usize,
     /// Sidebar nav models — read by `_sidebar.html` as
     /// `{{ entry.admin_name }}` / `{{ entry.display_name }}`.
     /// Kept under the conventional `entries` name to match every
@@ -4207,6 +4384,16 @@ pub(crate) struct ObjectHistoryCtx {
     pub flash: Option<FlashCtx>,
 }
 
+/// One choice in the audit page's Action / Model dropdowns: the stored
+/// value, a human label, and whether it is the applied one.
+#[derive(Serialize)]
+pub(crate) struct AuditFilterOption {
+    pub value: String,
+    pub label: String,
+    pub is_active: bool,
+    pub link: String,
+}
+
 #[derive(Serialize)]
 pub(crate) struct LogEntriesCtx {
     #[serde(flatten)]
@@ -4216,6 +4403,34 @@ pub(crate) struct LogEntriesCtx {
     pub entries: Vec<SidebarEntry>,
     pub history_entries: Vec<HistoryEntryCtx>,
     pub flash: Option<FlashCtx>,
+    /// The find row's current state, echoed back so the controls show
+    /// what is applied and the hidden inputs carry it across submits.
+    pub search_query: String,
+    pub action_filter: Option<String>,
+    pub model_filter: Option<String>,
+    pub from_filter: Option<String>,
+    pub to_filter: Option<String>,
+    /// The distinct values the two dropdowns offer, from the rows that
+    /// exist rather than from a hard-coded list.
+    pub action_options: Vec<AuditFilterOption>,
+    pub model_options: Vec<AuditFilterOption>,
+    /// Paging, matching the list page's vocabulary.
+    pub page: usize,
+    pub per_page: usize,
+    pub total_rows: usize,
+    pub total_pages: usize,
+    pub showing_from: usize,
+    pub showing_to: usize,
+    pub prev_page_link: Option<String>,
+    pub next_page_link: Option<String>,
+    pub page_items: Vec<PageItem>,
+    /// True when any filter or term is applied — drives the empty
+    /// state's wording and whether a reset is offered.
+    pub has_filters: bool,
+    pub clear_filters_link: String,
+    /// The raw `?user_id=` value, so the find row's hidden input can
+    /// carry the actor filter across a search submit.
+    pub user_filter: Option<i64>,
     /// When `Some(label)`, the page is showing audit entries
     /// filtered by `?user_id=N`. The label is the actor's email
     /// (or `#<id>` fallback) for the banner. `None` → no filter
@@ -4230,6 +4445,8 @@ pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCt
         .map(|a| {
             let changes = extract_changes_from_metadata(a.metadata.as_ref());
             let date_iso = a.timestamp.format("%Y-%m-%d").to_string();
+            let time_hm = a.timestamp.format("%H:%M").to_string();
+            let correlation_id = a.correlation_id.clone();
             let is_new_day = prev_date_iso.as_deref() != Some(date_iso.as_str());
             prev_date_iso = Some(date_iso.clone());
             HistoryEntryCtx {
@@ -4248,6 +4465,8 @@ pub(crate) fn map_audit_actions(actions: Vec<AdminAction>) -> Vec<HistoryEntryCt
                 action_type: a.action_type,
                 object_id: a.object_id,
                 summary: a.summary,
+                time_hm,
+                correlation_id,
                 ip_address: a.ip_address.unwrap_or_default(),
                 changes,
             }

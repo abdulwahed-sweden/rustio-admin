@@ -63,6 +63,141 @@ pub(crate) fn find(slug: &str) -> Option<&'static EmbeddedDoc> {
     EMBEDDED_DOCS.iter().find(|d| d.slug == slug)
 }
 
+/// The document's own one-line description: the first real paragraph
+/// of its markdown, flattened to plain text.
+///
+/// Derived rather than hand-written so the index can never drift from
+/// the document it points at — every embedded doc opens with a sentence
+/// saying what it is for, and that sentence is the subtitle. Inline
+/// markup (links, code spans, emphasis) is stripped to its text, the
+/// leading `# Title` and any fenced block are skipped, and the result is
+/// trimmed to one sentence (or `MAX_SUMMARY` characters on a word
+/// boundary) so a row stays a row.
+pub(crate) fn summary(src: &str) -> String {
+    /// Long enough for a real sentence, short enough that a list row
+    /// does not become a paragraph.
+    const MAX_SUMMARY: usize = 190;
+
+    let mut para = String::new();
+    for raw in src.lines() {
+        let line = raw.trim();
+        // Before the first paragraph: skip the title, blank lines and
+        // anything that is not prose.
+        if para.is_empty()
+            && (line.is_empty()
+                || line.starts_with('#')
+                || line.starts_with("```")
+                || line.starts_with('|')
+                || line.starts_with('>')
+                || line.starts_with("- ")
+                || line.starts_with("<!--"))
+        {
+            continue;
+        }
+        // The paragraph ends at the first blank line after it starts.
+        if line.is_empty() {
+            break;
+        }
+        if !para.is_empty() {
+            para.push(' ');
+        }
+        para.push_str(line);
+    }
+
+    let flat = flatten_inline(&para);
+    truncate_to_sentence(&flat, MAX_SUMMARY)
+}
+
+/// Strip the inline markdown a summary should not carry: `[text](url)`
+/// and `[text][ref]` keep their text, code spans and emphasis markers
+/// lose their delimiters.
+fn flatten_inline(src: &str) -> String {
+    let mut out = String::with_capacity(src.len());
+    let mut chars = src.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            // `[text](dest)` / `[text][ref]` -> `text`
+            '[' => {
+                for inner in chars.by_ref() {
+                    if inner == ']' {
+                        break;
+                    }
+                    out.push(inner);
+                }
+                // Drop the destination that follows, if there is one.
+                match chars.peek() {
+                    Some('(') => {
+                        chars.next();
+                        for inner in chars.by_ref() {
+                            if inner == ')' {
+                                break;
+                            }
+                        }
+                    }
+                    Some('[') => {
+                        chars.next();
+                        for inner in chars.by_ref() {
+                            if inner == ']' {
+                                break;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            '`' | '*' | '_' => {}
+            _ => out.push(c),
+        }
+    }
+    // Collapse the runs of whitespace the stripping can leave behind.
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Cut at the end of the first sentence, or at the last word boundary
+/// before `max`, whichever comes first. Returns the whole string when it
+/// already fits and holds no sentence end.
+fn truncate_to_sentence(src: &str, max: usize) -> String {
+    // A sentence end is `. ` — not a bare `.`, which also ends
+    // `rustio-admin.cli` and `0.33.1`.
+    if let Some(end) = src
+        .char_indices()
+        .find(|&(i, c)| c == '.' && src[i + 1..].starts_with(' '))
+        .map(|(i, _)| i + 1)
+    {
+        if end <= max {
+            return src[..end].to_string();
+        }
+    }
+    if src.chars().count() <= max {
+        return src.to_string();
+    }
+    let cut = src
+        .char_indices()
+        .take_while(|&(i, _)| i < max)
+        .filter(|&(_, c)| c == ' ')
+        .map(|(i, _)| i)
+        .last()
+        .unwrap_or_else(|| src.floor_char_boundary(max.min(src.len())));
+    format!("{}…", src[..cut].trim_end())
+}
+
+/// How many `##` sections the document has — the shape of a document,
+/// stated on the index so a reader can tell a reference table from a
+/// two-section note before opening it. Fenced blocks are skipped so a
+/// `#` inside a shell snippet is not counted as a heading.
+pub(crate) fn section_count(src: &str) -> usize {
+    let mut in_fence = false;
+    src.lines()
+        .filter(|line| {
+            if line.trim_start().starts_with("```") {
+                in_fence = !in_fence;
+                return false;
+            }
+            !in_fence && line.starts_with("## ")
+        })
+        .count()
+}
+
 /// True when a link in the in-app docs can actually be followed.
 ///
 /// The `/admin/docs` viewer serves only the three embedded docs by slug,
@@ -141,6 +276,68 @@ mod tests {
         for d in EMBEDDED_DOCS {
             assert!(seen.insert(d.slug), "duplicate doc slug `{}`", d.slug);
         }
+    }
+
+    #[test]
+    fn every_embedded_doc_derives_a_usable_summary_and_shape() {
+        // The index renders these; an empty summary would print a
+        // blank row and a zero section count would call a reference
+        // document a note.
+        for d in EMBEDDED_DOCS {
+            let sum = summary(d.source);
+            assert!(!sum.is_empty(), "doc `{}` has no summary", d.slug);
+            assert!(
+                !sum.starts_with('#'),
+                "doc `{}` summary is its title, not its lead: {sum}",
+                d.slug
+            );
+            assert!(
+                sum.chars().count() <= 191,
+                "doc `{}` summary is {} chars",
+                d.slug,
+                sum.chars().count()
+            );
+            assert!(
+                section_count(d.source) > 0,
+                "doc `{}` has no `##` sections",
+                d.slug
+            );
+        }
+    }
+
+    #[test]
+    fn summary_skips_the_title_and_flattens_inline_markup() {
+        let src = "# Title\n\nSee [the guide](./design/X.md) for `Foo::bar` \
+                   and **more**.\n\nA second paragraph.\n";
+        assert_eq!(
+            summary(src),
+            "See the guide for Foo::bar and more.",
+            "links, code spans and emphasis lose their markers; the \
+             title and the second paragraph are not part of the lead"
+        );
+    }
+
+    #[test]
+    fn summary_cuts_at_a_sentence_not_at_a_decimal_point() {
+        // `0.33.1` and `admin.rs` both contain a `.`; only `. ` ends a
+        // sentence.
+        let src = "# T\n\nPinned at 0.33.1 in admin.rs today. And then more.\n";
+        assert_eq!(summary(src), "Pinned at 0.33.1 in admin.rs today.");
+    }
+
+    #[test]
+    fn summary_falls_back_to_a_word_boundary_when_a_sentence_runs_long() {
+        let long = "word ".repeat(80);
+        let out = summary(&format!("# T\n\n{long}\n"));
+        assert!(out.ends_with('…'), "long lead is elided: {out}");
+        assert!(out.chars().count() <= 191, "elided lead is capped: {out}");
+        assert!(!out.contains("  "), "no double space at the cut: {out}");
+    }
+
+    #[test]
+    fn section_count_ignores_hashes_inside_fenced_blocks() {
+        let src = "# T\n\n## One\n\n```sh\n# not a heading\n## also not\n```\n\n## Two\n";
+        assert_eq!(section_count(src), 2);
     }
 
     #[test]

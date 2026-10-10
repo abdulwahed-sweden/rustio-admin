@@ -204,6 +204,13 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 }
 .rio-ws-inner.rio-page--wide { max-inline-size: var(--rio-page-wide); }
 .rio-ws-inner.rio-page--narrow { max-inline-size: var(--rio-page-narrow); }
+/* The documentation workspace. Not the full 1600: a document rail, a
+   reading column and an on-page nav at 1600 give the reading column
+   ~1050px, which is more white than a 76ch measure can justify. At
+   1440 the column lands near 900 — the prose keeps its measure and the
+   tables and code blocks, which are allowed the full width, have room
+   to use it. */
+.rio-ws-inner.rio-page--docs { max-inline-size: 1440px; }
 .rio-ws-inner.rio-page--form {
   max-inline-size: var(--rio-page-form);
   inline-size: calc(100% - 32px);

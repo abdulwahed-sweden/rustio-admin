@@ -15,14 +15,8 @@
  * (mono, dotted) was removed so there is one pill system. */
 
 /* ---- Health page ---- */
-.rio-health__summary { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-16); }
-.rio-health__row--error td { background: var(--rio-danger-tint); }
-.rio-health__row--warn td { background: var(--rio-warn-tint); }
 
 /* ---- Avatar + "by" ---- */
-.rio-avatar { inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--rio-radius-md); background: var(--rio-rust-tint); color: var(--rio-rust); display: grid; place-items: center; font-family: var(--rio-font-display); font-weight: 700; font-size: var(--rio-text-12); }
-.rio-by { display: inline-flex; align-items: center; gap: var(--rio-space-8); color: var(--rio-text); text-decoration: none; }
-.rio-by:hover { color: var(--rio-rust); }
 
 /* ---- Date divider rows ---- */
 .rio-history-date-divider th, tr.lx-date th {
@@ -41,168 +35,622 @@
 .rio-history-diff__new, .lx-diff__new { color: var(--rio-success); }
 
 /* ---- DB browser ---- */
-.rio-db-stats { display: flex; flex-wrap: wrap; gap: var(--rio-space-48); margin: 0; }
-.rio-db-stat dt { font-family: var(--rio-font-body); font-weight: 700; font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-mute); }
-.rio-db-stat dd { margin: 2px 0 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-30); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
-.rio-db-table { padding: 0 !important; overflow: hidden; }
-.rio-db-table__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--rio-space-16); padding: var(--rio-space-16) var(--rio-space-20); border-block-end: 1px solid var(--rio-line); }
-.rio-db-table__header h2 { margin: 0; font-family: var(--rio-font-mono); font-size: var(--rio-text-17); color: var(--rio-text-hi); }
-.rio-db-fks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--rio-space-20); padding: var(--rio-space-20); border-block-start: 1px solid var(--rio-line); }
-.rio-db-fks__group h3 { font-family: var(--rio-font-body); font-weight: 700; font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: 0.05em; color: var(--rio-text-mute); margin: 0 0 var(--rio-space-8); }
-.rio-db-fk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--rio-space-6); font-size: var(--rio-text-13); }
-.rio-db-fk-list a { color: var(--rio-rust); text-decoration: none; }
 
 /* ---- Shared: inline <code> inside a masthead lead paragraph ---- */
 .rio-masthead-desc code { font-family: var(--rio-font-mono); font-size: 0.92em; background: var(--rio-surface-2); padding: 1px 6px; border-radius: var(--rio-radius-sm); }
 
 /* ---- Audit log (log_entries) cell helpers — replaces inline styles ---- */
-.rio-table-scroll { overflow: auto; }
-.rio-hist-when { white-space: nowrap; color: var(--rio-text-mute); }
-.rio-hist-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
 
 /* ---- API surface (apis_index) — moved out of the template's inline <style> ---- */
-.rio-api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--rio-s5); }
-.rio-api-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
-.rio-api-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
-.rio-api-card__glyph { width: 38px; height: 38px; flex: none; border-radius: var(--rio-radius-sm); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
-.rio-api-card__glyph .rio-icon { width: 18px; height: 18px; }
-.rio-api-card__title {
-  font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong);
-  /* The same identity floor the record cards take: an API path is long
-     and unbreakable, and without a floor it wraps one segment per line. */
-  min-inline-size: 12rem;
-  overflow-wrap: break-word;
-}
-.rio-api-card__title a { color: inherit; }
-.rio-api-card__title a:hover { color: var(--rio-accent); }
-.rio-api-card__sub { font-weight: var(--rio-fw-regular); color: var(--rio-text-subtle); font-size: var(--rio-fs-sm); }
-.rio-api-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-muted); }
-.rio-api-endpoints { display: flex; flex-direction: column; }
-.rio-api-ep { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
 .rio-api-verb { flex: none; min-width: 52px; text-align: center; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); letter-spacing: 0.03em; padding: 0.18rem 0.5rem; border-radius: var(--rio-radius-sm); }
 .rio-api-verb--get { background: var(--rio-success-bg); color: var(--rio-success); }
 .rio-api-verb--post { background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
 .rio-api-verb--del { background: var(--rio-danger-bg); color: var(--rio-danger); }
 .rio-api-path { font-family: var(--rio-font-mono); font-size: var(--rio-fs-sm); color: var(--rio-text); overflow-x: auto; }
-.rio-api-ep__action { margin-left: auto; flex: none; font-size: var(--rio-fs-xs); color: var(--rio-text-subtle); }
-.rio-api-fields { padding: var(--rio-s4) var(--rio-s5) var(--rio-s5); }
-.rio-api-fields__label { font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-subtle); margin-bottom: var(--rio-s3); }
-.rio-api-ftable { width: 100%; border-collapse: collapse; font-size: var(--rio-fs-sm); }
-.rio-api-ftable td { padding: 0.45rem 0; border-bottom: 1px solid var(--rio-border-soft); }
-.rio-api-ftable tr:last-child td { border-bottom: 0; }
-.rio-api-ftable .rio-api-fname { font-family: var(--rio-font-mono); color: var(--rio-text); }
-.rio-api-ftable .rio-api-ftype { color: var(--rio-text-muted); }
-.rio-api-ftable .rio-api-fnull { text-align: right; color: var(--rio-text-subtle); font-size: var(--rio-fs-xs); }
-.rio-api-fnull--yes { color: var(--rio-warning); font-weight: var(--rio-fw-semibold); }
 @media (max-width: 720px) { .rio-api-grid { grid-template-columns: 1fr; } }
 
-/* ---- Docs index (docs_index) — moved out of the template's inline <style> ---- */
-.rio-doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--rio-s4); }
-.rio-doc-card { display: flex; align-items: center; gap: var(--rio-s4); padding: var(--rio-s5); background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
-.rio-doc-card:hover { border-color: var(--rio-accent); transform: translateY(-2px); box-shadow: var(--rio-shadow-lg); }
-.rio-doc-card__glyph { width: 46px; height: 46px; flex: none; border-radius: var(--rio-radius-lg); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
-.rio-doc-card__glyph .rio-icon { width: 22px; height: 22px; }
-.rio-doc-card__body { min-width: 0; display: flex; flex-direction: column; }
-.rio-doc-card__title { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); transition: color .14s ease; }
-.rio-doc-card:hover .rio-doc-card__title { color: var(--rio-accent); }
-.rio-doc-card__path { margin-top: 2px; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); color: var(--rio-text-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rio-doc-card__arrow { margin-left: auto; flex: none; font-size: 1.25rem; color: var(--rio-text-subtle); transition: transform .14s ease, color .14s ease; }
-.rio-doc-card:hover .rio-doc-card__arrow { transform: translateX(3px); color: var(--rio-accent); }
-
-/* ---- Doc page viewer (doc_page) — moved out of the template's inline <style> ---- */
-/* Doc page: a constrained reading column + a sticky "On this page" nav
- * beside it. The card hugs the reading measure (~66ch) so the prose
- * never runs a fatiguing line length, and the TOC fills the space that
- * used to sit empty to its right. Left-aligned so the card's left edge
- * lines up with the masthead title. */
-.rio-docpage { display: grid; grid-template-columns: auto minmax(0, 12rem); gap: var(--rio-s6); align-items: start; justify-content: start; }
-.rio-docpage-card { max-width: 44rem; min-width: 0; background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); padding: var(--rio-s6); }
-.rio-doc-prose { max-width: none; color: var(--rio-text); font-size: var(--rio-fs-base); line-height: 1.7; }
-/* Anchor jumps from the TOC land below the top of the scroll area
- * (the topbar sits outside it) with a little breathing room. */
-.rio-doc-prose :is(h1, h2, h3, h4) { scroll-margin-top: var(--rio-s6); }
-.rio-doc-prose > :first-child { margin-top: 0; }
-/* the markdown's own leading title duplicates the page header → drop it */
-.rio-doc-prose > h1:first-child { display: none; }
-.rio-doc-prose h1 { font-size: var(--rio-fs-h2); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s6) 0 var(--rio-s3); }
-.rio-doc-prose h2 { font-size: var(--rio-fs-h2); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s6) 0 var(--rio-s3); padding-bottom: var(--rio-s2); border-bottom: 1px solid var(--rio-border-soft); }
-.rio-doc-prose h3 { font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s5) 0 var(--rio-s2); }
-.rio-doc-prose h4 { font-size: var(--rio-fs-md); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); margin: var(--rio-s4) 0 var(--rio-s2); }
-.rio-doc-prose p { margin: 0 0 var(--rio-s4); }
-.rio-doc-prose strong { font-weight: var(--rio-fw-bold); color: var(--rio-text-strong); }
-.rio-doc-prose a { color: var(--rio-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--rio-accent) 35%, transparent); text-underline-offset: 2px; }
-.rio-doc-prose a:hover { color: var(--rio-accent2-ink, var(--rio-accent)); text-decoration-color: currentColor; }
-.rio-doc-prose ul, .rio-doc-prose ol { margin: 0 0 var(--rio-s4); padding-left: 1.4em; }
-.rio-doc-prose li { margin: 0.3em 0; }
-.rio-doc-prose li::marker { color: var(--rio-accent2-ink, var(--rio-text-subtle)); }
-.rio-doc-prose :not(pre) > code { font-family: var(--rio-font-mono); font-size: 0.88em; background: var(--rio-surface-2); color: var(--rio-text-strong); padding: 0.12em 0.42em; border-radius: var(--rio-radius-sm); border: 1px solid var(--rio-border-soft); }
-.rio-doc-prose pre { margin: 0 0 var(--rio-s4); padding: var(--rio-s4) var(--rio-s5); background: var(--rio-surface-chrome); border-radius: var(--rio-radius); overflow-x: auto; }
-.rio-doc-prose pre code { font-family: var(--rio-font-mono); font-size: 0.86em; line-height: 1.65; color: var(--rio-on-solid); }
-.rio-doc-prose table { width: 100%; border-collapse: collapse; margin: 0 0 var(--rio-s4); font-size: var(--rio-fs-sm); }
-.rio-doc-prose thead th { text-align: left; background: var(--rio-surface-2); color: var(--rio-text-muted); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; padding: var(--rio-s2) var(--rio-s3); border-bottom: 1px solid var(--rio-border); }
-.rio-doc-prose tbody td { padding: var(--rio-s2) var(--rio-s3); border-bottom: 1px solid var(--rio-border-soft); vertical-align: top; }
-.rio-doc-prose tbody tr:last-child td { border-bottom: 0; }
-.rio-doc-prose blockquote { margin: 0 0 var(--rio-s4); padding: var(--rio-s3) var(--rio-s4); border-left: 3px solid var(--rio-accent2, var(--rio-accent)); background: var(--rio-accent2-soft, var(--rio-accent-soft)); border-radius: 0 var(--rio-radius-sm) var(--rio-radius-sm) 0; color: var(--rio-text-muted); }
-.rio-doc-prose blockquote p:last-child { margin-bottom: 0; }
-.rio-doc-prose hr { border: 0; border-top: 1px solid var(--rio-border); margin: var(--rio-s6) 0; }
-.rio-doc-prose img { max-width: 100%; height: auto; border-radius: var(--rio-radius); }
-.rio-doc-foot { margin-top: var(--rio-s5); }
-.rio-doc-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--rio-accent2-ink, var(--rio-accent)); font-weight: var(--rio-fw-semibold); font-size: var(--rio-fs-sm); }
-.rio-doc-back:hover { color: var(--rio-accent2, var(--rio-accent)); }
-
-/* "On this page" — sticky on-page table of contents, populated by
- * admin.js `initDocToc`. Hidden until JS reveals it (and only when the
- * doc has ≥2 headings), so a JS-less or short page shows nothing. */
-.rio-doc-toc { position: sticky; top: var(--rio-s6); align-self: start; }
-.rio-doc-toc[hidden] { display: none; }
-.rio-doc-toc__title { margin: 0 0 var(--rio-s3); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--rio-text-subtle); }
-.rio-doc-toc__nav { display: flex; flex-direction: column; border-left: 1px solid var(--rio-border); }
-.rio-doc-toc__link { padding: var(--rio-s1) var(--rio-s3); margin-left: -1px; border-left: 2px solid transparent; font-size: var(--rio-fs-sm); line-height: 1.35; color: var(--rio-text-muted); transition: color 0.12s ease, border-color 0.12s ease; }
-.rio-doc-toc__link--sub { padding-left: var(--rio-s5); font-size: var(--rio-fs-xs); }
-.rio-doc-toc__link:hover { color: var(--rio-text-strong); }
-.rio-doc-toc__link.is-active { color: var(--rio-accent); border-left-color: var(--rio-accent); font-weight: var(--rio-fw-semibold); }
-
-/* Narrow screens: single column, drop the side nav, let the card fill. */
-@media (max-width: 900px) {
-  .rio-docpage { grid-template-columns: 1fr; }
-  .rio-docpage-card { max-width: none; }
-  .rio-doc-toc { display: none; }
-}
 
 /* ---- API surface as sections (apis_index.html) ----------------------
    One flat section per model: head (name · base path · field count),
    endpoints on the left, fields on the right. */
-.rio-api-sections { display: flex; flex-direction: column; gap: var(--rio-space-16); }
-.rio-api-section {
-  background: var(--rio-surface);
-  border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-lg);
-  box-shadow: var(--rio-shadow-sm);
-  overflow: hidden;
+@media (max-width: 900px) {
 }
-.rio-api-section-head {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-8);
+
+/* ============================================================
+   AUDIT LOG  ·  /admin/history and /admin/<model>/<id>/history
+
+   One <details> per event. The <summary> is the row; the body is the
+   event. The day is a sticky band above its rows, so a row needs only
+   the clock — the exact timestamp, actor, address and correlation id
+   are in the body, read one at a time instead of competing for a
+   column each.
+   ============================================================ */
+.rio-audit { overflow: visible; }
+/* The two date filters. `position: relative` is load-bearing, not
+   decoration: each label holds a `.rio-sr-only` span, and `.rio-sr-only`
+   is `position: absolute` — with no positioned ancestor it resolves
+   against the initial containing block, escapes the find row's
+   horizontal scroller and stretches the DOCUMENT at 390px while every
+   element inside the page still measures clean. The label becomes the
+   containing block so the hidden text stays inside it. */
+.rio-audit-period { position: relative; }
+.rio-audit-day {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: baseline; gap: var(--rio-space-8);
+  padding: var(--rio-space-8) var(--rio-space-16);
+  background: var(--rio-sunken);
+  border-block-end: 1px solid var(--rio-line);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-text-mono);
+}
+.rio-audit-day .rio-meta { margin-inline-start: auto; font-family: var(--rio-font-body); letter-spacing: 0; text-transform: none; font-weight: var(--rio-weight-regular); }
+.rio-audit-row { border-block-end: 1px solid var(--rio-line); }
+.rio-audit-row:last-child { border-block-end: 0; }
+.rio-audit-row > summary {
+  list-style: none; cursor: pointer;
+  display: grid; align-items: center;
+  grid-template-columns: 52px max-content minmax(0, 1fr) max-content 20px;
+  gap: var(--rio-space-12);
+  min-block-size: var(--rio-row-h);
+  padding: var(--rio-space-8) var(--rio-space-16);
+}
+.rio-audit-row > summary::-webkit-details-marker { display: none; }
+.rio-audit-row > summary:hover { background: var(--rio-raised); }
+.rio-audit-row[open] > summary { background: var(--rio-raised); }
+.rio-audit-when { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); font-variant-numeric: tabular-nums; }
+.rio-audit-what { min-inline-size: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-4) var(--rio-space-8); }
+.rio-audit-what .rio-cell-primary { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); text-decoration: none; }
+.rio-audit-what .rio-cell-primary:hover { color: var(--rio-rust); }
+.rio-audit-sum { color: var(--rio-text); font-size: var(--rio-text-14); }
+.rio-audit-sum code { font-size: 0.92em; }
+.rio-audit-who { font-size: var(--rio-text-13); color: var(--rio-text-mute); text-decoration: none; white-space: nowrap; }
+.rio-audit-who:hover { color: var(--rio-rust); text-decoration: underline; }
+.rio-audit-chev { color: var(--rio-text-faint); transition: rotate var(--rio-dur-fast) var(--rio-ease); display: inline-flex; }
+.rio-audit-row[open] .rio-audit-chev { rotate: 90deg; }
+.rio-audit-detail {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--rio-space-16) var(--rio-space-32);
+  padding: var(--rio-space-12) var(--rio-space-16) var(--rio-space-16) calc(52px + var(--rio-space-16) + var(--rio-space-12));
+  background: var(--rio-raised);
+  border-block-start: 1px solid var(--rio-line);
+}
+.rio-audit-detail .rio-history-diff { margin: 0; }
+.rio-audit-detail .rio-history-diff__label { min-inline-size: 110px; }
+.rio-audit-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--rio-space-4) var(--rio-space-16); margin: 0; font-size: var(--rio-text-13); }
+.rio-audit-kv dt { color: var(--rio-text-mute); }
+.rio-audit-kv dd { margin: 0; color: var(--rio-text-hi); font-family: var(--rio-font-mono); overflow-wrap: anywhere; }
+.rio-audit-kv dd .rio-meta { font-family: var(--rio-font-body); }
+.rio-audit-empty-diff { color: var(--rio-text-faint); font-size: var(--rio-text-13); }
+@media (max-width: 760px) {
+  .rio-audit-row > summary { grid-template-columns: 52px max-content minmax(0, 1fr) 20px; grid-template-areas: "when pill who chev" "what what what what"; row-gap: var(--rio-space-4); }
+  .rio-audit-when { grid-area: when; } .rio-audit-row > summary > .rio-pill { grid-area: pill; }
+  .rio-audit-who { grid-area: who; justify-self: end; display: block; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .rio-audit-chev { grid-area: chev; } .rio-audit-what { grid-area: what; }
+  .rio-audit-detail { grid-template-columns: 1fr; padding-inline-start: var(--rio-space-16); }
+}
+
+/* ============================================================
+   API REFERENCE
+   Composition from docs/design/page-composition-study (completion pass).
+   ============================================================ */
+.rio-ref-table .rio-api-verb { min-inline-size: 48px; }
+.rio-ref-table td code, .rio-ref-models td code, .rio-ref-paths code { font-size: var(--rio-text-13); background: none; padding: 0; color: var(--rio-text); }
+.rio-ref-paths { display: inline-flex; flex-wrap: wrap; gap: var(--rio-space-8); }
+.rio-ref-paths code { color: var(--rio-text-mute); }
+.rio-ref-schema + .rio-ref-schema { margin-block-start: var(--rio-space-16); }
+.rio-ref-fields td:first-child { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-hi); }
+.rio-ref-fields td:nth-child(2) { color: var(--rio-text-mute); }
+.rio-ref-fields .rio-mark--off { color: var(--rio-text-faint); font-weight: var(--rio-weight-regular); }
+.rio-ref-perm { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
+.rio-board + .rio-board { margin-block-start: var(--rio-space-16); }
+.rio-ref-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--rio-space-16); }
+
+/* ============================================================
+   HEALTH
+   Composition from docs/design/page-composition-study (completion pass).
+   ============================================================ */
+.rio-status {
+  display: flex; align-items: center; gap: var(--rio-space-16);
+  padding: var(--rio-space-16) var(--rio-space-20);
+  margin-block-end: var(--rio-space-16);
+  background: var(--rio-surface); border: 1px solid var(--rio-line); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow-sm);
+  border-inline-start: 4px solid var(--rio-success);
+}
+.rio-status--warn { border-inline-start-color: var(--rio-warn); }
+.rio-status--error { border-inline-start-color: var(--rio-danger); }
+.rio-status-dot { flex: none; inline-size: 12px; block-size: 12px; border-radius: var(--rio-radius-pill); background: var(--rio-success); box-shadow: 0 0 0 4px var(--rio-success-tint); }
+.rio-status--warn .rio-status-dot { background: var(--rio-warn); box-shadow: 0 0 0 4px var(--rio-warn-tint); }
+.rio-status--error .rio-status-dot { background: var(--rio-danger); box-shadow: 0 0 0 4px var(--rio-danger-tint); }
+.rio-status-title { display: block; font-size: var(--rio-text-17); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-status-meta { display: block; margin-block-start: 2px; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-status-meta code { font-size: 0.92em; }
+.rio-status-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--rio-space-16); align-items: start; }
+.rio-check-rows { list-style: none; margin: 0; padding: 0; }
+.rio-check-row {
+  display: grid; grid-template-columns: 96px minmax(160px, 0.6fr) minmax(0, 1.4fr); gap: var(--rio-space-16); align-items: baseline;
   padding: var(--rio-space-12) var(--rio-space-16);
   border-block-end: 1px solid var(--rio-line);
 }
-.rio-api-section-head h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
-.rio-api-section-head h2 a { color: inherit; text-decoration: none; }
-.rio-api-section-head h2 a:hover { color: var(--rio-rust); }
-.rio-api-base { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
-.rio-api-section-head .rio-meta { margin-inline-start: auto; }
-.rio-api-section-body { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr); }
-.rio-api-ep-list {
+.rio-check-row:last-child { border-block-end: 0; }
+.rio-check-state { display: inline-flex; align-items: center; gap: var(--rio-space-6); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-success); }
+.rio-check-state::before { content: ""; inline-size: 8px; block-size: 8px; border-radius: var(--rio-radius-pill); background: currentColor; }
+.rio-check-row--warn .rio-check-state { color: var(--rio-warn); }
+.rio-check-row--error .rio-check-state { color: var(--rio-danger); }
+.rio-check-row--error { background: var(--rio-danger-tint); }
+.rio-check-row--warn { background: var(--rio-warn-tint); }
+.rio-check-label { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-check-row--ok .rio-check-label { font-weight: var(--rio-weight-medium); }
+.rio-check-msg { color: var(--rio-text); font-size: var(--rio-text-14); overflow-wrap: anywhere; }
+.rio-check-row--ok .rio-check-msg { color: var(--rio-text-mute); }
+.rio-facts .rio-code { margin-block-start: var(--rio-space-8); }
+.rio-facts .rio-code pre,
+.rio-facts pre.rio-code { padding: var(--rio-space-8) var(--rio-space-12); font-size: var(--rio-text-13); }
+.rio-facts dl + .rio-facts-title { margin-block-start: var(--rio-space-16); }
+@media (max-width: 900px) { .rio-status-layout { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .rio-check-row { grid-template-columns: 96px minmax(0, 1fr); } .rio-check-msg { grid-column: 2; } }
+
+/* ============================================================
+   DOCS  ·  /admin/docs and /admin/docs/<slug>
+
+   A documentation workspace inside the console: a document rail, a
+   reading column on its own white surface, and an on-page nav. The
+   console's own chrome lives on the warm page ground; a document does
+   not — prose needs the highest-clarity surface the system has, and a
+   clear edge telling the reader where the document starts and stops.
+
+   This block replaces two older ones. The prose typography was written
+   against the `--rio-fs-*` / `--rio-s*` compat aliases, where
+   `--rio-fs-h2` serves BOTH h1 and h2 — so every document rendered its
+   two top heading levels at the same 18px and had no hierarchy to read.
+   It now resolves against the live ladder: 24 · 18 · 16 · 13-mono over
+   a 15px body.
+   ============================================================ */
+
+/* ---- The index ---------------------------------------------------
+   A row per document: ordinal, title, the document's own opening
+   sentence (derived — `docs::summary`), its route and its section
+   count, and one affordance for the whole row. The ordinal is a real
+   element rather than a counter so it can align with the title's cap
+   height while the lead wraps beneath it. */
+.rio-docs-index .rio-board-title { background: var(--rio-raised); }
+.rio-docs-list { list-style: none; margin: 0; padding: 0; }
+.rio-docs-row + .rio-docs-row { border-block-start: 1px solid var(--rio-line); }
+.rio-docs-item {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 1.25rem;
+  align-items: start;
+  gap: var(--rio-space-16);
+  padding: var(--rio-space-20) var(--rio-space-24);
+  color: inherit;
+  text-decoration: none;
+}
+.rio-docs-item:hover { background: var(--rio-raised); }
+.rio-docs-item:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: -3px; border-radius: var(--rio-radius-md); }
+.rio-docs-item-ord {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); color: var(--rio-text-faint);
+  line-height: var(--rio-leading-tight); padding-block-start: 0.2em;
+}
+.rio-docs-item-body { display: grid; gap: var(--rio-space-6); min-inline-size: 0; }
+.rio-docs-item-title {
+  font-size: var(--rio-text-17); font-weight: var(--rio-weight-semibold);
+  color: var(--rio-text-hi); line-height: var(--rio-leading-tight);
+}
+.rio-docs-item:hover .rio-docs-item-title { color: var(--rio-rust); }
+.rio-docs-item-lead {
+  max-inline-size: 72ch;
+  font-size: var(--rio-text-14); line-height: var(--rio-leading-snug);
+  color: var(--rio-text-mute);
+}
+.rio-docs-item-meta {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-8);
+  font-size: var(--rio-text-12); color: var(--rio-text-faint);
+}
+.rio-docs-item-meta code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+/* The separator belongs to the count, not to the line — wrapping it
+   alone leaves a dangling "·" at the end of the route. */
+.rio-docs-item-count { white-space: nowrap; }
+/* The affordance belongs to the row, so it answers the row's hover
+   rather than carrying a hover of its own. */
+.rio-docs-item-go {
+  display: inline-flex; align-items: center; justify-content: flex-end;
+  color: var(--rio-text-faint); padding-block-start: 0.15em;
+  transition: transform var(--rio-dur-fast) var(--rio-ease), color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-docs-item-go svg { inline-size: 18px; block-size: 18px; }
+.rio-docs-item:hover .rio-docs-item-go { color: var(--rio-rust); transform: translateX(3px); }
+
+/* ---- The workspace grid ------------------------------------------
+   Rails that fit a document title, a reading column that takes the
+   rest. `1fr` rather than a fixed `68ch`: the column is capped at a
+   reading measure on the prose itself, so the surface can be generous
+   while the line length stays honest. */
+/* The rails are deliberately lean. This page already carries the
+   console's own 232px sidebar, so a docs rail and an on-page nav at a
+   documentation site's usual widths would leave the reading column
+   narrower than the prose it holds — which is the state this pass is
+   fixing. 11rem + 12rem keeps both legible and gives the column the
+   rest. */
+.rio-docs {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 12rem;
+  gap: var(--rio-space-24);
+  align-items: start;
+}
+@media (min-width: 1700px) {
+  .rio-docs { grid-template-columns: 13rem minmax(0, 1fr) 14rem; gap: var(--rio-space-32); }
+}
+.rio-docs-main { min-inline-size: 0; }
+
+/* The document rail. */
+.rio-docs-nav {
+  position: sticky; top: var(--rio-space-24);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rio-docs-nav-title {
+  margin: 0 0 var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase; color: var(--rio-text-mono);
+}
+.rio-docs-nav-link {
+  display: block; padding: var(--rio-space-8) var(--rio-space-12);
+  border-radius: var(--rio-radius-md);
+  font-size: var(--rio-text-14); line-height: var(--rio-leading-snug);
+  color: var(--rio-text-mute); text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.rio-docs-nav-link:hover { color: var(--rio-text-hi); background: var(--rio-raised); }
+.rio-docs-nav-link[aria-current] {
+  color: var(--rio-rust); background: var(--rio-rust-tint);
+  font-weight: var(--rio-weight-semibold);
+}
+.rio-docs-nav-foot {
+  margin: var(--rio-space-16) 0 0; padding-block-start: var(--rio-space-12);
+  border-block-start: 1px solid var(--rio-line);
+  font-size: var(--rio-text-12); color: var(--rio-text-faint);
+}
+.rio-docs-nav-foot strong { color: var(--rio-text-mute); font-variant-numeric: lining-nums tabular-nums; }
+
+/* The head sits inside the reading column, so the title lines up with
+   the document's first line and not with the rail. */
+.rio-docs-main > .rio-crumbs { margin-block-end: var(--rio-space-4); }
+.rio-docs-main > .rio-masthead-top { margin-block-end: var(--rio-space-12); }
+/* The head states what it is rendering, not what the document says —
+   the document says that in its own first line. */
+.rio-docs-facts { margin-block-end: var(--rio-space-20); }
+
+/* ---- The reading surface -----------------------------------------
+   White, bordered, and generous. The console's boards are 16/24; a
+   document gets 40 inline so the prose has a margin, the way a page
+   does. */
+.rio-docs-article {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  padding: var(--rio-space-32);
+}
+@media (min-width: 1700px) {
+  .rio-docs-article { padding: var(--rio-space-40); }
+}
+
+/* ---- Prose -------------------------------------------------------
+   One reading measure, one rhythm. Headings take their space from
+   above, which is what makes a section read as a section. */
+.rio-doc-prose {
+  max-inline-size: 76ch;
+  color: var(--rio-text);
+  font-size: var(--rio-text-15);
+  line-height: 1.75;
+}
+/* Anchor jumps land clear of the sticky chrome above the scroll area. */
+.rio-doc-prose :is(h1, h2, h3, h4) { scroll-margin-block-start: var(--rio-space-32); }
+.rio-doc-prose > :first-child { margin-block-start: 0; }
+.rio-doc-prose > :last-child { margin-block-end: 0; }
+/* The markdown's own leading title duplicates the page head. */
+.rio-doc-prose > h1:first-child { display: none; }
+
+.rio-doc-prose h1,
+.rio-doc-prose h2 {
+  margin: var(--rio-space-48) 0 var(--rio-space-16);
+  padding-block-end: var(--rio-space-8);
+  border-block-end: 1px solid var(--rio-line);
+  font-size: var(--rio-text-24);
+  font-weight: var(--rio-weight-display);
+  line-height: var(--rio-leading-display);
+  letter-spacing: -0.01em;
+  color: var(--rio-text-hi);
+}
+.rio-doc-prose h3 {
+  margin: var(--rio-space-32) 0 var(--rio-space-12);
+  font-size: var(--rio-text-20);
+  font-weight: var(--rio-weight-bold);
+  line-height: var(--rio-leading-tight);
+  color: var(--rio-text-hi);
+}
+/* The fourth level is a mono micro-label, as every other section label
+   in the console is — a 16px semibold over a 15px body is not a step a
+   reader can see. */
+.rio-doc-prose h4 {
+  margin: var(--rio-space-24) 0 var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase; color: var(--rio-text-mono);
+}
+
+.rio-doc-prose p { margin: 0 0 var(--rio-space-16); }
+.rio-doc-prose strong { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-doc-prose a {
+  color: var(--rio-rust); text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--rio-rust) 35%, transparent);
+  text-underline-offset: 2px;
+}
+.rio-doc-prose a:hover { text-decoration-color: currentColor; }
+
+.rio-doc-prose ul,
+.rio-doc-prose ol { margin: 0 0 var(--rio-space-16); padding-inline-start: 1.5em; }
+.rio-doc-prose li { margin-block: var(--rio-space-6); padding-inline-start: 0.2em; }
+.rio-doc-prose li > ul,
+.rio-doc-prose li > ol { margin-block: var(--rio-space-6) 0; }
+.rio-doc-prose li::marker { color: var(--rio-text-faint); }
+
+/* Inline code: a tint, no border. These documents put three or four
+   identifiers in a sentence, and a bordered chip each turns a paragraph
+   into a row of buttons. The tint is enough to say "this is a literal"
+   at the density this prose actually uses it. */
+.rio-doc-prose :not(pre) > code {
+  font-family: var(--rio-font-mono); font-size: 0.875em;
+  background: var(--rio-sunken); color: var(--rio-text-hi);
+  padding: 0.1em 0.36em; border-radius: var(--rio-radius-sm);
+  border: 0;
+  overflow-wrap: break-word;
+}
+/* A code block is a well, and it is allowed to use the full width of
+   the surface — a diagram or a wide command should not be forced to
+   scroll inside the prose measure. */
+.rio-doc-prose pre {
+  margin: 0 0 var(--rio-space-20);
+  padding: var(--rio-space-16) var(--rio-space-20);
+  max-inline-size: none;
+  background: var(--rio-sunken);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md);
+  overflow-x: auto;
+}
+.rio-doc-prose pre code {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-13);
+  line-height: 1.7; color: var(--rio-text); background: none;
+  border: 0; padding: 0; white-space: pre;
+}
+
+/* Tables are reference material: full width of the surface, mono heads
+   like every other table in the console, and room to read. */
+/* `display: block` + `width: max-content` is the one way a bare
+   `<table>` — which is all the markdown renderer emits, with no wrapper
+   to hang an `overflow` on — can scroll inside itself instead of
+   pushing the page sideways. It sizes to its content, caps at the
+   surface, and scrolls past that. */
+.rio-doc-prose table {
+  display: block;
+  inline-size: max-content; max-inline-size: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 var(--rio-space-20);
+  font-size: var(--rio-text-14);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-md);
+}
+.rio-doc-prose thead th {
+  text-align: start; background: var(--rio-sunken);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase; color: var(--rio-text-mono);
+  padding: var(--rio-space-8) var(--rio-space-12);
+  border-block-end: 1px solid var(--rio-line);
+  white-space: nowrap;
+}
+.rio-doc-prose tbody td {
+  padding: var(--rio-space-12);
+  border-block-end: 1px solid var(--rio-line);
+  vertical-align: top; line-height: var(--rio-leading-snug);
+}
+.rio-doc-prose tbody tr:last-child td { border-block-end: 0; }
+/* A reference table's first column is an identifier. Breaking
+   `search_index_column` across two lines to save 20px makes it
+   unreadable and unsearchable; the table scrolls instead. */
+.rio-doc-prose tbody td:first-child { white-space: nowrap; }
+.rio-doc-prose tbody td:first-child > code { overflow-wrap: normal; }
+.rio-doc-prose tbody tr:hover { background: var(--rio-raised); }
+
+.rio-doc-prose blockquote {
+  margin: 0 0 var(--rio-space-20);
+  padding: var(--rio-space-12) var(--rio-space-20);
+  border-inline-start: 3px solid var(--rio-line-strong);
+  background: var(--rio-raised);
+  border-radius: 0 var(--rio-radius-md) var(--rio-radius-md) 0;
+  color: var(--rio-text);
+}
+.rio-doc-prose blockquote > :last-child { margin-block-end: 0; }
+.rio-doc-prose hr { border: 0; border-block-start: 1px solid var(--rio-line); margin: var(--rio-space-32) 0; }
+.rio-doc-prose img { max-inline-size: 100%; block-size: auto; border-radius: var(--rio-radius-md); }
+
+/* Heading anchors, revealed on hover in the heading's own margin. */
+.rio-doc-prose :is(h2, h3)[id] { position: relative; }
+.rio-doc-prose :is(h2, h3)[id] > a.rio-docs-anchor {
+  position: absolute; inset-inline-start: -1.1em;
+  color: var(--rio-text-faint); text-decoration: none;
+  opacity: 0; font-weight: var(--rio-weight-regular);
+}
+.rio-doc-prose :is(h2, h3)[id]:hover > a.rio-docs-anchor { opacity: 1; }
+
+/* ---- On this page ------------------------------------------------
+   Populated by `initDocToc`, hidden until it has at least two headings
+   to list. The active rule is the reader's position in the document,
+   so it is the one thing here allowed to carry the accent. */
+.rio-doc-toc { position: sticky; top: var(--rio-space-24); align-self: start; }
+.rio-doc-toc[hidden] { display: none; }
+.rio-doc-toc__title {
+  margin: 0 0 var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase; color: var(--rio-text-mono);
+}
+.rio-doc-toc__nav {
+  display: flex; flex-direction: column;
+  border-inline-start: 1px solid var(--rio-line);
+  max-block-size: calc(100vh - 14rem); overflow-y: auto;
+}
+.rio-doc-toc__link {
+  padding: var(--rio-space-6) var(--rio-space-12);
+  margin-inline-start: -1px;
+  border-inline-start: 2px solid transparent;
+  font-size: var(--rio-text-13); line-height: var(--rio-leading-snug);
+  color: var(--rio-text-mute); text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+}
+.rio-doc-toc__link--sub { padding-inline-start: var(--rio-space-24); font-size: var(--rio-text-12); }
+.rio-doc-toc__link:hover { color: var(--rio-text-hi); }
+.rio-doc-toc__link.is-active {
+  color: var(--rio-rust); border-inline-start-color: var(--rio-rust);
+  font-weight: var(--rio-weight-semibold);
+}
+
+/* ---- Previous / next ---------------------------------------------
+   Two targets, each naming the document it leads to — a reader at the
+   bottom of a document is deciding what to read next, and "Next →" on
+   its own does not help them decide. */
+.rio-docs-foot {
+  display: flex; flex-wrap: wrap; gap: var(--rio-space-12);
+  margin-block-start: var(--rio-space-40);
+  padding-block-start: var(--rio-space-24);
+  border-block-start: 1px solid var(--rio-line);
+}
+.rio-docs-step {
+  display: inline-flex; align-items: center; gap: var(--rio-space-12);
+  min-inline-size: 0; flex: 1 1 14rem;
   padding: var(--rio-space-12) var(--rio-space-16);
-  border-inline-end: 1px solid var(--rio-line);
-  display: flex; flex-direction: column; gap: var(--rio-space-4);
+  border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md);
+  color: inherit; text-decoration: none;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-api-ep-list .rio-api-ep { padding: var(--rio-space-4) 0; border: 0; gap: var(--rio-space-8); }
-.rio-api-ep-list .rio-api-verb { min-inline-size: 44px; }
-.rio-api-ep-list .rio-api-path { font-size: var(--rio-text-13); }
-.rio-api-ep-list .rio-api-ep__action { font-size: var(--rio-text-13); color: var(--rio-text-faint); }
-.rio-api-section .rio-api-fields { padding: var(--rio-space-8) var(--rio-space-16) var(--rio-space-12); }
-.rio-api-section .rio-api-ftable td { padding: var(--rio-space-4) 0; font-size: var(--rio-text-13); }
+.rio-docs-step:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
+.rio-docs-step--next { margin-inline-start: auto; justify-content: flex-end; text-align: end; }
+.rio-docs-step > span { display: grid; gap: 2px; min-inline-size: 0; }
+.rio-docs-step svg { flex: none; color: var(--rio-text-faint); }
+.rio-docs-step:hover svg { color: var(--rio-rust); }
+.rio-docs-step-label {
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase; color: var(--rio-text-faint);
+}
+.rio-docs-step-title {
+  font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold);
+  color: var(--rio-text-hi); overflow-wrap: anywhere;
+}
+
+/* ---- Narrow ------------------------------------------------------
+   The on-page nav goes first (it duplicates the headings the reader is
+   already scrolling past), then the document rail becomes a scrolling
+   strip above the reading column. The surface keeps its border but
+   gives back its generous inline padding. */
+/* The on-page nav is dropped well above the width where it technically
+   fits. Three columns at 1280 leave the reading column at ~480px —
+   narrower than two columns leave it — so the breakpoint is set where
+   the third column stops costing more than it gives. */
+@media (max-width: 1400px) {
+  .rio-docs { grid-template-columns: 13rem minmax(0, 1fr); }
+  .rio-docs-toc { display: none; }
+}
 @media (max-width: 900px) {
-  .rio-api-section-body { grid-template-columns: 1fr; }
-  .rio-api-ep-list { border-inline-end: 0; border-block-end: 1px solid var(--rio-line); }
+  .rio-docs { grid-template-columns: minmax(0, 1fr); gap: var(--rio-space-20); }
+  .rio-docs-nav {
+    position: static; flex-direction: row; flex-wrap: nowrap;
+    overflow-x: auto; gap: var(--rio-space-4);
+    padding-block-end: var(--rio-space-12);
+    border-block-end: 1px solid var(--rio-line);
+  }
+  .rio-docs-nav-title, .rio-docs-nav-foot { display: none; }
+  .rio-docs-nav-link { white-space: nowrap; flex: none; }
+  .rio-docs-article { padding: var(--rio-space-24); }
+  .rio-docs-step--next { margin-inline-start: 0; }
 }
+@media (max-width: 600px) {
+  /* No full-bleed negative margin here: pulling the surface wider than
+     its grid column made `.rio-docs` 32px wider than its own box, which
+     is a horizontal overflow waiting for an ancestor to stop clipping
+     it. The surface keeps its edge and gives back padding instead. */
+  .rio-docs-article { padding: var(--rio-space-20) var(--rio-space-16); }
+  .rio-docs-item { grid-template-columns: minmax(0, 1fr) 1.25rem; padding: var(--rio-space-16); }
+  .rio-docs-item-ord { display: none; }
+  .rio-doc-prose h1, .rio-doc-prose h2 { font-size: var(--rio-text-20); margin-block-start: var(--rio-space-32); }
+  .rio-doc-prose h3 { font-size: var(--rio-text-17); }
+}
+
+
+/* ============================================================
+   NOTIFICATIONS · FLAGS
+   Composition from docs/design/page-composition-study (completion pass).
+   ============================================================ */
+.rio-notif-rows { list-style: none; margin: 0; padding: 0; }
+.rio-notif-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) max-content; align-items: baseline; gap: var(--rio-space-12); padding: var(--rio-space-12) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+.rio-notif-row:last-child { border-block-end: 0; }
+.rio-notif-dot { inline-size: 8px; block-size: 8px; border-radius: var(--rio-radius-pill); background: transparent; align-self: center; }
+.rio-notif-row--unread .rio-notif-dot { background: var(--rio-rust); }
+.rio-notif-row--unread .rio-notif-msg { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-notif-msg { color: var(--rio-text); text-decoration: none; }
+a.rio-notif-msg:hover { color: var(--rio-rust); }
+.rio-notif-when { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); white-space: nowrap; }
+.rio-flag-state { display: inline-flex; align-items: center; gap: var(--rio-space-6); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-flag-state::before { content: ""; inline-size: 8px; block-size: 8px; border-radius: var(--rio-radius-pill); background: var(--rio-success); }
+.rio-flag-state--off { color: var(--rio-text-faint); font-weight: var(--rio-weight-regular); }
+.rio-flag-state--off::before { background: var(--rio-line-strong); }
+.rio-flag-form .rio-fieldset-grid { grid-template-columns: minmax(200px, 1fr) minmax(0, 2fr); }
+@media (max-width: 760px) { .rio-flag-form .rio-fieldset-grid { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   DEVELOPER PAGES
+   Composition from docs/design/page-composition-study (completion pass).
+   ============================================================ */
+.rio-jump { display: flex; flex-wrap: wrap; gap: var(--rio-space-4); margin-block-end: var(--rio-space-16); }
+.rio-jump a { display: inline-flex; align-items: center; block-size: var(--rio-ctl-sm); padding: 0 var(--rio-space-12); border-radius: var(--rio-radius-pill); border: 1px solid var(--rio-line); background: var(--rio-surface); font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text); text-decoration: none; }
+.rio-jump a:hover { border-color: var(--rio-line-strong); color: var(--rio-rust); }
+.rio-dbt-foot { display: flex; flex-wrap: wrap; gap: var(--rio-space-4) var(--rio-space-24); padding: var(--rio-space-8) var(--rio-space-16); background: var(--rio-sunken); border-block-start: 1px solid var(--rio-line); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-dbt-foot code { font-size: 0.92em; background: none; padding: 0; color: var(--rio-text); }
+.rio-dbt-foot a { color: var(--rio-rust); text-decoration: none; }
+.rio-dbt-cols td:first-child { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-hi); }
+.rio-dbt-cols td.rio-cell-meta code { background: none; padding: 0; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-board-title h2 code { font-size: var(--rio-text-14); background: none; padding: 0; color: inherit; }
+.rio-dev-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--rio-space-16); align-items: start; }
+@media (max-width: 1100px) { .rio-dev-layout { grid-template-columns: 1fr; } }
+/* playground */
+.rio-pg { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(0, 1.2fr); gap: var(--rio-space-16); align-items: start; }
+.rio-pg-response { position: sticky; top: var(--rio-space-16); }
+.rio-pg-response .rio-code { border: 0; border-radius: 0; min-block-size: 240px; }
+.rio-pg-url { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-mute); overflow-wrap: anywhere; }
+.rio-pg-status { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); padding: var(--rio-space-8) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
+.rio-pg-status strong { color: var(--rio-success); }
+@media (max-width: 1000px) { .rio-pg { grid-template-columns: 1fr; } .rio-pg-response { position: static; } }
+/* csv import */
+.rio-imp-cols { display: inline-flex; flex-wrap: wrap; gap: var(--rio-space-4); }
+.rio-form-card .rio-code { margin: 0; }
+.rio-form-card .rio-code + .rio-hint { margin-block-start: var(--rio-space-8); }
+.rio-form-card .rio-fieldset > .rio-hint { display: block; margin: 0 0 var(--rio-space-8); color: var(--rio-text-mute); font-size: var(--rio-text-13); clear: both; }
+
+/* ---- Playground layout: form left, response beside it ---- */
+.rio-pg-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--rio-space-16); align-items: start; }
+.rio-playground__form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--rio-space-16); padding: var(--rio-space-24); }
+.rio-playground__field { display: flex; flex-direction: column; gap: var(--rio-space-8); min-inline-size: 0; }
+.rio-playground__field > span { font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-playground__field--wide { grid-column: 1 / -1; }
+.rio-playground__field[hidden] { display: none; }
+.rio-playground__actions { grid-column: 1 / -1; margin: 0; }
+.rio-playground__url { margin-inline-start: auto; font-family: var(--rio-font-mono); font-size: var(--rio-text-13); overflow-wrap: anywhere; }
+.rio-playground__result { position: sticky; inset-block-start: var(--rio-space-16); }
+.rio-playground__body { margin: 0; border: 0; border-radius: 0; max-block-size: 60vh; overflow: auto; }
+@media (max-width: 1000px) { .rio-pg-layout { grid-template-columns: minmax(0, 1fr); } .rio-playground__result { position: static; } }
+
+/* ---- CSV import: the pieces the page adds beyond the shared card ---- */
+.rio-imp-fix { margin-block-end: var(--rio-space-16); }
+.rio-imp-note { margin: var(--rio-space-8) 0 0; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-imp-rows { margin-block-start: var(--rio-space-16); }
+.rio-imp-errs { margin: 0; padding-inline-start: var(--rio-space-16); color: var(--rio-text-mute); font-size: var(--rio-text-13); }

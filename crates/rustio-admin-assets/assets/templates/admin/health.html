@@ -1,46 +1,68 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
+{# An operational status page.
+
+   The verdict used to be a small pill beside a count inside a card, and
+   every row repeated a pill of its own — so the page said "warning" five
+   times and never said when, or what to do next. The verdict is now a
+   band that reads as one sentence, the checks are rows ordered failing
+   first (in `health_ctx`, not here), and the things an operator reaches
+   for next — the probe route, the CLI, the audit trail — are a panel
+   beside them instead of being absent.
+
+   "Re-run checks" is a link to this page: every GET re-probes. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
-<div class="rio-masthead-top"><div>
-  <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">Same probes the <code>rustio-admin doctor</code> CLI runs, exposed on the admin chrome. Reload to re-run.</p>
-</div></div>
+<div class="rio-masthead-top">
+  <div><h1>{{ page_title }}</h1></div>
+  <div class="rio-masthead-cta">
+    <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/health">{{ icon("rotate-ccw") }} Re-run checks</a>
+  </div>
+</div>
 
-<section class="rio-card rio-health">
-  <header class="rio-health__summary">
-    {% if all_ok %}
-    <span class="rio-pill rio-pill--badge-success">All clear</span>
-    {% elif error_count > 0 %}
-    <span class="rio-pill rio-pill--badge-danger">{{ error_count }} error{% if error_count != 1 %}s{% endif %}</span>
-    {% else %}
-    <span class="rio-pill rio-pill--badge-neutral">{{ warn_count }} warning{% if warn_count != 1 %}s{% endif %}</span>
-    {% endif %}
-    <span class="rio-meta">
-      {{ ok_count }} ok · {{ warn_count }} warn · {{ error_count }} error
-    </span>
-  </header>
+<div class="rio-status{% if error_count > 0 %} rio-status--error{% elif warn_count > 0 %} rio-status--warn{% endif %}">
+  <span class="rio-status-dot" aria-hidden="true"></span>
+  <div>
+    <div class="rio-status-title">
+      {% if all_ok %}All {{ ok_count }} checks passing
+      {% elif error_count > 0 %}{{ error_count }} check{% if error_count != 1 %}s{% endif %} failing{% if warn_count > 0 %}, {{ warn_count }} warning{% if warn_count != 1 %}s{% endif %}{% endif %}
+      {% else %}{{ warn_count }} warning{% if warn_count != 1 %}s{% endif %}{% endif %}
+    </div>
+    <div class="rio-status-meta">
+      {{ checks|length }} check{% if checks|length != 1 %}s{% endif %} · as of {{ server_now }} · the same probes <code>rustio-admin doctor</code> runs
+    </div>
+  </div>
+</div>
 
-  <table class="rio-table rio-health__table">
-    <thead><tr><th>Status</th><th>Check</th><th>Detail</th></tr></thead>
-    <tbody>
+<div class="rio-status-layout">
+  <div class="rio-board">
+    <div class="rio-board-title"><h2>Checks</h2><span class="rio-meta">failing first</span></div>
+    {% if checks %}
+    <div class="rio-check-rows">
       {% for c in checks %}
-      <tr class="rio-health__row rio-health__row--{{ c.status }}">
-        <td>
-          {% if c.status == "ok" %}
-          <span class="rio-pill rio-pill--badge-success">OK</span>
-          {% elif c.status == "warn" %}
-          <span class="rio-pill rio-pill--badge-neutral">Warn</span>
-          {% else %}
-          <span class="rio-pill rio-pill--badge-danger">Error</span>
-          {% endif %}
-        </td>
-        <td><strong>{{ c.label }}</strong></td>
-        <td>{{ c.message }}</td>
-      </tr>
+      <div class="rio-check-row rio-check-row--{{ c.status }}">
+        <span class="rio-check-state">{% if c.status == "ok" %}Passing{% elif c.status == "warn" %}Warning{% else %}Failing{% endif %}</span>
+        <span class="rio-check-label">{{ c.label }}</span>
+        <span class="rio-check-msg">{{ c.message }}</span>
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
-</section>
+    </div>
+    {% else %}
+    <div class="rio-empty">
+      <div class="rio-empty-title">No checks reported</div>
+      <div>The health probe returned nothing. That is itself worth investigating — run <code>rustio-admin doctor</code>.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="rio-facts">
+    <h2 class="rio-facts-title">Diagnostics</h2>
+    <dl>
+      <dt>Probe</dt><dd><code class="rio-code">GET /admin/healthz</code></dd>
+      <dt>CLI</dt><dd><code class="rio-code">rustio-admin doctor</code></dd>
+      <dt>Email</dt><dd><code class="rio-code">rustio-admin doctor email --to …</code></dd>
+      <dt>Audit</dt><dd><a class="rio-action-link" href="/admin/history">Recent authority events</a></dd>
+    </dl>
+  </div>
+</div>
 {% endblock %}

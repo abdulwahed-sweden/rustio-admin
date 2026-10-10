@@ -479,10 +479,37 @@
 /* ---- Surface title band ---------------------------------------------
    A surface that is the page's one surface names itself: title at the
    start, a meta note at the end, one rule beneath. */
+/* ---- The facts line ----
+   One line of what a page is looking at, under the title. Promoted here from
+   pages/dashboard.css: the audit log, health, docs, sessions, search and the
+   developer pages all state their facts the same way. */
+.rio-dash-facts {
+  display: flex; flex-wrap: wrap;
+  gap: var(--rio-space-4) var(--rio-space-16);
+  margin: 0 0 var(--rio-space-16);
+  color: var(--rio-text-mute); font-size: var(--rio-text-14);
+}
+.rio-dash-facts strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); font-variant-numeric: lining-nums tabular-nums; }
+.rio-dash-facts a { color: var(--rio-rust); text-decoration: none; }
+.rio-dash-facts a:hover { text-decoration: underline; }
+.rio-dash-facts code { font-size: 0.92em; }
+
 .rio-board-title {
   display: flex; align-items: baseline; gap: var(--rio-space-8);
   padding: var(--rio-space-12) var(--rio-space-16);
   border-block-end: 1px solid var(--rio-line);
+}
+/* A band can carry an action at its end — "Sign out of every other device",
+   "Search inside Jobs →". */
+.rio-board-title .rio-board-title-action { margin-inline-start: auto; }
+.rio-board-title .rio-board-title-action + .rio-meta,
+.rio-board-title .rio-meta + .rio-board-title-action { margin-inline-start: var(--rio-space-12); }
+.rio-board-title .rio-pill { margin-inline-start: var(--rio-space-4); }
+@media (max-width: 760px) {
+  .rio-board-title { flex-wrap: wrap; row-gap: var(--rio-space-4); }
+  .rio-board-title h2 { flex: 1 1 auto; }
+  .rio-board-title .rio-meta,
+  .rio-board-title .rio-board-title-action { flex-basis: 100%; margin-inline-start: 0; }
 }
 .rio-board-title h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
 .rio-board-title .rio-meta { margin-inline-start: auto; }

@@ -1872,6 +1872,24 @@ pub fn register_admin_routes(
         }
     });
 
+    // The search PAGE (`/admin/search`), distinct from the palette's
+    // JSON endpoint above. Registered before the generic
+    // `/admin/:admin_name` pattern so a model named `search` cannot
+    // shadow it. Role gate is `Staff`, same as the palette; the
+    // handler filters to models the operator can `view` — a looser
+    // gate than the palette's `change`, because every link this page
+    // offers is itself view-gated.
+    let c = ctx.clone();
+    let router = router.get("/admin/search", move |req| {
+        let c = c.clone();
+        async move {
+            match role_guard(&c, &req, Role::Staff).await? {
+                Guard::Redirect(r) => Ok(r),
+                Guard::Allow(ident) => handlers::search_page(&c, ident, req).await,
+            }
+        }
+    });
+
     // Built-in framework docs — Staff-gated read-only pages
     // rendering the embedded markdown sources from `docs/*.md`.
     // Mounted before the generic `/admin/:admin_name` pattern so

@@ -1,107 +1,59 @@
 {% extends "admin/_base.html" %}
-{# A data page: wide tables take the wide measure. #}
-{% block page_measure %}rio-page--wide{% endblock %}
+{# The schema explorer: a facts line instead of a stat card, a jump row
+   so a database with thirty tables is navigable, and one board per table
+   whose foot states the foreign keys in both directions. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Database</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">
-    Read-only schema explorer for the <code>public</code> schema. Row counts are the planner's
-    estimate (<code>pg_class.reltuples</code>) — accurate after an <code>ANALYZE</code>, approximate otherwise.
-  </p>
 </div></div>
 
-<section class="rio-card rio-db-summary">
-  <dl class="rio-db-stats">
-    <div class="rio-db-stat">
-      <dt>Tables</dt>
-      <dd>{{ tables|length }}</dd>
-    </div>
-    <div class="rio-db-stat">
-      <dt>Columns</dt>
-      <dd>{{ total_columns }}</dd>
-    </div>
-    <div class="rio-db-stat">
-      <dt>Rows (approx.)</dt>
-      <dd>~ {{ total_row_estimate }}</dd>
-    </div>
-  </dl>
-</section>
+<p class="rio-dash-facts">
+  <span><strong>{{ tables|length }}</strong> table{% if tables|length != 1 %}s{% endif %}</span>
+  <span><strong>{{ total_columns }}</strong> columns</span>
+  <span>~<strong>{{ total_row_estimate }}</strong> rows</span>
+  <span>read-only, <code>public</code> schema; counts are <code>pg_class.reltuples</code></span>
+</p>
 
 {% if tables %}
+<nav class="rio-jump" aria-label="Jump to a table">
+  {% for t in tables %}<a href="#t-{{ t.name }}">{{ t.name }}</a>{% endfor %}
+</nav>
+
 {% for t in tables %}
-<section class="rio-card rio-db-table" id="t-{{ t.name }}">
-  <header class="rio-db-table__header">
+<div class="rio-board" id="t-{{ t.name }}">
+  <div class="rio-board-title">
     <h2><code>{{ t.name }}</code></h2>
-    <span class="rio-meta">
-      {{ t.column_count }} column{% if t.column_count != 1 %}s{% endif %} ·
-      ~ {{ t.row_estimate }} row{% if t.row_estimate != 1 %}s{% endif %}
-    </span>
-  </header>
-
-  <table class="rio-table rio-db-columns">
-    <thead>
-      <tr>
-        <th>Column</th>
-        <th>Type</th>
-        <th>Nullable</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in t.columns %}
-      <tr>
-        <td><code>{{ c.name }}</code></td>
-        <td>{{ c.data_type }}</td>
-        <td>{% if c.is_nullable %}YES{% else %}NO{% endif %}</td>
-        <td>{% if c.default_expr %}<code>{{ c.default_expr }}</code>{% else %}<span class="rio-meta">—</span>{% endif %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
+    <span class="rio-meta rio-board-title-action">{{ t.column_count }} column{% if t.column_count != 1 %}s{% endif %} · ~{{ t.row_estimate }} row{% if t.row_estimate != 1 %}s{% endif %}</span>
+  </div>
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops rio-dbt-cols">
+      <thead><tr><th>Column</th><th>Type</th><th>Required</th><th>Default</th></tr></thead>
+      <tbody>
+        {% for c in t.columns %}
+        <tr>
+          <td class="rio-cell-fit">{{ c.name }}</td>
+          <td>{{ c.data_type }}</td>
+          <td>{% if c.is_nullable %}<span class="rio-mark rio-mark--off">optional</span>{% else %}<span class="rio-mark">required</span>{% endif %}</td>
+          <td class="rio-cell-meta">{% if c.default_expr %}<code>{{ c.default_expr }}</code>{% else %}<span class="rio-meta">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% if t.outgoing_fks or t.incoming_fks %}
-  <div class="rio-db-fks">
-    {% if t.outgoing_fks %}
-    <div class="rio-db-fks__group">
-      <h3>References (outgoing)</h3>
-      <ul class="rio-db-fk-list">
-        {% for fk in t.outgoing_fks %}
-        <li>
-          <code>{{ fk.source_column }}</code> →
-          <a href="#t-{{ fk.target_table }}"><code>{{ fk.target_table }}</code></a>.<code>{{ fk.target_column }}</code>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-    {% if t.incoming_fks %}
-    <div class="rio-db-fks__group">
-      <h3>Referenced by (incoming)</h3>
-      <ul class="rio-db-fk-list">
-        {% for fk in t.incoming_fks %}
-        <li>
-          <a href="#t-{{ fk.source_table }}"><code>{{ fk.source_table }}</code></a>.<code>{{ fk.source_column }}</code>
-          → <code>{{ fk.target_column }}</code>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
+  <div class="rio-dbt-foot">
+    {% for fk in t.outgoing_fks %}<span><code>{{ fk.source_column }}</code> → <a href="#t-{{ fk.target_table }}"><code>{{ fk.target_table }}.{{ fk.target_column }}</code></a></span>{% endfor %}
+    {% for fk in t.incoming_fks %}<span><a href="#t-{{ fk.source_table }}"><code>{{ fk.source_table }}.{{ fk.source_column }}</code></a> → <code>{{ fk.target_column }}</code></span>{% endfor %}
   </div>
   {% endif %}
-</section>
+</div>
 {% endfor %}
 {% else %}
-<section class="rio-card rio-card--quiet">
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("database", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No tables in the public schema</h3>
-    <p class="rio-empty-state__lead">
-      Run <code>rustio-admin migrate apply</code> to create your project's tables — they
-      appear here once the schema lands.
-    </p>
-  </div>
-</section>
+<div class="rio-board"><div class="rio-empty">
+  <div class="rio-empty-title">No tables in the public schema</div>
+  <div>Run <code>rustio-admin migrate apply</code> to create your project's tables — they appear here once the schema lands.</div>
+</div></div>
 {% endif %}
 {% endblock %}

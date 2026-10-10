@@ -1731,6 +1731,171 @@ pub(crate) async fn search_models(
     Ok(Response::json_raw(body))
 }
 
+/// `GET /admin/search` — the result-oriented admin search page.
+///
+/// Shares the per-model query with the `⌘K` palette
+/// (`search_models`) but differs in two ways the spec calls for:
+/// it gates on `view` rather than `change`, because every link it
+/// offers (the list page, the record's history) is view-gated; and it
+/// keeps a count per model so the page can say how much it is showing
+/// of how much matched.
+pub(crate) async fn search_page(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    /// Rows per model on the page. The palette shows 5; this page is
+    /// for comparing, so it shows more without becoming a list page.
+    const PAGE_PER_MODEL: i64 = 25;
+
+    let term = req.query().get("q").unwrap_or_default().trim().to_string();
+    let scope = req
+        .query()
+        .get("scope")
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "all".to_string());
+    let has_query = term.chars().count() >= SEARCH_MIN_QUERY_LEN;
+
+    let mut groups: Vec<render::SearchGroupCtx> = Vec::new();
+    let mut scopes: Vec<render::SearchScopeCtx> = Vec::new();
+    let mut result_count = 0usize;
+
+    for entry in ctx.admin.entries() {
+        if entry.core || entry.search_fields.is_empty() {
+            continue;
+        }
+        // `view`, not `change`: this page links to the model's list and
+        // the record's history, both view-gated. The palette's stricter
+        // `change` gate is right for IT because it links to the edit
+        // page — the two gates differ on purpose.
+        let perm = format!(
+            "{}.view_{}",
+            entry.admin_name,
+            entry.singular_name.to_ascii_lowercase()
+        );
+        if !auth::check_permission(&ctx.db, &identity, &perm).await? {
+            continue;
+        }
+
+        let in_scope = scope == "all" || scope == entry.admin_name;
+        let mut count = 0usize;
+
+        if has_query && in_scope {
+            let page = entry
+                .ops
+                .list(
+                    &ctx.db,
+                    super::types::ListOpts {
+                        search: Some((
+                            term.clone(),
+                            entry.search_fields.iter().map(|s| s.to_string()).collect(),
+                        )),
+                        search_index_column: entry.search_index_column,
+                        limit: Some(PAGE_PER_MODEL),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            count = page.total.max(0) as usize;
+
+            let display_idx = render::pick_display_index(entry.fields, None);
+            let rows: Vec<render::SearchRowCtx> = page
+                .rows
+                .iter()
+                .map(|row| {
+                    let label = display_idx
+                        .and_then(|i| row.cells.get(i).cloned())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| format!("#{}", row.id));
+                    // Context cells: what the list page would show,
+                    // minus the identity column that is already the
+                    // label, capped so a wide model stays readable.
+                    let cells: Vec<String> = row
+                        .cells
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, c)| Some(*i) != display_idx && !c.is_empty())
+                        .map(|(_, c)| c.clone())
+                        .take(3)
+                        .collect();
+                    render::SearchRowCtx {
+                        id: row.id,
+                        label,
+                        cells,
+                        edit_url: format!("/admin/{}/{}/edit", entry.admin_name, row.id),
+                        history_url: format!("/admin/{}/{}/history", entry.admin_name, row.id),
+                    }
+                })
+                .collect();
+
+            if !rows.is_empty() {
+                result_count += rows.len();
+                groups.push(render::SearchGroupCtx {
+                    admin_name: entry.admin_name.to_string(),
+                    display_name: entry.display_name.to_string(),
+                    shown: rows.len(),
+                    total: count,
+                    list_link: format!(
+                        "/admin/{}?q={}",
+                        entry.admin_name,
+                        urlencoding::encode(&term)
+                    ),
+                    rows,
+                });
+            }
+        }
+
+        let scope_link = if scope == entry.admin_name {
+            format!("/admin/search?q={}", urlencoding::encode(&term))
+        } else {
+            format!(
+                "/admin/search?q={}&scope={}",
+                urlencoding::encode(&term),
+                entry.admin_name
+            )
+        };
+        scopes.push(render::SearchScopeCtx {
+            admin_name: entry.admin_name.to_string(),
+            display_name: entry.display_name.to_string(),
+            count,
+            is_active: scope == entry.admin_name,
+            link: scope_link,
+            list_link: format!(
+                "/admin/{}?q={}",
+                entry.admin_name,
+                urlencoding::encode(&term)
+            ),
+        });
+    }
+
+    let model_count = groups.len();
+    let all_link = format!("/admin/search?q={}", urlencoding::encode(&term));
+    let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let view = render::SearchPageCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin)
+            .with_unread_count(unread),
+        page_title: "Search",
+        entries: ctx
+            .admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(render::SidebarEntry::from)
+            .collect(),
+        query: term,
+        scope,
+        groups,
+        scopes,
+        result_count,
+        model_count,
+        has_query,
+        all_link,
+    };
+    let body = ctx.templates.render("admin/search.html", &view)?;
+    Ok(Response::html(body))
+}
+
 // ---- CRUD audit emission -------------------------------------------------
 
 /// Fire-and-forget audit emission for a project-model CRUD event.
@@ -2840,6 +3005,15 @@ pub(crate) async fn show_object_history(
         .unwrap_or_default();
 
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    // The feed is newest-first, so the last entry is the creation and
+    // the first is the most recent change. Three facts from the rows
+    // already fetched — no extra query.
+    let entries_ctx = render::map_audit_actions(actions);
+    let event_count = entries_ctx.len();
+    let created_at = entries_ctx.last().map(|e| e.timestamp_iso.clone());
+    let created_by = entries_ctx.last().map(|e| e.user_email.clone());
+    let last_change = entries_ctx.first().map(|e| e.when_relative.clone());
+
     let view = render::ObjectHistoryCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
             .with_unread_count(unread)
@@ -2850,6 +3024,10 @@ pub(crate) async fn show_object_history(
         singular_name: entry.singular_name.to_string(),
         object_id: id,
         object_label: label,
+        created_at,
+        created_by,
+        last_change,
+        event_count,
         entries: ctx
             .admin
             .entries()
@@ -2857,7 +3035,7 @@ pub(crate) async fn show_object_history(
             .filter(|e| !e.core)
             .map(render::SidebarEntry::from)
             .collect(),
-        history_entries: render::map_audit_actions(actions),
+        history_entries: entries_ctx,
         flash: None,
     };
     let body = ctx
@@ -3553,18 +3731,116 @@ pub(crate) async fn show_log_entries(
     req: &Request,
 ) -> Result<Response> {
     ensure_audit_ready(&ctx.db).await;
-    // Per-actor filter: `?user_id=N` narrows the audit feed to one
-    // operator's actions. Non-numeric / non-positive values drop
-    // silently — the feed renders unfiltered rather than 4xx-ing on a
-    // bad URL.
+    // The audit page's find row: a term, three narrowing filters, a
+    // period, and a page. Every one is optional and every bad value
+    // drops silently — a mistyped URL renders the unfiltered feed
+    // rather than a 4xx, as the `?user_id=` filter already did.
     let qs = req.query();
+    let pick = |k: &str| -> Option<String> {
+        qs.get(k)
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    };
+    let search = pick("q");
+    let action_filter = pick("action");
+    let model_filter = pick("model");
+    // `YYYY-MM-DD` only; anything else is ignored rather than passed
+    // to Postgres as a cast that would error.
+    let is_date = |v: &String| {
+        v.len() == 10
+            && v.as_bytes().iter().enumerate().all(|(i, c)| {
+                if i == 4 || i == 7 {
+                    *c == b'-'
+                } else {
+                    c.is_ascii_digit()
+                }
+            })
+    };
+    let from_filter = pick("from").filter(is_date);
+    let to_filter = pick("to").filter(is_date);
     let user_filter: Option<i64> = qs
         .get("user_id")
         .and_then(|s| s.trim().parse::<i64>().ok())
         .filter(|n| *n > 0);
-    let actions = audit::recent(&ctx.db, 100, None, None, user_filter)
+
+    const PER_PAGE: usize = 50;
+    let page = qs
+        .get("page")
+        .and_then(|s| s.trim().parse::<usize>().ok())
+        .filter(|n| *n >= 1)
+        .unwrap_or(1);
+
+    let query = |offset: usize| audit::AuditQuery {
+        search: search.as_deref(),
+        model: model_filter.as_deref(),
+        action: action_filter.as_deref(),
+        user_id: user_filter,
+        from: from_filter.as_deref(),
+        to: to_filter.as_deref(),
+        limit: PER_PAGE as i64,
+        offset: offset as i64,
+    };
+    let page_raw = page;
+    let (mut actions, total) = audit::page(&ctx.db, &query((page_raw - 1) * PER_PAGE))
         .await
         .unwrap_or_default();
+    let total_rows = total.max(0) as usize;
+    let total_pages = total_rows.div_ceil(PER_PAGE).max(1);
+    // A `?page=` past the last page is a stale URL — a bookmark taken
+    // before the log was filtered, or before rows aged out. Clamp to
+    // the last page and refetch once, as the list page does, rather
+    // than rendering an empty board that claims "0–50 of 11".
+    let page = page_raw.min(total_pages);
+    if page != page_raw && total_rows > 0 {
+        if let Ok((rows, _)) = audit::page(&ctx.db, &query((page - 1) * PER_PAGE)).await {
+            actions = rows;
+        }
+    }
+
+    // Rebuild the query string for a link that changes one parameter,
+    // so paging keeps the filters and a filter keeps the term.
+    let base_params: Vec<(&str, String)> = [
+        ("q", search.clone()),
+        ("action", action_filter.clone()),
+        ("model", model_filter.clone()),
+        ("from", from_filter.clone()),
+        ("to", to_filter.clone()),
+        ("user_id", user_filter.map(|u| u.to_string())),
+    ]
+    .into_iter()
+    .filter_map(|(k, v)| v.map(|v| (k, v)))
+    .collect();
+    let link_with = |extra: Option<(&str, String)>| -> String {
+        let mut parts: Vec<String> = base_params
+            .iter()
+            .filter(|(k, _)| extra.as_ref().map(|(ek, _)| ek != k).unwrap_or(true))
+            .map(|(k, v)| format!("{k}={}", urlencoding::encode(v)))
+            .collect();
+        if let Some((k, v)) = extra {
+            if !v.is_empty() {
+                parts.push(format!("{k}={}", urlencoding::encode(&v)));
+            }
+        }
+        if parts.is_empty() {
+            "/admin/history".to_string()
+        } else {
+            format!("/admin/history?{}", parts.join("&"))
+        }
+    };
+    let page_link = |n: usize| -> String {
+        if n <= 1 {
+            link_with(None)
+        } else {
+            link_with(Some(("page", n.to_string())))
+        }
+    };
+
+    // The dropdowns offer the values that exist, not a hard-coded list.
+    let action_options =
+        build_audit_options(&ctx.db, "action_type", action_filter.as_deref(), &link_with).await;
+    let model_options =
+        build_audit_options(&ctx.db, "model_name", model_filter.as_deref(), &link_with).await;
+
     // Resolve the filtered user's display label (email) so the
     // active-filter banner can render "Showing actions by <email>"
     // instead of a bare id. A missing user falls back to `#<id>`.
@@ -3580,6 +3856,14 @@ pub(crate) async fn show_log_entries(
     } else {
         None
     };
+
+    let shown = actions.len();
+    let has_filters = search.is_some()
+        || action_filter.is_some()
+        || model_filter.is_some()
+        || from_filter.is_some()
+        || to_filter.is_some()
+        || user_filter.is_some();
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::LogEntriesCtx {
         base: BaseContext::new(Some(&identity), csrf_token(req), &ctx.admin)
@@ -3595,10 +3879,81 @@ pub(crate) async fn show_log_entries(
             .collect(),
         history_entries: render::map_audit_actions(actions),
         flash: None,
+        search_query: search.clone().unwrap_or_default(),
+        action_filter: action_filter.clone(),
+        model_filter: model_filter.clone(),
+        from_filter: from_filter.clone(),
+        to_filter: to_filter.clone(),
+        action_options,
+        model_options,
+        page,
+        per_page: PER_PAGE,
+        total_rows,
+        total_pages,
+        showing_from: if shown == 0 {
+            0
+        } else {
+            (page - 1) * PER_PAGE + 1
+        },
+        showing_to: (page - 1) * PER_PAGE + shown,
+        prev_page_link: (page > 1).then(|| page_link(page - 1)),
+        next_page_link: (page < total_pages).then(|| page_link(page + 1)),
+        page_items: render::audit_page_items(page, total_pages, page_link),
+        has_filters,
+        clear_filters_link: "/admin/history".to_string(),
+        user_filter,
         user_filter_label,
     };
     let body = ctx.templates.render("admin/log_entries.html", &view)?;
     Ok(Response::html(body))
+}
+
+/// The distinct values of one audit column, newest-first by frequency,
+/// as dropdown options with their links pre-baked.
+///
+/// Reads from the rows that exist rather than from a hard-coded list,
+/// so a project's own `ActionType` variants appear without a code
+/// change. Capped at 30: beyond that a dropdown is the wrong control.
+async fn build_audit_options(
+    db: &Db,
+    column: &str,
+    active: Option<&str>,
+    link_with: &impl Fn(Option<(&str, String)>) -> String,
+) -> Vec<render::AuditFilterOption> {
+    let param = if column == "action_type" {
+        "action"
+    } else {
+        "model"
+    };
+    let sql = format!(
+        "SELECT {column} AS v, COUNT(*) AS n FROM rustio_admin_actions
+         WHERE {column} IS NOT NULL AND {column} <> ''
+         GROUP BY {column} ORDER BY n DESC, v ASC LIMIT 30"
+    );
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .fetch_all(db.pool())
+        .await
+        .unwrap_or_default();
+    use sqlx::Row as _;
+    rows.iter()
+        .filter_map(|r| r.try_get::<String, &str>("v").ok())
+        .map(|value| render::AuditFilterOption {
+            label: humanise_audit_value(&value),
+            is_active: active == Some(value.as_str()),
+            link: link_with(Some((param, value.clone()))),
+            value,
+        })
+        .collect()
+}
+
+/// `password_reset` → `Password reset`; a model name is left alone
+/// because it is already the display name the audit row stored.
+fn humanise_audit_value(v: &str) -> String {
+    let mut out = v.replace('_', " ");
+    if let Some(first) = out.get_mut(0..1) {
+        first.make_ascii_uppercase();
+    }
+    out
 }
 
 // ---- Self-service password change ---------------------------------------

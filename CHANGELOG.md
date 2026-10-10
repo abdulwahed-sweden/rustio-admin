@@ -8,6 +8,53 @@ leaves the alpha track.
 
 ## Unreleased
 
+### Added
+
+- **`/admin/search` — a search PAGE, beside the `⌘K` palette.** The palette
+  jumps to one record: five rows per model, gated on `change` because every
+  link it offers is an edit link, Enter opens the highlighted one. The page
+  shows and compares every match: grouped per model with counts, twenty-five
+  rows per model, gated on `view` because every link it offers is view-gated,
+  and each group hands off to that model's own list with the term carried,
+  where the filters, sort, pages and bulk actions already live. The two
+  gates differ on purpose. Staff and above; models contribute only the fields
+  they declare searchable. The palette's footer now carries an
+  "All results for …" way through to it.
+
+- **The audit log filters and pages.** `/admin/history` grew a find row —
+  term, action, model, and a from/to period — over a paged board, where it
+  previously rendered one unfiltered page. The action and model dropdowns
+  offer the values that exist in the table rather than a hard-coded list, so
+  a project's own `ActionType` variants appear without a code change. Each
+  event is a native `<details>` row (no JavaScript) whose body carries the
+  exact timestamp, the actor, the address and the correlation id, read one at
+  a time instead of competing for a column each.
+
+- **The framework documents read as a sequence.** `/admin/docs/<slug>` now
+  offers the previous and next document in its foot; the first falls back to
+  the index, the last offers none.
+
+- **The docs index says what each document is.** Every row now carries the
+  document's own opening sentence, its route and its `##` section count, all
+  derived from the markdown (`docs::summary`, `docs::section_count`) rather
+  than hand-written, so a new embedded doc describes itself with no extra
+  entry to maintain.
+
+### Fixed
+
+- **The framework docs had no heading hierarchy.** `.rio-doc-prose` was styled
+  against the `--rio-fs-*` compat aliases, where `--rio-fs-h2` resolves both
+  `h1` and `h2` to 18px — so a document's two top heading levels rendered
+  identically and a section could not be told from a sub-section. The same
+  block drew list markers and link hover from `--rio-accent2-ink` (amber) and
+  code blocks from `--rio-surface-chrome` (a dark slab). The docs typography
+  now resolves against the live ladder; no token value changed.
+
+- **A wide table in a document pushed the page sideways.** The markdown
+  renderer emits a bare `<table>` with no wrapper to carry an `overflow`, so a
+  reference table wider than the reading column overflowed the page instead of
+  scrolling. Tables now scroll inside themselves.
+
 ### Changed
 
 - **Composition 3.1 — the admin takes RustIO's shared scale.** The framework

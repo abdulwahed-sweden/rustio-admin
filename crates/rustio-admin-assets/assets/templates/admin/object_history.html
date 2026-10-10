@@ -1,63 +1,77 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
+{# One record's history. The same row anatomy as the audit log — a
+   <details> per event under sticky day bands — without the find row:
+   this page is already filtered to one record. A facts line states what
+   the feed adds up to, and the foot leads to the full trail. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> ·
-    <a href="/admin/{{ admin_name }}">{{ display_name }}</a> ·
-    <a href="/admin/{{ admin_name }}/{{ object_id }}/edit">{{ object_label }}</a> ·
-    <span>History</span>
-  </nav>
-  <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">Every recorded mutation to this row, newest first.</p>
-</header>
+<nav class="rio-crumbs">
+  <a href="/admin">Home</a><span class="rio-crumb-sep">·</span>
+  <a href="/admin/{{ admin_name }}">{{ display_name }}</a><span class="rio-crumb-sep">·</span>
+  <a href="/admin/{{ admin_name }}/{{ object_id }}/edit">{{ object_label }}</a><span class="rio-crumb-sep">·</span>
+  <span class="rio-crumb-current">History</span>
+</nav>
+<div class="rio-masthead-top">
+  <div><h1>{{ page_title }}</h1></div>
+  <div class="rio-masthead-cta">
+    <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/{{ admin_name }}/{{ object_id }}/edit">Open record</a>
+  </div>
+</div>
 
-<section class="rio-card rio-card--quiet rio-list">
+<p class="rio-dash-facts">
+  <span><strong>{{ event_count }}</strong> event{% if event_count != 1 %}s{% endif %}</span>
+  {% if created_by %}<span>created by <strong>{{ created_by }}</strong>{% if created_at %} on <strong>{{ created_at }}</strong>{% endif %}</span>
+  {% elif created_at %}<span>created <strong>{{ created_at }}</strong></span>{% endif %}
+  {% if last_change %}<span>last change <strong>{{ last_change }}</strong></span>{% endif %}
+</p>
+
+<div class="rio-board rio-audit">
   {% if history_entries %}
-  <table class="rio-table rio-table--striped">
-    <thead><tr><th>When</th><th>Action</th><th>By</th><th>Summary</th><th>IP</th></tr></thead>
-    <tbody>
-      {% for e in history_entries %}
-      {% if e.is_new_day %}
-      <tr class="rio-history-date-divider"><th colspan="5" scope="rowgroup">{{ e.date_iso }}</th></tr>
-      {% endif %}
-      <tr>
-        <td title="{{ e.timestamp_iso }}">{{ e.when_relative }}</td>
-        <td><span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span></td>
-        <td>{{ e.user_email }}</td>
-        <td>
-          {{ e.summary }}
-          {% if e.changes %}
-          <dl class="rio-history-diff" aria-label="Changed fields">
-            {% for c in e.changes %}
-            <div class="rio-history-diff__row" data-field="{{ c.field }}">
-              <dt class="rio-history-diff__label">{{ c.label }}</dt>
-              <dd class="rio-history-diff__value rio-history-diff__value--from">
-                {% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
-              </dd>
-              <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
-              <dd class="rio-history-diff__value rio-history-diff__value--to">
-                {% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}
-              </dd>
-            </div>
-            {% endfor %}
-          </dl>
-          {% endif %}
-        </td>
-        <td>{{ e.ip_address }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% for e in history_entries %}
+  {% if e.is_new_day %}<div class="rio-audit-day">{{ e.date_iso }}</div>{% endif %}
+  <details class="rio-audit-row">
+    <summary>
+      <span class="rio-audit-when">{{ e.time_hm }}</span>
+      <span class="rio-pill rio-pill--{{ e.pill_class }}">{{ e.label }}</span>
+      <span class="rio-audit-what"><span class="rio-audit-sum">{{ e.summary }}</span></span>
+      <span class="rio-audit-who">{{ e.user_email }}</span>
+      <span class="rio-audit-chev" aria-hidden="true">{{ icon("chevron-right") }}</span>
+    </summary>
+    <div class="rio-audit-detail">
+      <div>
+        {% if e.changes %}
+        <dl class="rio-history-diff" aria-label="Changed fields">
+          {% for c in e.changes %}
+          <div class="rio-history-diff__row" data-field="{{ c.field }}">
+            <dt class="rio-history-diff__label">{{ c.label }}</dt>
+            <dd>{% if c.from %}<span class="rio-history-diff__old">{{ c.from }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
+            <dd class="rio-history-diff__arrow" aria-hidden="true">→</dd>
+            <dd>{% if c.to %}<span class="rio-history-diff__new">{{ c.to }}</span>{% else %}<span class="rio-meta">—</span>{% endif %}</dd>
+          </div>
+          {% endfor %}
+        </dl>
+        {% else %}
+        <p class="rio-audit-empty-diff">No field-level changes recorded for this event.</p>
+        {% endif %}
+      </div>
+      <dl class="rio-audit-kv">
+        <dt>When</dt><dd>{{ e.timestamp_iso }} <span class="rio-meta">({{ e.when_relative }})</span></dd>
+        <dt>Actor</dt><dd>{{ e.user_email }} <span class="rio-meta">(user #{{ e.user_id }})</span></dd>
+        {% if e.ip_address %}<dt>From</dt><dd>{{ e.ip_address }}</dd>{% endif %}
+        {% if e.correlation_id %}<dt>Request</dt><dd>{{ e.correlation_id }}</dd>{% endif %}
+        <dt>Event</dt><dd>{{ e.action_type }}</dd>
+      </dl>
+    </div>
+  </details>
+  {% endfor %}
+  <div class="rio-board-foot rio-board-foot--ops">
+    <a class="rio-action-link" href="/admin/history?model={{ display_name }}">Full audit log {{ icon("arrow-right") }}</a>
+  </div>
   {% else %}
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("clock", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No history yet for this row</h3>
-    <p class="rio-empty-state__lead">
-      Edits and deletes appear here automatically as they happen.
-    </p>
+  <div class="rio-empty">
+    <div class="rio-empty-title">No history yet for this row</div>
+    <div>Edits and deletes appear here automatically as they happen.</div>
   </div>
   {% endif %}
-</section>
+</div>
 {% endblock %}

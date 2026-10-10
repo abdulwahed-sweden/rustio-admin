@@ -3,17 +3,16 @@
 {% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
+<div class="rio-form-layout rio-form-layout--single">
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <span>Two-factor authentication</span>
-  </nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Two-factor authentication</span></nav>
+<div class="rio-masthead-top">
+<div>
   <h1>Set up two-factor authentication</h1>
-  <p class="rio-page-header__lead">
-    Scan the code with your authenticator app or enter the manual key,
-    then type the 6-digit code your app shows you to finish setup.
-  </p>
-</header>
+  <p class="rio-masthead-desc">Scan the code with your authenticator app or enter the manual key,
+    then type the 6-digit code your app shows you to finish setup.</p>
+</div>
+</div>
 
 {% if error %}
 <div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>
@@ -32,7 +31,7 @@
     <code class="rio-code-block">{{ secret_base32 }}</code>
   </div>
 
-  <form method="post" action="/admin/account/mfa/enroll" class="rio-form" autocomplete="off">
+  <form method="post" action="/admin/account/mfa/enroll" class="rio-form rio-form-card" autocomplete="off">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <input type="hidden" name="secret_base32" value="{{ secret_base32 }}">
     <div class="rio-form-row">
@@ -59,5 +58,6 @@
   </form>
 </section>
 
+</div>
 </div>
 {% endblock %}
