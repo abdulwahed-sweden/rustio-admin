@@ -27,6 +27,10 @@
 
 RustIO Admin generates the foundation for operational software from Rust models.
 
+`rustio-admin new` scaffolds a working project from one of five presets —
+`minimal`, `blog`, `clinic`, `translation-agency`, `ecommerce` — so a first run
+lands on a non-empty admin rather than an empty shell.
+
 It is designed for teams that need more than CRUD from day one:
 
 - authentication and sessions
@@ -143,7 +147,13 @@ Database/authority commands are available through the CLI's database feature whe
 cargo install rustio-admin-cli --features db
 ```
 
-Check the current crate documentation for the supported Rust toolchain and feature matrix before pinning production builds.
+**Supported toolchain.** The library needs **Rust 1.94**. The CLI installs
+lightweight by default and needs only **1.85** — scaffolding, theme, builder,
+override, docs and reload verbs, with no `sqlx` and no runtime dependency.
+The database and authority verbs (`migrate`, `user`, `group`, `perm`, `audit`,
+`doctor`, `ai`, `memory`) live behind `--features db`, which pulls the runtime
+back in and raises the CLI's floor to 1.94. A CI job compiles the lightweight
+build on 1.85 so that floor cannot drift.
 
 ---
 
@@ -168,6 +178,10 @@ Useful starting points:
 - [`docs/README.md`](./docs/README.md) — documentation index
 - [`docs/getting-started.md`](./docs/getting-started.md) — getting started
 - [`docs/quickstart-translation-agency.md`](./docs/quickstart-translation-agency.md) — worked example
+- [`examples/fixshop`](./examples/fixshop) — a complete runnable admin: a repair
+  shop with customers, jobs, quotes and an append-only event log, a status
+  ladder enforced in both `ModelAdmin::validate` and the bulk actions, and two
+  staff roles with different permissions
 - [`MANIFESTO.md`](./MANIFESTO.md) — project philosophy
 - [`CHANGELOG.md`](./CHANGELOG.md) — releases and visible changes
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributing
