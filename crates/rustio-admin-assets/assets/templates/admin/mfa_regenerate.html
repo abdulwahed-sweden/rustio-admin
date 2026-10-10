@@ -4,17 +4,15 @@
 {% block content %}
 <div class="rio-form-shell">
 
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> · <span>Regenerate backup codes</span>
-  </nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Regenerate backup codes</span></nav>
+<div class="rio-masthead-top">
+<div>
   <h1>Generate new backup codes</h1>
-  <p class="rio-page-header__lead">
-    Use this if you have lost your saved codes or suspect they have
+  <p class="rio-masthead-desc">Use this if you have lost your saved codes or suspect they have
     been seen by someone else. Your authenticator app stays paired —
-    only the backup codes change.
-  </p>
-</header>
+    only the backup codes change.</p>
+</div>
+</div>
 
 {% if error %}
 <div class="rio-alert rio-alert--danger" role="alert">{{ error }}</div>

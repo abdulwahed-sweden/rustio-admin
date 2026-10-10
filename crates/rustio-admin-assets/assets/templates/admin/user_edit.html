@@ -3,6 +3,7 @@
 {% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
+<div class="rio-form-layout rio-form-layout--single">
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ email }}</span></nav>
 <div class="rio-masthead-top">
   <div><h1>Edit user</h1><p class="rio-masthead-desc">Editing <strong>{{ email }}</strong> — identity, role, and group memberships.</p></div>
@@ -11,16 +12,16 @@
 {% if is_last_developer %}<div class="rio-alert rio-alert--warn" role="status">This is the only active Developer. Demoting or deactivating the account is blocked by the framework.</div>{% endif %}
 {% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
 
-<form method="post" action="/admin/users/{{ user_id }}/edit" class="rio-form">
+<form method="post" action="/admin/users/{{ user_id }}/edit" class="rio-form rio-form-card">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for section in identity_sections %}
-  <fieldset class="rio-fieldset rio-board">
+  <fieldset class="rio-fieldset">
     {% if section.title %}<legend class="rio-fieldset-legend">{{ section.title }}</legend>{% endif %}
     <div class="rio-fieldset-grid">{% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}</div>
   </fieldset>
   {% endfor %}
 
-  <fieldset class="rio-fieldset rio-board">
+  <fieldset class="rio-fieldset">
     <legend class="rio-fieldset-legend">Group memberships</legend>
     {% if all_groups %}
     <ul class="rio-checkbox-list">
@@ -41,5 +42,6 @@
     </span>
   </div>
 </form>
+</div>
 </div>
 {% endblock %}

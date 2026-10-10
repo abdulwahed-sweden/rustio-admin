@@ -3,15 +3,16 @@
 {% block page_measure %}rio-page--form{% endblock %}
 {% block content %}
 <div class="rio-form-shell">
+<div class="rio-form-layout rio-form-layout--single">
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/users">Users</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Add user</span></nav>
 <div class="rio-masthead-top"><div><h1>Add user</h1><p class="rio-masthead-desc">New account. Role determines what the user can see and change.</p></div></div>
 
 {% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
 
-<form method="post" action="/admin/users/new" class="rio-form" autocomplete="off">
+<form method="post" action="/admin/users/new" class="rio-form rio-form-card" autocomplete="off">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for section in sections %}
-  <fieldset class="rio-fieldset rio-board">
+  <fieldset class="rio-fieldset">
     {% if section.title %}<legend class="rio-fieldset-legend">{{ section.title }}</legend>{% endif %}
     <div class="rio-fieldset-grid">{% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}</div>
   </fieldset>
@@ -23,5 +24,6 @@
     <button type="submit" class="rio-btn rio-btn--primary">Create user</button>
   </div>
 </form>
+</div>
 </div>
 {% endblock %}
