@@ -10,6 +10,41 @@ leaves the alpha track.
 
 ### Changed
 
+- **Composition 3.1 — the admin takes RustIO's shared scale.** The framework
+  and RustIO now resolve the same semantic vocabulary: a canonical token core
+  (`tokens/canonical.css`) carries RustIO `main @ 00b933c`'s values, and every
+  `--rio-*` name becomes a permanent alias onto it. No `--rio-*` token is
+  renamed or removed, so components, `AdminTheme` overrides and downstream
+  stylesheets are untouched; `contract_assets::every_rio_alias_resolves_to_a_declared_canonical_token`
+  guards the two layers.
+
+  What changes on screen: the type ladder becomes 12 · 13 · 14 · 15 · 16 ·
+  18 · 24 · 33 on a **15px base** (titles 24/800, mono micro-labels 13/700);
+  controls become **38px** standard, 31px small and 32px in the masthead;
+  table rows **48px** over **40px** heads; radii collapse to 14 / 8 / 6; and
+  elevation goes flat — a white card on the page ground with a 1px border is
+  already separated, so `--rio-shadow-card`, `-md` and `-inset` resolve to
+  `none`.
+
+  **Focus becomes its own semantic role.** Nine rules drew their ring from
+  `--rio-rust`, so a project accent override silently retargeted focus and
+  could degrade its contrast. Every ring is now a solid 3px
+  `--rio-accent-focus` (`#2F7BD6`) at 2px offset, which `AdminTheme` cannot
+  touch; the 4px translucent `--rio-accent-ring` glow is retired, having
+  reached only ~1.54:1 as a wash.
+
+  The page head loses its card, the list page splits into a find row and a
+  data surface, badges collapse onto one status face plus a bordered count
+  face, and row actions become quiet text that is always visible rather than
+  icon-only and revealed on hover. `VISUAL-CONTRACT.md` → **v3.0** records the
+  target and the two deliberate divergences from RustIO (the centred form
+  measure; `AdminTheme` never retargeting focus). Derived from
+  `docs/design/rustio-admin-composition-study/`.
+
+  **Migration impact:** downstream admins see the new scale after
+  `cargo update`. Projects that set `Admin::accent_color("#…")` keep their
+  override — and it now actually applies (see Fixed).
+
 - **Page composition on the frozen theme.** The record form, dashboard,
   users and groups lists, group editor, active sessions, API surface and
   history pages are recomposed per `docs/design/page-composition-study/`
@@ -38,6 +73,40 @@ leaves the alpha track.
     endpoints beside fields, on the standard measure.
   - **History** (`log_entries.html`): no avatar per row; metadata treated
     as metadata; sticky date dividers.
+
+### Fixed
+
+- **`AdminTheme` / `Admin::accent_color` was a no-op.** `_theme.html` emitted
+  its override as `html { … }`. `:root` is a pseudo-class (0,1,0) and `html` a
+  type selector (0,0,1), and the token files declare on `:root` — so the
+  stylesheet beat the override on specificity regardless of source order, and
+  **every project theme was silently dropped**. The partial now selects
+  `:root`, which ties on specificity and wins on source order, as was always
+  intended. Hover and pressed shades are computed from the accent
+  (`render::shade_hex`) instead of the same hex written into all six
+  `--rio-rust*` names, which had flattened a themed button to one colour in
+  all three states. `--rio-accent-focus` stays deliberately absent from the
+  override.
+
+- **Every boolean form field had an invisible, unclickable control.**
+  `.rio-check` hid the native checkbox (`position: absolute; opacity: 0`) and
+  drew a substitute `.rio-check-box` span that **no template has ever
+  rendered** — the label was all that showed, and the only way to toggle the
+  field was to find the 1px hidden input. Booleans are now a 38px bordered row
+  with a real 18px checkbox carrying `accent-color`.
+
+- **Every admin page scrolled sideways at narrow widths.** The masthead
+  utility strip (brand pill, ⌘K trigger, bell, Docs, account menu) had no
+  narrow-width case and none of its controls could give way, so it pushed the
+  document ~142px wider than a 390px viewport on every page. The strip now
+  yields first: below 760 the trigger flexes and drops its shortcut hint,
+  below 480 the environment pill, Docs link and trigger label go. The bell and
+  account menu stay at every width.
+
+- **List timestamps were inconsistent across surfaces.** The users list and
+  the account sessions table printed `%Y-%m-%d %H:%M` with no zone while the
+  model list, user detail and footer printed `… UTC`. Both now carry the zone;
+  the value is stored and rendered as UTC either way.
 
 ### Removed
 
@@ -352,19 +421,23 @@ route, auth, permission, or migration change to existing models.
 ## [Unreleased]
 
 ### Changed
-- **Admin: the page header is one white surface.** The region carrying the
-  breadcrumb, title, supporting text and page-level actions now renders as a
-  card on `--rio-surface`, matching `.rio-board` / `.rio-card` (same
-  `--rio-line` hairline, `--rio-radius-xl`, `--rio-shadow-sm`,
-  `--rio-card-pad-x`), with its inline edges flush to the table, form or card
-  below. Applied centrally in the new `components/page-header.css` to both
-  shared header contracts — `.rio-page-header` and the unwrapped
-  `.rio-crumbs` + `.rio-masthead-top` pair — so every console page inherits
-  it without a per-page edit. Height stays content-driven; on narrow screens
-  the title block and actions stack inside the surface. Signed-out auth pages
-  and the error/forbidden pages are unaffected.
-  `csv_import_result.html` swaps its page-local `.pgx-head` / `.pgx-title`
-  header for `.rio-page-header` so it inherits the same treatment.
+
+> **Superseded by Composition 3.1.** Five entries that stood here described
+> intermediate states of this same unreleased cycle, each later reversed
+> before anything shipped: the page header as one white surface (the card is
+> gone — the head is type and space on the page ground); the burnt-copper
+> rust accent `#B84318` over a `#EDF1F5` canvas (the accent is RustIO Blue
+> `#1F5797` on `#F1F1EE`, and the dark theme they described does not exist —
+> the admin is light-only); the smallest text tier nudged 14px → 15px (the
+> ladder now puts mono micro-labels at 13px and there is no size floor); the
+> data board's rows at 56px (they are 48px over 40px heads); and a
+> conformance pass against `VISUAL-CONTRACT.md` **v2.1**, whose 44px control
+> floor, 14px text floor and "36/38px heights are forbidden" clause v3.0
+> repeals outright. The substance that survived — one canonical status pill,
+> the required-field asterisk in `--rio-danger`, lowercase pill text, no
+> sub-floor inline font sizes — is part of the Composition 3.1 entry at the
+> top of this file. Nothing below was released in the intermediate form.
+
 - **CLI: `translation-agency` scaffold preset; the empty `school`/`inventory`
   project types are dropped.** `rustio-admin new` (choose *translation-agency*)
   and `startproject --preset translation-agency` now scaffold a working dispatch
@@ -415,49 +488,6 @@ route, auth, permission, or migration change to existing models.
   `--rio-on-solid` token. **No new tokens, no markup-behaviour change, no
   `admin.css`/`routes.rs` concat change** (reused existing fragments, so the
   `cascade_lockstep` lock-step is untouched).
-- **Brand repalette — rust accent + cool ink neutrals + JetBrains Mono.** The
-  framework's visual identity moves from teal (`#119588`) on warm near-white to a
-  **burnt-copper rust** accent (`--rio-accent #B84318`, hover `#8F3413`) over a
-  **cool blue-grey "ink"** neutral scale on a `#EDF1F5` canvas, matching the
-  `rustio` reference project. Titles are `#0F141A` (cool ink), borders/inputs use
-  the ink-200/ink-300 steps, and status colours retune to the reference set
-  (success `#067647`, warn `#B54708`, danger `#B42318`). Dark theme keeps its
-  graphite surfaces but its accent lifts to a warm coral (`#F2935E`) for AA. The
-  **mono stack now selects JetBrains Mono** (already self-hosted/baked; no new
-  asset) ahead of the system fallbacks. All changes are token-value only — every
-  `--rio-*` name is unchanged, so components/templates are untouched and dark mode
-  re-derives automatically. The Visual Contract (§1/§2) and DESIGN_DOCTRINE /
-  DESIGN_SYSTEM are updated to the new canonical values. **Migration impact:**
-  downstream admins see the new palette/mono after `cargo update`; projects that
-  set `Admin::accent_color("#…")` keep their override.
-- **Small text nudged up (+1px).** The smallest content tier (`--rio-text-12` /
-  `--rio-text-13`: table headers, pills, hints, stat labels) lifts from 14px to
-  **15px** for readability; the ≥14px floor (Visual Contract §2) still holds.
-- **List/table readability — tighter row density (visual only).** The admin data
-  board's row height drops from an over-tall 72px to a comfortable, more
-  scannable 56px (header padding 14px → 12px to match), so ~50% more rows fit a
-  viewport without crowding. No new tokens (length values only), no markup,
-  context, route, or behaviour change — `components`/`tokens` and the
-  `cascade_lockstep` lock-step are untouched. First increment of the redesign
-  plan in `REDESIGN_AUDIT.md` (Phase 1: presentation-only polish). Verified in
-  light and dark against the `shop` example.
-- **Visual-Contract conformance pass across admin pages (visual only).** A
-  full audit of every admin page against `VISUAL-CONTRACT.md` v2.1, with the
-  token-level fixes applied: removed a stray `.rio-pill` redefinition in
-  `pages/detail.css` that was overriding the canonical §9 status pill
-  (15px/700) globally with a smaller 14px/600 variant — every status pill now
-  renders at contract spec; the required-field asterisk is now `--rio-danger`
-  (red, §4) instead of the copper accent; confirm-dialog cards get the §3
-  card shell on the MFA/password-change confirmation pages (`mfa_disable`,
-  `mfa_regenerate`, `password_change`) and their padding moves to s6 (32px);
-  the list/users/groups board-foot counts drop hardcoded `font-size:13px`
-  inline styles (the only sub-14px content text in linked CSS, §2 floor) in
-  favour of a `.rio-board-foot` rule; and the table boolean / user-active
-  status pills now emit lowercase text (`yes`/`no`, `active`/`inactive`, §9).
-  No new tokens, no markup-structure, route, schema, or behaviour change;
-  `cascade_lockstep` untouched. Remaining audit findings (row-action taxonomy,
-  dense-button sizing) are deferred as contract-level decisions.
-
 ### Fixed
 - **List pages no longer show raw `datetime-local` wire format.** Timestamp
   columns rendered as `2026-09-04T02:01` — the shape
