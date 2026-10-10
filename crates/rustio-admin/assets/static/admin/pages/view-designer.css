@@ -82,6 +82,19 @@
 .rio-vd-prio { inline-size: 4rem; text-align: center; }
 .rio-vd-reorder { display: inline-flex; flex-direction: column; gap: 2px; }
 
+/* Narrow screens. A field row is a name plus four controls; below 760
+   the controls take their own line under the name rather than
+   compressing it to nothing, and the mode select stops being a fixed
+   12rem inside a 390px card. */
+@media (max-width: 760px) {
+  .rio-vd-row { flex-wrap: wrap; row-gap: var(--rio-space-12); }
+  .rio-vd-controls { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; }
+  .rio-vd-role { inline-size: auto; flex: 1 1 8.5rem; }
+  .rio-vd-mode-default { inline-size: 100%; }
+  .rio-vd-mode-default .rio-input { inline-size: 100%; }
+  .rio-vd-modes { gap: var(--rio-space-16); }
+}
+
 /* ---- Compositions ---- */
 .rio-vd-slot { border: 1px solid var(--rio-line); border-radius: var(--rio-radius-md); padding: var(--rio-space-16); margin-block-end: var(--rio-space-12); }
 .rio-vd-slot legend { font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: .05em; color: var(--rio-text-faint); padding-inline: var(--rio-space-6); }

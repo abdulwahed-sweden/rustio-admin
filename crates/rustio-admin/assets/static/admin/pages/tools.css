@@ -120,6 +120,14 @@
    column each.
    ============================================================ */
 .rio-audit { overflow: visible; }
+/* The two date filters. `position: relative` is load-bearing, not
+   decoration: each label holds a `.rio-sr-only` span, and `.rio-sr-only`
+   is `position: absolute` — with no positioned ancestor it resolves
+   against the initial containing block, escapes the find row's
+   horizontal scroller and stretches the DOCUMENT at 390px while every
+   element inside the page still measures clean. The label becomes the
+   containing block so the hidden text stays inside it. */
+.rio-audit-period { position: relative; }
 .rio-audit-day {
   position: sticky; top: 0; z-index: 2;
   display: flex; align-items: baseline; gap: var(--rio-space-8);
