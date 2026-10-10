@@ -34,6 +34,27 @@ leaves the alpha track.
   offers the previous and next document in its foot; the first falls back to
   the index, the last offers none.
 
+- **The docs index says what each document is.** Every row now carries the
+  document's own opening sentence, its route and its `##` section count, all
+  derived from the markdown (`docs::summary`, `docs::section_count`) rather
+  than hand-written, so a new embedded doc describes itself with no extra
+  entry to maintain.
+
+### Fixed
+
+- **The framework docs had no heading hierarchy.** `.rio-doc-prose` was styled
+  against the `--rio-fs-*` compat aliases, where `--rio-fs-h2` resolves both
+  `h1` and `h2` to 18px — so a document's two top heading levels rendered
+  identically and a section could not be told from a sub-section. The same
+  block drew list markers and link hover from `--rio-accent2-ink` (amber) and
+  code blocks from `--rio-surface-chrome` (a dark slab). The docs typography
+  now resolves against the live ladder; no token value changed.
+
+- **A wide table in a document pushed the page sideways.** The markdown
+  renderer emits a bare `<table>` with no wrapper to carry an `overflow`, so a
+  reference table wider than the reading column overflowed the page instead of
+  scrolling. Tables now scroll inside themselves.
+
 ### Changed
 
 - **Composition 3.1 — the admin takes RustIO's shared scale.** The framework
