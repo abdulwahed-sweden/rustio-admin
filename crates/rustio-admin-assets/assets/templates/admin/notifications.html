@@ -1,73 +1,50 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
+{# The inbox. Head shape B, a facts line, and one board of rows.
+
+   The old page had a boxed head, then a section header, then a card
+   around a striped table whose State column said "read" — a column
+   spent restating the absence of the unread dot beside it. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
-  <div class="rio-page-actions">
-    <h1>{{ page_title }}</h1>
-    {% if unread_count > 0 %}
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
+<div class="rio-masthead-top">
+  <div><h1>{{ page_title }}</h1></div>
+  {% if unread_count > 0 %}
+  <div class="rio-masthead-cta">
     <form method="post" action="/admin/notifications/mark_all_read" class="rio-form-inline">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <button type="submit" class="rio-btn rio-btn--primary rio-btn--md">Mark all read</button>
+      <button type="submit" class="rio-btn rio-btn--secondary rio-btn--md">Mark all read</button>
     </form>
-    {% endif %}
   </div>
-  <p class="rio-page-header__lead">
-    {% if unread_count > 0 %}
-    <strong>{{ unread_count }} unread.</strong>
-    {% else %}
-    All caught up.
-    {% endif %}
-    Project code emits notifications via
-    <code>rustio_admin::send_notification(db, user_id, message, url)</code>.
-  </p>
-</header>
+  {% endif %}
+</div>
 
-<section class="rio-section" aria-label="Notifications">
-  <header class="rio-section__header">
-    <div class="rio-section__heading">
-      <span class="rio-section__label">Inbox</span>
-      <h2 class="rio-section__title">{{ notifications|length }} message{% if notifications|length != 1 %}s{% endif %}</h2>
+<p class="rio-dash-facts">
+  <span><strong>{{ unread_count }}</strong> unread</span>
+  <span><strong>{{ notifications|length }}</strong> total</span>
+  <span>emitted by <code>rustio_admin::send_notification(db, user_id, message, url)</code></span>
+</p>
+
+<div class="rio-board">
+  <div class="rio-board-title"><h2>Inbox</h2></div>
+  {% if notifications %}
+  <div class="rio-notif-rows">
+    {% for n in notifications %}
+    <div class="rio-notif-row{% if n.unread %} rio-notif-row--unread{% endif %}">
+      <span class="rio-notif-dot" aria-hidden="true"></span>
+      <span class="rio-notif-msg">
+        {% if n.url %}<a href="{{ n.url }}">{{ n.message }}</a>{% else %}{{ n.message }}{% endif %}
+        {% if n.unread %}<span class="rio-sr-only">(unread)</span>{% endif %}
+      </span>
+      <span class="rio-notif-when" title="{{ n.created_iso }}">{{ n.when_relative }}</span>
     </div>
-  </header>
-  <div class="rio-card rio-card--quiet rio-list">
-    {% if notifications %}
-    <table class="rio-table rio-table--striped">
-      <thead><tr><th>When</th><th>Message</th><th>State</th></tr></thead>
-      <tbody>
-        {% for n in notifications %}
-        <tr>
-          <td title="{{ n.created_iso }}">{{ n.when_relative }}</td>
-          <td>
-            {% if n.url %}
-            <a href="{{ n.url }}">{{ n.message }}</a>
-            {% else %}
-            {{ n.message }}
-            {% endif %}
-          </td>
-          <td>
-            {% if n.unread %}
-            <span class="rio-pill rio-pill--badge-neutral">Unread</span>
-            {% else %}
-            <span class="rio-meta">read</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div class="rio-empty-state">
-      <div class="rio-empty-state__icon">{{ icon("bell", class="rio-icon") }}</div>
-      <h3 class="rio-empty-state__title">No notifications</h3>
-      <p class="rio-empty-state__lead">
-        Notifications appear here as project code emits them.
-        Try <code>rustio_admin::send_notification(...)</code> from a
-        handler to test the flow.
-      </p>
-    </div>
-    {% endif %}
+    {% endfor %}
   </div>
-</section>
+  {% else %}
+  <div class="rio-empty">
+    <div class="rio-empty-title">No notifications</div>
+    <div>Notifications appear here as project code emits them. Try <code>rustio_admin::send_notification(…)</code> from a handler to test the flow.</div>
+  </div>
+  {% endif %}
+</div>
 {% endblock %}

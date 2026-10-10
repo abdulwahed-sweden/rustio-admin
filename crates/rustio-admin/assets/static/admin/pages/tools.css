@@ -343,3 +343,9 @@ a.rio-notif-msg:hover { color: var(--rio-rust); }
 .rio-playground__result { position: sticky; inset-block-start: var(--rio-space-16); }
 .rio-playground__body { margin: 0; border: 0; border-radius: 0; max-block-size: 60vh; overflow: auto; }
 @media (max-width: 1000px) { .rio-pg-layout { grid-template-columns: minmax(0, 1fr); } .rio-playground__result { position: static; } }
+
+/* ---- CSV import: the pieces the page adds beyond the shared card ---- */
+.rio-imp-fix { margin-block-end: var(--rio-space-16); }
+.rio-imp-note { margin: var(--rio-space-8) 0 0; font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-imp-rows { margin-block-start: var(--rio-space-16); }
+.rio-imp-errs { margin: 0; padding-inline-start: var(--rio-space-16); color: var(--rio-text-mute); font-size: var(--rio-text-13); }

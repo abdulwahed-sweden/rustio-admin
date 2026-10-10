@@ -1,89 +1,69 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
+{# Flags as an operational table, with the register form as a card
+   beneath it rather than a third equal surface. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs"><a href="/admin">Home</a> · <span>{{ page_title }}</span></nav>
+<nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
+<div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">
-    Project-side feature flags read by <code>rustio_admin::feature_enabled(db, "key")</code>.
-    Reads are cached for 60 s per process — toggles may take up to a
-    minute to propagate across a multi-process fleet.
-  </p>
-</header>
+</div></div>
 
-<div class="rio-form">
-  <div>
-  <header class="rio-section-head">
-    <p class="rio-section-head__eyebrow">Flags</p>
-    <h2 class="rio-section-head__title">{{ flags|length }} registered</h2>
-  </header>
-  <section class="rio-fieldset" aria-label="Registered flags">
-    {% if flags %}
-    <table class="rio-table">
-      <thead>
-        <tr><th>Key</th><th>State</th><th>Description</th><th>Updated</th><th></th></tr>
-      </thead>
+<p class="rio-dash-facts">
+  <span><strong>{{ flags|length }}</strong> flag{% if flags|length != 1 %}s{% endif %}</span>
+  <span>read by <code>rustio_admin::feature_enabled(db, "key")</code></span>
+  <span>cached 60&nbsp;s per process — a toggle can take a minute to propagate</span>
+</p>
+
+<div class="rio-board">
+  <div class="rio-board-title"><h2>Flags</h2><span class="rio-meta">{{ flags|length }}</span></div>
+  {% if flags %}
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops">
+      <thead><tr><th>Key</th><th>On</th><th>Description</th><th>Updated</th><th class="col-act"><span class="rio-sr-only">Actions</span></th></tr></thead>
       <tbody>
         {% for f in flags %}
         <tr>
-          <td><code>{{ f.key }}</code></td>
-          <td>
-            {% if f.enabled %}
-            <span class="rio-pill rio-pill--on">enabled</span>
-            {% else %}
-            <span class="rio-pill rio-pill--off">disabled</span>
-            {% endif %}
-          </td>
+          <td class="rio-cell-fit"><span class="rio-cell-primary">{{ f.key }}</span></td>
+          <td>{% if f.enabled %}<span class="rio-mark">yes</span>{% else %}<span class="rio-mark rio-mark--off">&mdash;</span>{% endif %}</td>
           <td>{{ f.description }}</td>
-          <td title="{{ f.updated_iso }}"><span class="rio-meta">{{ f.updated_iso }}</span></td>
-          <td>
+          <td class="rio-td--datetime"><span class="rio-meta">{{ f.updated_iso }}</span></td>
+          <td class="col-act">
             <form method="post" action="/admin/feature_flags/{{ f.key }}/toggle" class="rio-form-inline">
               <input type="hidden" name="_csrf" value="{{ csrf_token }}">
               <input type="hidden" name="enabled" value="{% if f.enabled %}0{% else %}1{% endif %}">
-              <button type="submit" class="rio-action-link">
-                {% if f.enabled %}Disable{% else %}Enable{% endif %}
-              </button>
+              <button type="submit" class="rio-btn rio-btn--quiet rio-btn--sm">{% if f.enabled %}Disable{% else %}Enable{% endif %}</button>
             </form>
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="rio-empty-state">
-      <div class="rio-empty-state__icon">{{ icon("flag", class="rio-icon") }}</div>
-      <h3 class="rio-empty-state__title">No flags yet</h3>
-      <p class="rio-empty-state__lead">
-        Register your first flag below — your code reads it via
-        <code>feature_enabled(db, "key")</code>.
-      </p>
-    </div>
-    {% endif %}
-  </section>
   </div>
-
-  <div>
-  <header class="rio-section-head">
-    <p class="rio-section-head__eyebrow">Add</p>
-    <h2 class="rio-section-head__title">Register a new flag</h2>
-  </header>
-  <section class="rio-fieldset" aria-label="Register a flag">
-    <form method="post" action="/admin/feature_flags" class="rio-form rio-form--inline">
-      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-      <label class="rio-form-field">
-        <span>Key</span>
-        <input type="text" name="key" required pattern="[a-z0-9_]+"
-               placeholder="snake_case_identifier"
-               class="rio-input rio-input--mono">
-      </label>
-      <label class="rio-form-field">
-        <span>Description</span>
-        <input type="text" name="description" placeholder="What flips when this is on?" class="rio-input">
-      </label>
-      <button type="submit" class="rio-btn rio-btn--primary">Add flag</button>
-    </form>
-  </section>
+  {% else %}
+  <div class="rio-empty">
+    <div class="rio-empty-title">No flags yet</div>
+    <div>Register your first flag below — your code reads it via <code>feature_enabled(db, "key")</code>.</div>
   </div>
+  {% endif %}
 </div>
+
+<form method="post" action="/admin/feature_flags" class="rio-form rio-form-card rio-flag-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <fieldset class="rio-fieldset">
+    <legend class="rio-fieldset-legend">Register a flag</legend>
+    <div class="rio-fieldset-grid">
+      <div class="rio-field">
+        <label class="rio-label" for="flag-key">Key</label>
+        <input id="flag-key" type="text" name="key" required pattern="[a-z0-9_]+" placeholder="snake_case_identifier" class="rio-input rio-input--mono">
+      </div>
+      <div class="rio-field">
+        <label class="rio-label" for="flag-desc">Description</label>
+        <input id="flag-desc" type="text" name="description" placeholder="What flips when this is on?" class="rio-input">
+      </div>
+    </div>
+  </fieldset>
+  <div class="rio-form-actions">
+    <button type="submit" class="rio-btn rio-btn--primary">Add flag</button>
+  </div>
+</form>
 {% endblock %}
