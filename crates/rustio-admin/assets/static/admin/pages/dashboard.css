@@ -35,15 +35,9 @@
    under the title instead of four stat tiles; the models as the one
    surface, with a title band. Existing tokens only.
    ============================================================ */
-.rio-dash-facts {
-  display: flex; flex-wrap: wrap;
-  gap: var(--rio-space-4) var(--rio-space-16);
-  margin: 0 0 var(--rio-space-16);
-  color: var(--rio-text-mute); font-size: var(--rio-text-14);
-}
-.rio-dash-facts strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); font-variant-numeric: lining-nums tabular-nums; }
-.rio-dash-facts a { color: var(--rio-rust); text-decoration: none; }
-.rio-dash-facts a:hover { text-decoration: underline; }
+/* `.rio-dash-facts` lives in components/data.css now — it is the shared
+   facts line, used by the audit log, health, docs, sessions, search and the
+   developer pages as well as this one. */
 .rio-dtable--models .rio-cell-primary { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); text-decoration: none; }
 .rio-dtable--models .rio-cell-primary:hover { color: var(--rio-rust); }
 .rio-dtable--models td.col-fields { inline-size: auto; color: var(--rio-text-mute); font-family: var(--rio-font-body); font-size: var(--rio-text-14); }
