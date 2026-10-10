@@ -352,6 +352,19 @@ route, auth, permission, or migration change to existing models.
 ## [Unreleased]
 
 ### Changed
+- **CLI: the scaffolded `templates/home.html` renders on the framework's
+  tokens.** The first-boot homepage `rustio-admin new` / `startproject` writes
+  used to carry a palette of its own (a teal `--brand`, Tailwind greys, a 720px
+  system-font column) that matched nothing in the design system and drifted
+  every time the system moved. It now links `/static/admin.css` (registered by
+  `register_admin_routes`, no session needed) and resolves every colour, size,
+  weight and radius through `--rio-*` tokens: the heading ladder, the
+  `.rio-eyebrow` section labels, the `.rio-code` well for the next-steps
+  commands, and real `.rio-btn` buttons for Admin / Docs / Health — so a
+  project theme reaches the homepage too. Content, the `{{name}}` /
+  `{{type_phrase}}` substitution and every link are unchanged; the page is
+  still served raw by `main.rs`, never through minijinja. Same fix
+  `examples/fixshop` received in `b5fa45c`.
 - **Admin: the page header is one white surface.** The region carrying the
   breadcrumb, title, supporting text and page-level actions now renders as a
   card on `--rio-surface`, matching `.rio-board` / `.rio-card` (same
