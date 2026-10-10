@@ -4,142 +4,137 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{name}}</title>
+
+  <!-- Your project's public landing page. Edit or replace it freely — it is
+       yours, and nothing in the admin depends on it.
+
+       Two things worth knowing before you do:
+
+       1. This file is served as RAW HTML. `src/main.rs` bakes it with
+          `include_str!` and hands it straight to `Response::html`, so it
+          never goes through the template engine. A `{% … %}` tag or a
+          `{# … #}` comment would render as visible text on the page.
+
+       2. It renders on the framework's own stylesheet. `/static/admin.css`
+          is registered by `register_admin_routes` and needs no session, so
+          a signed-out visitor gets the same bundle the admin does — which
+          means this page inherits your theme, including any
+          `AdminTheme` / `Admin::accent_color` override, for free.
+
+       Every colour, size, weight, radius and space below resolves through a
+       `--rio-*` token. If you want a palette of your own, set it here; if
+       you want to follow the admin, leave the tokens alone. -->
+  <link rel="stylesheet" href="/static/admin.css">
+
   <style>
-    /* Edit these three tokens to give the project its own surface
-       colour without hunting through the file. Everything below
-       inherits from them. */
-    :root {
-      --brand: #0d9488;   /* accent — checkmark, link hover, focus */
-      --text:  #1f2937;   /* primary text */
-      --muted: #6b7280;   /* secondary text, section eyebrows */
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
+    /* Page-specific layout only — no colour values of its own. */
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 4rem 1.5rem;
-      color: var(--text);
-      line-height: 1.6;
-      background: #fafafa;
-      font-size: 15px;
+      background: var(--rio-bg);
+      color: var(--rio-text);
     }
-    h1 {
-      font-size: 1.75rem;
-      margin: 0 0 0.25rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
+    .rio-home {
+      max-inline-size: 44rem;
+      margin-inline: auto;
+      padding: var(--rio-space-64) var(--rio-space-24);
     }
-    .subtitle {
-      color: var(--muted);
-      margin: 0 0 2.75rem;
-      font-size: 0.9375rem;
+    .rio-home h1 { margin: 0 0 var(--rio-space-4); }
+    .rio-home__subtitle {
+      color: var(--rio-text-mute);
+      font-size: var(--rio-text-17);
+      margin: 0 0 var(--rio-space-40);
     }
-    section { margin: 2rem 0; }
-    section h2 {
-      font-size: 0.6875rem;
-      font-weight: 600;
+
+    .rio-home__section { margin-block: var(--rio-space-32); }
+    /* The same mono micro-label the admin uses for every section heading. */
+    .rio-home__section h2 {
+      margin: 0 0 var(--rio-space-12);
+      font-family: var(--rio-font-mono);
+      font-size: var(--rio-text-12);
+      font-weight: var(--rio-weight-bold);
+      letter-spacing: var(--rio-tracking-caps);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin: 0 0 0.75rem;
+      color: var(--rio-text-mono);
     }
-    ul.status {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    ul.status li {
-      padding: 0.25rem 0;
-      color: #374151;
-    }
-    ul.status li::before {
-      content: "✓";
-      display: inline-block;
-      width: 1.25rem;
-      color: var(--brand);
-      font-weight: 600;
-    }
-    pre {
-      background: #f3f4f6;
-      padding: 0.875rem 1rem;
-      border-radius: 4px;
-      overflow-x: auto;
-      font-size: 0.8125rem;
-      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      color: #1f2937;
-      margin: 0;
-      line-height: 1.55;
-    }
-    code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.875em; }
-    .links {
+
+    .rio-home__status { list-style: none; padding: 0; margin: 0; }
+    .rio-home__status li {
       display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--rio-space-8);
+      padding-block: var(--rio-space-4);
     }
-    .links a {
-      display: inline-block;
-      padding: 0.375rem 0.875rem;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      color: #1f2937;
-      text-decoration: none;
-      font-size: 0.875rem;
-      background: #fff;
+    .rio-home__status li::before {
+      content: "✓";
+      flex: none;
+      color: var(--rio-success);
+      font-weight: var(--rio-weight-bold);
     }
-    .links a:hover {
-      background: #f3f4f6;
-      border-color: #9ca3af;
+
+    .rio-home pre {
+      margin: 0;
+      padding: var(--rio-space-12) var(--rio-space-16);
+      background: var(--rio-sunken);
+      border: 1px solid var(--rio-line);
+      border-radius: var(--rio-radius-control);
+      overflow-x: auto;
+      font-family: var(--rio-font-mono);
+      font-size: var(--rio-text-13);
+      line-height: 1.6;
+      color: var(--rio-text-hi);
     }
-    .links-hint {
-      color: var(--muted);
-      font-size: 0.8125rem;
-      margin: 0.5rem 0 0;
+    .rio-home code { font-family: var(--rio-font-mono); font-size: 0.9em; }
+
+    .rio-home__links { display: flex; gap: var(--rio-space-8); flex-wrap: wrap; }
+    .rio-home__hint {
+      margin: var(--rio-space-8) 0 0;
+      color: var(--rio-text-mute);
+      font-size: var(--rio-text-13);
     }
-    footer {
-      margin-top: 4rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid #e5e7eb;
-      color: #9ca3af;
-      font-size: 0.8125rem;
+
+    .rio-home__foot {
+      margin-block-start: var(--rio-space-64);
+      padding-block-start: var(--rio-space-16);
+      border-block-start: 1px solid var(--rio-line);
+      color: var(--rio-text-mute);
+      font-size: var(--rio-text-13);
     }
-    footer a { color: #6b7280; }
   </style>
 </head>
 <body>
-  <h1>{{name}}</h1>
-  <p class="subtitle">{{type_phrase}}</p>
+  <main class="rio-home">
+    <h1>{{name}}</h1>
+    <p class="rio-home__subtitle">{{type_phrase}}</p>
 
-  <section>
-    <h2>Status</h2>
-    <ul class="status">
-      <li>Project created with <code>rustio-admin new</code></li>
-      <li>RustIO is serving this page</li>
-      <li>Admin panel mounted at <a href="/admin">/admin</a></li>
-    </ul>
-  </section>
+    <section class="rio-home__section">
+      <h2>Status</h2>
+      <ul class="rio-home__status">
+        <li>Project created with <code>rustio-admin new</code></li>
+        <li>RustIO is serving this page</li>
+        <li>Admin panel mounted at <a href="/admin">/admin</a></li>
+      </ul>
+    </section>
 
-  <section>
-    <h2>Next steps</h2>
-    <pre>rustio-admin migrate apply
+    <section class="rio-home__section">
+      <h2>Next steps</h2>
+      <pre>rustio-admin migrate apply
 rustio-admin user create --email admin@{{name}}.local --role administrator
 rustio-admin doctor</pre>
-  </section>
+    </section>
 
-  <section>
-    <h2>Links</h2>
-    <div class="links">
-      <a href="/admin">Admin</a>
-      <a href="/admin/docs">Docs</a>
-      <a href="/admin/health">Health</a>
-    </div>
-    <p class="links-hint">sign in required</p>
-  </section>
+    <section class="rio-home__section">
+      <h2>Links</h2>
+      <div class="rio-home__links">
+        <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin">Admin</a>
+        <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/docs">Docs</a>
+        <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/health">Health</a>
+      </div>
+      <p class="rio-home__hint">sign in required</p>
+    </section>
 
-  <footer>
-    Replace or edit this page in <code>templates/home.html</code>.
-    Powered by <a href="https://github.com/abdulwahed-sweden/rustio-admin">rustio-admin</a>.
-  </footer>
+    <footer class="rio-home__foot">
+      Replace or edit this page in <code>templates/home.html</code>.
+      Powered by <a href="https://github.com/abdulwahed-sweden/rustio-admin">rustio-admin</a>.
+    </footer>
+  </main>
 </body>
 </html>
