@@ -1,0 +1,134 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Completion pass — the unfinished pages · rustio-admin page composition study · completion</title><style>
+/* --- Reference-page chrome. Deliberately plain: this file is a design
+   reference read from a repository, not a product screen. The RustIO product
+   styles live below, scoped to .rio, and are the actual contract. --- */
+:root{
+  --pg:#f6f7f9;--pg-2:#ffffff;--pg-line:#dfe4ea;--pg-ink:#171B22;--pg-ink-2:#3F4A59;
+  --pg-accent:#1f5797;
+  --g1:4px;--g2:8px;--g3:12px;--g4:16px;--g5:24px;--g6:32px;--g7:48px;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pg-ink);font-family:var(--sans);
+  font-size:16px;font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:var(--g7) var(--g5) 96px}
+a{color:var(--pg-accent)}
+:focus-visible{outline:3px solid #2f7bd6;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--g2);margin-bottom:var(--g5);
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.crumbs a{color:var(--pg-accent);text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+h1{margin:0 0 var(--g3);font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+h2{margin:0;font-size:18px;font-weight:700;line-height:1.3}
+h3{margin:0 0 var(--g2);font-size:16px;font-weight:700;line-height:1.35}
+.lede{max-width:74ch;color:var(--pg-ink-2);font-size:16px;font-weight:500}
+.sec{margin-top:var(--g7)}
+.sec-head{display:flex;align-items:baseline;gap:var(--g3);padding-bottom:var(--g2);
+  margin-bottom:var(--g4);border-bottom:1px solid var(--pg-line)}
+.sec-key{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--pg-accent);letter-spacing:.06em}
+/* `:where()` contributes no specificity, so these documentation colours can
+   never outrank a product rule inside a board render. Without it `.sec p`
+   (0-1-1) silently beats `.rio-card-title` (0-1-0) and mono labels lose their
+   colour. */
+.sec :where(p,li){color:var(--pg-ink-2);max-width:78ch}
+.sec ul{margin:0;padding-left:1.15em;display:grid;gap:var(--g2)}
+.note{padding:var(--g3) var(--g4);border-left:3px solid var(--pg-line);background:#fff;
+  border-radius:0 8px 8px 0;font-size:15px;color:var(--pg-ink-2)}
+code{font-family:var(--mono);font-size:.9em;background:#eef1f5;border:1px solid var(--pg-line);
+  border-radius:4px;padding:1px 5px;color:#174578}
+table.doc{width:100%;border-collapse:collapse;font-size:15px;background:#fff;
+  border:1px solid var(--pg-line);border-radius:10px;overflow:hidden}
+table.doc th{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#202733;text-align:left;padding:12px 14px;
+  background:#f1f4f8;border-bottom:1px solid var(--pg-line)}
+table.doc :where(td){padding:11px 14px;border-bottom:1px solid var(--pg-line);color:var(--pg-ink-2);vertical-align:top}
+table.doc :where(td:first-child){color:var(--pg-ink);font-weight:600}
+table.doc :where(tr:last-child td){border-bottom:0}
+.scroll{overflow-x:auto}
+.st{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid;
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;line-height:1.7}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st-existing{color:#4c5868;border-color:#c7cfd9;background:#f1f3f6}
+.st-visual{color:#174578;border-color:#b7cdea;background:#eaf2fd}
+.st-wiring{color:#7a4c08;border-color:#e3c981;background:#fff6e6}
+.st-future{color:#5b3f87;border-color:#c3b1e0;background:#f4f0fb;border-style:dashed}
+.props{display:grid;gap:1px;background:var(--pg-line);border:1px solid var(--pg-line);
+  border-radius:10px;overflow:hidden}
+.prop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--g4);padding:var(--g4);background:#fff;align-items:start}
+.prop h3{margin-bottom:4px;font-size:15px}
+.prop :where(p){margin:0;font-size:15px;color:var(--pg-ink-2)}
+.prop.is-future{background:repeating-linear-gradient(135deg,#fbfaff,#fbfaff 10px,#f5f2fb 10px,#f5f2fb 20px)}
+.explore{border:2px dashed #c3b1e0;border-radius:12px;padding:var(--g5);background:#faf8fd;margin-top:var(--g5)}
+.explore .hd{display:flex;align-items:center;gap:var(--g3);margin-bottom:var(--g3);flex-wrap:wrap}
+.explore .dim{filter:saturate(.3) opacity(.6);pointer-events:none}
+/* A board render sits in a frame and scrolls inside it, so the page body
+   never scrolls sideways at any width. */
+.frame{border:1px solid var(--pg-line);border-radius:12px;overflow:hidden;contain:paint;
+  background:#fff;max-width:100%}
+.frame-bar{display:flex;align-items:center;gap:var(--g3);padding:10px var(--g4);
+  border-bottom:1px solid var(--pg-line);background:#f1f4f8;font-family:var(--mono);
+  font-size:13px;color:#3F4A59}
+.frame-bar .w{margin-left:auto;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.frame-body>.rio{min-width:1040px}
+.frame.narrow{width:390px}
+.frame.narrow .frame-body>.rio{min-width:0}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);
+  font-size:14px;color:#596779}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+
+.wrap{max-width:1520px}
+/* Frames are same-origin iframes so admin.css's media queries respond to the
+   frame width, not the reader's window. A script sizes each to its content. */
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.shot{display:block;border:0;height:320px;max-width:none;background:#f1f1ee}
+.frame.narrow{width:390px;max-width:100%}
+.frame.w480{width:480px;max-width:100%}
+.frame.w760{width:760px;max-width:100%}
+.frame.w900{width:900px;max-width:100%}
+.frame.w1100{width:1100px;max-width:100%}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);font-size:14px;color:#596779}
+.flow{font-family:var(--mono);font-size:13px;line-height:1.6;background:#fff;border:1px solid var(--pg-line);border-radius:10px;padding:var(--g4) var(--g5);white-space:pre;overflow-x:auto;color:#202733}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:var(--g2) var(--g5);font-size:15px}
+.kv dt{font-family:var(--mono);font-size:13px;font-weight:700;color:#334052;letter-spacing:.04em}
+.kv dd{margin:0;color:var(--pg-ink-2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--g4)}
+.cards a{display:block;padding:var(--g4);border:1px solid var(--pg-line);border-radius:10px;background:#fff;color:var(--pg-ink);text-decoration:none}
+.cards a:hover{border-color:#b7cdea}
+.cards a strong{display:block;font-size:16px;margin-bottom:4px}
+.cards a span{font-size:14px;color:var(--pg-ink-2)}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+.pair{display:grid;gap:12px;margin-top:12px} .pair .lab{font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#596779;margin:16px 0 4px}
+.crit{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 24px;margin:8px 0 4px} .crit h3{margin:0 0 4px;font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#334052} .crit ul{padding-left:1.1em}
+.defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px} .defs div{background:#fff;border:1px solid var(--pg-line);border-radius:10px;padding:14px 16px} .defs h3{margin:0 0 6px;font-size:15px} .defs p{margin:0;font-size:14px;color:var(--pg-ink-2)}
+</style></head><body><div class="wrap">
+<nav class="crumbs"><a href="../index.html">Study</a> <span>·</span> <strong>Index</strong> <span>·</span> <a href="Audit-Log.html">Audit log</a> <span>·</span> <a href="API-Reference.html">API surface</a> <span>·</span> <a href="Health.html">Health</a> <span>·</span> <a href="Docs.html">Docs</a> <span>·</span> <a href="Sessions.html">Sessions</a> <span>·</span> <a href="Search.html">Search</a> <span>·</span> <a href="Utility-Pages.html">Notifications · Flags · Record history</a> <span>·</span> <a href="Developer-Pages.html">Database · Schema · Playground · CSV import</a> <span>·</span> <a href="Account-Flows.html">Account & security flows</a></nav><p class="cap">rustio-admin · page composition study · completion pass · theme frozen, composition redesigned</p><h1>Completion pass — the unfinished pages</h1><p class="lede">Composition 3.1 shipped the list, form, dashboard, users and groups pages. These boards finish the rest: the audit log, the API surface, health, docs, sessions and search, then the utility, developer and account pages that still render the old composition. The theme is frozen; only how each page is put together changes.</p>
+<div class="sec"><div class="sec-head"><span class="sec-key">A</span><h2>What is frozen, what moves</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Frozen (not touched)</th><th>Redesigned (composition)</th></tr></thead><tbody><tr><td>colours · type ladder · token values · spacing scale · focus · radii · shadows · light theme · shell · rail · two-row header · module navigation · ⌘K trigger · account menu · footer</td><td>page heads · surfaces and bands · row anatomy · facts lines and panels · filters and find rows · tables vs rows · disclosure of detail · action hierarchy · empty states · narrow reflow · the search experience</td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>What the audit found</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Pages / templates reviewed</th><th>Already Composition 3.1</th><th>Special but complete</th><th>Redesigned here</th></tr></thead><tbody><tr><td>58 templates: 49 pages + 9 shell partials</td><td>7 templates — dashboard, list (+ adaptive), form, users, groups, group editor, user detail</td><td>15 templates — 7 signed-out / step-up auth pages, 6 confirmations, 2 error pages</td><td>27 templates + the search page (new), 6 of them mandatory</td></tr></tbody></table></div><p style='margin-top:12px'>The full table with a reason per page is <code>INVENTORY.md</code>. Category B was applied strictly: a page is there only when its composition is already the confirmation, error or signed-out contract — never because it merely works.</p></div><div class="sec"><div class="sec-head"><span class="sec-key">C</span><h2>The six that had to change</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Page</th><th>What was wrong</th><th>What it becomes</th></tr></thead><tbody><tr><td><a href='Audit-Log.html'>Audit log</a></td><td>a six-column table with diffs ballooning the Summary cell, one filter (click a name), no event identity, no detail</td><td>operational rows under sticky day bands: time · action · record · summary · actor; the full event (diff, actor, ip, correlation id) opens inline; a find row with the four filters an audit needs</td></tr><tr><td><a href='API-Reference.html'>API surface</a></td><td>the same five endpoints repeated in every model card; three head buttons</td><td>a reference: the endpoint pattern stated once with its permission, a models table that doubles as the table of contents, one schema band per model</td></tr><tr><td><a href='Health.html'>Health</a></td><td>a pill and a count in a card around a three-column table; no time, no hierarchy, no next step</td><td>a status band (one verdict, when, how many), checks ordered failing → warning → passing as rows, a diagnostics panel with the probe, the CLI and the audit link</td></tr><tr><td><a href='Docs.html'>Docs</a></td><td>three decorative cards for three links; prose boxed in a card beside a 12rem TOC; a back link in the card foot</td><td>a reading surface: a docs nav, 68ch unboxed prose, the on-page nav, section anchors, prev/next at the foot; the index as a numbered reading list</td></tr><tr><td><a href='Sessions.html'>Sessions</a></td><td>one list where this device and the others look alike; four facts in one grey line; two equal buttons under the list</td><td>this device as a facts band; other devices as an operational table with the revoke-others action in its band; sign out everywhere framed as the last, dangerous thing</td></tr><tr><td><a href='Search.html'>Search</a></td><td>a ⌘K palette only — no page, no counts, no path to 'see all', edit-only results</td><td>⌘K is the jump; a search page is the result surface: scope, counts per model, context per hit, a hand-off into each model's own filtered list; three states designed</td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">D</span><h2>⌘K and the search page — two jobs</h2></div><div class="defs"><div><h3>⌘K · jump</h3><p>Fast navigation and command discovery. A few results, grouped by model, Enter opens the first. It gains a foot that says what Enter does and a way out to the full search.</p></div><div><h3>/admin/search · results</h3><p>The result-oriented experience: every match with its context, counted per model, scoped, and handed on to each model's own list where filters and sort live.</p></div><div><h3>/admin/&lt;model&gt;?q= · filter</h3><p>Unchanged. The deep tool: the find row, filters, sort, pagination and bulk actions of one model. The search page links into it; it never replaces it.</p></div></div></div><div class="sec"><div class="sec-head"><span class="sec-key">E</span><h2>Boards</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Board</th><th>Shows</th></tr></thead><tbody><tr><td><a href="Audit-Log.html">Audit log</a></td><td>critique · CURRENT vs REDESIGNED · the filtered state · the row anatomy · 390</td></tr><tr><td><a href="API-Reference.html">API surface</a></td><td>critique · CURRENT vs REDESIGNED · the hierarchy · 390</td></tr><tr><td><a href="Health.html">Health</a></td><td>critique · degraded and all-clear · 390</td></tr><tr><td><a href="Docs.html">Docs</a></td><td>critique · index and document · 390</td></tr><tr><td><a href="Sessions.html">Sessions</a></td><td>critique · CURRENT vs REDESIGNED · one device only · 390</td></tr><tr><td><a href="Search.html">Search</a></td><td>the three jobs · palette CURRENT vs REDESIGNED · the page: results, no query, no results · keyboard · 390</td></tr><tr><td><a href="Utility-Pages.html">Notifications · Flags · Record history</a></td><td>notifications · feature flags · record history</td></tr><tr><td><a href="Developer-Pages.html">Database · Schema · Playground · CSV import</a></td><td>database · schema · playground · CSV import; branding and view designer in the spec only</td></tr><tr><td><a href="Account-Flows.html">Account & security flows</a></td><td>two-factor enrolment · lock account · edit user</td></tr></tbody></table></div></div>
+<div class="foot">Page composition study · completion pass (2026-10-10) · rustio-admin <code>origin/main @ d495e80</code> (Composition 3.1 shipped), <code>examples/fixshop</code>. CURRENT frames are the real templates at that commit rendered with fixshop contexts against the real CSS bundle in <code>ADMIN_CSS</code> order. REDESIGNED frames use the same shell and bundle plus <code>build/composition-completion.css</code>. No runtime file was changed.</div></div>
+<script>
+(function(){
+  function fit(f){
+    try{
+      var d=f.contentDocument; if(!d||!d.documentElement) return;
+      var h=Math.max(d.documentElement.scrollHeight,d.body?d.body.scrollHeight:0);
+      f.style.height=(h+2)+'px';
+    }catch(e){}
+  }
+  var frames=document.querySelectorAll('iframe.shot');
+  frames.forEach(function(f){ f.addEventListener('load',function(){fit(f);setTimeout(function(){fit(f)},150)}); fit(f); });
+  window.addEventListener('load',function(){frames.forEach(fit)});
+})();
+</script>
+</body></html>

@@ -74,3 +74,36 @@ history, health, DB browser, feature flags, docs viewer, view designer,
 AdminTheme, rio-theme. Every route, handler, hidden input, `_csrf`,
 `data-rio-*` hook and permission gate. The arrangement changes; nothing is
 removed.
+
+## Completion pass (2026-10-10)
+
+Composition 3.1 shipped on `main @ d495e80` (the list, form, dashboard, users
+and groups pages). This pass audited **every** remaining admin page against
+that shipped direction and redesigned the ones still on the old composition.
+Same rules: theme frozen, runtime read-only, design artefacts only.
+
+| | |
+|---|---|
+| Baseline | `origin/main @ d495e80` — CURRENT frames are the real templates at that commit |
+| Reviewed | 58 templates (49 pages, 9 shell partials), each rendered at 1440 and 390 |
+| Already Composition 3.1 | 7 templates |
+| Special but complete | 15 templates (signed-out auth, confirmations, errors) |
+| Redesigned | 27 templates + the search page (new); 17 renders on 9 boards, 11 spec-only |
+
+Reading order:
+
+1. `INVENTORY.md` — every page, its class (A / B / C), priority and reason;
+   the cross-cutting shell findings.
+2. `boards/completion/index.html` — the six mandatory pages, the search
+   definition, the board list.
+3. `SPEC-COMPLETION.md` — each redesigned composition: problems, new
+   composition, reused patterns, added components, narrow behaviour,
+   implementation notes.
+4. `HANDOFF-COMPLETION.md` — exact templates and fragments, what to retire,
+   the wiring list, the order to land it in, the tests that touch it.
+5. `build/composition-completion.css` — the proposal as a stylesheet layer,
+   tokens only.
+
+Boards: `Audit-Log` · `API-Reference` · `Health` · `Docs` · `Sessions` ·
+`Search` (mandatory) · `Utility-Pages` · `Developer-Pages` ·
+`Account-Flows`.
