@@ -1,54 +1,106 @@
 {% extends "admin/_base.html" %}
-{# One list, one row per session: the device is the identity, the ip and
-   the three times are a meta line, the trust badge and the action sit at
-   the edge. The current session is tinted and says so. Revoke, "Sign out
-   of every other device" and "Sign out everywhere" are unchanged. #}
-{% block page_measure %}rio-page--narrow{% endblock %}
+{# Session management.
+
+   This device is its own surface with labelled facts — it is the one
+   session the operator must not revoke by accident, and in the old list
+   it was a row like any other with four unlabelled values in a grey
+   line. The others are a table, because comparing devices is the job.
+
+   The two bulk actions were equal buttons with the destructive one
+   second. "Sign out of every other device" is now the band's own action
+   on the table it acts on; "Sign out everywhere" is a danger section at
+   the end with the consequence written out.
+
+   The three POST routes and every `_csrf` are unchanged. #}
+{% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Active sessions</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-masthead-desc">Every device signed in to your account. Revoke any you don't recognise.</p>
 </div></div>
 
 {% if sessions %}
-<ul class="rio-sess-rows" role="list">
-  {% for s in sessions %}
-  <li class="rio-sess-row{% if s.is_current %} rio-sess-row--current{% endif %}">
-    <div class="rio-sess-row-id">
-      <div class="rio-sess-row-device">{{ s.ua_summary }}{% if s.is_current %}<span class="rio-sess-you">you, now</span>{% endif %}</div>
-      <div class="rio-sess-row-meta">
-        <span class="rio-ip">{{ s.ip }}</span>
-        <span>signed in {{ s.created_at }}</span>
-        <span>last active {{ s.last_seen_relative }}</span>
-        <span>expires {{ s.expires_relative }}</span>
-      </div>
-    </div>
-    <span class="rio-pill rio-pill--{% if s.is_current %}on{% else %}neutral{% endif %}">{{ s.trust_label }}</span>
-    <div class="rio-sess-row-action">
-      {% if s.is_current %}
-      <span class="rio-meta">This session</span>
-      {% else %}
-      <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline rio-sess-revoke">
-        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-        <button type="submit" class="rio-btn rio-btn--quiet rio-btn--sm is-danger">Revoke</button>
-      </form>
-      {% endif %}
-    </div>
-  </li>
-  {% endfor %}
-</ul>
-<div class="rio-sess-bulk">
-  <form method="post" action="/admin/account/sessions/revoke-others" class="rio-form-inline">
-    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
-    <button type="submit" class="rio-btn rio-btn--secondary rio-btn--md">{{ icon("log-out") }} Sign out of every other device</button>
-  </form>
+<p class="rio-dash-facts">
+  <span><strong>{{ sessions|length }}</strong> session{% if sessions|length != 1 %}s{% endif %}</span>
+  <span><strong>{{ other_count }}</strong> other device{% if other_count != 1 %}s{% endif %}</span>
+</p>
+
+{% for s in sessions %}{% if s.is_current %}
+<div class="rio-board">
+  <div class="rio-board-title">
+    <h2>This device</h2>
+    <span class="rio-pill rio-pill--on">{{ s.trust_label }}</span>
+    <span class="rio-meta rio-board-title-action">Sign out from the account menu</span>
+  </div>
+  <dl class="rio-sess-facts">
+    <div><dt>Device</dt><dd>{{ s.ua_summary }}</dd></div>
+    <div><dt>IP</dt><dd class="rio-ip">{{ s.ip }}</dd></div>
+    <div><dt>Signed in</dt><dd>{{ s.created_at }}</dd></div>
+    <div><dt>Last active</dt><dd>{{ s.last_seen_relative }}</dd></div>
+    <div><dt>Expires</dt><dd>{{ s.expires_relative }}</dd></div>
+  </dl>
+</div>
+{% endif %}{% endfor %}
+
+<div class="rio-board rio-sess-others">
+  <div class="rio-board-title">
+    <h2>Other devices</h2>
+    <span class="rio-meta">{{ other_count }}</span>
+    {% if other_count > 0 %}
+    <form method="post" action="/admin/account/sessions/revoke-others" class="rio-form-inline rio-board-title-action">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <button type="submit" class="rio-btn rio-btn--secondary rio-btn--sm">{{ icon("log-out") }} Sign out of every other device</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if other_count > 0 %}
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops rio-sess-table">
+      <thead><tr>
+        <th>Device</th><th>Trust</th><th>IP</th><th>Signed in</th><th>Last active</th><th>Expires</th><th class="col-act"><span class="rio-sr-only">Actions</span></th>
+      </tr></thead>
+      <tbody>
+        {% for s in sessions %}{% if not s.is_current %}
+        <tr>
+          <td class="rio-sess-device">{{ s.ua_summary }}</td>
+          <td class="rio-sess-col-trust"><span class="rio-pill rio-pill--neutral">{{ s.trust_label }}</span></td>
+          <td class="rio-ip">{{ s.ip }}</td>
+          <td class="rio-sess-time" data-label="Signed in">{{ s.created_at }}</td>
+          <td class="rio-sess-time" data-label="Last active">{{ s.last_seen_relative }}</td>
+          <td class="rio-sess-time" data-label="Expires">{{ s.expires_relative }}</td>
+          <td class="col-act">
+            <form method="post" action="/admin/account/sessions/{{ s.session_id }}/revoke" class="rio-form-inline rio-sess-revoke">
+              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+              <button type="submit" class="rio-btn rio-btn--quiet rio-btn--sm is-danger">Revoke</button>
+            </form>
+          </td>
+        </tr>
+        {% endif %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="rio-empty">
+    <div class="rio-empty-title">No other devices</div>
+    <div>This is the only device signed in to your account.</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="rio-sess-danger">
+  <div>
+    <strong>Sign out everywhere</strong>
+    <p>Ends every session including this one. You will be signed out immediately and will need to sign in again.</p>
+  </div>
   <form method="post" action="/admin/account/sessions/revoke-all" class="rio-form-inline">
     <input type="hidden" name="_csrf" value="{{ csrf_token }}">
     <button type="submit" class="rio-btn rio-btn--danger rio-btn--md">{{ icon("log-out") }} Sign out everywhere</button>
   </form>
 </div>
 {% else %}
-<div class="rio-board"><div class="rio-empty">{{ icon("log-out") }}<div class="rio-empty-title">No active sessions</div><div>Sign in fresh on another device to see this page populate.</div></div></div>
+<div class="rio-board"><div class="rio-empty">
+  <div class="rio-empty-title">No active sessions</div>
+  <div>Sign in fresh on another device to see this page populate.</div>
+</div></div>
 {% endif %}
 {% endblock %}

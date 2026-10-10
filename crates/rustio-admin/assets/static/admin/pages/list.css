@@ -292,3 +292,37 @@
 
 /* Narrow: the card scrolls inside `.rio-tablewrap`; the page never
    scrolls sideways. */
+
+/* ============================================================
+   SEARCH
+   Composition from docs/design/page-composition-study (completion pass).
+   ============================================================ */
+.rio-scope { display: inline-flex; flex-wrap: wrap; gap: var(--rio-space-4); }
+.rio-scope a { display: inline-flex; align-items: center; block-size: var(--rio-ctl-sm); padding: 0 var(--rio-space-12); border-radius: var(--rio-radius-pill); font-size: var(--rio-text-13); color: var(--rio-text-mute); text-decoration: none; border: 1px solid transparent; }
+.rio-scope a:hover { color: var(--rio-text-hi); background: var(--rio-raised); }
+.rio-scope a[aria-current] { color: var(--rio-rust); background: var(--rio-rust-tint); border-color: var(--rio-rust-tint-2); font-weight: var(--rio-weight-semibold); }
+.rio-scope a .rio-meta { margin-inline-start: var(--rio-space-4); }
+.rio-search-group .rio-dtable td { block-size: auto; padding-block: var(--rio-space-8); }
+.rio-search-group .rio-cell-primary mark, .rio-search-group .rio-cell-meta mark { background: var(--rio-warn-tint); color: inherit; border-radius: var(--rio-radius-sm); padding: 0 2px; }
+.rio-search-group td.rio-cell-meta { color: var(--rio-text-mute); font-size: var(--rio-text-14); }
+.rio-search-hint { color: var(--rio-text-faint); }
+.rio-search-hint .rio-kbd { margin-inline: 2px; }
+.rio-search-empty-models { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--rio-space-8); margin-block-start: var(--rio-space-12); }
+/* the palette: a foot that says what Enter does and where the full search is */
+.rio-search-palette__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8) var(--rio-space-16); padding: var(--rio-space-8) var(--rio-space-16); border-block-start: 1px solid var(--rio-line); background: var(--rio-sunken); font-size: var(--rio-text-12); color: var(--rio-text-mute); }
+.rio-search-palette__foot .rio-kbd { margin-inline-end: 2px; }
+.rio-search-palette__foot a { margin-inline-start: auto; color: var(--rio-rust); text-decoration: none; font-weight: var(--rio-weight-semibold); }
+.rio-search-palette__group-label .rio-meta { font-weight: var(--rio-weight-regular); text-transform: none; letter-spacing: 0; }
+.rio-search-palette__result-hint { margin-inline-start: auto; font-family: var(--rio-font-mono); font-size: var(--rio-text-12); color: var(--rio-text-faint); }
+.rio-search-palette__result.is-selected .rio-search-palette__result-hint { color: var(--rio-rust); }
+@media (max-width: 760px) { .rio-find--page .rio-scope { inline-size: 100%; flex-wrap: nowrap; overflow-x: auto; } }
+
+/* ---- Narrow: a search result row stacks label over context ---- */
+@media (max-width: 760px) {
+  .rio-scope a { white-space: nowrap; }
+  .rio-search-group thead { display: none; }
+  .rio-search-group tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) max-content; column-gap: var(--rio-space-12); row-gap: 2px; padding: var(--rio-space-8) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+  .rio-search-group tbody tr:last-child { border-block-end: 0; }
+  .rio-search-group tbody td { display: block; block-size: auto; min-block-size: 0; inline-size: auto; padding: 0; border: 0; position: static; background: none; white-space: normal; grid-column: 1; }
+  .rio-search-group tbody td.col-act { inline-size: auto; min-inline-size: 0; max-inline-size: none; overflow: visible; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}

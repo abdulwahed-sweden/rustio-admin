@@ -506,8 +506,10 @@
 .rio-board-title .rio-meta + .rio-board-title-action { margin-inline-start: var(--rio-space-12); }
 .rio-board-title .rio-pill { margin-inline-start: var(--rio-space-4); }
 @media (max-width: 760px) {
-  .rio-board-title { flex-wrap: wrap; }
-  .rio-board-title .rio-board-title-action { margin-inline-start: 0; }
+  .rio-board-title { flex-wrap: wrap; row-gap: var(--rio-space-4); }
+  .rio-board-title h2 { flex: 1 1 auto; }
+  .rio-board-title .rio-meta,
+  .rio-board-title .rio-board-title-action { flex-basis: 100%; margin-inline-start: 0; }
 }
 .rio-board-title h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
 .rio-board-title .rio-meta { margin-inline-start: auto; }

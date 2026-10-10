@@ -636,6 +636,10 @@ pub(crate) struct AccountSessionsCtx {
     pub page_title: &'static str,
     pub entries: Vec<SidebarEntry>,
     pub sessions: Vec<AccountSessionRowCtx>,
+    /// Sessions other than this one. The page bands and the bulk
+    /// action key off it, so it is counted once here rather than
+    /// filtered twice in the template.
+    pub other_count: usize,
 }
 
 #[derive(Serialize)]
@@ -657,7 +661,7 @@ pub(crate) fn account_sessions_ctx(
     current_session_id: Option<i64>,
     csrf_token: String,
 ) -> AccountSessionsCtx {
-    let rows = sessions
+    let rows: Vec<AccountSessionRowCtx> = sessions
         .into_iter()
         .map(|s| AccountSessionRowCtx {
             session_id: s.session_id,
@@ -671,8 +675,10 @@ pub(crate) fn account_sessions_ctx(
         })
         .collect();
 
+    let other_count = rows.iter().filter(|r| !r.is_current).count();
     AccountSessionsCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin),
+        other_count,
         page_title: "Active sessions",
         entries: admin
             .entries()

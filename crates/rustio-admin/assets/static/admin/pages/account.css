@@ -60,35 +60,9 @@
 /* ---- Active sessions — ONE surface, not five cards ----------------
    Five stacked bordered-and-shadowed cards made five sessions look like
    five pages. They are rows of one list: the same surface, divided. */
-.rio-sess-list {
-  list-style: none; margin: 0; padding: 0;
-  display: flex; flex-direction: column;
-  background: var(--rio-surface);
-  border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius);
-  overflow: hidden;
-}
-.rio-sess-card {
-  position: relative;
-  padding: var(--rio-space-16);
-  border-block-end: 1px solid var(--rio-line);
-}
-.rio-sess-card:last-child { border-block-end: 0; }
-.rio-sess-card--current { background: var(--rio-rust-tint); }
-.rio-sess-top { display: flex; align-items: center; gap: var(--rio-space-12); margin-block-end: var(--rio-space-12); }
 .rio-sess-glyph { display: none; } /* the row is the object; a glyph plate is not */
-.rio-sess-title { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
-.rio-sess-trust { margin-inline-start: auto; display: inline-flex; align-items: center; gap: var(--rio-space-8); font-family: var(--rio-font-body); font-weight: var(--rio-weight-semibold); font-size: var(--rio-text-12); padding: var(--rio-space-4) var(--rio-space-8); border-radius: var(--rio-radius-sm); background: var(--rio-neutral-tint); color: var(--rio-neutral); white-space: nowrap; }
-.rio-sess-trust::before { content: ""; inline-size: 6px; block-size: 6px; flex: none; border-radius: 50%; background: currentColor; }
-.rio-sess-card--current .rio-sess-trust { background: var(--rio-success-tint); color: var(--rio-success); }
 /* The track has to hold a full `YYYY-MM-DD HH:MM UTC` without wrapping,
    or a nowrap value overruns its column and collides with the next. */
-.rio-sess-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--rio-space-12) var(--rio-space-16); }
-.rio-sess-meta dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); text-transform: uppercase; letter-spacing: var(--rio-tracking-caps); color: var(--rio-text-mono); font-weight: var(--rio-weight-bold); }
-.rio-sess-meta dd { margin: 2px 0 0; font-size: var(--rio-text-15); color: var(--rio-text); white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
-.rio-sess-foot { margin-block-start: var(--rio-space-12); padding-block-start: var(--rio-space-12); border-block-start: 1px solid var(--rio-line); display: flex; align-items: center; }
-.rio-sess-note { color: var(--rio-text-faint); font-size: var(--rio-text-14); }
-.rio-sess-bulk { display: flex; flex-wrap: wrap; gap: var(--rio-space-12); margin-block-start: var(--rio-space-20); }
 /* Per-session revoke — pushed to the row's end, danger-tinted label. */
 .rio-sess-revoke { margin-inline-start: auto; }
 .rio-sess-revoke .rio-btn { color: var(--rio-danger); }
@@ -96,36 +70,40 @@
 /* ---- Sessions as a list (account_sessions.html) ---------------------
    One row per session: the device is the identity, the ip and the three
    times are a meta line, the trust badge and the action at the edge. */
-.rio-sess-rows {
-  list-style: none; margin: 0; padding: 0;
-  background: var(--rio-surface);
-  border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-lg);
-  box-shadow: var(--rio-shadow-sm);
-  overflow: hidden;
-}
-.rio-sess-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center; column-gap: var(--rio-space-16);
-  min-block-size: 64px;
-  padding: var(--rio-space-12) var(--rio-space-16);
-  border-block-end: 1px solid var(--rio-line);
-}
-.rio-sess-row:last-child { border-block-end: 0; }
-.rio-sess-row--current { background: var(--rio-sunken); }
-.rio-sess-row-id { min-inline-size: 0; }
-.rio-sess-row-device { font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
-.rio-sess-you { margin-inline-start: var(--rio-space-8); font-size: var(--rio-text-13); font-weight: var(--rio-weight-regular); color: var(--rio-text-mute); }
-.rio-sess-row-meta {
-  display: flex; flex-wrap: wrap; gap: var(--rio-space-4) var(--rio-space-12);
-  margin-block-start: 2px;
-  font-size: var(--rio-text-13); color: var(--rio-text-mute);
-  font-variant-numeric: lining-nums tabular-nums;
-}
-.rio-sess-row-meta .rio-ip { font-family: var(--rio-font-mono); }
-.rio-sess-row-action { min-inline-size: 72px; display: flex; justify-content: flex-end; }
-.rio-sess-row .rio-sess-revoke { margin-inline-start: 0; }
 @media (max-width: 760px) {
-  .rio-sess-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .rio-sess-row-action { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* ============================================================
+   SESSIONS
+   Composition from docs/design/page-composition-study (completion pass).
+   ============================================================ */
+.rio-sess-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--rio-space-12) var(--rio-space-24); margin: 0; padding: var(--rio-space-16); }
+.rio-sess-facts > div { min-inline-size: 0; }
+.rio-sess-facts dt { font-family: var(--rio-font-mono); font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps); text-transform: uppercase; color: var(--rio-text-mono); }
+.rio-sess-facts dd { margin: var(--rio-space-4) 0 0; color: var(--rio-text-hi); font-size: var(--rio-text-14); overflow-wrap: anywhere; }
+.rio-sess-facts dd.rio-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); }
+.rio-sess-table td.rio-sess-device { font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-sess-table td.rio-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
+.rio-sess-table td.rio-sess-time { color: var(--rio-text-mute); font-size: var(--rio-text-14); white-space: nowrap; }
+.rio-sess-table .rio-pill--neutral { text-transform: none; }
+.rio-sess-danger {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-12) var(--rio-space-24);
+  margin-block-start: var(--rio-space-24); padding: var(--rio-space-16) var(--rio-space-20);
+  border: 1px solid var(--rio-danger-line); border-radius: var(--rio-radius-lg); background: var(--rio-surface);
+}
+.rio-sess-danger > div { flex: 1 1 320px; min-inline-size: 0; }
+.rio-sess-danger strong { display: block; color: var(--rio-text-hi); }
+.rio-sess-danger p { margin: 2px 0 0; color: var(--rio-text-mute); font-size: var(--rio-text-14); }
+@media (max-width: 760px) {
+  .rio-sess-table thead { display: none; }
+  .rio-sess-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) max-content; column-gap: var(--rio-space-12); row-gap: 2px; padding: var(--rio-space-12) var(--rio-space-16); border-block-end: 1px solid var(--rio-line); }
+  .rio-sess-table tbody tr:last-child { border-block-end: 0; }
+  .rio-sess-table tbody td { display: block; block-size: auto; min-block-size: 0; padding: 0; border: 0; position: static; background: none; grid-column: 1; }
+  .rio-sess-table tbody td.rio-sess-device { grid-row: 1; }
+  .rio-sess-table tbody td.rio-sess-col-trust { grid-column: 2; grid-row: 1; justify-self: end; }
+  .rio-sess-table tbody td.rio-ip { grid-row: 2; margin-block-end: var(--rio-space-4); }
+  .rio-sess-table tbody td.rio-sess-time { white-space: normal; font-size: var(--rio-text-13); }
+  .rio-sess-table tbody td.rio-sess-time::before { content: attr(data-label) " "; color: var(--rio-text-faint); }
+  .rio-sess-table tbody td.col-act { grid-column: 2; grid-row: 3 / span 3; align-self: end; justify-self: end; padding: 0; inline-size: auto; min-inline-size: 0; max-inline-size: none; overflow: visible; }
+}
+.rio-sess-others { margin-block-start: var(--rio-space-16); }
