@@ -3303,6 +3303,67 @@ pub(crate) fn api_field_type_label(field: &AdminField) -> &'static str {
     }
 }
 
+/// The `/admin/search` page.
+///
+/// Distinct from the `⌘K` palette on purpose (see `SPEC-COMPLETION.md`):
+/// the palette jumps to one record and gates on `change` because it
+/// links to the edit page; this page shows and compares every match and
+/// gates on `view`, because every link it offers is view-gated.
+#[derive(Serialize)]
+pub(crate) struct SearchPageCtx {
+    #[serde(flatten)]
+    pub base: BaseContext,
+    pub page_title: &'static str,
+    pub entries: Vec<SidebarEntry>,
+    /// The term as typed, echoed into the field and the copy.
+    pub query: String,
+    /// `all` or an `admin_name` — which models were searched.
+    pub scope: String,
+    /// One group per model that returned at least one row.
+    pub groups: Vec<SearchGroupCtx>,
+    /// Every searchable model, for the scope row and the no-query
+    /// state's entry points — including the ones with no match.
+    pub scopes: Vec<SearchScopeCtx>,
+    pub result_count: usize,
+    pub model_count: usize,
+    /// True once a term long enough to search has been submitted.
+    pub has_query: bool,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SearchScopeCtx {
+    pub admin_name: String,
+    pub display_name: String,
+    pub count: usize,
+    pub is_active: bool,
+    pub link: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SearchGroupCtx {
+    pub admin_name: String,
+    pub display_name: String,
+    /// Rows shown versus rows that matched — the band states both when
+    /// the page is capped.
+    pub shown: usize,
+    pub total: usize,
+    /// `/admin/<model>?q=<term>` — the hand-off to that model's own
+    /// filtered list, with its filters, sort, pages and bulk actions.
+    pub list_link: String,
+    pub rows: Vec<SearchRowCtx>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct SearchRowCtx {
+    pub id: i64,
+    pub label: String,
+    /// The same display cells the list page would show, minus the
+    /// identity column that is already the label.
+    pub cells: Vec<String>,
+    pub edit_url: String,
+    pub history_url: String,
+}
+
 #[derive(Serialize)]
 pub(crate) struct DocsIndexCtx {
     #[serde(flatten)]

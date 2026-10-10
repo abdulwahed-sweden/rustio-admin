@@ -1731,6 +1731,164 @@ pub(crate) async fn search_models(
     Ok(Response::json_raw(body))
 }
 
+/// `GET /admin/search` — the result-oriented admin search page.
+///
+/// Shares the per-model query with the `⌘K` palette
+/// (`search_models`) but differs in two ways the spec calls for:
+/// it gates on `view` rather than `change`, because every link it
+/// offers (the list page, the record's history) is view-gated; and it
+/// keeps a count per model so the page can say how much it is showing
+/// of how much matched.
+pub(crate) async fn search_page(
+    ctx: &AdminCtx,
+    identity: Identity,
+    req: Request,
+) -> Result<Response> {
+    /// Rows per model on the page. The palette shows 5; this page is
+    /// for comparing, so it shows more without becoming a list page.
+    const PAGE_PER_MODEL: i64 = 25;
+
+    let term = req.query().get("q").unwrap_or_default().trim().to_string();
+    let scope = req
+        .query()
+        .get("scope")
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "all".to_string());
+    let has_query = term.chars().count() >= SEARCH_MIN_QUERY_LEN;
+
+    let mut groups: Vec<render::SearchGroupCtx> = Vec::new();
+    let mut scopes: Vec<render::SearchScopeCtx> = Vec::new();
+    let mut result_count = 0usize;
+
+    for entry in ctx.admin.entries() {
+        if entry.core || entry.search_fields.is_empty() {
+            continue;
+        }
+        // `view`, not `change`: this page links to the model's list and
+        // the record's history, both view-gated. The palette's stricter
+        // `change` gate is right for IT because it links to the edit
+        // page — the two gates differ on purpose.
+        let perm = format!(
+            "{}.view_{}",
+            entry.admin_name,
+            entry.singular_name.to_ascii_lowercase()
+        );
+        if !auth::check_permission(&ctx.db, &identity, &perm).await? {
+            continue;
+        }
+
+        let in_scope = scope == "all" || scope == entry.admin_name;
+        let mut count = 0usize;
+
+        if has_query && in_scope {
+            let page = entry
+                .ops
+                .list(
+                    &ctx.db,
+                    super::types::ListOpts {
+                        search: Some((
+                            term.clone(),
+                            entry.search_fields.iter().map(|s| s.to_string()).collect(),
+                        )),
+                        search_index_column: entry.search_index_column,
+                        limit: Some(PAGE_PER_MODEL),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            count = page.total.max(0) as usize;
+
+            let display_idx = render::pick_display_index(entry.fields, None);
+            let rows: Vec<render::SearchRowCtx> = page
+                .rows
+                .iter()
+                .map(|row| {
+                    let label = display_idx
+                        .and_then(|i| row.cells.get(i).cloned())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| format!("#{}", row.id));
+                    // Context cells: what the list page would show,
+                    // minus the identity column that is already the
+                    // label, capped so a wide model stays readable.
+                    let cells: Vec<String> = row
+                        .cells
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, c)| Some(*i) != display_idx && !c.is_empty())
+                        .map(|(_, c)| c.clone())
+                        .take(3)
+                        .collect();
+                    render::SearchRowCtx {
+                        id: row.id,
+                        label,
+                        cells,
+                        edit_url: format!("/admin/{}/{}/edit", entry.admin_name, row.id),
+                        history_url: format!("/admin/{}/{}/history", entry.admin_name, row.id),
+                    }
+                })
+                .collect();
+
+            if !rows.is_empty() {
+                result_count += rows.len();
+                groups.push(render::SearchGroupCtx {
+                    admin_name: entry.admin_name.to_string(),
+                    display_name: entry.display_name.to_string(),
+                    shown: rows.len(),
+                    total: count,
+                    list_link: format!(
+                        "/admin/{}?q={}",
+                        entry.admin_name,
+                        urlencoding::encode(&term)
+                    ),
+                    rows,
+                });
+            }
+        }
+
+        let scope_link = if scope == entry.admin_name {
+            format!("/admin/search?q={}", urlencoding::encode(&term))
+        } else {
+            format!(
+                "/admin/search?q={}&scope={}",
+                urlencoding::encode(&term),
+                entry.admin_name
+            )
+        };
+        scopes.push(render::SearchScopeCtx {
+            admin_name: entry.admin_name.to_string(),
+            display_name: entry.display_name.to_string(),
+            count,
+            is_active: scope == entry.admin_name,
+            link: scope_link,
+        });
+    }
+
+    let model_count = groups.len();
+    let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
+    let view = render::SearchPageCtx {
+        base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin)
+            .with_unread_count(unread),
+        page_title: "Search",
+        entries: ctx
+            .admin
+            .entries()
+            .iter()
+            .filter(|e| !e.core)
+            .map(render::SidebarEntry::from)
+            .collect(),
+        query: term,
+        scope,
+        groups,
+        scopes,
+        result_count,
+        model_count,
+        has_query,
+    };
+    let body = ctx.templates.render("admin/search.html", &view)?;
+    Ok(Response::html(body))
+}
+
 // ---- CRUD audit emission -------------------------------------------------
 
 /// Fire-and-forget audit emission for a project-model CRUD event.
