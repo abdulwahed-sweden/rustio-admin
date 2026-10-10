@@ -3386,6 +3386,13 @@ pub(crate) struct DocsIndexCtx {
 pub(crate) struct DocSummaryCtx {
     pub slug: &'static str,
     pub title: &'static str,
+    /// The document's opening sentence, flattened to plain text — see
+    /// [`crate::admin::docs::summary`]. Derived, so the index can never
+    /// describe a document as something it no longer is.
+    pub summary: String,
+    /// How many `##` sections it holds, so the shape of a document is
+    /// legible before it is opened.
+    pub sections: usize,
 }
 
 #[derive(Serialize)]
@@ -3395,6 +3402,18 @@ pub(crate) struct DocPageCtx {
     pub page_title: String,
     pub entries: Vec<SidebarEntry>,
     pub doc_title: &'static str,
+    /// The URL key, which is also the markdown file's stem — the head
+    /// names the source it is rendering.
+    pub slug: &'static str,
+    /// `##` sections in this document.
+    ///
+    /// The head states the source and the shape rather than repeating
+    /// the document's opening sentence: `docs::summary` IS that
+    /// sentence, so a lead here would print the first paragraph twice,
+    /// and hoisting it instead would silently drop the rest of a
+    /// paragraph the summary truncated. The index, where the reader has
+    /// not yet seen the prose, is where the summary belongs.
+    pub sections: usize,
     /// Pre-rendered HTML fragment from `docs::render_markdown`.
     /// The template marks it `|safe` because this is the
     /// trusted boundary — markdown source is framework-owned,
@@ -3434,11 +3453,19 @@ pub(crate) fn docs_index_ctx(
             .collect(),
         docs: crate::admin::docs::EMBEDDED_DOCS
             .iter()
-            .map(|d| DocSummaryCtx {
-                slug: d.slug,
-                title: d.title,
-            })
+            .map(DocSummaryCtx::from)
             .collect(),
+    }
+}
+
+impl From<&'static crate::admin::docs::EmbeddedDoc> for DocSummaryCtx {
+    fn from(d: &'static crate::admin::docs::EmbeddedDoc) -> Self {
+        Self {
+            slug: d.slug,
+            title: d.title,
+            summary: crate::admin::docs::summary(d.source),
+            sections: crate::admin::docs::section_count(d.source),
+        }
     }
 }
 
@@ -3462,6 +3489,8 @@ pub(crate) fn doc_page_ctx(
             .map(SidebarEntry::from)
             .collect(),
         doc_title: doc.title,
+        slug: doc.slug,
+        sections: crate::admin::docs::section_count(doc.source),
         body_html: crate::admin::docs::render_markdown(doc.source),
         docs: all
             .iter()
@@ -3474,14 +3503,8 @@ pub(crate) fn doc_page_ctx(
         prev: here
             .and_then(|i| i.checked_sub(1))
             .and_then(|i| all.get(i))
-            .map(|d| DocSummaryCtx {
-                slug: d.slug,
-                title: d.title,
-            }),
-        next: here.and_then(|i| all.get(i + 1)).map(|d| DocSummaryCtx {
-            slug: d.slug,
-            title: d.title,
-        }),
+            .map(DocSummaryCtx::from),
+        next: here.and_then(|i| all.get(i + 1)).map(DocSummaryCtx::from),
     }
 }
 

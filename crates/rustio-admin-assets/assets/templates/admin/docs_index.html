@@ -1,12 +1,23 @@
 {% extends "admin/_base.html" %}
-{# The docs index: a numbered reading list, not three hover-lifting
-   glyph cards. Three links do not need a card grid; they need an order
-   and a path. #}
+{# The docs home.
+
+   It used to be three 40px rows carrying a title and a URL — a route
+   table, not a library. A reader choosing what to open needs to know
+   what each document is about and roughly how big it is, and both are
+   derived from the markdown itself (`docs::summary`, `section_count`)
+   so this page cannot describe a document as something it no longer is.
+
+   The reading measure, not the wide one: a list of three things in a
+   1600px field is the problem it had. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
 <div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
+  <p class="rio-masthead-desc">
+    The framework's own reference, rendered from the markdown shipped inside
+    the binary. Read it here instead of opening the repository.
+  </p>
 </div></div>
 
 <p class="rio-dash-facts">
@@ -16,16 +27,23 @@
 </p>
 
 {% if docs %}
-<div class="rio-board">
-  <div class="rio-board-title"><h2>Documents</h2></div>
+<div class="rio-board rio-docs-index">
+  <div class="rio-board-title"><h2>Documents</h2><span class="rio-meta">in reading order</span></div>
   <ol class="rio-docs-list">
     {% for d in docs %}
-    <li>
+    <li class="rio-docs-row">
       <a class="rio-docs-item" href="/admin/docs/{{ d.slug }}">
-        <span class="rio-docs-item-title">{{ d.title }}</span>
-        <span class="rio-docs-item-path">/admin/docs/{{ d.slug }}</span>
+        <span class="rio-docs-item-ord" aria-hidden="true">{{ "%02d"|format(loop.index) }}</span>
+        <span class="rio-docs-item-body">
+          <span class="rio-docs-item-title">{{ d.title }}</span>
+          <span class="rio-docs-item-lead">{{ d.summary }}</span>
+          <span class="rio-docs-item-meta">
+            <code>/admin/docs/{{ d.slug }}</code>
+            <span class="rio-docs-item-count">· {{ d.sections }} section{% if d.sections != 1 %}s{% endif %}</span>
+          </span>
+        </span>
+        <span class="rio-docs-item-go" aria-hidden="true">{{ icon("arrow-right") }}</span>
       </a>
-      <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/docs/{{ d.slug }}">Read</a>
     </li>
     {% endfor %}
   </ol>
