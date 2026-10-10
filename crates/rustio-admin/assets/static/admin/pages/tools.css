@@ -228,7 +228,8 @@
 .rio-check-msg { color: var(--rio-text); font-size: var(--rio-text-14); overflow-wrap: anywhere; }
 .rio-check-row--ok .rio-check-msg { color: var(--rio-text-mute); }
 .rio-facts .rio-code { margin-block-start: var(--rio-space-8); }
-.rio-facts .rio-code pre { padding: var(--rio-space-8) var(--rio-space-12); font-size: var(--rio-text-13); }
+.rio-facts .rio-code pre,
+.rio-facts pre.rio-code { padding: var(--rio-space-8) var(--rio-space-12); font-size: var(--rio-text-13); }
 .rio-facts dl + .rio-facts-title { margin-block-start: var(--rio-space-16); }
 @media (max-width: 900px) { .rio-status-layout { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .rio-check-row { grid-template-columns: 96px minmax(0, 1fr); } .rio-check-msg { grid-column: 2; } }

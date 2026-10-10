@@ -34,6 +34,10 @@ kbd {
   font-size: var(--rio-text-12);
 }
 .rio-code pre { margin: 0; padding: var(--rio-space-16); }
+/* A <pre> that IS the well rather than one nested inside it — the shape
+   the console uses wherever a single command or payload is the whole
+   block. The nested form keeps its own padding above. */
+pre.rio-code { margin: 0; padding: var(--rio-space-12) var(--rio-space-16); }
 .rio-code .tok-key { color: var(--rio-syntax-key); }
 .rio-code .tok-str { color: var(--rio-syntax-str); }
 .rio-code .tok-num { color: var(--rio-syntax-num); }
