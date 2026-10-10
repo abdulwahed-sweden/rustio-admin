@@ -8,6 +8,32 @@ leaves the alpha track.
 
 ## Unreleased
 
+### Added
+
+- **`/admin/search` — a search PAGE, beside the `⌘K` palette.** The palette
+  jumps to one record: five rows per model, gated on `change` because every
+  link it offers is an edit link, Enter opens the highlighted one. The page
+  shows and compares every match: grouped per model with counts, twenty-five
+  rows per model, gated on `view` because every link it offers is view-gated,
+  and each group hands off to that model's own list with the term carried,
+  where the filters, sort, pages and bulk actions already live. The two
+  gates differ on purpose. Staff and above; models contribute only the fields
+  they declare searchable. The palette's footer now carries an
+  "All results for …" way through to it.
+
+- **The audit log filters and pages.** `/admin/history` grew a find row —
+  term, action, model, and a from/to period — over a paged board, where it
+  previously rendered one unfiltered page. The action and model dropdowns
+  offer the values that exist in the table rather than a hard-coded list, so
+  a project's own `ActionType` variants appear without a code change. Each
+  event is a native `<details>` row (no JavaScript) whose body carries the
+  exact timestamp, the actor, the address and the correlation id, read one at
+  a time instead of competing for a column each.
+
+- **The framework documents read as a sequence.** `/admin/docs/<slug>` now
+  offers the previous and next document in its foot; the first falls back to
+  the index, the last offers none.
+
 ### Changed
 
 - **Composition 3.1 — the admin takes RustIO's shared scale.** The framework
