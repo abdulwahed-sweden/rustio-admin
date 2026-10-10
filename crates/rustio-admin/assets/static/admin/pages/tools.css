@@ -52,39 +52,11 @@
 /* ---- Audit log (log_entries) cell helpers — replaces inline styles ---- */
 
 /* ---- API surface (apis_index) — moved out of the template's inline <style> ---- */
-.rio-api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--rio-s5); }
-.rio-api-card { background: var(--rio-surface); border: 1px solid var(--rio-border); border-radius: var(--rio-radius-lg); box-shadow: var(--rio-shadow); overflow: hidden; }
-.rio-api-card__head { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s4) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
-.rio-api-card__glyph { width: 38px; height: 38px; flex: none; border-radius: var(--rio-radius-sm); display: grid; place-items: center; background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
-.rio-api-card__glyph .rio-icon { width: 18px; height: 18px; }
-.rio-api-card__title {
-  font-size: var(--rio-fs-lg); font-weight: var(--rio-fw-bold); color: var(--rio-text-strong);
-  /* The same identity floor the record cards take: an API path is long
-     and unbreakable, and without a floor it wraps one segment per line. */
-  min-inline-size: 12rem;
-  overflow-wrap: break-word;
-}
-.rio-api-card__title a { color: inherit; }
-.rio-api-card__title a:hover { color: var(--rio-accent); }
-.rio-api-card__sub { font-weight: var(--rio-fw-regular); color: var(--rio-text-subtle); font-size: var(--rio-fs-sm); }
-.rio-api-card__count { margin-left: auto; font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); color: var(--rio-text-muted); }
-.rio-api-endpoints { display: flex; flex-direction: column; }
-.rio-api-ep { display: flex; align-items: center; gap: var(--rio-s3); padding: var(--rio-s3) var(--rio-s5); border-bottom: 1px solid var(--rio-border-soft); }
 .rio-api-verb { flex: none; min-width: 52px; text-align: center; font-family: var(--rio-font-mono); font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-bold); letter-spacing: 0.03em; padding: 0.18rem 0.5rem; border-radius: var(--rio-radius-sm); }
 .rio-api-verb--get { background: var(--rio-success-bg); color: var(--rio-success); }
 .rio-api-verb--post { background: var(--rio-accent2-soft, var(--rio-accent-soft)); color: var(--rio-accent2-ink, var(--rio-accent)); }
 .rio-api-verb--del { background: var(--rio-danger-bg); color: var(--rio-danger); }
 .rio-api-path { font-family: var(--rio-font-mono); font-size: var(--rio-fs-sm); color: var(--rio-text); overflow-x: auto; }
-.rio-api-ep__action { margin-left: auto; flex: none; font-size: var(--rio-fs-xs); color: var(--rio-text-subtle); }
-.rio-api-fields { padding: var(--rio-s4) var(--rio-s5) var(--rio-s5); }
-.rio-api-fields__label { font-size: var(--rio-fs-xs); font-weight: var(--rio-fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--rio-text-subtle); margin-bottom: var(--rio-s3); }
-.rio-api-ftable { width: 100%; border-collapse: collapse; font-size: var(--rio-fs-sm); }
-.rio-api-ftable td { padding: 0.45rem 0; border-bottom: 1px solid var(--rio-border-soft); }
-.rio-api-ftable tr:last-child td { border-bottom: 0; }
-.rio-api-ftable .rio-api-fname { font-family: var(--rio-font-mono); color: var(--rio-text); }
-.rio-api-ftable .rio-api-ftype { color: var(--rio-text-muted); }
-.rio-api-ftable .rio-api-fnull { text-align: right; color: var(--rio-text-subtle); font-size: var(--rio-fs-xs); }
-.rio-api-fnull--yes { color: var(--rio-warning); font-weight: var(--rio-fw-semibold); }
 @media (max-width: 720px) { .rio-api-grid { grid-template-columns: 1fr; } }
 
 /* ---- Docs index (docs_index) — moved out of the template's inline <style> ---- */
@@ -163,39 +135,7 @@
 /* ---- API surface as sections (apis_index.html) ----------------------
    One flat section per model: head (name · base path · field count),
    endpoints on the left, fields on the right. */
-.rio-api-sections { display: flex; flex-direction: column; gap: var(--rio-space-16); }
-.rio-api-section {
-  background: var(--rio-surface);
-  border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-lg);
-  box-shadow: var(--rio-shadow-sm);
-  overflow: hidden;
-}
-.rio-api-section-head {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--rio-space-8);
-  padding: var(--rio-space-12) var(--rio-space-16);
-  border-block-end: 1px solid var(--rio-line);
-}
-.rio-api-section-head h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
-.rio-api-section-head h2 a { color: inherit; text-decoration: none; }
-.rio-api-section-head h2 a:hover { color: var(--rio-rust); }
-.rio-api-base { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
-.rio-api-section-head .rio-meta { margin-inline-start: auto; }
-.rio-api-section-body { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr); }
-.rio-api-ep-list {
-  padding: var(--rio-space-12) var(--rio-space-16);
-  border-inline-end: 1px solid var(--rio-line);
-  display: flex; flex-direction: column; gap: var(--rio-space-4);
-}
-.rio-api-ep-list .rio-api-ep { padding: var(--rio-space-4) 0; border: 0; gap: var(--rio-space-8); }
-.rio-api-ep-list .rio-api-verb { min-inline-size: 44px; }
-.rio-api-ep-list .rio-api-path { font-size: var(--rio-text-13); }
-.rio-api-ep-list .rio-api-ep__action { font-size: var(--rio-text-13); color: var(--rio-text-faint); }
-.rio-api-section .rio-api-fields { padding: var(--rio-space-8) var(--rio-space-16) var(--rio-space-12); }
-.rio-api-section .rio-api-ftable td { padding: var(--rio-space-4) 0; font-size: var(--rio-text-13); }
 @media (max-width: 900px) {
-  .rio-api-section-body { grid-template-columns: 1fr; }
-  .rio-api-ep-list { border-inline-end: 0; border-block-end: 1px solid var(--rio-line); }
 }
 
 /* ============================================================
@@ -408,3 +348,16 @@ a.rio-notif-msg:hover { color: var(--rio-rust); }
 .rio-form-card .rio-code { margin: 0; }
 .rio-form-card .rio-code + .rio-hint { margin-block-start: var(--rio-space-8); }
 .rio-form-card .rio-fieldset > .rio-hint { display: block; margin: 0 0 var(--rio-space-8); color: var(--rio-text-mute); font-size: var(--rio-text-13); clear: both; }
+
+/* ---- Playground layout: form left, response beside it ---- */
+.rio-pg-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--rio-space-16); align-items: start; }
+.rio-playground__form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--rio-space-16); padding: var(--rio-space-24); }
+.rio-playground__field { display: flex; flex-direction: column; gap: var(--rio-space-8); min-inline-size: 0; }
+.rio-playground__field > span { font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-playground__field--wide { grid-column: 1 / -1; }
+.rio-playground__field[hidden] { display: none; }
+.rio-playground__actions { grid-column: 1 / -1; margin: 0; }
+.rio-playground__url { margin-inline-start: auto; font-family: var(--rio-font-mono); font-size: var(--rio-text-13); overflow-wrap: anywhere; }
+.rio-playground__result { position: sticky; inset-block-start: var(--rio-space-16); }
+.rio-playground__body { margin: 0; border: 0; border-radius: 0; max-block-size: 60vh; overflow: auto; }
+@media (max-width: 1000px) { .rio-pg-layout { grid-template-columns: minmax(0, 1fr); } .rio-playground__result { position: static; } }

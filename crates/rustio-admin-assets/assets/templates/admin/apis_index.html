@@ -1,8 +1,15 @@
 {% extends "admin/_base.html" %}
-{# One flat section per model: name and base path in the head, the five
-   endpoints on the left, the fields on the right. Same data, same paths,
-   same field table as the cards it replaces — without a glyph tile and a
-   ragged two-up grid. #}
+{# A technical reference, not a card per model.
+
+   Every model section used to repeat the identical five endpoint rows —
+   with four models that is twenty rows saying the same five things. The
+   pattern is stated ONCE as a band, with the permission each verb needs
+   (the string `handlers.rs` builds: `{model}.{verb}_{singular}`), and
+   the models become a table of contents. What differs per model — its
+   base path and its fields — is what each model's own band carries.
+
+   The head offered three equal buttons; the playground is the primary
+   action and the two downloads are facts. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ page_title }}</span></nav>
@@ -15,56 +22,85 @@
     </p>
   </div>
   <div class="rio-masthead-cta">
-    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/apis/playground">Open playground →</a>
-    <a class="rio-btn rio-btn--secondary rio-btn--md" href="{{ openapi_url }}">OpenAPI 3.0 spec</a>
-    <a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/apis/sdk.ts">TypeScript SDK</a>
+    <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/apis/playground">Open playground</a>
   </div>
 </div>
 
+<p class="rio-dash-facts">
+  <span><strong>{{ apis|length }}</strong> model{% if apis|length != 1 %}s{% endif %}</span>
+  <span><strong>{{ apis|length * 5 }}</strong> endpoints</span>
+  <span>session cookie, <code>_csrf</code> on POST</span>
+  <span><a href="{{ openapi_url }}">openapi.json</a></span>
+  <span><a href="/admin/apis/sdk.ts">rustio-sdk.ts</a></span>
+</p>
+
 {% if apis %}
-<div class="rio-api-sections">
-  {% for m in apis %}
-  <section class="rio-api-section" aria-labelledby="api-{{ m.admin_name }}">
-    <div class="rio-api-section-head">
-      <h2 id="api-{{ m.admin_name }}"><a href="/admin/{{ m.admin_name }}">{{ m.display_name }}</a></h2>
-      <span class="rio-api-base">{{ m.list_path }}</span>
-      <span class="rio-meta">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
-    </div>
-    <div class="rio-api-section-body">
-      <div class="rio-api-ep-list">
-        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--get">GET</span><span class="rio-api-path">{{ m.list_path }}</span><span class="rio-api-ep__action">List rows</span></div>
-        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--post">POST</span><span class="rio-api-path">{{ m.list_path }}</span><span class="rio-api-ep__action">Create</span></div>
-        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--get">GET</span><span class="rio-api-path">{{ m.detail_path }}</span><span class="rio-api-ep__action">Detail</span></div>
-        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--post">POST</span><span class="rio-api-path">{{ m.detail_path }}/edit</span><span class="rio-api-ep__action">Update</span></div>
-        <div class="rio-api-ep"><span class="rio-api-verb rio-api-verb--del">POST</span><span class="rio-api-path">{{ m.detail_path }}/delete</span><span class="rio-api-ep__action">Delete</span></div>
-      </div>
-      <div class="rio-api-fields">
-        <table class="rio-api-ftable">
-          <tbody>
-            {% for f in m.fields %}
-            <tr>
-              <td class="rio-api-fname">{{ f.name }}</td>
-              <td class="rio-api-ftype">{{ f.type_label }}</td>
-              <td class="rio-api-fnull{% if f.nullable %} rio-api-fnull--yes{% endif %}">{% if f.nullable %}nullable{% else %}required{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-  {% endfor %}
-</div>
-{% else %}
-<div class="rio-card rio-card--quiet">
-  <div class="rio-empty-state">
-    <div class="rio-empty-state__icon">{{ icon("table", class="rio-icon") }}</div>
-    <h3 class="rio-empty-state__title">No project models registered yet</h3>
-    <p class="rio-empty-state__lead">
-      Register a model in your <code>main.rs</code> via
-      <code>Admin::new().model::&lt;YourModel&gt;()</code> and its endpoints will appear here automatically.
-    </p>
+<div class="rio-board">
+  <div class="rio-board-title"><h2>The endpoint pattern</h2><span class="rio-meta">the same five for every model</span></div>
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops rio-ref-table">
+      <thead><tr><th>Method</th><th>Path</th><th>Does</th><th>Needs</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr><td><span class="rio-api-verb rio-api-verb--get">GET</span></td><td><code>/admin/{model}</code></td><td>List rows</td><td><span class="rio-ref-perm">{model}.view_{singular}</span></td><td>rows + paging</td></tr>
+        <tr><td><span class="rio-api-verb rio-api-verb--post">POST</span></td><td><code>/admin/{model}/new</code></td><td>Create</td><td><span class="rio-ref-perm">{model}.add_{singular}</span></td><td>envelope + id</td></tr>
+        <tr><td><span class="rio-api-verb rio-api-verb--get">GET</span></td><td><code>/admin/{model}/{id}/edit</code></td><td>Detail</td><td><span class="rio-ref-perm">{model}.view_{singular}</span></td><td>one row</td></tr>
+        <tr><td><span class="rio-api-verb rio-api-verb--post">POST</span></td><td><code>/admin/{model}/{id}/edit</code></td><td>Update</td><td><span class="rio-ref-perm">{model}.change_{singular}</span></td><td>envelope</td></tr>
+        <tr><td><span class="rio-api-verb rio-api-verb--del">POST</span></td><td><code>/admin/{model}/{id}/delete</code></td><td>Delete</td><td><span class="rio-ref-perm">{model}.delete_{singular}</span></td><td>envelope</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
+
+<div class="rio-board">
+  <div class="rio-board-title"><h2>Models</h2><span class="rio-meta">{{ apis|length }}</span></div>
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops rio-ref-models">
+      <thead><tr><th>Model</th><th>Base path</th><th>Singular</th><th>Fields</th><th class="col-act"><span class="rio-sr-only">Actions</span></th></tr></thead>
+      <tbody>
+        {% for m in apis %}
+        <tr>
+          <td class="rio-cell-fit"><a class="rio-cell-primary" href="#api-{{ m.admin_name }}">{{ m.display_name }}</a></td>
+          <td><code>{{ m.list_path }}</code></td>
+          <td><code>{{ m.singular_name }}</code></td>
+          <td>{{ m.field_count }}</td>
+          <td class="col-act"><span class="rio-row-actions">
+            <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/{{ m.admin_name }}">Browse</a>
+            <a class="rio-btn rio-btn--quiet rio-btn--sm" href="/admin/apis/playground">Try</a>
+          </span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% for m in apis %}
+<div class="rio-board rio-ref-schema" id="api-{{ m.admin_name }}">
+  <div class="rio-board-title">
+    <h2>{{ m.display_name }}</h2>
+    <span class="rio-ref-paths"><code>{{ m.list_path }}</code><code>{{ m.detail_path }}</code></span>
+    <span class="rio-meta rio-board-title-action">{{ m.field_count }} field{% if m.field_count != 1 %}s{% endif %}</span>
+  </div>
+  <div class="rio-tablewrap">
+    <table class="rio-dtable rio-dtable--ops rio-ref-fields">
+      <thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead>
+      <tbody>
+        {% for f in m.fields %}
+        <tr>
+          <td>{{ f.name }}</td>
+          <td>{{ f.type_label }}</td>
+          <td>{% if f.nullable %}<span class="rio-mark rio-mark--off">optional</span>{% else %}<span class="rio-mark">required</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="rio-board"><div class="rio-empty">
+  <div class="rio-empty-title">No project models registered yet</div>
+  <div>Register a model in your <code>main.rs</code> via <code>Admin::new().model::&lt;YourModel&gt;()</code> and its endpoints appear here automatically.</div>
+</div></div>
 {% endif %}
 {% endblock %}

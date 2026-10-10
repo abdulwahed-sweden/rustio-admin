@@ -1,23 +1,21 @@
 {% extends "admin/_base.html" %}
-{# A reading/detail page: the standard measure. #}
+{# The playground: a form card whose foot carries Send and the live URL,
+   and a response board beside it. Same ids, same `data-show-for`
+   toggles, same script — only the surfaces around them change. #}
 {% block page_measure %}rio-page--standard{% endblock %}
 {% block content %}
-<header class="rio-page-header">
-  <nav class="rio-breadcrumbs">
-    <a href="/admin">Home</a> ·
-    <a href="/admin/apis">API surface</a> ·
-    <span>{{ page_title }}</span>
-  </nav>
+<nav class="rio-crumbs">
+  <a href="/admin">Home</a><span class="rio-crumb-sep">·</span>
+  <a href="/admin/apis">API surface</a><span class="rio-crumb-sep">·</span>
+  <span class="rio-crumb-current">Playground</span>
+</nav>
+<div class="rio-masthead-top"><div>
   <h1>{{ page_title }}</h1>
-  <p class="rio-page-header__lead">
-    Pick a model + endpoint, optionally tweak parameters, and fetch
-    the response in-page. Write methods (create / update / delete)
-    submit form-encoded bodies; the CSRF token is injected
-    automatically.
-  </p>
-</header>
+  <p class="rio-masthead-desc">Call the JSON endpoints with your current session. Requests run against live data.</p>
+</div></div>
 
-<section class="rio-card rio-playground" data-method="list">
+<div class="rio-pg-layout">
+<section class="rio-form-card rio-playground" data-method="list">
   <form id="rio-playground-form" class="rio-playground__form" onsubmit="return false;">
     <input type="hidden" id="rio-playground-csrf" value="{{ csrf_token }}">
 
@@ -86,19 +84,22 @@
       <textarea id="rio-playground-body" class="rio-input" rows="4" placeholder="title=Hello&body=World"></textarea>
     </label>
 
-    <div class="rio-playground__actions">
+    <div class="rio-form-actions rio-playground__actions">
       <button type="button" id="rio-playground-send" class="rio-btn rio-btn--primary rio-btn--md">Send</button>
       <code id="rio-playground-url" class="rio-meta rio-playground__url"></code>
     </div>
   </form>
 
-  <div class="rio-playground__result">
-    <div class="rio-playground__status">
-      <span id="rio-playground-status" class="rio-meta">Idle.</span>
+  </section>
+
+  <section class="rio-board rio-playground__result">
+    <div class="rio-board-title">
+      <h2>Response</h2>
+      <span id="rio-playground-status" class="rio-meta rio-board-title-action">Idle.</span>
     </div>
-    <pre id="rio-playground-body-out" class="rio-playground__body" aria-live="polite"></pre>
-  </div>
-</section>
+    <pre id="rio-playground-body-out" class="rio-code rio-playground__body" aria-live="polite"></pre>
+  </section>
+</div>
 
 <script>
 (function () {
