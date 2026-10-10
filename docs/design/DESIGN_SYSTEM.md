@@ -197,7 +197,7 @@ A project that needs a different accent colour:
 ```rust
 // ✅ Typed override at boot. Emits a single _theme.html style block.
 let admin = Admin::new()
-    .accent_color("#B84318");
+    .accent_color("#2D6A4F");
 ```
 
 A project that needs new tokens for its own components:
@@ -367,12 +367,12 @@ comment so a diff in those blocks is visually loud:
 
 - `--rio-accent` and friends — the brand colour
 - `--rio-bg`, `--rio-surface*` — the surface ladder
-- `--rio-text*` — the slate text scale
+- `--rio-text*` — the ink ramp
 - `--rio-border*` — outline weights
 - `--rio-success / --rio-warning / --rio-danger` — semantic colours
-- `--rio-fs-*` — typography scale (14px floor; values owned by VISUAL-CONTRACT.md §2)
+- `--rio-fs-*` — typography scale (values owned by VISUAL-CONTRACT.md §2.1; no size floor)
 - `--rio-font-body / --rio-font-display / --rio-font-mono` (+ `--rio-font-arabic`) — font stacks
-- `--rio-s1`–`--rio-s7` — spacing scale (4 / 8 / 12 / 16 / 24 / 32 / 48 px)
+- `--rio-s1`–`--rio-s6` — spacing scale (4 / 8 / 12 / 16 / 24 / 32 px)
 - `--rio-radius / --rio-shadow*` — radii + shadows
 
 Touching any of these is a design-system change. Read the PR
@@ -386,7 +386,7 @@ stylesheet:
 ```css
 /* ❌ Wrong — silently forks the framework's accent */
 :root {
-  --rio-accent: #B84318;
+  --rio-accent: #2D6A4F;
 }
 ```
 
@@ -395,7 +395,7 @@ Two right answers:
 ```rust
 // ✅ Typed override at boot. Emits a single _theme.html style block.
 let admin = Admin::new()
-    .accent_color("#B84318");
+    .accent_color("#2D6A4F");
 ```
 
 ```css
@@ -481,11 +481,14 @@ Hanken faces are gone — see the font-cleanup CHANGELOG entries.)
 
 ### 10.2 Size ladder
 
-The size ladder and the **14px content-area floor** are owned by
-[`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2 (body / inputs / tables 16px,
-legends / headers / kbd 14px, page titles 36px). Components must resolve through
-the `--rio-fs-*` / `--rio-text-*` tokens, never literal `font-size` — and never
-below 14px in the content area. A project that needs a tighter or looser scale
+The size ladder is owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §2.1
+(body / inputs / table cells 15px, mono micro-labels 13px, page titles 24px).
+There is **no size floor** — the v2.x "nothing below 14px" rule was repealed in
+contract v3.0, because 13px is the family's mono/micro size. What replaces it is
+a role and contrast rule: 13px is for mono micro-labels that name a thing, never
+for prose, and operational text may not be pale (contract §1.2). Components must
+resolve through the `--rio-fs-*` / `--rio-text-*` tokens, never a literal
+`font-size`. A project that needs a tighter or looser scale
 (POS terminal on a reflective display, density-tuned dashboard) overrides
 via its own project-scoped class wrapper, never by
 redefining the framework size tokens.
@@ -566,11 +569,12 @@ Carry from the design doctrine. Do not re-litigate.
 
 | Decision | Value | Override path |
 |----------|-------|---------------|
-| Accent palette | **Rust** — values owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1 (light) / §12 (dark). Permanent | `Admin::accent_color("#…")` per project |
-| Retired accent | A prior terracotta/red accent. Do not reintroduce | None — framework identity decision |
+| Accent palette | **RustIO Blue** — values owned by [`VISUAL-CONTRACT.md`](VISUAL-CONTRACT.md) §1.3. The `--rio-rust*` names are permanent aliases; the value is blue. Focus is a separate role and is never retargeted | `Admin::accent_color("#…")` per project (accent only) |
+| Retired accents | The prior terracotta/red accent and the burnt-copper "rust" `#B84318` of Visual Contract v2.x. Do not reintroduce | None — framework identity decision |
 | Typography stack | **Inter** (Latin UI, body + display), SFMono stack (mono), **Tajawal** (Arabic UI), **Noto Naskh Arabic** (Arabic body) — see VISUAL-CONTRACT.md §2 | Project class wrappers may layer; cannot redefine `--rio-font-*` |
-| Size ladder | Owned by VISUAL-CONTRACT.md §2 (16px body, 14px floor, 36px titles) | Project class wrappers; no token redefinition |
-| Spacing scale | `--rio-s1` (4px) → `--rio-s7` (48px) | Same |
+| Size ladder | Owned by VISUAL-CONTRACT.md §2.1 (15px body, 13px mono micro-labels, 24px titles; no size floor) | Project class wrappers; no token redefinition |
+| Spacing scale | `--rio-s1` (4px) → `--rio-s6` (32px) | Same |
+| Control + row scale | Owned by VISUAL-CONTRACT.md §5, §8, §9.1 (38 / 31 / 32px controls; 40px heads, 48px rows) | Project class wrappers; no token redefinition |
 | Project token prefix | `--bsk-*` / `--app-*` / `--<project>-*` | None — convention |
 | Token authority | `crates/rustio-admin/assets/static/admin/admin.css` | None — single source of truth |
 | Branch policy | One canonical branch (`main`). Feature branches converge | None — operational |

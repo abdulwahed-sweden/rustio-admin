@@ -1,14 +1,15 @@
 {% extends "admin/_base.html" %}
 {% from "admin/_row_actions.html" import row_actions %}
-{# A data page: lists take the wide measure. #}
-{% block page_measure %}rio-page--wide{% endblock %}
+{# Operator accounts as the generic operational table: the identity hugs
+   with the id as a mono suffix on the same line, 48px rows, the family
+   timestamp. The special-cased grid table it replaced drew its head rule
+   per cell and spent 72px on one line of data. #}
+{% block page_measure %}rio-page--wide rio-c-list{% endblock %}
 {% block content %}
 <nav class="rio-crumbs" aria-label="Breadcrumb"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">Users</span></nav>
-
 <div class="rio-masthead-top">
   <div>
     <h1>Users</h1>
-    <p class="rio-masthead-desc">Operator accounts — role, last sign-in, and MFA enrolment.</p>
   </div>
   <div class="rio-masthead-cta">
     <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a>
@@ -18,44 +19,37 @@
 <div class="rio-board">
   {% if users %}
   <div class="rio-tablewrap">
-  <table class="rio-dtable rio-dtable--users">
+  <table class="rio-dtable rio-dtable--ops rio-dtable--people">
     <thead>
       <tr>
         <th scope="col">User</th>
         <th scope="col">Role</th>
         <th scope="col">Status</th>
-        <th scope="col">Created</th>
+        <th scope="col" class="rio-th--datetime">Created</th>
         <th scope="col" class="col-act"><span class="rio-sr-only">Actions</span></th>
       </tr>
     </thead>
     <tbody>
       {% for u in users %}
       <tr>
-        <td class="rio-cell-user">
-          <div class="rio-prod">
-            <span class="rio-mono-tile">{{ u.email | first | upper }}</span>
-            <span class="rio-prod-text">
-              <a class="rio-prod-name rio-email" href="/admin/users/{{ u.id }}" title="{{ u.email }}">{{ u.email }}</a>
-              <span class="rio-prod-cat">#{{ u.id }}</span>
-            </span>
-          </div>
+        <td class="rio-cell-user rio-cell-fit">
+          <a class="rio-cell-primary" href="/admin/users/{{ u.id }}" title="{{ u.email }}">{{ u.email }}</a><span class="rio-cell-id">#{{ u.id }}</span>
         </td>
-        <td><span class="rio-role">{{ u.role }}</span></td>
+        <td><span class="rio-role rio-role--{{ u.role }}">{{ u.role }}</span></td>
         <td><span class="rio-pill rio-pill--{% if u.is_active %}on{% else %}off{% endif %}">{% if u.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-        <td class="rio-cell-meta">{{ u.created_at }}</td>
+        <td class="rio-td--datetime rio-cell-meta">{{ u.created_at }}</td>
         <td class="col-act">{{ row_actions("users", u.id) }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
-  <div class="rio-board-foot"><span>Showing <strong>{{ users|length }}</strong> account{% if users|length != 1 %}s{% endif %}</span></div>
+  <div class="rio-board-foot rio-board-foot--ops"><span class="rio-board-foot-text">Showing <strong>{{ users|length }}</strong> account{% if users|length != 1 %}s{% endif %}</span></div>
   {% else %}
   <div class="rio-empty">
-    {{ icon("users") }}
     <div class="rio-empty-title">No users yet</div>
     <div>Add an account to grant admin access — role controls what they can see and change.</div>
-    <div class="rio-empty-cta"><a class="rio-btn rio-btn--primary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a></div>
+    <div class="rio-empty-cta"><a class="rio-btn rio-btn--secondary rio-btn--md" href="/admin/users/new">{{ icon("plus") }} Add user</a></div>
   </div>
   {% endif %}
 </div>

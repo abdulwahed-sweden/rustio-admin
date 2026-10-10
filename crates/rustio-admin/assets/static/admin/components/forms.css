@@ -18,32 +18,44 @@
 /* Text input / textarea / select share .rio-input */
 .rio-input {
   inline-size: 100%;
-  min-block-size: 46px;            /* comfortable touch target (≥ contract 44px) */
-  padding: 11px 14px;
+  min-block-size: var(--rio-ctl);  /* 38 — contract §5 */
+  padding: 0 var(--rio-space-12);
   font-family: var(--rio-font-body);
-  font-size: 1rem;                 /* 16px */
+  font-size: var(--rio-text-15);   /* 15 */
+  font-weight: var(--rio-weight-medium);
   color: var(--rio-text-hi);
   background: var(--rio-surface);
-  border: 1px solid var(--rio-line-strong);
+  /* The boundary is what identifies the control, so SC 1.4.11 applies:
+     --rio-field-line is the card border deepened to clear 3:1 against
+     both the card and the page ground. */
+  border: 1px solid var(--rio-field-line);
   border-radius: var(--rio-radius-control); /* contract §5: 8px */
-  box-shadow: var(--rio-shadow-inset);       /* reads as "place to type" */
   transition: border-color var(--rio-dur-fast) var(--rio-ease), box-shadow var(--rio-dur-fast) var(--rio-ease);
   appearance: none;
 }
 .rio-input::placeholder { color: var(--rio-text-faint); }
 /* Identifier fields (slug, flag key) render their placeholder in mono (contract §5). */
 .rio-input--mono::placeholder { font-family: var(--rio-font-mono); }
-.rio-input:hover { border-color: var(--rio-text-faint); }
+.rio-input:hover { border-color: var(--rio-line-strong); }
+/* Contract §5: the focus border plus the solid 3px ring. The former 4px
+   translucent glow reached only ~1.54:1 and is retired. */
 .rio-input:focus,
 .rio-input:focus-visible {
-  outline: none;
-  border-color: var(--rio-accent-focus);     /* contract §5 focus border */
-  box-shadow: var(--rio-shadow-inset), 0 0 0 4px var(--rio-accent-ring);
+  outline: 3px solid var(--rio-accent-focus);
+  outline-offset: 2px;
+  border-color: var(--rio-accent-focus);
 }
 .rio-input:disabled { background: var(--rio-sunken); color: var(--rio-text-faint); cursor: not-allowed; }
 .rio-input[aria-invalid="true"] { border-color: var(--rio-danger); }
-.rio-input[aria-invalid="true"]:focus { box-shadow: var(--rio-shadow-inset), 0 0 0 4px var(--rio-danger-tint); }
-textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; }
+.rio-input[aria-invalid="true"]:focus { outline-color: var(--rio-danger); border-color: var(--rio-danger); }
+/* A textarea is a reading surface, not a control: it keeps a comfortable
+   height instead of collapsing to --rio-ctl. */
+textarea.rio-input {
+  min-block-size: 104px;
+  padding: var(--rio-space-8) var(--rio-space-12);
+  resize: vertical;
+  line-height: var(--rio-leading-body);
+}
 
 /* Select wrapper — chevron via background, mono-free */
 .rio-select-wrap { position: relative; display: block; }
@@ -70,70 +82,12 @@ textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; 
   color: var(--rio-text-faint);
   pointer-events: none;
 }
-/* Large variant — the prominent list search */
-.rio-search--lg .rio-input { block-size: 46px; padding-inline-start: 44px; font-size: var(--rio-text-15); border-radius: var(--rio-radius-lg); }
-.rio-search--lg .rio-search-icon { inset-inline-start: 15px; inline-size: 18px; block-size: 18px; }
-
-/* Hero variant — the page's visual focal point.
-   Stronger 1.5px frame, soft lift, and a clear accent focus ring so any user
-   spots it instantly. A "Search" action button reveals on hover / focus. */
-.rio-search--hero .rio-input {
-  block-size: 44px;
-  border-width: 1px;
-  border-color: var(--rio-line-strong);
-  background: var(--rio-surface);
-  box-shadow: var(--rio-shadow-sm);
-  padding-inline-start: 42px;
-  padding-inline-end: 116px; /* room for clear + reveal button */
-  font-size: var(--rio-text-14);
-  transition: border-color var(--rio-dur-base) var(--rio-ease),
-              box-shadow var(--rio-dur-base) var(--rio-ease);
-}
-.rio-search--hero .rio-search-icon { color: var(--rio-text-mute); inset-inline-start: 14px; inline-size: 17px; block-size: 17px; transition: color var(--rio-dur-base) var(--rio-ease); }
-.rio-search--hero:hover .rio-input { border-color: var(--rio-rust); }
-.rio-search--hero:focus-within .rio-input {
-  border-color: var(--rio-rust);
-  box-shadow: 0 0 0 4px var(--rio-rust-ring), var(--rio-shadow-md);
-}
-.rio-search--hero:focus-within .rio-search-icon { color: var(--rio-rust); }
-
-/* Reveal-on-hover "Search" button — slides in from the trailing edge.
-   When the field has text (--filled) it shifts left to clear the × button. */
-.rio-search-go {
-  position: absolute;
-  inset-inline-end: 6px;
-  inset-block-start: 50%;
-  display: inline-flex; align-items: center; gap: 6px;
-  block-size: 34px; padding: 0 13px;
-  font-family: var(--rio-font-body);
-  font-size: var(--rio-text-13); font-weight: var(--rio-weight-semibold);
-  color: var(--rio-on-solid);
-  background: var(--rio-rust-solid);
-  border: 0; border-radius: var(--rio-radius-md);
-  cursor: pointer; white-space: nowrap;
-  opacity: 0;
-  transform: translateY(-50%) translateX(8px) scale(0.96);
-  transform-origin: center right;
-  pointer-events: none;
-  transition: opacity var(--rio-dur-base) var(--rio-ease),
-              transform var(--rio-dur-base) var(--rio-ease),
-              background var(--rio-dur-fast) var(--rio-ease);
-}
-.rio-search--hero:hover .rio-search-go,
-.rio-search--hero:focus-within .rio-search-go {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0) scale(1);
-  pointer-events: auto;
-}
-.rio-search-go:hover { background: var(--rio-rust-solid-hover); }
-.rio-search-go:active { background: var(--rio-rust-solid-active); }
-.rio-search-go svg { inline-size: 15px; block-size: 15px; }
-.rio-search--filled .rio-search-go { inset-inline-end: 40px; }
-@media (prefers-reduced-motion: reduce) {
-  .rio-search-go { transition: opacity var(--rio-dur-fast) var(--rio-ease); transform: translateY(-50%); }
-  .rio-search--hero:hover .rio-search-go,
-  .rio-search--hero:focus-within .rio-search-go { transform: translateY(-50%); }
-}
+/* The list's find row uses the base `.rio-search` at `--rio-ctl`. The
+   `--lg` and `--hero` variants are gone with the hero search they dressed,
+   and so is the reveal-on-hover "Search" button: `--hero` was the only
+   thing that ever revealed it, so once the find row dropped that class the
+   button was a submit control nothing could show and nobody could press.
+   The form submits on Enter, as it always did. */
 
 /* Clear (×) button — sits at the trailing edge whenever there's a query */
 .rio-search-clear {
@@ -153,55 +107,64 @@ textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; 
 .rio-search--button {
   appearance: none; cursor: pointer; text-align: start;
   gap: var(--rio-space-8); padding: 0 12px 0 34px;
-  block-size: 36px;
+  block-size: var(--rio-ctl-util);
   background: var(--rio-sunken);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-md);
+  border-radius: var(--rio-radius-control);
   color: var(--rio-text-faint);
   transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-search--button:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
-.rio-search--button:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-search--button:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 .rio-search-placeholder { font-size: var(--rio-text-14); }
-.rio-search--hero .rio-input::placeholder { color: var(--rio-text-faint); }
 
-/* Checkbox & radio */
+/* ============================================================
+   Boolean field — a 38px bordered row (VISUAL-CONTRACT.md §5)
+
+   The control and its label sit inside a field-line box on the surface,
+   so a boolean reads as a control of the same weight as the text input
+   beside it rather than as a stray line of text.
+
+   This also fixes a real defect. `.rio-check` used to hide the native
+   checkbox (`position: absolute; opacity: 0`) and draw a substitute
+   `.rio-check-box` span — which NO template has ever rendered. Every
+   boolean field on every model form therefore had an invisible,
+   unclickable control: the label was all that showed. The substitute
+   box and its twelve rules are deleted rather than fixed, because a
+   native checkbox with `accent-color` is the whole of what they drew.
+   ============================================================ */
 .rio-check {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: var(--rio-space-8);
-  cursor: pointer;
-  font-size: var(--rio-text-14);
-  color: var(--rio-text);
-}
-.rio-check input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
-.rio-check-box {
-  inline-size: 18px; block-size: 18px;
-  flex: none;
-  margin-block-start: 1px;
-  border: 1.5px solid var(--rio-line-strong);
-  border-radius: 5px;
-  background: var(--rio-surface);
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
+  gap: var(--rio-space-12);
+  min-block-size: var(--rio-ctl);
+  padding: 0 var(--rio-space-12);
+  border: 1px solid var(--rio-field-line);
+  border-radius: var(--rio-radius-control);
+  background: var(--rio-surface);
+  color: var(--rio-text-hi);
+  font-size: var(--rio-text-15);
+  font-weight: var(--rio-weight-medium);
+  cursor: pointer;
+  transition: border-color var(--rio-dur-fast) var(--rio-ease);
 }
-.rio-check-box--radio { border-radius: 999px; }
-.rio-check:hover .rio-check-box { border-color: var(--rio-text-faint); }
-.rio-check input:focus-visible + .rio-check-box { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
-.rio-check input:checked + .rio-check-box {
-  background: var(--rio-rust);
-  border-color: var(--rio-rust);
+.rio-check:hover { border-color: var(--rio-line-strong); }
+.rio-check:focus-within { border-color: var(--rio-accent-focus); }
+.rio-check input[type="checkbox"],
+.rio-check input[type="radio"] {
+  position: static;
+  opacity: 1;
+  inline-size: 18px;
+  block-size: 18px;
+  flex: none;
+  margin: 0;
+  /* Contract §7: one accent on every checkbox and radio, never the
+     browser's default blue by accident. */
+  accent-color: var(--rio-rust);
+  cursor: pointer;
 }
-.rio-check-box svg { inline-size: 12px; block-size: 12px; color: var(--rio-text-onrust); opacity: 0; }
-.rio-check input:checked + .rio-check-box svg { opacity: 1; }
-.rio-check-box--radio::after {
-  content: ""; inline-size: 7px; block-size: 7px; border-radius: 999px;
-  background: var(--rio-text-onrust); transform: scale(0); transition: transform var(--rio-dur-fast) var(--rio-ease);
-}
-.rio-check input:checked + .rio-check-box--radio::after { transform: scale(1); }
-.rio-check input:disabled + .rio-check-box { opacity: 0.5; }
+.rio-check input:disabled { cursor: not-allowed; }
+.rio-check:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
 
 /* Switch */
 .rio-switch { display: inline-flex; align-items: center; gap: var(--rio-space-8); cursor: pointer; }
@@ -224,7 +187,7 @@ textarea.rio-input { min-block-size: 88px; resize: vertical; line-height: 1.55; 
 }
 .rio-switch input:checked + .rio-switch-track { background: var(--rio-rust); }
 .rio-switch input:checked + .rio-switch-track .rio-switch-thumb { inset-inline-start: 18px; }
-.rio-switch input:focus-visible + .rio-switch-track { outline: 2px solid var(--rio-rust); outline-offset: 2px; }
+.rio-switch input:focus-visible + .rio-switch-track { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 .rio-switch input:disabled + .rio-switch-track { opacity: 0.5; }
 
 /* A numeric input that should not stretch to the full field width

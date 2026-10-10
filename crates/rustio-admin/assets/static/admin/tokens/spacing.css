@@ -1,27 +1,44 @@
 /* ============================================================
    RustIO — Spacing tokens · 4px base grid
+   ALIAS LAYER — the canonical six live in `tokens/canonical.css`.
+
+   `--rio-space-4 … 32` map 1:1 onto `--s1 … --s6`. The larger and
+   off-scale steps (2, 6, 20, 40, 48, 64, 80, 96) have no canonical
+   counterpart; they stay so nothing breaks and are audited out as
+   components move onto the six.
    ============================================================ */
 
 :root {
   --rio-space-0:   0;
-  --rio-space-2:   0.125rem; /* 2 */
-  --rio-space-4:   0.25rem;  /* 4 */
-  --rio-space-6:   0.375rem; /* 6 */
-  --rio-space-8:   0.5rem;   /* 8 */
-  --rio-space-12:  0.75rem;  /* 12 */
-  --rio-space-16:  1rem;     /* 16 */
-  --rio-space-20:  1.25rem;  /* 20 */
-  --rio-space-24:  1.5rem;   /* 24 */
-  --rio-space-32:  2rem;     /* 32 */
-  --rio-space-40:  2.5rem;   /* 40 */
-  --rio-space-48:  3rem;     /* 48 */
-  --rio-space-64:  4rem;     /* 64 */
-  --rio-space-80:  5rem;     /* 80 */
-  --rio-space-96:  6rem;     /* 96 */
+  --rio-space-2:   0.125rem; /* 2  — off-scale */
+  --rio-space-4:   var(--s1); /* 4  */
+  --rio-space-6:   0.375rem; /* 6  — off-scale */
+  --rio-space-8:   var(--s2); /* 8  */
+  --rio-space-12:  var(--s3); /* 12 */
+  --rio-space-16:  var(--s4); /* 16 */
+  --rio-space-20:  1.25rem;  /* 20 — off-scale */
+  --rio-space-24:  var(--s5); /* 24 */
+  --rio-space-32:  var(--s6); /* 32 */
+  --rio-space-40:  2.5rem;   /* 40 — off-scale */
+  --rio-space-48:  3rem;     /* 48 — off-scale */
+  --rio-space-64:  4rem;     /* 64 — off-scale */
+  --rio-space-80:  5rem;     /* 80 — off-scale */
+  --rio-space-96:  6rem;     /* 96 — off-scale */
 
   /* --- Hit targets --- */
-  --rio-hit-compact:     40px; /* compact / admin density */
-  --rio-hit-comfortable: 44px; /* comfortable / marketing density */
+  --rio-hit-compact:     var(--th-h); /* 40 — compact / admin density */
+  --rio-hit-comfortable: var(--td-h); /* 48 — comfortable density */
+
+  /* --- Control heights -------------------------------------------
+     Three heights, replacing the hard-coded 44 / 46 / 40px rules
+     that components carried (VISUAL-CONTRACT.md §5, §8). */
+  --rio-ctl:         var(--ctl);      /* 38 — input, select, standard button */
+  --rio-ctl-sm:      var(--ctl-sm);   /* 31 — small button, segment, filter trigger */
+  --rio-ctl-util:    var(--ctl-util); /* 32 — compact masthead utility control */
+
+  /* --- Row heights ----------------------------------------------- */
+  --rio-th-h:        var(--th-h); /* 40 — column head; also the Compact line */
+  --rio-td-h:        var(--td-h); /* 48 — data row minimum */
 
   /* --- Layout measures -------------------------------------------
      Three layers, on purpose. The shell is fluid across the workspace
@@ -29,34 +46,35 @@
      task pages take a narrow one. There is no single centred width for
      the whole application.
 
-     The scale above is already the 4 / 8 / 12 / 16 / 24 / 32 grid — the
-     tokens are named for the px they render, so `--rio-space-4` IS 4px.
-     What follows is only what that scale cannot express. */
-  --rio-shell-pad-x:     var(--rio-space-32); /* 32 — shell gutter */
+     `--rio-page-narrow` and `--rio-page-form` are product tokens:
+     RustIO has no narrow measure and no form-measure token (it renders
+     a 728px form card left-aligned inside `--content`, beside a System
+     aside this product does not have). Keeping the form page centred on
+     its own measure is an INTENTIONAL DIVERGENCE — see
+     VISUAL-CONTRACT.md §15.1 — and 728 is RustIO's card width
+     (680 + 2 x --s5). */
+  --rio-shell-pad-x:     var(--gutter); /* 32 / 24 / 16 — shell gutter */
 
-  --rio-page-wide:       1480px; /* lists, tables, reports, bulk surfaces */
-  --rio-page-standard:   1120px; /* default page measure */
-  --rio-page-narrow:      920px; /* reading pages whose content is
-                                   deliberately narrower than the console:
-                                   account sessions, and anything else that
-                                   caps itself rather than filling the column */
-  --rio-page-form:        672px; /* forms, confirmations, reading */
+  --rio-page-wide:       var(--content-wide); /* 1600 — lists, tables, bulk */
+  --rio-page-standard:   var(--content);      /* 1120 — default page measure */
+  --rio-page-narrow:      920px; /* product: reading pages that cap themselves */
+  --rio-page-form:        728px; /* product: forms, confirmations, reading */
 
-  --rio-card-pad-x:      var(--rio-space-24); /* 24 — one x-origin per card */
-  --rio-row-h:           64px;   /* comfortable body row */
-  --rio-table-head-h:    48px;
-  --rio-table-foot-h:    48px;
-  --rio-topbar-h:        52px;   /* utility row + sidebar brand */
-  --rio-modulebar-h:     48px;   /* module row */
-  --rio-page-top-space:  56px;   /* module row -> first page content */
-  --rio-rail-inset:      var(--rio-space-24); /* 24 — rail x-origin */
+  --rio-card-pad-x:      var(--s5); /* 24 — one x-origin per card */
+  --rio-row-h:           var(--td-h);   /* 48 — body row */
+  --rio-table-head-h:    var(--th-h);   /* 40 — column head */
+  --rio-table-foot-h:    var(--td-h);   /* 48 */
+  --rio-topbar-h:        var(--masthead); /* 56 — utility row + sidebar brand */
+  --rio-modulebar-h:     40px;  /* product: module row */
+  --rio-page-top-space:  var(--s6); /* 32 — module row -> first page content */
+  --rio-rail-w:          var(--rail); /* 240 — contextual rail */
+  --rio-rail-inset:      var(--s5);   /* 24 — rail x-origin */
 }
 
-/* Narrow shells breathe less. Declared here so every region that uses
-   the token follows automatically — shell, module row and footer. */
+/* Narrow shells breathe less. `--rio-shell-pad-x` follows `--gutter`,
+   which steps down in `tokens/canonical.css`. */
 @media (max-width: 760px) {
   :root {
-    --rio-shell-pad-x:    var(--rio-space-16); /* 16 */
-    --rio-page-top-space: var(--rio-space-32); /* 32 */
+    --rio-page-top-space: var(--s5); /* 24 */
   }
 }

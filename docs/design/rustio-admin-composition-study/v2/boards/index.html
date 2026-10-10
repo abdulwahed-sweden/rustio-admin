@@ -1,0 +1,131 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>rustio-admin × RustIO composition — study v2 · rustio-admin composition study v2</title><style>
+/* --- Reference-page chrome. Deliberately plain: this file is a design
+   reference read from a repository, not a product screen. The RustIO product
+   styles live below, scoped to .rio, and are the actual contract. --- */
+:root{
+  --pg:#f6f7f9;--pg-2:#ffffff;--pg-line:#dfe4ea;--pg-ink:#171B22;--pg-ink-2:#3F4A59;
+  --pg-accent:#1f5797;
+  --g1:4px;--g2:8px;--g3:12px;--g4:16px;--g5:24px;--g6:32px;--g7:48px;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pg-ink);font-family:var(--sans);
+  font-size:16px;font-weight:500;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:var(--g7) var(--g5) 96px}
+a{color:var(--pg-accent)}
+:focus-visible{outline:3px solid #2f7bd6;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--g2);margin-bottom:var(--g5);
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.crumbs a{color:var(--pg-accent);text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+h1{margin:0 0 var(--g3);font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+h2{margin:0;font-size:18px;font-weight:700;line-height:1.3}
+h3{margin:0 0 var(--g2);font-size:16px;font-weight:700;line-height:1.35}
+.lede{max-width:74ch;color:var(--pg-ink-2);font-size:16px;font-weight:500}
+.sec{margin-top:var(--g7)}
+.sec-head{display:flex;align-items:baseline;gap:var(--g3);padding-bottom:var(--g2);
+  margin-bottom:var(--g4);border-bottom:1px solid var(--pg-line)}
+.sec-key{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--pg-accent);letter-spacing:.06em}
+/* `:where()` contributes no specificity, so these documentation colours can
+   never outrank a product rule inside a board render. Without it `.sec p`
+   (0-1-1) silently beats `.rio-card-title` (0-1-0) and mono labels lose their
+   colour. */
+.sec :where(p,li){color:var(--pg-ink-2);max-width:78ch}
+.sec ul{margin:0;padding-left:1.15em;display:grid;gap:var(--g2)}
+.note{padding:var(--g3) var(--g4);border-left:3px solid var(--pg-line);background:#fff;
+  border-radius:0 8px 8px 0;font-size:15px;color:var(--pg-ink-2)}
+code{font-family:var(--mono);font-size:.9em;background:#eef1f5;border:1px solid var(--pg-line);
+  border-radius:4px;padding:1px 5px;color:#174578}
+table.doc{width:100%;border-collapse:collapse;font-size:15px;background:#fff;
+  border:1px solid var(--pg-line);border-radius:10px;overflow:hidden}
+table.doc th{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#202733;text-align:left;padding:12px 14px;
+  background:#f1f4f8;border-bottom:1px solid var(--pg-line)}
+table.doc :where(td){padding:11px 14px;border-bottom:1px solid var(--pg-line);color:var(--pg-ink-2);vertical-align:top}
+table.doc :where(td:first-child){color:var(--pg-ink);font-weight:600}
+table.doc :where(tr:last-child td){border-bottom:0}
+.scroll{overflow-x:auto}
+.st{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid;
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;line-height:1.7}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st-existing{color:#4c5868;border-color:#c7cfd9;background:#f1f3f6}
+.st-visual{color:#174578;border-color:#b7cdea;background:#eaf2fd}
+.st-wiring{color:#7a4c08;border-color:#e3c981;background:#fff6e6}
+.st-future{color:#5b3f87;border-color:#c3b1e0;background:#f4f0fb;border-style:dashed}
+.props{display:grid;gap:1px;background:var(--pg-line);border:1px solid var(--pg-line);
+  border-radius:10px;overflow:hidden}
+.prop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--g4);padding:var(--g4);background:#fff;align-items:start}
+.prop h3{margin-bottom:4px;font-size:15px}
+.prop :where(p){margin:0;font-size:15px;color:var(--pg-ink-2)}
+.prop.is-future{background:repeating-linear-gradient(135deg,#fbfaff,#fbfaff 10px,#f5f2fb 10px,#f5f2fb 20px)}
+.explore{border:2px dashed #c3b1e0;border-radius:12px;padding:var(--g5);background:#faf8fd;margin-top:var(--g5)}
+.explore .hd{display:flex;align-items:center;gap:var(--g3);margin-bottom:var(--g3);flex-wrap:wrap}
+.explore .dim{filter:saturate(.3) opacity(.6);pointer-events:none}
+/* A board render sits in a frame and scrolls inside it, so the page body
+   never scrolls sideways at any width. */
+.frame{border:1px solid var(--pg-line);border-radius:12px;overflow:hidden;contain:paint;
+  background:#fff;max-width:100%}
+.frame-bar{display:flex;align-items:center;gap:var(--g3);padding:10px var(--g4);
+  border-bottom:1px solid var(--pg-line);background:#f1f4f8;font-family:var(--mono);
+  font-size:13px;color:#3F4A59}
+.frame-bar .w{margin-left:auto;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#596779}
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.frame-body>.rio{min-width:1040px}
+.frame.narrow{width:390px}
+.frame.narrow .frame-body>.rio{min-width:0}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);
+  font-size:14px;color:#596779}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+
+.wrap{max-width:1520px}
+/* Frames are same-origin iframes so admin.css's media queries respond to the
+   frame width, not the reader's window. A script sizes each to its content. */
+.frame-body{overflow-x:auto;background:#f1f1ee}
+.shot{display:block;border:0;height:320px;max-width:none;background:#f1f1ee}
+.frame.narrow{width:390px;max-width:100%}
+.frame.w480{width:480px;max-width:100%}
+.frame.w760{width:760px;max-width:100%}
+.frame.w900{width:900px;max-width:100%}
+.frame.w1100{width:1100px;max-width:100%}
+.rowset{display:flex;gap:var(--g5);flex-wrap:wrap;align-items:flex-start}
+.rowset>*{min-width:0;max-width:100%}
+.cap{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#596779;margin-bottom:var(--g2)}
+.foot{margin-top:var(--g7);padding-top:var(--g4);border-top:1px solid var(--pg-line);font-size:14px;color:#596779}
+.flow{font-family:var(--mono);font-size:13px;line-height:1.6;background:#fff;border:1px solid var(--pg-line);border-radius:10px;padding:var(--g4) var(--g5);white-space:pre;overflow-x:auto;color:#202733}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:var(--g2) var(--g5);font-size:15px}
+.kv dt{font-family:var(--mono);font-size:13px;font-weight:700;color:#334052;letter-spacing:.04em}
+.kv dd{margin:0;color:var(--pg-ink-2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--g4)}
+.cards a{display:block;padding:var(--g4);border:1px solid var(--pg-line);border-radius:10px;background:#fff;color:var(--pg-ink);text-decoration:none}
+.cards a:hover{border-color:#b7cdea}
+.cards a strong{display:block;font-size:16px;margin-bottom:4px}
+.cards a span{font-size:14px;color:var(--pg-ink-2)}
+@media (max-width:760px){ .wrap{padding:var(--g5) var(--g4) var(--g7)} h1{font-size:26px} }
+
+.tri{display:grid;gap:12px;margin-top:12px} .tri .lab{font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#596779;margin:16px 0 4px}</style></head><body><div class="wrap">
+<nav class="crumbs"><strong>Index</strong> <span>·</span> <a href="Shell.html">Shell</a> <span>·</span> <a href="Dashboard.html">Dashboard</a> <span>·</span> <a href="Data-Table.html">Data table</a> <span>·</span> <a href="View-Modes.html">View modes</a> <span>·</span> <a href="Users-Groups.html">Users & groups</a> <span>·</span> <a href="Permissions-Matrix.html">Permissions matrix</a> <span>·</span> <a href="API-Surface.html">API surface</a> <span>·</span> <a href="Account-Sessions.html">Account & sessions</a> <span>·</span> <a href="Form.html">Form</a> <span>·</span> <a href="History.html">History (dense)</a> <span>·</span> <a href="Dense-Orders.html">Dense: Orders</a> <span>·</span> <a href="Narrow.html">Narrow</a> <span>·</span> <a href="Comparison.html">Comparison</a></nav><p class="cap">rustio-admin · composition unification study · v2</p><h1>rustio-admin × RustIO composition — study v2</h1><p class="lede">The v1 conclusion stands: rustio-admin adopts RustIO's composition and scale without losing a component. v2 re-checks it against the two RustIO implementation branches that appeared after v1, revises four points, and adds the pages v1 did not draw.</p>
+<div class="sec"><div class="sec-head"><span class="sec-key">A</span><h2>What changed since v1</h2></div><div class="scroll"><table class="doc"><thead><tr><th></th><th>v1 assumed</th><th>Now</th></tr></thead><tbody><tr><td>RustIO state</td><td>Design package only (PR #6 at 298780e)</td><td>Two open implementations: PR #5 <code>884bf3b</code> (layered <code>admin-composition.css</code>, page-head band, compact tokens, timestamp format, filter width, sticky actions, card identity floor) and PR #6 <code>2887db4</code> (the package landed in <code>admin.css</code>: find row, data surface, quiet actions, <code>ColumnView.hug</code>). <code>main</code> is still <code>8a6da60</code>. <strong>They disagree on the page head and the list toolbar.</strong></td></tr><tr><td>rustio-admin state</td><td><code>d4b61fa</code></td><td><code>d4b61fa</code> — unchanged</td></tr><tr><td>Page head</td><td>Action one gap after the title</td><td>A band: title left, actions right, rule beneath (PR #5 measured the beside-title version and reversed it). Form pages drop the rule</td></tr><tr><td>Form measure</td><td>Widen to the 1120 column</td><td>Keep the form's own measure, 728 centred (PR #5 <code>--form-measure</code>); rustio-admin's <code>rio-page--form</code> already is this</td></tr><tr><td>Compact</td><td>40px lines, no head</td><td>32px head · 38px rows (PR #5 tokens), kept as a table</td></tr><tr><td>Timestamps</td><td>not covered</td><td>One family format in cells: <code>YYYY-MM-DD HH:MM UTC</code>; relative time only where it is the point. rustio-admin today uses four formats</td></tr><tr><td>Cells by kind</td><td>not covered</td><td>date / datetime / boolean cells never wrap, tabular digits everywhere, identity columns hug (<code>rio-td--kind</code> already exists)</td></tr><tr><td>Actions column</td><td>not covered</td><td>Sticky inside the scroller at every width (a refinement over PR #5's 761–1100 window)</td></tr><tr><td>Card titles</td><td>badge inline, <code>overflow-wrap: anywhere</code></td><td>12rem identity floor, badges wrap beneath, <code>break-word</code></td></tr></tbody></table></div><p class='note' style='margin-top:12px'><strong>Critique first.</strong> <code>../CRITIQUE.md</code> (sections A–G) is the record of what in v1 remains correct, what is outdated, and why — written before any v2 frame was drawn. <code>../STUDY.md</code> is the revised study; <code>../CURRENT-VS-PROPOSAL.md</code>, <code>../TOKEN-MAPPING.md</code>, <code>../COMPONENT-MATRIX.md</code> and <code>../MIGRATION.md</code> carry the detail.</p></div><div class="sec"><div class="sec-head"><span class="sec-key">B</span><h2>The four classes used on every board</h2></div><div class="scroll"><table class="doc"><thead><tr><th>Class</th><th>Meaning</th></tr></thead><tbody><tr><td><span class="st st-existing">KEEP</span></td><td>Already right in rustio-admin today; the proposal does not touch it</td></tr><tr><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>Takes RustIO's composition, scale or face; the markup and behaviour stay</td></tr><tr><td><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span></td><td>A rustio-admin-only quality fix the alignment pass should carry, independent of RustIO</td></tr><tr><td><span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span></td><td>A rustio-admin capability RustIO does not have; it keeps its own composition and takes only the shared scale and faces</td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">C</span><h2>The strongest improvements, in order of effect</h2></div><div class="scroll"><table class="doc"><thead><tr><th>#</th><th>Improvement</th><th>Class</th><th>Board</th></tr></thead><tbody><tr><td>1</td><td>Unbox the page head: band with a rule, 24px title, actions on the surface's right edge</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>Shell · Data table</td></tr><tr><td>2</td><td>Scale: 15px base, 38 / 31px controls, 48px rows, 40px mono heads — the single change that makes the two products one family</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>every board</td></tr><tr><td>3</td><td>Quiet text row actions, always visible, on every list (today: hover-revealed icons everywhere but Users)</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span> <span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span></td><td>Data table · Users</td></tr><tr><td>4</td><td>One badge system (dot + word + soft fill) for pills, roles and view-layer badges — three today</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>Data table · View modes</td></tr><tr><td>5</td><td>Command bar → find row + data-surface head: search 340 / 38, filter triggers 31, result count after the last control; view modes, sort and rows-per-page on the surface head</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>Data table</td></tr><tr><td>6</td><td>One timestamp format in cells, family-wide; relative time only in History 'when' and 'last seen'</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span> <span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span></td><td>Dense: Orders · Account</td></tr><tr><td>7</td><td>Cells by kind: nowrap for date / datetime / boolean, tabular digits, identity hugging; sticky actions column</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span> <span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span></td><td>Dense: Orders</td></tr><tr><td>8</td><td>Sessions as one list surface instead of five stacked cards; account detail list on a 140px label column</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>Account & sessions</td></tr><tr><td>9</td><td>AdminTheme accent override keeps a hover shade (today hover = active = base)</td><td><span class="st st-wiring">IMPROVE RUSTIO-ADMIN</span></td><td>Shell</td></tr><tr><td>10</td><td>Flat empty states inside the surface; monogram tiles removed; form at its own 728 measure</td><td><span class="st st-visual">ALIGN WITH RUSTIO</span></td><td>Dashboard · Form</td></tr></tbody></table></div></div><div class="sec"><div class="sec-head"><span class="sec-key">D</span><h2>What stays unique</h2></div><p><span class="st st-future">PRODUCT-SPECIFIC — KEEP UNIQUE</span> Two-row header and module navigation · contextual rail · ⌘K palette · account menu · notifications · filter dropdown panels (chips, FK autocomplete, multi-select, date range) · active-filter pills · bulk selection and bulk actions · three save variants · inline related sections · permission matrix · session list · API surface · audit history with diffs · branding · health · DB browser · feature flags · docs viewer · view designer · AdminTheme · rio-theme · the full-width footer. Every one keeps its markup, routes and behaviour and takes only the shared scale and faces.</p></div><div class="sec"><div class="sec-head"><span class="sec-key">E</span><h2>Primary colour</h2></div><p><strong>Keep <code>#1F5797</code>.</strong> Re-evaluated against the current repositories: RustIO PR #5 removed the one page that injected a different blue and re-pinned the scaffold to the contract blue; rustio-admin already carries the same value. The family blue is settled on both sides; a different primary for rustio-admin alone would undo the convergence this study exists for. <code>--focus #2F7BD6</code> stays distinct from the primary (PR #5 restates why), and <code>AdminTheme</code> already leaves it alone.</p></div>
+<div class="foot">Design study v2 (2026-10-09) · rustio-admin <code>d4b61fa</code> · RustIO main <code>8a6da60</code>, PR #5 <code>884bf3b</code>, PR #6 <code>2887db4</code>. CURRENT frames render rustio-admin's real template markup against its real 30-fragment stylesheet; ORIGINAL STUDY frames use the v1 mock stylesheet; UPDATED PROPOSAL frames use the v2 mock stylesheet. Nothing here is product CSS; no runtime file was changed.</div></div>
+<script>
+(function(){
+  function fit(f){
+    try{
+      var d=f.contentDocument; if(!d||!d.documentElement) return;
+      var h=Math.max(d.documentElement.scrollHeight,d.body?d.body.scrollHeight:0);
+      f.style.height=(h+2)+'px';
+    }catch(e){}
+  }
+  var frames=document.querySelectorAll('iframe.shot');
+  frames.forEach(function(f){ f.addEventListener('load',function(){fit(f);setTimeout(function(){fit(f)},150)}); fit(f); });
+  window.addEventListener('load',function(){frames.forEach(fit)});
+})();
+</script>
+</body></html>

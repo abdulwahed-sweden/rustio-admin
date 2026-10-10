@@ -18,15 +18,17 @@
 }
 .rio-tab:hover { color: var(--rio-text-hi); }
 .rio-tab[aria-selected="true"] { color: var(--rio-text-hi); border-block-end-color: var(--rio-rust); }
-.rio-tab:focus-visible { outline: 2px solid var(--rio-rust); outline-offset: -2px; border-radius: var(--rio-radius-sm); }
+.rio-tab:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: -3px; border-radius: var(--rio-radius-sm); }
 
 /* Breadcrumbs (contract §2.1): link segments strong + 700, · separator muted,
    current segment muted + 400. */
-.rio-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); font-size: var(--rio-fs-sm); color: var(--rio-text-mute); margin-block-end: var(--rio-space-12); }
-.rio-crumbs a { color: var(--rio-text-hi); font-weight: 700; text-decoration: none; }
-.rio-crumbs a:hover { color: var(--rio-rust); }
-.rio-crumbs .rio-crumb-sep { color: var(--rio-text-mute); }
-.rio-crumbs .rio-crumb-current { color: var(--rio-text-mute); font-weight: var(--rio-weight-regular); }
+/* Breadcrumb — a 13px/600 trail (VISUAL-CONTRACT.md §2.1). The current
+   segment is the emphatic one; the links behind it stay secondary. */
+.rio-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); font-size: var(--rio-text-12); font-weight: var(--rio-weight-semibold); color: var(--rio-text-mute); margin-block-end: var(--rio-space-8); }
+.rio-crumbs a { color: var(--rio-text-mute); font-weight: var(--rio-weight-semibold); text-decoration: none; }
+.rio-crumbs a:hover { color: var(--rio-rust-hover); }
+.rio-crumbs .rio-crumb-sep { color: var(--rio-line-strong); }
+.rio-crumbs .rio-crumb-current { color: var(--rio-text-hi); font-weight: var(--rio-weight-bold); }
 
 /* Pagination */
 .rio-pagination { display: flex; align-items: center; gap: 4px; }
@@ -164,7 +166,7 @@
 /* Account button (topbar) */
 .rio-account {
   display: flex; align-items: center; gap: var(--rio-space-8);
-  block-size: 36px; padding-inline: 8px 10px;
+  block-size: var(--rio-ctl-util); padding-inline: 8px 10px;
   background: none; border: 1px solid transparent; border-radius: var(--rio-radius-md);
   cursor: pointer; color: var(--rio-text);
   transition: background var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
@@ -259,13 +261,13 @@
   padding: var(--rio-space-4) 0 0; /* 4px lift above the icon + label */
   position: relative;
   color: var(--rio-text-mute); text-decoration: none;
-  font-size: 0.9375rem; font-weight: var(--rio-weight-medium);
+  font-size: var(--rio-text-14); font-weight: var(--rio-weight-semibold);
   white-space: nowrap;
   transition: color var(--rio-dur-fast) var(--rio-ease),
               background var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-modnav-item svg {
-  inline-size: 18px; block-size: 18px; flex: none;
+  inline-size: 16px; block-size: 16px; flex: none;
   stroke-width: 1.75; color: currentColor;
 }
 /* Restrained hover: colour lifts, a faint wash, no shape change. */

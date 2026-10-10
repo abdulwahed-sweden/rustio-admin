@@ -99,6 +99,10 @@ pub(crate) struct BaseContext {
     /// Accent colour in `#rrggbb` form, only `Some` when the project
     /// patched it. `None` means *no override — admin.css owns it*.
     pub accent_hex: Option<String>,
+    /// Hover and pressed shades computed from `accent_hex`, so a project
+    /// override keeps a three-state button instead of one flat colour.
+    pub accent_hover_hex: Option<String>,
+    pub accent_active_hex: Option<String>,
     /// Same colour as a space-separated RGB triplet (`"30 107 168"`)
     /// for use inside `rgb(... / opacity)` expressions. `None` paired
     /// with `accent_hex == None`.
@@ -145,6 +149,38 @@ pub(crate) fn hex_to_rgb_triplet(hex: &str) -> String {
     let b = u8::from_str_radix(&h[4..6], 16).unwrap_or(26);
     format!("{r} {g} {b}")
 }
+
+/// Darken an `#rrggbb` accent toward black by `factor`, returning
+/// `#rrggbb`. On any parse failure returns the input untouched, so a
+/// config typo degrades to "no shade" rather than to a broken colour.
+///
+/// A project that sets `AdminTheme::accent_color` used to get that one
+/// hex written into all six `--rio-rust*` names, which flattened hover
+/// and active: the button looked identical before, during and after a
+/// press. The framework's own pair is the reference for the ratio —
+/// `--blue` `#1F5797` to `--blue-dark` `#174578` is a scale of ~0.78,
+/// and the pressed `#123A66` ~0.64 — so the same two steps are applied
+/// to whatever accent a project supplies.
+///
+/// This is deliberately a few lines here rather than a call into
+/// `rio-theme`: that crate is build-time only and the runtime must never
+/// link it.
+pub(crate) fn shade_hex(hex: &str, factor: f32) -> String {
+    let h = hex.trim_start_matches('#');
+    if h.len() != 6 || !h.chars().all(|c| c.is_ascii_hexdigit()) {
+        return hex.to_string();
+    }
+    let ch = |i: usize| -> u8 {
+        let v = u8::from_str_radix(&h[i..i + 2], 16).unwrap_or(0);
+        (f32::from(v) * factor).round().clamp(0.0, 255.0) as u8
+    };
+    format!("#{:02X}{:02X}{:02X}", ch(0), ch(2), ch(4))
+}
+
+/// The hover shade of a project accent (~0.78 of it).
+pub(crate) const ACCENT_HOVER_SCALE: f32 = 0.78;
+/// The pressed shade of a project accent (~0.64 of it).
+pub(crate) const ACCENT_ACTIVE_SCALE: f32 = 0.64;
 
 /// Environment label resolved from `RUSTIO_ENV` (if set) else
 /// derived from build kind. Cached process-wide: one env read at
@@ -203,6 +239,12 @@ impl BaseContext {
             is_demo_session,
             demo_label,
             has_theme_overrides: theme.has_overrides(),
+            accent_hover_hex: accent_hex
+                .as_deref()
+                .map(|h| shade_hex(h, ACCENT_HOVER_SCALE)),
+            accent_active_hex: accent_hex
+                .as_deref()
+                .map(|h| shade_hex(h, ACCENT_ACTIVE_SCALE)),
             accent_hex,
             accent_rgb,
             theme_bg: theme.bg.clone(),
@@ -623,7 +665,7 @@ pub(crate) fn account_sessions_ctx(
             is_current: Some(s.session_id) == current_session_id,
             ip: s.ip.unwrap_or_else(|| "—".to_string()),
             ua_summary: summarise_user_agent(s.user_agent.as_deref()),
-            created_at: s.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            created_at: s.created_at.format("%Y-%m-%d %H:%M UTC").to_string(),
             last_seen_relative: relative_time(s.last_seen),
             expires_relative: relative_time(s.expires_at),
         })
@@ -820,6 +862,13 @@ pub(crate) struct ListField {
     /// `"checkbox"` / `"datetime"`. The list template dispatches on
     /// this rather than duck-typing on the cell's string shape.
     pub kind: &'static str,
+    /// Whether the column is a `#[rustio(choices = …)]` field. The
+    /// widget vocabulary cannot say so — a choices `String` is a
+    /// `"text"` widget like any other — but a value drawn from a fixed
+    /// set reads as a state, not as prose, so the list wears it as a
+    /// badge. Display only: search, filters and sort still use the
+    /// stored value.
+    pub has_choices: bool,
     /// Sort hint for sortable column headers in `list.html`.
     /// `"asc"` → header link toggles to descending;
     /// `"desc"` → header link clears the sort (back to default);
@@ -1781,6 +1830,7 @@ pub(crate) fn list_ctx(
                 name: f.name.to_string(),
                 label: f.label.to_string(),
                 kind: f.field_type.widget(),
+                has_choices: f.choices.is_some(),
                 sort_active,
                 sort_link,
             }
@@ -2277,6 +2327,13 @@ pub(crate) struct FormCtx {
     /// the existing fast path on `Request::form()` stays in
     /// effect.
     pub has_file_field: bool,
+    /// `true` when at least one field is read-only (`disabled` on the
+    /// form). Read-only fields are facts the operator cannot type —
+    /// a mirrored status, a timer-maintained flag — so the template
+    /// shows them in a facts panel beside the card instead of as
+    /// greyed-out inputs; with this or `inlines` the page takes the
+    /// standard measure to make room for the aside.
+    pub has_readonly: bool,
     pub flash: Option<FlashCtx>,
 }
 
@@ -2583,6 +2640,7 @@ pub(crate) fn form_ctx(
         group_fields_by_fieldsets(fields, entry.fieldsets)
     };
 
+    let has_readonly = sections.iter().any(|s| s.fields.iter().any(|f| f.disabled));
     FormCtx {
         base: BaseContext::new(Some(identity), csrf_token, admin).with_nav_active(entry.admin_name),
         page_title: match mode {
@@ -2609,6 +2667,7 @@ pub(crate) fn form_ctx(
                 crate::admin::FieldType::FilePath | crate::admin::FieldType::OptionalFilePath
             )
         }),
+        has_readonly,
         flash: None,
     }
 }
@@ -4717,6 +4776,84 @@ pub(crate) fn must_change_password_form_sections(min_length: usize) -> Vec<FormS
 mod tests {
     use super::*;
 
+    /// A project accent gets three distinct states, not one flat colour
+    /// repeated six times. The ratios track the framework's own pair:
+    /// `#1F5797` → `#174578` hover → `#123A66` pressed.
+    #[test]
+    fn a_themed_accent_keeps_a_hover_and_a_pressed_shade() {
+        let accent = "#1F5797";
+        let hover = shade_hex(accent, ACCENT_HOVER_SCALE);
+        let active = shade_hex(accent, ACCENT_ACTIVE_SCALE);
+        assert_ne!(hover, accent, "hover must differ from the base accent");
+        assert_ne!(active, hover, "pressed must differ from hover");
+        // Each step is darker than the last on every channel.
+        let lum = |h: &str| {
+            let h = h.trim_start_matches('#');
+            (0..3)
+                .map(|i| u32::from(u8::from_str_radix(&h[i * 2..i * 2 + 2], 16).unwrap()))
+                .sum::<u32>()
+        };
+        assert!(lum(&hover) < lum(accent), "hover is darker than the accent");
+        assert!(lum(&active) < lum(&hover), "pressed is darker than hover");
+        assert_eq!(shade_hex("#FFFFFF", 1.0), "#FFFFFF");
+    }
+
+    /// A malformed accent degrades to "no shade" rather than to a broken
+    /// colour — the admin chrome must survive a config typo.
+    #[test]
+    fn a_malformed_accent_is_returned_untouched() {
+        for bad in ["", "#12", "not-a-colour", "#GGGGGG", "#1F5797AA"] {
+            assert_eq!(shade_hex(bad, ACCENT_HOVER_SCALE), bad, "mangled {bad:?}");
+        }
+    }
+
+    /// The theme partial must target `:root`, never `html`. `:root` is a
+    /// pseudo-class (0,1,0) and `html` a type selector (0,0,1), and the
+    /// token files declare on `:root` — so an `html` block loses on
+    /// specificity regardless of source order and every project override
+    /// is silently dropped. That was a real, shipped bug; this pins the fix.
+    #[test]
+    fn the_theme_partial_overrides_on_root_not_html() {
+        let src =
+            crate::embedded_template_source("admin/_theme.html").expect("the theme partial ships");
+        let style = src
+            .split_once("<style>")
+            .and_then(|(_, rest)| rest.split_once("</style>"))
+            .map(|(block, _)| block)
+            .expect("the partial emits a <style> block");
+        assert!(
+            style.contains(":root {"),
+            "the override block must select :root so it ties on specificity \
+             and wins on source order"
+        );
+        assert!(
+            !style.contains("html {"),
+            "an `html {{ … }}` override loses to the stylesheet's `:root` \
+             and is silently dropped"
+        );
+    }
+
+    /// Focus is its own semantic role and a project accent never retargets
+    /// it (VISUAL-CONTRACT.md §1.3, §15.2). RustIO's design.json injection
+    /// does set `--focus`; this product's divergence is deliberate, so it
+    /// is pinned rather than left to drift.
+    #[test]
+    fn a_project_theme_never_overrides_the_focus_token() {
+        let src =
+            crate::embedded_template_source("admin/_theme.html").expect("the theme partial ships");
+        let style = src
+            .split_once("<style>")
+            .and_then(|(_, rest)| rest.split_once("</style>"))
+            .map(|(block, _)| block)
+            .expect("the partial emits a <style> block");
+        assert!(
+            !style.contains("--rio-accent-focus"),
+            "AdminTheme must not set --rio-accent-focus: the focus ring has \
+             its own verified contrast budget and a brand colour is not \
+             required to clear it"
+        );
+    }
+
     /// The list page must not show operators the `datetime-local`
     /// wire format. `display_values` has to emit it — the change form
     /// puts that exact string in an `<input value=>` — so the list
@@ -5566,6 +5703,11 @@ mod adaptive_list_tests {
             display_name => "Customers",
             singular_name => "Customer",
             read_only => false,
+            // A real `ListCtx` always carries the paging fields; the foot
+            // computes its "Showing m–n of N" range from them.
+            page => 1usize,
+            per_page => 25usize,
+            total_rows => 1usize,
             fields => vec![context! { name => "full_name", kind => "text", label => "Full Name", sort_active => "", sort_link => "#" }],
             // ListRowCtx always carries highlights/links maps (often empty).
             rows => vec![context! {
@@ -5602,6 +5744,10 @@ mod adaptive_list_tests {
             rows => vec![context! { id => 42 }], // truthy so the board enters its row branch
             total_rows => 1,
             total_pages => 1,
+            // A real `ListCtx` always carries the paging fields; the foot
+            // computes its "Showing m–n of N" range from them.
+            page => 1usize,
+            per_page => 25usize,
             adaptive => Value::from_serialize(adaptive.unwrap()),
             mode_links => Value::from_serialize(&links),
         });
@@ -5614,5 +5760,104 @@ mod adaptive_list_tests {
         assert!(!html.contains("rio-dtable"));
         assert!(!html.contains("rio-bulk-form"));
         assert!(!html.contains("secret"));
+    }
+}
+
+/// The record page (`form.html`) composition: read-only fields render as
+/// a facts panel beside the card, never as greyed inputs, and the page
+/// takes the standard measure only when it has an aside to fill.
+#[cfg(test)]
+mod record_page_tests {
+    use minijinja::{context, Environment, Value};
+
+    fn render(has_readonly: bool, inlines: Vec<Value>, status_disabled: bool) -> String {
+        let mut env = Environment::new();
+        env.add_function(
+            "icon",
+            |_name: String, _kwargs: minijinja::value::Kwargs| -> String { String::new() },
+        );
+        env.add_template(
+            "admin/_base.html",
+            "{% block page_measure %}{% endblock %}|{% block content %}{% endblock %}",
+        )
+        .unwrap();
+        for name in ["admin/form.html", "admin/includes/_form_field.html"] {
+            env.add_template(
+                name,
+                rustio_admin_assets::embedded_template_source(name).unwrap(),
+            )
+            .unwrap();
+        }
+        let field = |name: &str, widget: &str, disabled: bool| {
+            context! {
+                name => name, label => name, widget => widget, input_type => "text",
+                value => "in_progress", hint => Value::from(()), placeholder => Value::from(()),
+                required => false, options => Value::from(()), multiple => false, span => 1u8,
+                autocomplete => Value::from(()), autofocus => false, disabled => disabled,
+                maxlength => Value::from(()), searchable => false, has_more => false,
+                search_url => Value::from(()), errors => Vec::<String>::new(),
+                target_model => Value::from(()), checked => false,
+            }
+        };
+        env.get_template("admin/form.html")
+            .unwrap()
+            .render(context! {
+                admin_name => "jobs", display_name => "Jobs", singular_name => "Job",
+                mode => "edit", object_id => 1i64, errors => Vec::<String>::new(),
+                csrf_token => "t", read_only => false, has_file_field => false,
+                has_readonly => has_readonly, inlines => inlines,
+                sections => vec![context! { title => Value::from(()), fields => vec![
+                    field("item", "text", false),
+                    field("status", "select", status_disabled),
+                ] }],
+            })
+            .unwrap()
+    }
+
+    #[test]
+    fn a_readonly_field_is_a_fact_not_a_greyed_input() {
+        let html = render(true, vec![], true);
+        assert!(html.contains("rio-facts"), "the facts panel renders");
+        assert!(
+            !html.contains("name=\"status\""),
+            "the read-only field is not rendered as an input: {html}"
+        );
+        assert!(
+            html.contains("name=\"item\""),
+            "the editable field still is"
+        );
+        assert!(
+            html.contains("rio-page--standard"),
+            "with an aside the page takes the standard measure"
+        );
+    }
+
+    #[test]
+    fn without_an_aside_the_card_stays_on_the_form_measure() {
+        let html = render(false, vec![], false);
+        assert!(!html.contains("rio-facts"));
+        assert!(!html.contains("rio-form-aside"));
+        assert!(html.contains("rio-page--form"));
+        assert!(html.contains("rio-form-layout--single"));
+        assert!(html.contains("name=\"status\""));
+    }
+
+    #[test]
+    fn the_action_bar_is_the_cards_foot_and_keeps_every_variant() {
+        let html = render(true, vec![], true);
+        let card_open = html.find("rio-form-card").expect("one card");
+        let actions = html.find("rio-form-actions").expect("the action bar");
+        let form_close = html.find("</form>").expect("the form closes");
+        assert!(
+            card_open < actions && actions < form_close,
+            "the bar is inside the card"
+        );
+        for name in [
+            "name=\"_save\"",
+            "name=\"_continue\"",
+            "name=\"_addanother\"",
+        ] {
+            assert!(html.contains(name), "{name} survives");
+        }
     }
 }

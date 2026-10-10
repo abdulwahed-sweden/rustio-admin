@@ -4,73 +4,97 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FixShop</title>
+
+  <!-- The public landing page. It is served OUTSIDE the admin, as raw
+       HTML (`Response::html(HOMEPAGE_HTML)` in `src/main.rs`) — this
+       file never goes through minijinja, so `{# … #}` would render as
+       visible text and the comment has to be a real HTML one.
+
+       It is still part of the same product, so it renders on the
+       framework's real stylesheet and real tokens rather than a palette
+       of its own. It used to carry a hand-rolled `:root` — #ffffff,
+       #111827, #6b7280, #e5e7eb and a near-black CTA — that matched
+       nothing in the design system and drifted every time the system
+       moved. Those five hexes are replaced by the tokens that already
+       define them.
+
+       `/static/admin.css` is registered by `register_admin_routes` and
+       needs no session, so a signed-out visitor gets the same bundle
+       the admin does. -->
+  <link rel="stylesheet" href="/static/admin.css">
+
   <style>
-    :root {
-      --bg:     #ffffff;
-      --ink:    #111827;
-      --muted:  #6b7280;
-      --rule:   #e5e7eb;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
+    /* Page-specific layout only. Every colour, size, weight and radius
+       below resolves through a --rio-* token. */
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      font-size: 15px;
-      line-height: 1.6;
+      background: var(--rio-bg);
+      color: var(--rio-text);
     }
-    main {
-      max-width: 34rem;
-      margin: 0 auto;
-      padding: 4rem 1.5rem;
+    .fs-home {
+      max-inline-size: 40rem;
+      margin-inline: auto;
+      padding: var(--rio-space-64) var(--rio-space-24);
     }
-    h1 { font-size: 1.6rem; margin: 0 0 .25rem; letter-spacing: -0.01em; }
-    p  { margin: 0 0 1.25rem; }
-    .lede { color: var(--muted); margin-bottom: 2rem; }
-    ul { margin: 0 0 1.25rem; padding-left: 1.1rem; }
-    li { margin: .3rem 0; }
-    .rule {
-      border-top: 1px solid var(--rule);
-      padding-top: 1.25rem;
+    .fs-home h1 {
+      margin: 0 0 var(--rio-space-8);
     }
-    .signin { color: var(--muted); font-size: .9em; }
-    code { font-size: .9em; }
-    a.cta {
-      display: inline-block;
-      margin-top: .5rem;
-      padding: .65rem 1.2rem;
-      background: var(--ink);
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: 500;
+    .fs-home .fs-lede {
+      color: var(--rio-text-mute);
+      font-size: var(--rio-text-17);
+      margin: 0 0 var(--rio-space-32);
     }
-    a.cta:hover { background: #000000; }
+    .fs-home p {
+      margin: 0 0 var(--rio-space-16);
+      max-inline-size: 680px;
+    }
+    .fs-roles {
+      margin: 0 0 var(--rio-space-24);
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: var(--rio-space-8);
+    }
+    .fs-roles li {
+      padding-inline-start: var(--rio-space-12);
+      border-inline-start: 2px solid var(--rio-line);
+    }
+    .fs-roles strong { color: var(--rio-text-hi); }
+    .fs-rule {
+      margin-block-start: var(--rio-space-24);
+      padding-block-start: var(--rio-space-24);
+      border-block-start: 1px solid var(--rio-line);
+    }
+    .fs-signin {
+      color: var(--rio-text-mute);
+      font-size: var(--rio-text-14);
+    }
+    .fs-cta { margin-block-start: var(--rio-space-24); }
   </style>
 </head>
 <body>
-  <main>
+  <main class="fs-home">
     <h1>FixShop</h1>
-    <p class="lede">A repair shop, run from the admin panel.</p>
+    <p class="fs-lede">A repair shop, run from the admin panel.</p>
 
     <p>Someone brings in a broken thing &mdash; a phone, a laptop, a bike, a
     washing machine. The shop takes it in, works out what is wrong, and sends
     the customer a price. If the customer says yes, it gets repaired. Then they
     come back and pick it up.</p>
 
-    <ul>
+    <ul class="fs-roles">
       <li><strong>Front desk</strong> &mdash; books items in, records what the customer said, hands them back.</li>
       <li><strong>Technician</strong> &mdash; diagnoses, quotes, repairs.</li>
       <li><strong>Owner</strong> &mdash; all of it, plus editing quotes and deleting.</li>
     </ul>
 
-    <p class="rule">A job cannot move to in progress until its quote is approved.</p>
+    <p class="fs-rule">A job cannot move to in progress until its quote is approved.</p>
 
-    <p class="signin">Sign in as anna (front desk), mike (technician) or sara
+    <p class="fs-signin">Sign in as anna (front desk), mike (technician) or sara
     (owner) &mdash; passwords in <code>README.md</code>.</p>
 
-    <a class="cta" href="/admin">Open the admin</a>
+    <p class="fs-cta">
+      <a class="rio-btn rio-btn--primary rio-btn--md" href="/admin">Open the admin</a>
+    </p>
   </main>
 </body>
 </html>

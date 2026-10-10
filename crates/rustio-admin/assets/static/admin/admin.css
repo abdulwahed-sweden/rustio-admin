@@ -37,6 +37,7 @@
  */
 
 /* ---- Design tokens — single source of truth for the visual scale. */
+@import url("tokens/canonical.css");
 @import url("tokens/colors.css");
 @import url("tokens/spacing.css");
 @import url("tokens/radius.css");

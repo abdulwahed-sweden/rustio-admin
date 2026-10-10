@@ -15,24 +15,19 @@
 .rio-content-shell { max-inline-size: 1040px; margin-inline: auto; }
 .rio-form { display: flex; flex-direction: column; gap: var(--rio-space-32); }
 
-/* Page title (contract §2.1): 36px / 800 / line-height 1.15, with the §10.4
- * rhythm (title → lead = s4). */
-.rio-form-shell .rio-masthead-top h1,
-.rio-page-header h1 {
-  font-family: var(--rio-font-body);
-  font-weight: 800;
-  font-size: var(--rio-fs-display);  /* 36px */
-  line-height: 1.15;
-  letter-spacing: -0.018em;
-  color: var(--rio-text-hi);
-  margin: 0 0 var(--rio-space-16);
-}
+/* The page title's size, weight and track are the ladder's (base/base.css
+ * h1) and its placement is the page-head grid's. A form page does not need
+ * a title of its own. */
 
 /* Section card with the label cutting the top border (contract §3,
  * legend-on-border). A native <fieldset>/<legend> produces this for free:
  * the legend interrupts the border line. White surface, 14px radius, soft
  * border, soft shadow, generous 32px padding. */
 .rio-fieldset {
+  /* `<fieldset>` defaults to `min-inline-size: min-content`, so it refuses
+     to shrink below its widest child. With the permission matrix inside
+     one, that widens the whole page at 390. */
+  min-inline-size: 0;
   border: 1px solid var(--rio-line);
   border-radius: 14px;
   background: var(--rio-surface);
@@ -202,3 +197,125 @@
    are unchanged by the alignment. */
 .rio-page--form .rio-form-actions { justify-content: flex-end; }
 .rio-page--form .rio-form-actions .rio-action-bar-end { margin-inline-start: 0; }
+
+/* ============================================================
+   The record page (form.html, group_edit.html) — composition from
+   design/page-composition-study. Theme untouched: every value below is
+   an existing --rio-* token.
+
+   One card, one foot. Sections are bands inside the card; the action bar
+   is the card's own foot, so the page ends where its action is. Beside
+   the card, an aside carries the facts the operator cannot type and the
+   related sections; with an aside the page sits on the standard measure.
+   ============================================================ */
+.rio-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, var(--rio-page-form)) minmax(280px, 1fr);
+  gap: var(--rio-space-24);
+  align-items: start;
+}
+.rio-form-layout--single { grid-template-columns: minmax(0, var(--rio-page-form)); }
+.rio-page--form .rio-form-layout--single { grid-template-columns: minmax(0, 1fr); }
+.rio-form-main { min-inline-size: 0; }
+.rio-form-aside { min-inline-size: 0; display: flex; flex-direction: column; gap: var(--rio-space-16); }
+
+.rio-form-card {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm);
+  overflow: hidden;
+  gap: 0;
+}
+.rio-form-card .rio-fieldset {
+  border: 0; border-radius: 0; box-shadow: none;
+  padding: var(--rio-space-24);
+  margin: 0;
+}
+/* The band rule is a shadow, not a border, and the legend floats into the
+   content flow: a native <legend> otherwise straddles the fieldset's top
+   edge and the rule runs through it. */
+.rio-form-card .rio-fieldset + .rio-fieldset { box-shadow: 0 -1px 0 var(--rio-line); }
+.rio-form-card .rio-fieldset-legend,
+.rio-form-card .rio-fieldset > legend {
+  float: left; inline-size: 100%; display: block;
+  margin: 0 0 var(--rio-space-12); padding: 0;
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mono);
+}
+.rio-form-card .rio-fieldset-grid,
+.rio-form-card .rio-tablewrap { clear: both; }
+.rio-form-card .rio-fieldset-grid { row-gap: var(--rio-space-20); }
+.rio-form-card .rio-field { gap: var(--rio-space-8); }
+/* Inputs sized by what they hold, not by the column they sit in. */
+.rio-form-card .rio-input[type="date"],
+.rio-form-card .rio-input[type="datetime-local"],
+.rio-form-card .rio-input[type="time"],
+.rio-form-card .rio-input[type="number"] { max-inline-size: 240px; }
+.rio-form-card .rio-form-actions {
+  justify-content: flex-start;
+  margin: 0;
+  padding: var(--rio-space-16) var(--rio-space-24);
+  border-block-start: 1px solid var(--rio-line);
+  background: var(--rio-sunken);
+}
+.rio-form-card .rio-form-actions .rio-action-bar-end { margin-inline-start: auto; }
+
+/* ---- Read-only facts: shown, not greyed ---- */
+.rio-facts {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm);
+  padding: var(--rio-space-16) var(--rio-space-20);
+}
+.rio-facts-title {
+  margin: 0 0 var(--rio-space-8);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mono);
+}
+.rio-facts dl {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--rio-space-8) var(--rio-space-16);
+  margin: 0; font-size: var(--rio-text-14);
+}
+.rio-facts dt { color: var(--rio-text-mute); }
+.rio-facts dd { margin: 0; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; overflow-wrap: anywhere; }
+.rio-facts-note { margin: var(--rio-space-12) 0 0; font-size: var(--rio-text-13); color: var(--rio-text-faint); }
+
+/* ---- Related sections: one surface each — head · rows · foot ---- */
+.rio-related {
+  background: var(--rio-surface);
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  box-shadow: var(--rio-shadow-sm);
+  overflow: hidden;
+}
+.rio-related-head {
+  display: flex; align-items: baseline; gap: var(--rio-space-8);
+  padding: var(--rio-space-12) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+}
+.rio-related-head h2 { margin: 0; font-size: var(--rio-text-15); font-weight: var(--rio-weight-semibold); color: var(--rio-text-hi); }
+.rio-related-head .rio-inline-meta { color: var(--rio-text-mute); font-size: var(--rio-text-13); }
+.rio-related-head .rio-related-add { margin-inline-start: auto; }
+.rio-related .rio-dtable td { block-size: auto; padding-block: var(--rio-space-8); font-size: var(--rio-text-14); }
+.rio-related .rio-empty { padding: var(--rio-space-16); }
+.rio-related-foot {
+  padding: var(--rio-space-8) var(--rio-space-16);
+  border-block-start: 1px solid var(--rio-line);
+  background: var(--rio-sunken);
+  font-size: var(--rio-text-13);
+}
+
+@media (max-width: 1040px) {
+  .rio-form-layout { grid-template-columns: minmax(0, 1fr); }
+}

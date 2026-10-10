@@ -1,12 +1,18 @@
 /* ============================================================
    RustIO — Radius tokens
+   ALIAS LAYER — values in `tokens/canonical.css`.
+
+   Composition 3.1 collapses the five-step ladder onto three: the card
+   radius (14), the control radius (8) and the small radius (6). The
+   retired names stay as aliases so no component or project override
+   breaks; md/lg/xl all resolve to the card radius now.
    ============================================================ */
 
 :root {
-  --rio-radius-sm:      6px;
-  --rio-radius-control: 8px; /* inputs, selects, textareas, buttons (contract §5/§8) */
-  --rio-radius-md:      9px;
-  --rio-radius-lg:      12px;
-  --rio-radius-xl:      16px;
+  --rio-radius-sm:      var(--radius-sm);
+  --rio-radius-control: var(--radius-btn); /* inputs, selects, textareas, buttons */
+  --rio-radius-md:      var(--radius);
+  --rio-radius-lg:      var(--radius);
+  --rio-radius-xl:      var(--radius);
   --rio-radius-pill:    999px;
 }

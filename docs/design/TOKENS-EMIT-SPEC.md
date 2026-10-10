@@ -13,9 +13,48 @@ correctly in **both** light and dark mode. The in-repo reference implementation 
 
 ---
 
+> **Status — light-only runtime (Visual Contract v3.0 §12).** The framework is
+> light-only: `tokens/colors.css` carries a single `:root` block, with no
+> `@media (prefers-color-scheme: dark)` and no `[data-theme]` block. The §1
+> hazard below therefore describes a historical state, and the §3 dark-block
+> requirements are **retained unchanged** — they are what `rio-theme`'s
+> `emit.rs` and its golden fixtures produce today, and changing them means
+> changing the emitter. Reconciling this contract with the light-only runtime,
+> together with the canonical-name alias pass, is the emitter pass of
+> `docs/design/rustio-admin-composition-study/MIGRATION.md`. Until then: this
+> document stays normative for *generators*, and `VISUAL-CONTRACT.md` is
+> authoritative on whether the framework has a dark theme. Do not read §1–§5 as
+> a licence to add dark blocks back to the framework's own stylesheets.
+
+## 0. Token names: canonical core + `--rio-*` aliases
+
+The framework's stylesheets are two layers (`VISUAL-CONTRACT.md` §1):
+`tokens/canonical.css` declares the shared RustIO semantic core — `--page`,
+`--surface`, the `--ink*` ramp, `--blue` / `--focus`, `--ctl` / `--th-h` /
+`--td-h`, `--s1 … --s6` and the rest — and every `--rio-*` name is a
+permanent alias onto one of them.
+
+**A generated `tokens.css` keeps emitting `--rio-*` names.** They are the
+public token contract that `AdminTheme`, this emitter and downstream project
+stylesheets all target, and the override is appended *after* the bundle, so
+re-pointing an alias re-points everything that consumes it. Emitting
+canonical names instead would be both unnecessary and more fragile: a
+project that set `--blue` but not `--rio-rust` would be overridden by the
+alias layer's own declaration.
+
+**Never emit `--rio-accent-focus`.** Focus is its own semantic role with a
+verified contrast budget against every surface the ring can sit beside, and
+a brand colour is not required to clear it. `AdminTheme` does not set it
+either; `render::tests::a_project_theme_never_overrides_the_focus_token`
+pins that. (RustIO's own `rustio.design.json` injection *does* set
+`--focus` — this product diverges deliberately; see `VISUAL-CONTRACT.md`
+§15.2.)
+
+---
+
 ## 1. The hazard this contract prevents
 
-The framework ships a dark theme as two blocks (`crates/rustio-admin/assets/static/admin/tokens/colors.css`):
+Historically the framework shipped a dark theme as two blocks (`crates/rustio-admin/assets/static/admin/tokens/colors.css`):
 
 ```css
 :root { /* light */ }

@@ -32,7 +32,9 @@
 }
 .rio-tabs::-webkit-scrollbar { display: none; }
 .rio-tab {
-  padding: var(--rio-space-12) var(--rio-space-16);
+  display: inline-flex; align-items: center;
+  block-size: var(--rio-ctl);
+  padding: 0 var(--rio-space-16);
   flex: none;
   color: var(--rio-text-mute);
   text-decoration: none;
@@ -61,15 +63,20 @@
    than a faint mono eyebrow; values carry the page's ink. */
 .rio-dl {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr);
   column-gap: var(--rio-space-24);
   margin: 0;
 }
 .rio-dl dt {
   padding-block: var(--rio-space-12);
-  font-size: var(--rio-text-14);
-  font-weight: var(--rio-weight-medium);
-  color: var(--rio-text-mute);
+  /* The label names the value: a 13px mono micro-label, as every other
+     label in the system is (VISUAL-CONTRACT.md §2.1). */
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mono);
   border-block-end: 1px solid var(--rio-line);
   min-inline-size: 0;
 }
@@ -158,3 +165,13 @@
    the contract pill globally (loads after data.css). */
 
 .rio-form-inline { display: inline; }
+
+/* ---- Audit log (log_entries.html) -----------------------------------
+   Calmer rows: the By link is the email, when and ip are metadata, the
+   date dividers stay under the head while the table scrolls. */
+.rio-table--audit .rio-by { color: var(--rio-text); text-decoration: none; }
+.rio-table--audit .rio-by:hover { color: var(--rio-rust); }
+.rio-table--audit .rio-hist-when { color: var(--rio-text-mute); font-size: var(--rio-text-14); white-space: nowrap; }
+.rio-table--audit .rio-hist-ip { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-faint); white-space: nowrap; }
+.rio-table--audit .rio-history-diff { margin-block-start: 2px; }
+.rio-table--audit tr.rio-history-date-divider th { position: sticky; inset-block-start: var(--rio-th-h); z-index: 1; }

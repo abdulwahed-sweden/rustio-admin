@@ -1,25 +1,38 @@
 {# Project-level token overrides for the admin chrome.
  #
- # IMPORTANT: this partial is included AFTER `<link rel="stylesheet"
- # href="/static/admin.css">` in `_base.html`. That ordering is the
- # whole point — a project override here wins ties on source order
- # without needing `!important`.
+ # SELECTOR: `:root`, not `html`. This partial is included AFTER
+ # `<link rel="stylesheet" href="/static/admin.css">` in `_base.html`,
+ # and the token files declare their values on `:root`. A `:root` block
+ # ties on specificity and wins on source order, which is the whole
+ # mechanism — no `!important` needed.
  #
- # The framework is light-only, so a single `html { ... }` block at
- # specificity (0,0,1,0) is enough to override the `:root` tokens.
+ # It used to say `html { … }`, which LOSES: `:root` is a pseudo-class
+ # (0,1,0) and `html` a type selector (0,0,1), so the stylesheet's
+ # `:root` beat this block regardless of order and every
+ # `AdminTheme`/`Admin::accent_color` override was silently dropped.
  #
- # When no fields are set on `AdminTheme`, no markup is emitted at
- # all and admin.css is the single source of truth. #}
+ # FOCUS IS NEVER OVERRIDDEN. `--rio-accent-focus` is absent from this
+ # block on purpose: focus is its own semantic role with its own verified
+ # contrast budget, and a project brand colour is not required to clear it
+ # (VISUAL-CONTRACT.md §1.3, §15.2). RustIO's `rustio.design.json` does
+ # inject `--focus`; this product deliberately does not.
+ #
+ # The hover and pressed shades are COMPUTED from the accent
+ # (`render::shade_hex`) rather than repeating one hex six times, which
+ # used to flatten a themed button to a single colour in all three states.
+ #
+ # When no fields are set on `AdminTheme`, no markup is emitted at all and
+ # admin.css is the single source of truth. #}
 {% if has_theme_overrides %}
 <style>
-html {
+:root {
 {%- if accent_hex %}
   --rio-rust: {{ accent_hex }};
-  --rio-rust-hover: {{ accent_hex }};
-  --rio-rust-active: {{ accent_hex }};
+  --rio-rust-hover: {{ accent_hover_hex }};
+  --rio-rust-active: {{ accent_active_hex }};
   --rio-rust-solid: {{ accent_hex }};
-  --rio-rust-solid-hover: {{ accent_hex }};
-  --rio-rust-solid-active: {{ accent_hex }};
+  --rio-rust-solid-hover: {{ accent_hover_hex }};
+  --rio-rust-solid-active: {{ accent_active_hex }};
 {%- endif %}
 {%- if theme_bg %}
   --rio-bg: {{ theme_bg }};

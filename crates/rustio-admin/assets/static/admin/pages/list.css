@@ -15,6 +15,38 @@
 .rio-icon { inline-size: 1em; block-size: 1em; flex: none; vertical-align: -0.12em; }
 .rio-chev { inline-size: 15px; block-size: 15px; flex: none; opacity: 0.7; }
 
+/* ============================================================
+   The find row
+
+   Everything that narrows the result, on one line, grouped: the search
+   field, then the filter triggers, then the count. Sort and rows-per-page
+   are NOT here — they arrange a result rather than find one, and they live
+   on the data surface itself.
+
+   Up to four filters stand inline; "More filters" only exists beyond that.
+   Two was too few: a page with three filters hid its third behind a menu
+   for no reason.
+   ============================================================ */
+.rio-find {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--rio-space-8) var(--rio-space-12);
+  margin-block-end: var(--rio-space-16);
+}
+.rio-find-search { flex: 0 1 340px; min-inline-size: 220px; }
+.rio-find-filters {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--rio-space-8);
+}
+/* With filters active the pill line below carries the one reset, so the
+   row above it does not repeat the offer. */
+.rio-c-list .rio-active-filters { margin-block: 0 var(--rio-space-16); }
+
+/* ---- Head strip ----
+   Only rendered when it has a job: a view-mode switch, or an adaptive
+   layout with no column heads to sort by. In Table mode the columns sort
+   themselves and the table starts at the top of the surface. */
+.rio-board-head--views .rio-board-tools { margin-inline-start: auto; }
+
 /* ---- JS dropdowns (filters / sort / rows / saved views) ---- */
 .rio-dropdown { position: relative; display: inline-flex; }
 .rio-dropdown-panel {
@@ -97,8 +129,8 @@
 .rio-active-filters-clear:hover { text-decoration: underline; }
 
 /* ---- Bulk-select reveal ---- */
-.rio-bulk-form .rio-bulkbar { display: none; }
-.rio-bulk-form.is-active .rio-bulkbar { display: flex; }
+.rio-bulk-form .rio-board-sel { display: none; }
+.rio-bulk-form.is-active .rio-board-sel { display: flex; }
 
 /* ---- Sortable table headers ---- */
 .rio-dtable thead th a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
@@ -130,6 +162,12 @@
 /* A table never widens the page. It scrolls inside its own board. */
 .rio-board { min-inline-size: 0; }
 .rio-tablewrap {
+  /* `position: relative` is load-bearing twice over: it is the containing
+     block for the absolutely positioned `.rio-sr-only` label inside the
+     actions column head — without it that label resolves against the page
+     and widens the document at narrow widths — and it scopes the sticky
+     actions column to this scroller. */
+  position: relative;
   inline-size: 100%;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
@@ -172,14 +210,10 @@
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* Role/authority badge — readable without relying on colour alone. */
-.rio-role {
-  display: inline-flex; align-items: center;
-  padding: 3px 9px; border-radius: var(--rio-radius-pill);
-  background: var(--rio-sunken); border: 1px solid var(--rio-line);
-  color: var(--rio-text); font-size: 0.875rem;
-  font-weight: var(--rio-weight-medium); white-space: nowrap;
-}
+/* Role/authority badge — the shared status face (components/data.css);
+   only its colour pair belongs here. */
+.rio-role { background: var(--rio-neutral-tint); color: var(--rio-neutral); }
+.rio-role--administrator, .rio-role--developer { background: var(--rio-rust-tint); color: var(--rio-rust); }
 
 @media (max-width: 760px) {
   .rio-selbar-actions { margin-inline-start: 0; inline-size: 100%; }
@@ -196,55 +230,16 @@
    what puts the USER header, the first user cell and the
    "Showing N accounts" footer on the same vertical line.
    ============================================================ */
-.rio-dtable--users { display: block; }
-.rio-dtable--users thead,
-.rio-dtable--users tbody { display: block; }
-
-.rio-dtable--users tr {
-  display: grid;
-  grid-template-columns:
-    minmax(420px, 1fr)  /* user identity — absorbs the remainder */
-    160px               /* role    */
-    120px               /* status  */
-    184px               /* created */
-    64px;               /* row actions */
-  column-gap: var(--rio-space-24);
-  align-items: center;
-  padding-inline: var(--rio-card-pad-x);
-}
-
-.rio-dtable--users thead tr { block-size: var(--rio-table-head-h); }
-.rio-dtable--users thead th {
-  display: flex; align-items: center; min-inline-size: 0;
-  padding: 0; block-size: 100%;
-  position: static; /* grid rows do not need the sticky table head */
-}
-
-/* One continuous separator per row, drawn on the row itself — cell
-   borders would break into fragments under every column gap. */
-.rio-dtable--users tbody tr {
-  min-block-size: var(--rio-row-h);
-  padding-block: var(--rio-space-12);
-  border-block-end: 1px solid var(--rio-line);
-}
-.rio-dtable--users tbody tr:last-child { border-block-end: 0; }
-.rio-dtable--users tbody td {
-  display: flex; align-items: center; min-inline-size: 0;
-  padding: 0; block-size: auto; border-block-end: 0;
-}
-.rio-dtable--users .col-act { justify-content: flex-end; inline-size: auto; }
-/* Actions are always visible in a grid row: the hover-reveal that the
-   legacy table used hides an authorized control behind a pointer. */
-.rio-dtable--users .rio-row-actions { opacity: 1; }
-
-/* Long addresses truncate inside their own track instead of pushing
-   ROLE sideways. The full value stays in the DOM and in `title`. */
-.rio-cell-user { min-inline-size: 0; }
-.rio-cell-user .rio-prod,
-.rio-cell-user .rio-prod-text { min-inline-size: 0; }
-.rio-cell-user .rio-prod { gap: var(--rio-space-12); } /* avatar -> text */
-.rio-cell-user .rio-prod-text {
-  display: flex; flex-direction: column; gap: var(--rio-space-4); /* email -> #id */
+/* ---- People tables (users, groups) ---------------------------------
+   The generic operational table (`.rio-dtable--ops`): the identity hugs,
+   with the id as a mono suffix on the same line. The `display: grid`
+   users table it replaces drew its head rule per cell and spent 72px on
+   one line of data. */
+.rio-dtable--people .rio-cell-user { white-space: nowrap; }
+.rio-dtable--people .rio-cell-id {
+  margin-inline-start: var(--rio-space-8);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-13);
+  color: var(--rio-text-faint);
 }
 .rio-email {
   display: block; min-inline-size: 0;
@@ -262,10 +257,38 @@
    layout — the button is never positioned against the viewport. */
 .rio-page--wide .rio-masthead-top { margin-block-end: var(--rio-space-24); }
 
+/* ---- Narrow ------------------------------------------------------------
+   The head keeps its two actions on the title's line as small controls —
+   a phone has width for that and not for a stacked action row. The search
+   takes the full width; the filters become one horizontally scrolling row
+   rather than three stacked ones; the count drops to its own line. */
+@media (max-width: 760px) {
+  .rio-c-list .rio-masthead-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title action" "lead lead";
+  }
+  .rio-c-list .rio-masthead-top > .rio-masthead-cta {
+    justify-self: end;
+    margin: 0;
+  }
+  .rio-c-list .rio-masthead-cta .rio-btn {
+    block-size: var(--rio-ctl-sm);
+    padding-inline: var(--rio-space-12);
+    font-size: var(--rio-text-12);
+  }
+  .rio-find-search { flex: 1 1 100%; }
+  .rio-find-filters {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    padding-block-end: 2px;
+  }
+  .rio-find-filters::-webkit-scrollbar { display: none; }
+  .rio-find-filters .rio-btn { flex: none; }
+  .rio-find-count { margin-inline-start: 0; }
+}
+
 /* Narrow: the card scrolls inside `.rio-tablewrap`; the page never
    scrolls sideways. */
-@media (max-width: 1040px) {
-  .rio-dtable--users tr {
-    grid-template-columns: minmax(240px, 1fr) 160px 120px 184px 64px;
-  }
-}

@@ -1,25 +1,29 @@
 {% extends "admin/_base.html" %}
-{# A data page: lists and matrices take the wide measure. #}
-{% block page_measure %}rio-page--wide{% endblock %}
+{# One card on the standard measure, two bands (Group, Permissions); the
+   matrix sits flat inside the card and the extra permissions — the
+   workflow verbs a project registers — are open as a checklist grid, not
+   folded away. The action bar is the card's foot. Every checkbox name and
+   the row-toggle hook are unchanged. #}
+{% block page_measure %}rio-page--standard rio-c-record{% endblock %}
 {% block content %}
-<div class="rio-form-shell">
 <nav class="rio-crumbs"><a href="/admin">Home</a><span class="rio-crumb-sep">·</span><a href="/admin/groups">Groups</a><span class="rio-crumb-sep">·</span><span class="rio-crumb-current">{{ name }}</span></nav>
 <div class="rio-masthead-top">
-  <div><h1>Edit group</h1><p class="rio-masthead-desc">Editing <strong>{{ name }}</strong> — change membership and attached permissions.</p></div>
+  <div><h1>Edit group</h1></div>
 </div>
-
 {% if errors %}<div class="rio-alert rio-alert--danger" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
 
-<form method="post" action="/admin/groups/{{ group_id }}/edit" class="rio-form">
+<div class="rio-form-layout rio-form-layout--single">
+<div class="rio-form-main">
+<form method="post" action="/admin/groups/{{ group_id }}/edit" class="rio-form rio-form-card">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for section in sections %}
-  <fieldset class="rio-fieldset rio-board">
+  <fieldset class="rio-fieldset">
     {% if section.title %}<legend class="rio-fieldset-legend">{{ section.title }}</legend>{% endif %}
     <div class="rio-fieldset-grid">{% for field in section.fields %}{% include "admin/includes/_form_field.html" %}{% endfor %}</div>
   </fieldset>
   {% endfor %}
 
-  <fieldset class="rio-fieldset rio-board">
+  <fieldset class="rio-fieldset">
     <legend class="rio-fieldset-legend">Permissions</legend>
     {% if matrix.rows or matrix.extras %}
     {% if matrix.rows %}
@@ -50,9 +54,8 @@
     </table>
     </div>
     {% endif %}
-
     {% if matrix.extras %}
-    <details class="rio-perm-extras">
+    <details class="rio-perm-extras rio-perm-extras--open" open>
       <summary>Other permissions ({{ matrix.extras|length }})</summary>
       <ul class="rio-checkbox-list">
         {% for cell in matrix.extras %}
@@ -88,5 +91,6 @@
     </span>
   </div>
 </form>
+</div>
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 /* ============================================================
-   RustIO — Typography tokens (Visual Contract v2.0)
+   RustIO — Typography tokens (Visual Contract v3.0)
    · Display + Body/UI — Inter — one clean, legible Latin face for both
                titles and body (the contract has no serif). Page titles,
                hero, stat values, body, inputs, tables.
@@ -24,46 +24,64 @@
   --rio-font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Tajawal", monospace;
   --rio-font-body:    "Inter", "Tajawal", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* --- Type scale (px) ---
-     12 · 13 · 14 · 15 · 17 · 20 · 24 · 30 · 38 · 48 · 64 · display-clamp */
-  /* Operator-comfort scale: body sits at 16px, the reading sizes lift to
-     match, and the large end opens back up. Judged by appearance, not the
-     token name — every value here is the px it actually renders. */
-  --rio-text-12: 0.9375rem;   /* 15 — small text nudged up (+1px) for readability */
-  --rio-text-13: 0.9375rem;   /* 15 — fine print, nudged up to match */
-  --rio-text-14: 1rem;        /* 16 — product base (body, inputs, tables) */
-  --rio-text-15: 1rem;        /* 16 */
-  --rio-text-17: 1.0625rem;   /* 17 — lead / section title */
-  --rio-text-20: 1.375rem;    /* 22 — lead / section title */
-  --rio-text-24: 1.625rem;    /* 26 — card title */
-  --rio-text-30: 1.9375rem;   /* 31 — h3 / stat value */
-  --rio-text-38: 2.375rem;    /* 38 — h2 */
-  --rio-text-48: 3rem;        /* 48 — h1 / page title */
-  --rio-text-64: 3.75rem;     /* 60 — display */
-  --rio-text-display: clamp(2.5rem, 5vw, 4.25rem); /* hero — smaller, refined */
+  /* --- Type scale — the Composition 3.1 ladder -------------------
+     Eight steps: 12 · 13 · 14 · 15 · 16 · 18 · 24 · 33 px
+     (VISUAL-CONTRACT.md §2.1). The token NAMES are historical — they
+     were minted when each named its own px — and are kept because
+     components and project stylesheets target them. The VALUES below
+     are the ladder; read the comment, not the name.
 
-  /* --- Weights --- */
+       13  mono micro-labels, fine print, badges, breadcrumb
+       14  secondary detail, counts, button labels
+       15  BASE — body, table cells, inputs, labels, field values
+       16  section headings, palette input
+       18  h2, dialog + section titles
+       24  h1 / page title / card title
+       33  display — stat values, auth titles, error numerals
+
+     12px is the ladder's bottom step and no role claims it today. */
+  --rio-text-12: 0.8125rem;   /* 13 — mono micro-label / fine print */
+  --rio-text-13: 0.8125rem;   /* 13 */
+  --rio-text-14: 0.875rem;    /* 14 — secondary detail, counts */
+  --rio-text-15: 0.9375rem;   /* 15 — base */
+  --rio-text-17: 1rem;        /* 16 — section heading */
+  --rio-text-20: 1.125rem;    /* 18 — h2 */
+  --rio-text-24: 1.5rem;      /* 24 — h1 / page title */
+  --rio-text-30: 2.0625rem;   /* 33 — display / stat value */
+  --rio-text-38: 2.0625rem;   /* 33 */
+  --rio-text-48: 2.0625rem;   /* 33 */
+  --rio-text-64: 2.0625rem;   /* 33 */
+  --rio-text-display: 2.0625rem; /* 33 — the ladder's top step */
+
+  /* --- Weights ---
+     Body sits at 500: operator software reads better with a little
+     weight at 15px than at 400. Titles carry 800, sub-heads 700, and
+     buttons take RustIO's 680 / 650 pair. */
   --rio-weight-regular:  400;
   --rio-weight-medium:   500;
   --rio-weight-semibold: 600;
   --rio-weight-bold:     700;
-  --rio-weight-display:  600; /* headings sit in the 600-700 band; no 800 */
+  --rio-weight-display:  800; /* h1 / page title / stat value */
+  --rio-weight-button:   680; /* standard button label */
+  --rio-weight-button-sm: 650; /* small button, segment */
 
-  /* --- Line heights — generous for comfortable reading --- */
-  --rio-leading-display: 1.1;  /* serif display / headlines */
-  --rio-leading-tight:   1.22; /* sub-heads */
+  /* --- Line heights --- */
+  --rio-leading-display: 1.2;  /* h1 / display */
+  --rio-leading-tight:   1.3;  /* h2 / sub-heads */
+  --rio-leading-ui:      1.4;  /* table cells, dense UI */
   --rio-leading-snug:    1.45; /* leads */
-  --rio-leading-body:    1.5;  /* body copy — contract: 1rem / 1.5 */
+  --rio-leading-body:    1.55; /* body copy */
   --rio-leading-relaxed: 1.72; /* long-form */
 
   /* --- Letter spacing ---
-     Inter reads refined with a hair of negative tracking at display + UI sizes. */
-  --rio-tracking-display: -0.006em; /* display headlines */
-  --rio-tracking-tight:   -0.008em; /* UI / body — crisp */
+     Titles take a deliberate negative track; mono micro-labels take
+     RustIO's .08em so an uppercase 13px label reads as a label. */
+  --rio-tracking-display: -0.02em; /* h1 / display */
+  --rio-tracking-tight:   -0.01em; /* h2 / h3 */
   --rio-tracking-normal:  0em;
   --rio-tracking-wide:    0.01em;
-  --rio-tracking-mono:    0.005em;  /* mono labels */
-  --rio-tracking-caps:    0.085em;  /* uppercase eyebrows */
+  --rio-tracking-mono:    0.005em; /* mono body (prices, ids) */
+  --rio-tracking-caps:    0.08em;  /* uppercase mono micro-labels */
 
   /* --- Multi-script stacks (framework addition; @font-face in
      base/fonts.css + base/typography-i18n.css). Latin renders in the

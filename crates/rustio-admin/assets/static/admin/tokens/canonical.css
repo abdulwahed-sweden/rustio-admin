@@ -1,0 +1,132 @@
+/* ============================================================
+   RustIO — Canonical token core (Composition 3.1)
+
+   The shared semantic vocabulary of the RustIO family. These names
+   and values are RustIO's (`main @ 00b933c`, `rustio-core/assets/
+   static/admin.css` `:root`); this file declares them verbatim so the
+   two products resolve the same palette, scale and geometry from the
+   same source of truth.
+
+   Every `--rio-*` token is an ALIAS onto a name declared here — see
+   `tokens/colors.css`, `spacing.css`, `radius.css`, `shadows.css` and
+   `compat.css`. The `--rio-*` names are the framework's public token
+   contract: `AdminTheme`, `rio-theme` and downstream project
+   stylesheets target them, so they are permanent. Components keep
+   consuming `var(--rio-*)` and never reach for a canonical name
+   directly.
+
+   Product-specific tokens have no canonical counterpart and stay in
+   their own files: `--rio-page-form`, `--rio-page-narrow`,
+   `--rio-modulebar-h`, `--rio-overlay`, `--rio-shadow-lg`,
+   `--rio-syntax-*`, `--rio-hit-*`, `--rio-on-solid`,
+   `--rio-rust-active`, the motion tokens.
+
+   LIGHT ONLY — one `:root`, no theme blocks (VISUAL-CONTRACT.md §12).
+
+   Contract: docs/design/VISUAL-CONTRACT.md §1
+   Mapping:  docs/design/rustio-admin-composition-study/TOKEN-MAPPING.md
+   ============================================================ */
+
+:root {
+  /* --- Surfaces, lines, rail ------------------------------------ */
+  --page:          #F1F1EE; /* page ground — warm paper */
+  --surface:       #FFFFFF; /* cards, panels, table body */
+  --surface-soft:  #F7F9FC; /* row hover, inset wells, soft fills */
+  --surface-head:  #F1F4F8; /* table heads, card heads, raised */
+  --border:        #D5DCE5;
+  --border-strong: #B9C5D3;
+  --rail-bg:       #F4F6F9;
+  --rail-line:     #D3DBE5;
+
+  /* --- Ink ramp -------------------------------------------------
+     Operational text is never pale. `--ink-3` is for tertiary
+     technical metadata ALONE; `--ink-hint` is the floor for anything
+     an operator actually has to read. */
+  --ink:       #171B22; /* titles, cells, labels, values */
+  --ink-body:  #202733; /* body, lead, column heads */
+  --ink-2:     #3F4A59; /* breadcrumb, counts, in-cell detail */
+  --ink-mono:  #334052; /* mono micro-labels, rail section labels */
+  --ink-hint:  #4C5868; /* field hints, help text, placeholders */
+  --ink-3:     #596779; /* tertiary technical metadata only */
+
+  /* --- Accent and focus ----------------------------------------
+     `--focus` is deliberately NOT `--blue`: sharing the primary-button
+     colour made a focused control read as a button. #2F7BD6 is ~1.72x
+     lighter than --blue and clears 3:1 against every surface the ring
+     can sit beside. Focus is its own semantic role and is never
+     retargeted by a project accent override (VISUAL-CONTRACT.md
+     §1.3, §15.2). */
+  --blue:       #1F5797;
+  --blue-dark:  #174578;
+  --blue-soft:  #DFEAFB;
+  --blue-line:  #B7CDEA;
+  --focus:      #2F7BD6;
+
+  /* --- Status — opaque soft fills, never alpha washes ----------- */
+  --green:       #19724B;
+  --green-soft:  #E8F6EE;
+  --green-line:  #B4DBC5;
+  --amber:       #935B0A;
+  --amber-soft:  #FFF4DF;
+  --red:         #A23F3A;
+  --red-soft:    #FFF0EE;
+  --red-line:    #E3B0AB;
+  --grey:        #4C5868;
+  --grey-soft:   #F2F4F7;
+  --grey-line:   #CFD6DF;
+
+  /* --- Control boundaries --------------------------------------
+     `--field-line` is the filled-input boundary deepened for
+     SC 1.4.11; `--filter-line` / `--filter-fill` are the
+     active-filter treatment. */
+  --field-line:  #848F9E;
+  --filter-line: #7890AF;
+  --filter-fill: #F4F8FD;
+
+  /* --- Elevation — flat by default -----------------------------
+     `--shadow-sm` is reserved for cards in a grid; `--shadow` is the
+     one deep shadow and dresses the auth card alone. */
+  --shadow-sm: 0 1px 2px rgba(22, 32, 56, 0.06);
+  --shadow:    0 1px 0 rgba(255, 255, 255, 0.6),
+               0 24px 50px -24px rgba(22, 32, 56, 0.45),
+               0 8px 20px -12px rgba(22, 32, 56, 0.25);
+
+  /* --- Spacing — the canonical six --------------------------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  /* --- Radii --------------------------------------------------- */
+  --radius:     14px; /* cards */
+  --radius-btn:  8px; /* buttons and controls */
+  --radius-sm:   6px; /* badges, small buttons, rail items, page links */
+
+  /* --- Control heights ----------------------------------------- */
+  --ctl:      38px; /* input, select, standard button */
+  --ctl-sm:   31px; /* small action button, segmented-control segment */
+  --ctl-util: 32px; /* compact masthead utility control */
+
+  /* --- Row heights --------------------------------------------- */
+  --th-h: 40px; /* table header; also the Compact line height */
+  --td-h: 48px; /* table row minimum */
+
+  /* --- Shell and measure --------------------------------------- */
+  --masthead:      56px;
+  --rail:         240px;
+  --gutter:        32px;
+  --content:     1120px;
+  --content-wide: 1600px;
+}
+
+/* The workspace gutter steps down with the viewport. Declared here so
+   every region that resolves `--gutter` follows automatically. */
+@media (max-width: 760px) {
+  :root { --gutter: 24px; }
+}
+
+@media (max-width: 480px) {
+  :root { --gutter: 16px; }
+}

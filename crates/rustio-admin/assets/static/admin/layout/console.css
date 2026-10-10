@@ -14,7 +14,7 @@
    labels are the point, and hiding them behind a tooltip only made
    the rail harder to scan. ------------------------------------- */
 .rio-rail {
-  inline-size: 232px; flex: none;
+  inline-size: var(--rio-rail-w); flex: none;
   display: flex; flex-direction: column;
   gap: 2px; padding: 0 var(--rio-space-12) var(--rio-space-16);
   background: var(--rio-rail-bg);
@@ -47,16 +47,17 @@
   margin: var(--rio-space-12) 0; flex: none;
 }
 .rio-rail-caption {
-  font-size: 0.875rem; font-weight: var(--rio-weight-semibold);
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--rio-text-mute);
+  font-family: var(--rio-font-mono);
+  font-size: var(--rio-text-12); font-weight: var(--rio-weight-bold);
+  letter-spacing: var(--rio-tracking-caps); text-transform: uppercase;
+  color: var(--rio-text-mono);
   padding: 0 calc(var(--rio-rail-inset) - var(--rio-space-12)) var(--rio-space-8);
   white-space: nowrap;
 }
 .rio-rail-spacer { flex: 1; min-block-size: 8px; }
 
 .rio-rail-btn {
-  inline-size: 100%; min-block-size: 40px;
+  inline-size: 100%; min-block-size: var(--rio-ctl);
   display: grid; grid-template-columns: 18px 1fr; align-items: center;
   justify-items: start; gap: var(--rio-space-12);
   padding: var(--rio-space-8) calc(var(--rio-rail-inset) - var(--rio-space-12));
@@ -77,13 +78,10 @@
   font-weight: var(--rio-weight-semibold);
 }
 .rio-rail-btn[aria-current="page"] svg { color: var(--rio-rust); }
-.rio-rail-btn[aria-current="page"]::before {
-  content: ""; position: absolute;
-  inset-inline-start: 0; inset-block: 8px;
-  inline-size: 3px; border-radius: 999px; background: var(--rio-rust);
-}
+/* Tint only. The 3px leading bar was a second signal for a state the
+   tint and the weight already carry (VISUAL-CONTRACT.md §10). */
 .rio-rail-label {
-  font-family: var(--rio-font-body); font-size: 0.9375rem;
+  font-family: var(--rio-font-body); font-size: var(--rio-text-15);
   font-weight: var(--rio-weight-medium); line-height: 1.35;
   min-inline-size: 0; overflow-wrap: anywhere;
 }
@@ -128,14 +126,14 @@
 .rio-ws-search {
   flex: 1; max-inline-size: 460px; margin: 0 auto;
   display: flex; align-items: center; gap: 10px;
-  block-size: 38px; padding: 0 12px;
+  block-size: var(--rio-ctl-util); padding: 0 var(--rio-space-12);
   background: var(--rio-sunken); border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-pill); color: var(--rio-text-faint);
+  border-radius: var(--rio-radius-control); color: var(--rio-text-faint);
   cursor: pointer; font-size: var(--rio-text-14); text-align: start;
   transition: border-color var(--rio-dur-fast) var(--rio-ease), background var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-ws-search:hover { border-color: var(--rio-line-strong); background: var(--rio-raised); }
-.rio-ws-search:focus-visible { outline: 2px solid var(--rio-accent-focus); outline-offset: 2px; }
+.rio-ws-search:focus-visible { outline: 3px solid var(--rio-accent-focus); outline-offset: 2px; }
 .rio-ws-search-label { flex: 1; text-align: start; }
 .rio-ws-search .rio-kbd { flex: none; }
 .rio-ws-actions { display: flex; align-items: center; gap: 8px; }
@@ -144,14 +142,14 @@
 .rio-usermenu { margin-inline-start: 4px; }
 .rio-usermenu-btn {
   display: inline-flex; align-items: center; gap: 9px;
-  block-size: 40px; padding: 0 10px 0 6px;
-  border: 1px solid var(--rio-line); border-radius: 999px;
+  block-size: var(--rio-ctl-util); padding: 0 var(--rio-space-8) 0 var(--rio-space-4);
+  border: 1px solid var(--rio-line); border-radius: var(--rio-radius-control);
   background: var(--rio-surface); color: var(--rio-text); cursor: pointer; font: inherit;
   transition: background-color var(--rio-dur-fast) var(--rio-ease), border-color var(--rio-dur-fast) var(--rio-ease);
 }
 .rio-usermenu-btn:hover { background: var(--rio-raised); border-color: var(--rio-line-strong); }
 .rio-usermenu-avatar {
-  inline-size: 30px; block-size: 30px; border-radius: 50%; flex: none;
+  inline-size: 24px; block-size: 24px; border-radius: var(--rio-radius-sm); flex: none;
   display: grid; place-items: center;
   background: var(--rio-rust-tint); color: var(--rio-rust);
   font-family: var(--rio-font-mono); font-weight: 700; font-size: 14px;
@@ -214,12 +212,40 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
   .rio-ws-inner { inline-size: calc(100% - 32px); }
 }
 
-/* ---- Editorial masthead + ledger ---- */
-.rio-masthead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-block-end: var(--rio-space-32); }
-.rio-masthead h1 { font-size: var(--rio-fs-display); line-height: 1.15; margin: 0 0 var(--rio-space-16); } /* contract §2.1: 36px */
-/* Lead paragraph (contract §2.1): 17px, --rio-text, line-height 1.7, ~70ch. */
-.rio-masthead-desc { color: var(--rio-text); margin: 0; font-size: var(--rio-fs-lead); line-height: 1.7; max-inline-size: 70ch; }
-.rio-masthead-cta { display: flex; align-items: center; gap: 10px; flex: none; padding-block-start: 6px; }
+/* ---- Narrow: the utility strip must fit, not scroll the page --------
+   Brand pill + ⌘K trigger + bell + Docs + account menu is more than a
+   phone has room for, and none of them could shrink: the search had a
+   280px floor and the actions were `flex: none` by default, so the strip
+   pushed the DOCUMENT sideways at every page. The utility row is chrome —
+   it gives way first. */
+@media (max-width: 760px) {
+  .rio-wshead-utility { min-inline-size: 0; }
+  .rio-wshead-inner { gap: var(--rio-space-8); min-inline-size: 0; }
+  /* The trigger keeps its icon and gives up its label and shortcut hint
+     rather than forcing the row wider than the viewport. */
+  .rio-ws-search { flex: 1 1 auto; min-inline-size: 0; max-inline-size: none; margin: 0; }
+  .rio-ws-search-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rio-ws-search .rio-kbd { display: none; }
+  .rio-ws-actions { flex: none; min-inline-size: 0; gap: var(--rio-space-4); }
+}
+
+@media (max-width: 480px) {
+  /* Below 480 the environment pill and the Docs link are the two things
+     an operator on a phone needs least; the account menu and the bell
+     stay, because signing out and seeing an alert are not optional. */
+  .rio-wshead-utility .rio-devpill { display: none; }
+  .rio-ws-actions .rio-ws-doclink { display: none; }
+  .rio-ws-search-label { display: none; }
+  .rio-ws-search { flex: 0 0 auto; }
+}
+
+/* ---- Editorial masthead + ledger ----
+   The masthead's COMPOSITION (the title/action/lead grid, the lead's face)
+   lives in components/page-header.css. Only the gap below the head and the
+   CTA row's own flex belong here; redeclaring `display` would win on source
+   order and undo the grid. */
+.rio-masthead-top { margin-block-end: var(--rio-space-24); }
+.rio-masthead-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rio-space-8); }
 
 .rio-ledger {
   display: flex; flex-wrap: wrap;
@@ -245,29 +271,83 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-ledger-item--accent .rio-ledger-num { color: var(--rio-rust); }
 
 /* ---- Command toolbar (search + filters in one bar) ---- */
-.rio-cmdbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-block-end: var(--rio-space-20); }
-.rio-cmdbar .rio-search--hero { flex: 1; min-inline-size: 280px; }
+/* ---- Find row ----
+   Search, the filter triggers, Reset, and then the count. The search
+   field is a 340px control, not a hero: it is one way into the data,
+   beside the filters, not the page's centrepiece. */
+/* The find row's own rules live in pages/list.css (`.rio-find`); what was
+   `.rio-cmdbar` is retired. The count's face stays here because the footer
+   and the dashboard use the same treatment. */
 .rio-cmdbar-spacer { flex: 1; }
+/* The result count reads as a count, not as a control. */
+.rio-find-count {
+  margin-inline-start: var(--rio-space-4);
+  color: var(--rio-text-mute);
+  font-size: var(--rio-text-14);
+  font-weight: var(--rio-weight-semibold);
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.rio-find-count strong { color: var(--rio-text); font-weight: var(--rio-weight-bold); }
 
-/* ---- Reworked data table ---- */
+/* ---- Data surface ----
+   One flat bordered surface holding the head, the data and the foot. */
 .rio-board {
   background: var(--rio-surface);
   border: 1px solid var(--rio-line);
-  border-radius: var(--rio-radius-xl);
-  box-shadow: var(--rio-shadow-sm), var(--rio-highlight-top);
+  border-radius: var(--rio-radius-lg);
   overflow: hidden;
 }
-.rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-14); }
-.rio-dtable thead th {
-  text-align: start; font-family: var(--rio-font-body); font-size: var(--rio-text-13);
-  font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--rio-text-mute); padding: 12px 22px;
-  background: var(--rio-surface); border-block-end: 1px solid var(--rio-line);
-  position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 1;
+
+/* ---- Data-surface head ----
+   How the data is arranged belongs to the surface that arranges it. The
+   view-mode switch is pushed to the trailing edge, as RustIO's
+   `.data-head .view-tools` is. */
+.rio-board-head {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--rio-space-8) var(--rio-space-16);
+  padding: var(--rio-space-8) var(--rio-space-16);
+  border-block-end: 1px solid var(--rio-line);
+  background: var(--rio-raised);
 }
-/* Phase-1 readability: tighten the over-tall 72px row to a comfortable,
-   more scannable density (still clears the 2-line monogram product cell). */
-.rio-dtable tbody td { padding: 0 22px; block-size: 56px; border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
+.rio-board-head:empty { display: none; }
+.rio-board-head > .rio-view-modes { margin-inline-start: auto; }
+
+/* Cards are their own objects on the page ground, so the surface steps
+   out of the way and the head becomes a bordered strip above the grid
+   (RustIO's `.data--cards`). `:has()` keeps this a CSS decision — the
+   template emits the same markup for every view mode. */
+.rio-board:has(.av-list--cards) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.rio-board:has(.av-list--cards) > .rio-board-head {
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  margin-block-end: var(--rio-space-16);
+}
+.rio-board:has(.av-list--cards) > .rio-board-foot {
+  border: 1px solid var(--rio-line);
+  border-radius: var(--rio-radius-lg);
+  margin-block-start: var(--rio-space-16);
+}
+
+/* List and Compact are lines OF the surface, so they run edge to edge. */
+.rio-board > .av-list--list,
+.rio-board > .av-list--compact { padding: 0; }
+.rio-dtable { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--rio-text-15); }
+.rio-dtable thead th {
+  text-align: start; block-size: var(--rio-th-h);
+  font-family: var(--rio-font-mono); font-size: var(--rio-text-12);
+  font-weight: var(--rio-weight-bold); letter-spacing: var(--rio-tracking-caps);
+  text-transform: uppercase;
+  color: var(--rio-text-mono); padding: 0 var(--rio-space-16);
+  background: var(--rio-raised); border-block-end: 1px solid var(--rio-line);
+  position: sticky; inset-block-start: 0; white-space: nowrap; z-index: 2;
+}
+.rio-dtable tbody td { padding: 0 var(--rio-space-16); block-size: var(--rio-td-h); border-block-end: 1px solid var(--rio-line); vertical-align: middle; }
 .rio-dtable tbody tr:last-child td { border-block-end: 0; }
 .rio-dtable tbody tr { transition: background var(--rio-dur-fast) var(--rio-ease); position: relative; }
 .rio-dtable tbody tr:hover { background: var(--rio-raised); }
@@ -282,7 +362,10 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-dtable .col-check { inline-size: 52px; }
 .rio-dtable .col-price { text-align: end; inline-size: 130px; }
 .rio-dtable .col-stock { inline-size: 160px; }
-.rio-dtable .col-act { inline-size: 96px; text-align: end; }
+/* Text actions need their own width rather than a fixed 96px minted for
+   two 30px icons. `width: 1%` with nowrap is the table idiom for "as
+   narrow as the content allows" (RustIO's `.actions`). */
+.rio-dtable .col-act { inline-size: 1%; white-space: nowrap; text-align: end; padding-inline-end: var(--rio-space-12); }
 
 /* primary (first) cell — the row's click-through to its edit page. */
 .rio-cell-primary { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); text-decoration: none; }
@@ -295,24 +378,20 @@ button.rio-usermenu-item { inline-size: 100%; border: 0; background: none; curso
 .rio-prod-name:hover { color: var(--rio-rust); }
 .rio-prod-cat { font-family: var(--rio-font-mono); font-size: var(--rio-text-13); color: var(--rio-text-mute); display: block; }
 .rio-price { font-family: var(--rio-font-mono); font-size: var(--rio-text-15); font-weight: 500; color: var(--rio-text-hi); font-variant-numeric: lining-nums tabular-nums; }
-.rio-mono-tile {
-  inline-size: 44px; block-size: 44px; border-radius: 12px; flex: none;
-  background: var(--rio-sunken); border: 1px solid var(--rio-line);
-  display: grid; place-items: center;
-  font-family: var(--rio-font-display); font-size: 16px; font-weight: 700; color: var(--rio-rust);
-  background: var(--rio-rust-tint); border-color: transparent;
-}
+/* The monogram tile is gone: identity is the link, not a coloured square
+   with an initial in it (VISUAL-CONTRACT.md §13). Removed from the three
+   templates that emitted it rather than hidden, so nothing renders a
+   decorative element the design does not have. */
 
 /* status pill: use the canonical .rio-pill (--on/--off) from components/data.css */
 
-/* inline row actions (reveal on hover) */
-.rio-row-actions { display: inline-flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity var(--rio-dur-fast) var(--rio-ease); }
-.rio-dtable tbody tr:hover .rio-row-actions, .rio-row-actions:focus-within { opacity: 1; }
+/* inline row actions */
+/* Always visible. The hover-reveal that used to live here hid an
+   authorized control behind a pointer: undiscoverable by scanning,
+   unreachable by touch (VISUAL-CONTRACT.md §9.4). */
+.rio-row-actions { display: inline-flex; gap: var(--rio-space-4); justify-content: flex-end; }
 
 /* board footer */
-.rio-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 18px; border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); font-size: var(--rio-text-13); color: var(--rio-text-mute); }
-.rio-board-foot strong { color: var(--rio-text-hi); font-weight: 600; }
+.rio-board-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--rio-space-12); padding: var(--rio-space-8) var(--rio-space-16); border-block-start: 1px solid var(--rio-line); background: var(--rio-surface); font-size: var(--rio-text-14); color: var(--rio-text-mute); }
+.rio-board-foot strong { color: var(--rio-text-hi); font-weight: var(--rio-weight-semibold); }
 
-@media (prefers-reduced-motion: reduce) {
-  .rio-row-actions { opacity: 1; }
-}
