@@ -28,7 +28,7 @@
 
 {% if scopes and query %}
 <nav class="rio-scope" aria-label="Search scope">
-  <a href="/admin/search?q={{ query | urlencode }}"{% if scope == "all" %} aria-current="true"{% endif %}>All</a>
+  <a href="{{ all_link }}"{% if scope == "all" %} aria-current="true"{% endif %}>All</a>
   {% for s in scopes %}
   <a href="{{ s.link }}"{% if s.is_active %} aria-current="true"{% endif %}>{{ s.display_name }}{% if s.count > 0 %} <span class="rio-meta">{{ s.count }}</span>{% endif %}</a>
   {% endfor %}
@@ -56,7 +56,7 @@
           {% for r in g.rows %}
           <tr>
             <td class="rio-cell-fit"><a class="rio-cell-primary" href="{{ r.edit_url }}">{{ r.label }}</a></td>
-            <td class="rio-cell-meta">{{ r.cells | join(sep=" · ") }}</td>
+            <td class="rio-cell-meta">{{ r.cells | join(" · ") }}</td>
             <td class="col-act"><span class="rio-row-actions">
               <a class="rio-btn rio-btn--quiet rio-btn--sm" href="{{ r.edit_url }}">Edit</a>
               <a class="rio-btn rio-btn--quiet rio-btn--sm" href="{{ r.history_url }}">History</a>
@@ -75,7 +75,7 @@
     <div>Try a shorter term, or a different spelling. Each model searches only the fields it declares searchable.</div>
     {% if scopes %}
     <div class="rio-search-empty-models">
-      {% for s in scopes %}<a class="rio-btn rio-btn--secondary rio-btn--sm" href="/admin/{{ s.admin_name }}?q={{ query | urlencode }}">Search inside {{ s.display_name }}</a>{% endfor %}
+      {% for s in scopes %}<a class="rio-btn rio-btn--secondary rio-btn--sm" href="{{ s.list_link }}">Search inside {{ s.display_name }}</a>{% endfor %}
     </div>
     {% endif %}
   </div></div>

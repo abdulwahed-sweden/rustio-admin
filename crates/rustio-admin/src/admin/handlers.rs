@@ -1861,10 +1861,16 @@ pub(crate) async fn search_page(
             count,
             is_active: scope == entry.admin_name,
             link: scope_link,
+            list_link: format!(
+                "/admin/{}?q={}",
+                entry.admin_name,
+                urlencoding::encode(&term)
+            ),
         });
     }
 
     let model_count = groups.len();
+    let all_link = format!("/admin/search?q={}", urlencoding::encode(&term));
     let unread = super::notifications::unread_count(&ctx.db, identity.user_id).await;
     let view = render::SearchPageCtx {
         base: BaseContext::new(Some(&identity), csrf_token(&req), &ctx.admin)
@@ -1884,6 +1890,7 @@ pub(crate) async fn search_page(
         result_count,
         model_count,
         has_query,
+        all_link,
     };
     let body = ctx.templates.render("admin/search.html", &view)?;
     Ok(Response::html(body))
@@ -3763,7 +3770,7 @@ pub(crate) async fn show_log_entries(
         .filter(|n| *n >= 1)
         .unwrap_or(1);
 
-    let query = audit::AuditQuery {
+    let query = |offset: usize| audit::AuditQuery {
         search: search.as_deref(),
         model: model_filter.as_deref(),
         action: action_filter.as_deref(),
@@ -3771,11 +3778,24 @@ pub(crate) async fn show_log_entries(
         from: from_filter.as_deref(),
         to: to_filter.as_deref(),
         limit: PER_PAGE as i64,
-        offset: ((page - 1) * PER_PAGE) as i64,
+        offset: offset as i64,
     };
-    let (actions, total) = audit::page(&ctx.db, &query).await.unwrap_or_default();
+    let page_raw = page;
+    let (mut actions, total) = audit::page(&ctx.db, &query((page_raw - 1) * PER_PAGE))
+        .await
+        .unwrap_or_default();
     let total_rows = total.max(0) as usize;
     let total_pages = total_rows.div_ceil(PER_PAGE).max(1);
+    // A `?page=` past the last page is a stale URL — a bookmark taken
+    // before the log was filtered, or before rows aged out. Clamp to
+    // the last page and refetch once, as the list page does, rather
+    // than rendering an empty board that claims "0–50 of 11".
+    let page = page_raw.min(total_pages);
+    if page != page_raw && total_rows > 0 {
+        if let Ok((rows, _)) = audit::page(&ctx.db, &query((page - 1) * PER_PAGE)).await {
+            actions = rows;
+        }
+    }
 
     // Rebuild the query string for a link that changes one parameter,
     // so paging keeps the filters and a filter keeps the term.

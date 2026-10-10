@@ -3328,6 +3328,11 @@ pub(crate) struct SearchPageCtx {
     pub model_count: usize,
     /// True once a term long enough to search has been submitted.
     pub has_query: bool,
+    /// The scope row's "All" link — the current term with no scope.
+    /// Built here rather than in the template because percent-encoding
+    /// the term is the handler's job (minijinja ships no `urlencode`
+    /// filter in this build).
+    pub all_link: String,
 }
 
 #[derive(Serialize)]
@@ -3336,7 +3341,11 @@ pub(crate) struct SearchScopeCtx {
     pub display_name: String,
     pub count: usize,
     pub is_active: bool,
+    /// Narrow this page to that one model.
     pub link: String,
+    /// Hand off to that model's own list with the term carried — the
+    /// no-results state's way out.
+    pub list_link: String,
 }
 
 #[derive(Serialize)]
