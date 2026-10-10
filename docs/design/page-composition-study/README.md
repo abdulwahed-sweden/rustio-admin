@@ -107,3 +107,10 @@ Reading order:
 Boards: `Audit-Log` · `API-Reference` · `Health` · `Docs` · `Sessions` ·
 `Search` (mandatory) · `Utility-Pages` · `Developer-Pages` ·
 `Account-Flows`.
+
+## Polish pass (2026-10-10)
+
+`POLISH.md` — a visual quality pass over the implemented branch
+`feat/composition-completion`: 42 renders inspected at 1440 and 390, 22
+defects with the exact correction, fragment and severity, and the order to
+land them in. No design change.
